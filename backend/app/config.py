@@ -1,11 +1,11 @@
-﻿import ipaddress
+import ipaddress
 import os
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
 
 APP_NAME = "wrtmonitor"
-APP_VERSION = "0.1.0-test.3"
+APP_VERSION = "0.1.0-test.4"
 
 
 @dataclass(frozen=True)
@@ -81,3 +81,4 @@ def load_settings() -> Settings:
         default_locale=os.getenv("WRTMONITOR_DEFAULT_LOCALE", "ru"),
         allow_insecure_local=allow_insecure_local,
     )
+

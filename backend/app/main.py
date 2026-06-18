@@ -200,6 +200,7 @@ def complete_setup(payload: SetupRequest, config: Settings = Depends(settings), 
     now = now_utc()
     user = User(id=uuid4(), username=payload.username.strip(), password_hash=hash_password(payload.password), role="owner", disabled=False, created_at=now, updated_at=now)
     db.add(user)
+    db.flush()
     db.add(AppSetting(key="public_server_url", value=server_url, updated_at=now))
     audit(db, user.id, "setup.complete", "server", None, {"server_url": server_url})
     db.commit()

@@ -1,4 +1,4 @@
-﻿# wrtmonitor
+# wrtmonitor
 
 `wrtmonitor` — self-hosted система мониторинга и управления OpenWrt-роутерами.
 
@@ -59,7 +59,7 @@ WRTMONITOR_PUBLIC_SERVER_URL=http://server-ip:8088
 Образ тестовой версии:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.3
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.4
 ```
 
 ## Подключение клиентов
@@ -116,3 +116,4 @@ OpenWrt agent выполняет только команды из allowlist:
 - [Android-приложение](docs/android.md)
 - [TrueNAS Custom App](docs/truenas-custom-app.md)
 - [Безопасность](docs/security.md)
+

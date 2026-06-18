@@ -3,14 +3,14 @@
 Тестовая установка использует готовый Docker image:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.3
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.4
 ```
 
 Если пакет GHCR приватный, сначала добавьте в TrueNAS Docker registry credentials для `ghcr.io`.
 
 ## Быстрый порядок
 
-1. Скачайте `wrtmonitor-truenas-0.1.0-test.3.yaml` из релиза.
+1. Скачайте `wrtmonitor-truenas-0.1.0-test.4.yaml` из релиза.
 2. Откройте YAML и замените тестовые значения на свои.
 3. Создайте Custom App из YAML.
 4. Запустите приложение.
@@ -81,3 +81,4 @@ http://truenas-ip:8088/health
 ```
 
 Подробная инструкция: [`docs/server-deployment.md`](../../docs/server-deployment.md).
+
