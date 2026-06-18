@@ -14,23 +14,12 @@ ghcr.io/shurshick/wrtmonitor:0.1.0-test.3
 2. Создайте Custom App из YAML.
 3. Задайте переменные.
 4. Запустите приложение.
-5. Откройте `/setup`.
-6. Создайте первого администратора.
-7. Проверьте `/health`.
+5. Настройте Nginx Proxy Manager на `http://truenas-ip:8088`.
+6. Откройте внешний HTTPS-адрес `/setup`.
+7. Создайте первого администратора.
+8. Проверьте `/health`.
 
-## Переменные для локального теста
-
-```env
-WRTMONITOR_PUBLIC_SERVER_URL=http://truenas-ip:8088
-WRTMONITOR_HTTP_PORT=8088
-WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
-POSTGRES_PASSWORD=replace-with-db-password
-POSTGRES_DB=wrtmonitor
-POSTGRES_USER=wrtmonitor
-WRTMONITOR_ALLOW_INSECURE_LOCAL=true
-```
-
-## Переменные для HTTPS
+## Переменные для HTTPS через NPM
 
 ```env
 WRTMONITOR_PUBLIC_SERVER_URL=https://monitor.example.ru
@@ -42,7 +31,41 @@ POSTGRES_USER=wrtmonitor
 WRTMONITOR_ALLOW_INSECURE_LOCAL=false
 ```
 
+В Nginx Proxy Manager:
+
+```text
+Scheme: http
+Forward Hostname / IP: truenas-ip
+Forward Port: 8088
+SSL: Let's Encrypt
+Force SSL: enabled
+```
+
 После запуска откройте:
+
+```text
+https://monitor.example.ru/setup
+```
+
+Проверка:
+
+```text
+https://monitor.example.ru/health
+```
+
+## Переменные для временного локального HTTP-теста
+
+```env
+WRTMONITOR_PUBLIC_SERVER_URL=http://truenas-ip:8088
+WRTMONITOR_HTTP_PORT=8088
+WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
+POSTGRES_PASSWORD=replace-with-db-password
+POSTGRES_DB=wrtmonitor
+POSTGRES_USER=wrtmonitor
+WRTMONITOR_ALLOW_INSECURE_LOCAL=true
+```
+
+В этом режиме открывайте:
 
 ```text
 http://truenas-ip:8088/setup

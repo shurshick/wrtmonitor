@@ -12,32 +12,33 @@
 ## Что понадобится
 
 - Docker или TrueNAS SCALE с Custom App.
-- Доступный адрес сервера для Android-приложения и OpenWrt-роутеров.
+- Доступный внешний HTTPS-адрес сервера для Android-приложения и OpenWrt-роутеров.
+- Nginx Proxy Manager или другой reverse proxy для публикации HTTPS.
 - Пароль для PostgreSQL.
 - Длинный секрет для JWT.
 
-Для теста в локальной сети можно использовать HTTP-адрес вида:
-
-```text
-http://truenas-ip:8088
-```
-
-Для постоянной установки лучше использовать HTTPS-адрес через reverse proxy:
+Основной тестовый сценарий предполагает внешний доступ через Nginx Proxy Manager:
 
 ```text
 https://monitor.example.ru
 ```
 
+Внутренний HTTP-порт `8088` нужен только как upstream для NPM:
+
+```text
+http://truenas-ip:8088
+```
+
 ## Важные переменные
 
 ```env
-WRTMONITOR_PUBLIC_SERVER_URL=http://truenas-ip:8088
+WRTMONITOR_PUBLIC_SERVER_URL=https://monitor.example.ru
 WRTMONITOR_HTTP_PORT=8088
 WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
 POSTGRES_PASSWORD=replace-with-db-password
 POSTGRES_DB=wrtmonitor
 POSTGRES_USER=wrtmonitor
-WRTMONITOR_ALLOW_INSECURE_LOCAL=true
+WRTMONITOR_ALLOW_INSECURE_LOCAL=false
 ```
 
 Назначение:
@@ -48,7 +49,34 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 - `POSTGRES_PASSWORD` — пароль базы данных.
 - `POSTGRES_DB` — имя базы, можно оставить `wrtmonitor`.
 - `POSTGRES_USER` — пользователь базы, можно оставить `wrtmonitor`.
-- `WRTMONITOR_ALLOW_INSECURE_LOCAL` — `true` только для локального HTTP-теста. Для HTTPS ставьте `false`.
+- `WRTMONITOR_ALLOW_INSECURE_LOCAL` — для NPM/HTTPS ставьте `false`. `true` нужен только для временного локального HTTP-теста без прокси.
+
+## Схема с Nginx Proxy Manager
+
+```text
+Android / OpenWrt
+        |
+        | https://monitor.example.ru
+        v
+Nginx Proxy Manager
+        |
+        | http://truenas-ip:8088
+        v
+wrtmonitor container
+        |
+        v
+PostgreSQL container
+```
+
+В NPM создайте Proxy Host:
+
+- `Domain Names`: ваш домен, например `monitor.example.ru`;
+- `Scheme`: `http`;
+- `Forward Hostname / IP`: IP TrueNAS или имя сервиса, доступное NPM;
+- `Forward Port`: `8088`;
+- включите `Websockets Support` не обязательно, но можно оставить включённым;
+- во вкладке SSL выпустите сертификат Let's Encrypt;
+- включите `Force SSL`.
 
 ## Установка на TrueNAS Custom App
 
@@ -71,29 +99,35 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 
 4. В TrueNAS создайте Custom App из YAML.
 
-5. Задайте переменные. Для локального теста:
+5. Задайте переменные. Для NPM/HTTPS:
 
    ```env
-   WRTMONITOR_PUBLIC_SERVER_URL=http://truenas-ip:8088
+   WRTMONITOR_PUBLIC_SERVER_URL=https://monitor.example.ru
    WRTMONITOR_HTTP_PORT=8088
    WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
    POSTGRES_PASSWORD=replace-with-db-password
    POSTGRES_DB=wrtmonitor
    POSTGRES_USER=wrtmonitor
-   WRTMONITOR_ALLOW_INSECURE_LOCAL=true
+   WRTMONITOR_ALLOW_INSECURE_LOCAL=false
    ```
 
 6. Запустите приложение.
 
 7. Дождитесь, пока оба контейнера перейдут в состояние `running` или `healthy`.
 
-8. Откройте в браузере:
+8. В Nginx Proxy Manager настройте Proxy Host на внутренний адрес:
 
    ```text
-   http://truenas-ip:8088/setup
+   http://truenas-ip:8088
    ```
 
-9. Создайте первого администратора.
+9. Откройте в браузере внешний адрес:
+
+   ```text
+   https://monitor.example.ru/setup
+   ```
+
+10. Создайте первого администратора.
 
    На этом шаге задаются:
 
@@ -101,10 +135,10 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
    - пароль администратора;
    - публичный адрес сервера.
 
-10. Проверьте состояние сервера:
+11. Проверьте состояние сервера через внешний адрес:
 
     ```text
-    http://truenas-ip:8088/health
+    https://monitor.example.ru/health
     ```
 
     Ожидаемый ответ:
@@ -113,6 +147,26 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
     {"status":"ok","database":"postgresql"}
     ```
 
+## Временный локальный HTTP-тест без NPM
+
+Используйте только для проверки в локальной сети:
+
+```env
+WRTMONITOR_PUBLIC_SERVER_URL=http://truenas-ip:8088
+WRTMONITOR_HTTP_PORT=8088
+WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
+POSTGRES_PASSWORD=replace-with-db-password
+POSTGRES_DB=wrtmonitor
+POSTGRES_USER=wrtmonitor
+WRTMONITOR_ALLOW_INSECURE_LOCAL=true
+```
+
+В этом режиме открывайте:
+
+```text
+http://truenas-ip:8088/setup
+```
+
 ## Установка на обычный Docker-сервер
 
 1. Скачайте исходники или используйте `docker-compose.yml` из репозитория.
@@ -120,13 +174,13 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 2. Создайте `.env`:
 
    ```env
-   WRTMONITOR_PUBLIC_SERVER_URL=http://server-ip:8088
+   WRTMONITOR_PUBLIC_SERVER_URL=https://monitor.example.ru
    WRTMONITOR_DATABASE_URL=postgresql+psycopg://wrtmonitor:replace-with-db-password@postgres:5432/wrtmonitor
    WRTMONITOR_BIND_HOST=0.0.0.0
    WRTMONITOR_BIND_PORT=8080
    WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
    WRTMONITOR_DEFAULT_LOCALE=ru
-   WRTMONITOR_ALLOW_INSECURE_LOCAL=true
+   WRTMONITOR_ALLOW_INSECURE_LOCAL=false
    POSTGRES_DB=wrtmonitor
    POSTGRES_USER=wrtmonitor
    POSTGRES_PASSWORD=replace-with-db-password
@@ -138,13 +192,15 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
    docker compose up -d
    ```
 
-4. Откройте:
+4. Настройте Nginx Proxy Manager или другой reverse proxy на внутренний адрес:
 
    ```text
-   http://server-ip:8088/setup
+   http://server-ip:8088
    ```
 
-5. Создайте администратора и проверьте `/health`.
+5. Откройте внешний адрес `https://monitor.example.ru/setup`.
+
+6. Создайте администратора и проверьте `/health`.
 
 ## После установки сервера
 
@@ -182,7 +238,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 ```
 
-Для production используйте HTTPS и:
+Для NPM/HTTPS используйте:
 
 ```env
 WRTMONITOR_ALLOW_INSECURE_LOCAL=false
@@ -191,6 +247,14 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=false
 ### Android или OpenWrt не подключаются
 
 Проверьте, что `WRTMONITOR_PUBLIC_SERVER_URL` доступен именно с телефона и роутера, а не только с компьютера.
+
+При NPM в Android и OpenWrt указывайте внешний HTTPS-адрес:
+
+```text
+https://monitor.example.ru
+```
+
+Не указывайте внутренний `http://truenas-ip:8088`, если телефон или роутер должны работать извне.
 
 ## Обновление тестовой версии
 

@@ -36,7 +36,14 @@
 
 Публичный адрес должен быть доступен Android-приложению и OpenWrt-роутеру.
 
-Для локальной лабораторной установки можно временно включить HTTP:
+Если сервер публикуется через Nginx Proxy Manager, в `WRTMONITOR_PUBLIC_SERVER_URL` указывайте внешний HTTPS-адрес:
+
+```env
+WRTMONITOR_ALLOW_INSECURE_LOCAL=false
+WRTMONITOR_PUBLIC_SERVER_URL=https://monitor.example.ru
+```
+
+Локальный HTTP используйте только для временной проверки без NPM:
 
 ```env
 WRTMONITOR_ALLOW_INSECURE_LOCAL=true
