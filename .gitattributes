@@ -1,0 +1,7 @@
+* text=auto
+
+*.sh text eol=lf
+gradlew text eol=lf
+openwrt-agent/wrtmonitor-agent text eol=lf
+openwrt-agent/wrtmonitor.init text eol=lf
+openwrt-agent/wrtmonitor.config text eol=lf

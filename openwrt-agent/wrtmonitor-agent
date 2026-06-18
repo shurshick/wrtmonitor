@@ -1,0 +1,126 @@
+#!/bin/sh
+set -eu
+
+CONFIG="wrtmonitor.main"
+
+cfg() {
+  uci -q get "$CONFIG.$1" 2>/dev/null || true
+}
+
+server_url() { cfg server_url | sed 's#/$##'; }
+device_token() { cfg device_token; }
+device_id() { cfg device_id; }
+
+api() {
+  method="$1"
+  path="$2"
+  body="${3:-{}}"
+  curl -fsS -X "$method" "$(server_url)$path" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $(device_token)" \
+    -d "$body"
+}
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+register_device() {
+  hostname="$(json_escape "$(uci -q get system.@system[0].hostname 2>/dev/null || hostname)")"
+  model="$(json_escape "$(cat /tmp/sysinfo/model 2>/dev/null || echo OpenWrt)")"
+  firmware="$(json_escape "$(cat /etc/openwrt_release 2>/dev/null | grep DISTRIB_DESCRIPTION | cut -d\\' -f2 || echo OpenWrt)")"
+  name="$(json_escape "$(cfg name)")"
+  body="{\"hostname\":\"$hostname\",\"model\":\"$model\",\"firmware\":\"$firmware\",\"name\":\"$name\",\"device_token\":\"$(json_escape "$(device_token)")\"}"
+  response="$(curl -fsS -X POST "$(server_url)/api/v1/agent/register" -H "Content-Type: application/json" -d "$body")"
+  id="$(printf '%s' "$response" | sed -n 's/.*"device_id":"\([^"]*\)".*/\1/p')"
+  [ -n "$id" ] || return 1
+  uci set "$CONFIG.device_id=$id"
+  uci commit wrtmonitor
+}
+
+telemetry() {
+  [ -n "$(device_id)" ] || register_device
+  uptime_value="$(cut -d. -f1 /proc/uptime 2>/dev/null || echo 0)"
+  load_value="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0)"
+  body="{\"device_id\":\"$(device_id)\",\"telemetry\":{\"system\":{\"uptime\":$uptime_value,\"load\":\"$load_value\"},\"wifi\":$(wifi_status_json)}}"
+  api POST /api/v1/agent/telemetry "$body" >/dev/null
+}
+
+wifi_status_json() {
+  status="$(wifi status 2>/dev/null | tr '\n' ' ' | sed 's/"/\\"/g' || true)"
+  printf '{"raw":"%s"}' "$status"
+}
+
+poll_commands() {
+  [ -n "$(device_id)" ] || register_device
+  commands="$(api GET /api/v1/agent/commands '{}')"
+  printf '%s' "$commands" | grep -q '"id"' || return 0
+  printf '%s\n' "$commands" | sed 's/},{/}\n{/g' | while read -r item; do
+    command_id="$(printf '%s' "$item" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')"
+    command_type="$(printf '%s' "$item" | sed -n 's/.*"type":"\([^"]*\)".*/\1/p')"
+    command_payload="$(printf '%s' "$item" | sed -n 's/.*"payload":{\([^}]*\)}.*/{\1}/p')"
+    [ -n "$command_id" ] || continue
+    execute_command "$command_id" "$command_type" "$command_payload"
+  done
+}
+
+execute_command() {
+  command_id="$1"
+  command_type="$2"
+  command_payload="${3:-{}}"
+  status="done"
+  result="{}"
+  case "$command_type" in
+    router.reboot)
+      result='{"message":"reboot scheduled"}'
+      (sleep 2; reboot) >/dev/null 2>&1 &
+      ;;
+    wifi.status)
+      result="$(wifi_status_json)"
+      ;;
+    wifi.set_enabled)
+      enabled="$(printf '%s' "$command_payload" | sed -n 's/.*"enabled":\([^,}]*\).*/\1/p')"
+      if [ "$enabled" = "false" ]; then
+        uci set wireless.@wifi-device[0].disabled='1' >/dev/null 2>&1 || status="failed"
+      else
+        uci set wireless.@wifi-device[0].disabled='0' >/dev/null 2>&1 || status="failed"
+      fi
+      uci commit wireless >/dev/null 2>&1 || status="failed"
+      wifi reload >/dev/null 2>&1 || status="failed"
+      ;;
+    wifi.set_ssid)
+      ssid="$(printf '%s' "$command_payload" | sed -n 's/.*"ssid":"\([^"]*\)".*/\1/p')"
+      if [ -n "$ssid" ]; then
+        uci set wireless.@wifi-iface[0].ssid="$ssid" >/dev/null 2>&1 || status="failed"
+        uci commit wireless >/dev/null 2>&1 || status="failed"
+        wifi reload >/dev/null 2>&1 || status="failed"
+      else
+        status="failed"
+        result='{"error":"ssid is required"}'
+      fi
+      ;;
+    network.interfaces)
+      result="{\"ifstatus\":\"$(ifstatus lan 2>/dev/null | sed 's/"/\\"/g' | tr '\n' ' ')\"}"
+      ;;
+    *)
+      status="failed"
+      result='{"error":"unsupported command"}'
+      ;;
+  esac
+  api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"$status\",\"result\":$result}" >/dev/null || true
+}
+
+daemon() {
+  while true; do
+    telemetry || logger -t wrtmonitor "telemetry failed"
+    poll_commands || logger -t wrtmonitor "command polling failed"
+    sleep "$(cfg interval)"
+  done
+}
+
+case "${1:-}" in
+  register) register_device ;;
+  send-now) telemetry; poll_commands ;;
+  daemon) daemon ;;
+  *) echo "Usage: wrtmonitor-agent register|send-now|daemon" >&2; exit 1 ;;
+esac

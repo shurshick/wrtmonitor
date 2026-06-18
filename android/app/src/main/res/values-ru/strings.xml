@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">wrtmonitor</string>
+    <string name="routers">Роутеры</string>
+    <string name="wifi">Wi-Fi</string>
+    <string name="network">Сеть</string>
+    <string name="system">Система</string>
+    <string name="settings">Настройки</string>
+    <string name="server_url">Адрес сервера</string>
+    <string name="login">Войти</string>
+    <string name="reboot">Перезагрузить</string>
+    <string name="apply">Применить</string>
+    <string name="online">Онлайн</string>
+</resources>

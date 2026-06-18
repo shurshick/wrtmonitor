@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wrtmonitor}
+      POSTGRES_USER: ${POSTGRES_USER:-wrtmonitor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-db-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wrtmonitor} -d ${POSTGRES_DB:-wrtmonitor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  wrtmonitor:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8088:8080"
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:
