@@ -6,6 +6,8 @@
     <string name="system">Система</string>
     <string name="settings">Настройки</string>
     <string name="server_url">Адрес сервера</string>
+    <string name="first_run_server_prompt">Введите адрес сервера wrtmonitor, чтобы подключить приложение.</string>
+    <string name="save">Сохранить</string>
     <string name="login">Войти</string>
     <string name="reboot">Перезагрузить</string>
     <string name="apply">Применить</string>

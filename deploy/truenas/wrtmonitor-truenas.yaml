@@ -1,4 +1,4 @@
-services:
+﻿services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -15,7 +15,7 @@ services:
       retries: 10
 
   wrtmonitor:
-    image: ghcr.io/shurshick/wrtmonitor:0.1.0-test.1
+    image: ghcr.io/shurshick/wrtmonitor:0.1.0-test.2
     restart: unless-stopped
     depends_on:
       postgres:

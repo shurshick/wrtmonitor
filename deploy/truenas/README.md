@@ -1,9 +1,9 @@
-# Установка на TrueNAS Custom App
+﻿# Установка на TrueNAS Custom App
 
 Тестовая установка использует готовый Docker image:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.1
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.2
 ```
 
 Если пакет GHCR приватный, сначала добавьте в TrueNAS Docker registry credentials для `ghcr.io`.

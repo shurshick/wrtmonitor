@@ -14,9 +14,30 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-if [ -z "$SERVER_URL" ] || [ -z "$DEVICE_TOKEN" ]; then
-  echo "Usage: sh install-openwrt.sh --server https://monitor.example.ru --token DEVICE_TOKEN [--name Router]" >&2
-  exit 1
+prompt_value() {
+  label="$1"
+  current="$2"
+  required="$3"
+  while [ -z "$current" ]; do
+    printf '%s: ' "$label" >&2
+    read -r current
+    if [ "$required" != "1" ]; then
+      break
+    fi
+  done
+  printf '%s' "$current"
+}
+
+if [ -z "$SERVER_URL" ]; then
+  SERVER_URL="$(prompt_value 'wrtmonitor server URL, example https://monitor.example.ru' "$SERVER_URL" 1)"
+fi
+
+if [ -z "$DEVICE_TOKEN" ]; then
+  DEVICE_TOKEN="$(prompt_value 'Device token' "$DEVICE_TOKEN" 1)"
+fi
+
+if [ -z "$NAME" ]; then
+  NAME="$(prompt_value 'Router name, optional' "$NAME" 0)"
 fi
 
 install -m 0755 wrtmonitor-agent /usr/bin/wrtmonitor-agent

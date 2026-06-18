@@ -1,4 +1,4 @@
-# wrtmonitor
+﻿# wrtmonitor
 
 `wrtmonitor` — self-hosted система мониторинга и управления OpenWrt-роутерами.
 
@@ -51,8 +51,14 @@ WRTMONITOR_PUBLIC_SERVER_URL=http://server-ip:8088
 Образ тестовой версии:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.1
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.2
 ```
+
+## Подключение клиентов
+
+Android-приложение при первом запуске спрашивает адрес сервера и сохраняет его локально. Позже адрес можно изменить в настройках приложения.
+
+OpenWrt agent можно установить с параметрами `--server`, `--token` и `--name`. Если параметры не переданы, установщик спросит адрес сервера, device token и имя роутера в консоли.
 
 ## Архитектура управления
 

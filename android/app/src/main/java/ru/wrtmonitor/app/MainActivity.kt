@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
@@ -48,11 +49,27 @@ private enum class Tab {
     Settings
 }
 
+private const val PREFS_NAME = "wrtmonitor"
+private const val PREF_SERVER_URL = "server_url"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WrtMonitorApp() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences(PREFS_NAME, 0) }
+    var serverUrl by remember { mutableStateOf(prefs.getString(PREF_SERVER_URL, "") ?: "") }
     var tab by remember { mutableStateOf(Tab.Routers) }
     MaterialTheme {
+        if (serverUrl.isBlank()) {
+            FirstRunScreen(
+                onSave = { value ->
+                    val normalized = value.trim().trimEnd('/')
+                    prefs.edit().putString(PREF_SERVER_URL, normalized).apply()
+                    serverUrl = normalized
+                }
+            )
+            return@MaterialTheme
+        }
         Scaffold(
             topBar = { TopAppBar(title = { Text("wrtmonitor") }) },
             bottomBar = {
@@ -77,9 +94,40 @@ private fun WrtMonitorApp() {
                     Tab.Wifi -> WifiScreen()
                     Tab.Network -> NetworkScreen()
                     Tab.System -> SystemScreen()
-                    Tab.Settings -> SettingsScreen()
+                    Tab.Settings -> SettingsScreen(serverUrl) { value ->
+                        val normalized = value.trim().trimEnd('/')
+                        prefs.edit().putString(PREF_SERVER_URL, normalized).apply()
+                        serverUrl = normalized
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FirstRunScreen(onSave: (String) -> Unit) {
+    var serverUrl by remember { mutableStateOf("") }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("wrtmonitor", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.first_run_server_prompt))
+        OutlinedTextField(
+            value = serverUrl,
+            onValueChange = { serverUrl = it },
+            label = { Text(stringResource(R.string.server_url)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Button(
+            onClick = { onSave(serverUrl) },
+            enabled = serverUrl.trim().startsWith("http://") || serverUrl.trim().startsWith("https://")
+        ) {
+            Text(stringResource(R.string.save))
         }
     }
 }
@@ -132,9 +180,16 @@ private fun SystemScreen() {
 }
 
 @Composable
-private fun SettingsScreen() {
-    var serverUrl by remember { mutableStateOf("") }
+private fun SettingsScreen(currentServerUrl: String, onSave: (String) -> Unit) {
+    var serverUrl by remember(currentServerUrl) { mutableStateOf(currentServerUrl) }
     Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge)
-    OutlinedTextField(value = serverUrl, onValueChange = { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) })
+    OutlinedTextField(
+        value = serverUrl,
+        onValueChange = { serverUrl = it },
+        label = { Text(stringResource(R.string.server_url)) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    Button(onClick = { onSave(serverUrl) }) { Text(stringResource(R.string.save)) }
     Button(onClick = { }) { Text(stringResource(R.string.login)) }
 }
