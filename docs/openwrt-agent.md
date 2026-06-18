@@ -20,3 +20,13 @@ sh install-openwrt.sh \
 ```
 
 Команды управления должны быть ограничены и логироваться.
+
+Текущий allowlist:
+
+- `router.reboot`;
+- `wifi.status`;
+- `wifi.set_enabled`;
+- `wifi.set_ssid`;
+- `network.interfaces`.
+
+Произвольный `shell.exec` и произвольный `uci.apply` не поддерживаются.

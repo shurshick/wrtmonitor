@@ -15,3 +15,5 @@ POSTGRES_DB=wrtmonitor
 POSTGRES_USER=wrtmonitor
 POSTGRES_PASSWORD=password
 ```
+
+После первого запуска откройте `/setup` и создайте администратора. Если TrueNAS публикует приложение через reverse proxy, в `WRTMONITOR_PUBLIC_SERVER_URL` указывайте внешний адрес, доступный Android-приложению и OpenWrt-роутерам.
