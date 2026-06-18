@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wrtmonitor}
+      POSTGRES_USER: ${POSTGRES_USER:-wrtmonitor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - wrtmonitor_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wrtmonitor} -d ${POSTGRES_DB:-wrtmonitor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  wrtmonitor:
+    image: ghcr.io/shurshick/wrtmonitor:0.1.0-test.1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${WRTMONITOR_HTTP_PORT:-8088}:8080"
+    environment:
+      WRTMONITOR_PUBLIC_SERVER_URL: ${WRTMONITOR_PUBLIC_SERVER_URL:?set WRTMONITOR_PUBLIC_SERVER_URL}
+      WRTMONITOR_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-wrtmonitor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wrtmonitor}
+      WRTMONITOR_BIND_HOST: 0.0.0.0
+      WRTMONITOR_BIND_PORT: 8080
+      WRTMONITOR_JWT_SECRET: ${WRTMONITOR_JWT_SECRET:?set WRTMONITOR_JWT_SECRET}
+      WRTMONITOR_DEFAULT_LOCALE: ${WRTMONITOR_DEFAULT_LOCALE:-ru}
+      WRTMONITOR_ALLOW_INSECURE_LOCAL: ${WRTMONITOR_ALLOW_INSECURE_LOCAL:-false}
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5).read()\nPY"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  wrtmonitor_postgres:

@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -35,9 +39,23 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wrtmonitor
     steps:
       - uses: actions/checkout@v4
       - run: docker build .
+      - name: Login to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Publish test image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker build \
+            -t "$IMAGE_NAME:0.1.0-test.1" \
+            -t "$IMAGE_NAME:latest" \
+            .
+          docker push "$IMAGE_NAME:0.1.0-test.1"
+          docker push "$IMAGE_NAME:latest"
 
   android:
     runs-on: ubuntu-latest
@@ -52,3 +70,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x ./gradlew
       - run: ./gradlew :android:app:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wrtmonitor-android-0.1.0-test.1-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk

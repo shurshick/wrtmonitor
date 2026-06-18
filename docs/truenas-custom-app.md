@@ -1,15 +1,19 @@
 # TrueNAS Custom App
 
-Для TrueNAS используйте Docker Compose/custom app с двумя сервисами:
+Для тестовой установки используйте готовый YAML:
+
+- [`deploy/truenas/wrtmonitor-truenas.yaml`](../deploy/truenas/wrtmonitor-truenas.yaml)
+
+Внутри два сервиса:
 
 - `postgres`;
 - `wrtmonitor`.
 
-Минимальные переменные:
+Минимальные переменные для TrueNAS:
 
 ```text
 WRTMONITOR_PUBLIC_SERVER_URL=https://monitor.example.ru
-WRTMONITOR_DATABASE_URL=postgresql+psycopg://wrtmonitor:password@postgres:5432/wrtmonitor
+WRTMONITOR_HTTP_PORT=8088
 WRTMONITOR_JWT_SECRET=long-random-secret
 POSTGRES_DB=wrtmonitor
 POSTGRES_USER=wrtmonitor

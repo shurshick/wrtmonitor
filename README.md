@@ -42,6 +42,18 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 WRTMONITOR_PUBLIC_SERVER_URL=http://server-ip:8088
 ```
 
+## Тестовая установка на TrueNAS
+
+Для TrueNAS Custom App подготовлен YAML:
+
+- [`deploy/truenas/wrtmonitor-truenas.yaml`](deploy/truenas/wrtmonitor-truenas.yaml)
+
+Образ тестовой версии:
+
+```text
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.1
+```
+
 ## Архитектура управления
 
 Android не подключается напрямую к роутеру. Все команды идут через сервер:
@@ -71,6 +83,8 @@ OpenWrt agent выполняет только команды из allowlist:
 - минимальный Android Material 3 scaffold;
 - Docker Compose;
 - CI.
+- TrueNAS YAML;
+- Android debug APK в CI artifacts.
 
 Следующие крупные блоки:
 
