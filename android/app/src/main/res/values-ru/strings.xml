@@ -7,6 +7,9 @@
     <string name="settings">Настройки</string>
     <string name="server_url">Адрес сервера</string>
     <string name="first_run_server_prompt">Введите адрес сервера wrtmonitor, чтобы подключить приложение.</string>
+    <string name="admin_username">Имя администратора</string>
+    <string name="admin_password">Пароль администратора</string>
+    <string name="change_server">Изменить сервер</string>
     <string name="save">Сохранить</string>
     <string name="login">Войти</string>
     <string name="reboot">Перезагрузить</string>

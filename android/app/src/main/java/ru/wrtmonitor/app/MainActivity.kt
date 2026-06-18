@@ -32,7 +32,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +58,7 @@ private enum class Tab {
 
 private const val PREFS_NAME = "wrtmonitor"
 private const val PREF_SERVER_URL = "server_url"
+private const val PREF_ACCESS_TOKEN = "access_token"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +66,7 @@ private fun WrtMonitorApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, 0) }
     var serverUrl by remember { mutableStateOf(prefs.getString(PREF_SERVER_URL, "") ?: "") }
+    var accessToken by remember { mutableStateOf(prefs.getString(PREF_ACCESS_TOKEN, "") ?: "") }
     var tab by remember { mutableStateOf(Tab.Routers) }
     MaterialTheme {
         if (serverUrl.isBlank()) {
@@ -66,6 +75,21 @@ private fun WrtMonitorApp() {
                     val normalized = value.trim().trimEnd('/')
                     prefs.edit().putString(PREF_SERVER_URL, normalized).apply()
                     serverUrl = normalized
+                }
+            )
+            return@MaterialTheme
+        }
+        if (accessToken.isBlank()) {
+            LoginScreen(
+                serverUrl = serverUrl,
+                onLogin = { token ->
+                    prefs.edit().putString(PREF_ACCESS_TOKEN, token).apply()
+                    accessToken = token
+                },
+                onChangeServer = {
+                    prefs.edit().remove(PREF_SERVER_URL).remove(PREF_ACCESS_TOKEN).apply()
+                    serverUrl = ""
+                    accessToken = ""
                 }
             )
             return@MaterialTheme
@@ -96,8 +120,9 @@ private fun WrtMonitorApp() {
                     Tab.System -> SystemScreen()
                     Tab.Settings -> SettingsScreen(serverUrl) { value ->
                         val normalized = value.trim().trimEnd('/')
-                        prefs.edit().putString(PREF_SERVER_URL, normalized).apply()
+                        prefs.edit().putString(PREF_SERVER_URL, normalized).remove(PREF_ACCESS_TOKEN).apply()
                         serverUrl = normalized
+                        accessToken = ""
                     }
                 }
             }
@@ -130,6 +155,88 @@ private fun FirstRunScreen(onSave: (String) -> Unit) {
             Text(stringResource(R.string.save))
         }
     }
+}
+
+@Composable
+private fun LoginScreen(serverUrl: String, onLogin: (String) -> Unit, onChangeServer: () -> Unit) {
+    val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.Main)
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf("") }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("wrtmonitor", style = MaterialTheme.typography.headlineMedium)
+        Text(serverUrl)
+        OutlinedTextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text(stringResource(R.string.admin_username)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text(stringResource(R.string.admin_password)) },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true
+        )
+        if (error.isNotBlank()) {
+            Text(error)
+        }
+        Button(
+            onClick = {
+                loading = true
+                error = ""
+                scope.launch {
+                    runCatching {
+                        withContext(Dispatchers.IO) { loginAdmin(serverUrl, username, password) }
+                    }.onSuccess { token ->
+                        loading = false
+                        onLogin(token)
+                    }.onFailure {
+                        loading = false
+                        error = it.message ?: "Login failed"
+                    }
+                }
+            },
+            enabled = !loading && username.isNotBlank() && password.isNotBlank()
+        ) {
+            Text(stringResource(R.string.login))
+        }
+        Button(onClick = onChangeServer, enabled = !loading) {
+            Text(stringResource(R.string.change_server))
+        }
+    }
+}
+
+private fun loginAdmin(serverUrl: String, username: String, password: String): String {
+    val url = URL("${serverUrl.trim().trimEnd('/')}/api/v1/auth/login")
+    val connection = (url.openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 10_000
+        readTimeout = 10_000
+        doOutput = true
+        setRequestProperty("Content-Type", "application/json")
+    }
+    val body = JSONObject()
+        .put("username", username)
+        .put("password", password)
+        .toString()
+    connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+    val status = connection.responseCode
+    val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+    val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+    if (status !in 200..299) {
+        throw IllegalStateException("HTTP $status")
+    }
+    return JSONObject(response).getString("access_token")
 }
 
 @Composable

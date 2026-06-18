@@ -3,7 +3,7 @@
 Тестовая установка использует готовый Docker image:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.2
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.3
 ```
 
 Если пакет GHCR приватный, сначала добавьте в TrueNAS Docker registry credentials для `ghcr.io`.

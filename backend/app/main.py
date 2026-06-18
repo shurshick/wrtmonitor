@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import secrets
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -42,6 +43,13 @@ class SetupRequest(BaseModel):
 
 class AgentRegisterRequest(BaseModel):
     device_token: str = Field(min_length=12)
+    name: str | None = None
+    hostname: str
+    model: str | None = None
+    firmware: str | None = None
+
+
+class DeviceProvisionRequest(BaseModel):
     name: str | None = None
     hostname: str
     model: str | None = None
@@ -224,12 +232,9 @@ def list_devices(_: User = Depends(current_user), db: Session = Depends(get_db))
     ]
 
 
-@app.post("/api/v1/agent/register")
-def register_agent(payload: AgentRegisterRequest, db: Session = Depends(get_db)) -> dict[str, str]:
-    token_digest = hash_token(payload.device_token)
-    existing = db.scalars(select(Device).where(Device.token_hash == token_digest)).first()
-    if existing:
-        return {"device_id": str(existing.id)}
+@app.post("/api/v1/devices/provision")
+def provision_device(payload: DeviceProvisionRequest, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict[str, str]:
+    device_token = secrets.token_urlsafe(32)
     now = now_utc()
     device = Device(
         id=uuid4(),
@@ -237,16 +242,25 @@ def register_agent(payload: AgentRegisterRequest, db: Session = Depends(get_db))
         hostname=payload.hostname,
         model=payload.model,
         firmware=payload.firmware,
-        token_hash=token_digest,
-        status="online",
-        last_seen_at=now,
+        token_hash=hash_token(device_token),
+        status="provisioned",
+        last_seen_at=None,
         created_at=now,
         updated_at=now,
     )
     db.add(device)
-    audit(db, None, "agent.register", "device", str(device.id), {"hostname": payload.hostname})
+    audit(db, user.id, "device.provision", "device", str(device.id), {"hostname": payload.hostname})
     db.commit()
-    return {"device_id": str(device.id)}
+    return {"device_id": str(device.id), "device_token": device_token}
+
+
+@app.post("/api/v1/agent/register")
+def register_agent(payload: AgentRegisterRequest, db: Session = Depends(get_db)) -> dict[str, str]:
+    token_digest = hash_token(payload.device_token)
+    existing = db.scalars(select(Device).where(Device.token_hash == token_digest)).first()
+    if existing:
+        return {"device_id": str(existing.id)}
+    raise HTTPException(status_code=401, detail="Unknown device token")
 
 
 @app.post("/api/v1/agent/telemetry")
