@@ -10,6 +10,7 @@
 - Production `server_url` должен быть HTTPS.
 - Web UI `/devices` требует вход администратора через `/login`.
 - API-документация `/docs`, `/redoc` и `/openapi.json` по умолчанию выключена. Для локальной отладки её можно включить через `WRTMONITOR_ENABLE_API_DOCS=true`.
+- Сервер отказывается запускаться с дефолтным или слишком коротким `WRTMONITOR_JWT_SECRET`.
 
 ## Что намеренно не включено
 

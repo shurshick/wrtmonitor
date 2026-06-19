@@ -1,4 +1,4 @@
-# wrtmonitor
+﻿# wrtmonitor
 
 `wrtmonitor` — self-hosted система мониторинга и управления OpenWrt-роутерами.
 
@@ -59,7 +59,7 @@ WRTMONITOR_PUBLIC_SERVER_URL=http://server-ip:8088
 Образ тестовой версии:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.9
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.10
 ```
 
 ## Подключение клиентов

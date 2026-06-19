@@ -24,4 +24,9 @@
     <string name="firmware">Firmware</string>
     <string name="last_seen">Last seen</string>
     <string name="no_data">No data</string>
+    <string name="open">Open</string>
+    <string name="telemetry">Telemetry</string>
+    <string name="updated_at">Updated</string>
+    <string name="uptime">Uptime</string>
+    <string name="load">Load</string>
 </resources>

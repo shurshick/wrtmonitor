@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
@@ -78,6 +79,11 @@ private data class RouterDevice(
     val lastSeenAt: String?
 )
 
+private data class DeviceTelemetry(
+    val createdAt: String?,
+    val payload: JSONObject?
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WrtMonitorApp() {
@@ -86,6 +92,7 @@ private fun WrtMonitorApp() {
     var serverUrl by remember { mutableStateOf(prefs.getString(PREF_SERVER_URL, "") ?: "") }
     var accessToken by remember { mutableStateOf(prefs.getString(PREF_ACCESS_TOKEN, "") ?: "") }
     var tab by remember { mutableStateOf(Tab.Routers) }
+    var selectedDevice by remember { mutableStateOf<RouterDevice?>(null) }
     MaterialTheme {
         if (serverUrl.isBlank()) {
             FirstRunScreen(
@@ -113,7 +120,18 @@ private fun WrtMonitorApp() {
             return@MaterialTheme
         }
         Scaffold(
-            topBar = { TopAppBar(title = { Text("wrtmonitor") }) },
+            topBar = {
+                TopAppBar(
+                    title = { Text(selectedDevice?.name?.ifBlank { selectedDevice?.hostname ?: "wrtmonitor" } ?: "wrtmonitor") },
+                    navigationIcon = {
+                        if (selectedDevice != null) {
+                            Button(onClick = { selectedDevice = null }) {
+                                Icon(Icons.Default.ArrowBack, null)
+                            }
+                        }
+                    }
+                )
+            },
             bottomBar = {
                 NavigationBar {
                     NavigationBarItem(selected = tab == Tab.Routers, onClick = { tab = Tab.Routers }, icon = { Icon(Icons.Default.Router, null) }, label = { Text(stringResource(R.string.routers)) })
@@ -131,16 +149,21 @@ private fun WrtMonitorApp() {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                when (tab) {
-                    Tab.Routers -> RoutersScreen(serverUrl, accessToken)
-                    Tab.Wifi -> WifiScreen()
-                    Tab.Network -> NetworkScreen()
-                    Tab.System -> SystemScreen()
-                    Tab.Settings -> SettingsScreen(serverUrl) { value ->
-                        val normalized = value.trim().trimEnd('/')
-                        prefs.edit().putString(PREF_SERVER_URL, normalized).remove(PREF_ACCESS_TOKEN).apply()
-                        serverUrl = normalized
-                        accessToken = ""
+                val device = selectedDevice
+                if (device != null) {
+                    DeviceScreen(serverUrl, accessToken, device)
+                } else {
+                    when (tab) {
+                        Tab.Routers -> RoutersScreen(serverUrl, accessToken) { selectedDevice = it }
+                        Tab.Wifi -> WifiScreen()
+                        Tab.Network -> NetworkScreen()
+                        Tab.System -> SystemScreen()
+                        Tab.Settings -> SettingsScreen(serverUrl) { value ->
+                            val normalized = value.trim().trimEnd('/')
+                            prefs.edit().putString(PREF_SERVER_URL, normalized).remove(PREF_ACCESS_TOKEN).apply()
+                            serverUrl = normalized
+                            accessToken = ""
+                        }
                     }
                 }
             }
@@ -258,7 +281,7 @@ private fun loginAdmin(serverUrl: String, username: String, password: String): S
 }
 
 @Composable
-private fun RoutersScreen(serverUrl: String, accessToken: String) {
+private fun RoutersScreen(serverUrl: String, accessToken: String, onOpenDevice: (RouterDevice) -> Unit) {
     val scope = rememberCoroutineScope()
     var devices by remember { mutableStateOf<List<RouterDevice>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -316,7 +339,7 @@ private fun RoutersScreen(serverUrl: String, accessToken: String) {
             else -> {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(devices, key = { it.id }) { device ->
-                        RouterCard(device)
+                        RouterCard(device, onOpenDevice)
                     }
                 }
             }
@@ -325,7 +348,7 @@ private fun RoutersScreen(serverUrl: String, accessToken: String) {
 }
 
 @Composable
-private fun RouterCard(device: RouterDevice) {
+private fun RouterCard(device: RouterDevice, onOpenDevice: (RouterDevice) -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(device.name.ifBlank { device.hostname.ifBlank { stringResource(R.string.router) } }, style = MaterialTheme.typography.titleMedium)
@@ -335,9 +358,78 @@ private fun RouterCard(device: RouterDevice) {
             if (device.firmware.isNotBlank()) Text("${stringResource(R.string.firmware)}: ${device.firmware}")
             Text("${stringResource(R.string.last_seen)}: ${device.lastSeenAt ?: stringResource(R.string.no_data)}")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { onOpenDevice(device) }) { Text(stringResource(R.string.open)) }
                 Button(onClick = { }) { Text(stringResource(R.string.reboot)) }
                 Button(onClick = { }) { Text(stringResource(R.string.settings)) }
             }
+        }
+    }
+}
+
+@Composable
+private fun DeviceScreen(serverUrl: String, accessToken: String, device: RouterDevice) {
+    val scope = rememberCoroutineScope()
+    var telemetry by remember(device.id) { mutableStateOf<DeviceTelemetry?>(null) }
+    var loading by remember(device.id) { mutableStateOf(true) }
+    var error by remember(device.id) { mutableStateOf("") }
+
+    fun refresh() {
+        loading = true
+        error = ""
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { fetchLatestTelemetry(serverUrl, accessToken, device.id) }
+            }.onSuccess {
+                telemetry = it
+                loading = false
+            }.onFailure {
+                error = it.message ?: "Failed to load telemetry"
+                loading = false
+            }
+        }
+    }
+
+    LaunchedEffect(serverUrl, accessToken, device.id) {
+        refresh()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(device.name.ifBlank { device.hostname.ifBlank { stringResource(R.string.router) } }, style = MaterialTheme.typography.titleLarge)
+                Text("${stringResource(R.string.status)}: ${device.status}")
+                if (device.model.isNotBlank()) Text("${stringResource(R.string.model)}: ${device.model}")
+                if (device.firmware.isNotBlank()) Text("${stringResource(R.string.firmware)}: ${device.firmware}")
+                Text("${stringResource(R.string.last_seen)}: ${device.lastSeenAt ?: stringResource(R.string.no_data)}")
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.telemetry), style = MaterialTheme.typography.titleLarge)
+            Button(onClick = { refresh() }, enabled = !loading) { Text(stringResource(R.string.refresh)) }
+        }
+        when {
+            loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            error.isNotBlank() -> Text(error)
+            telemetry?.payload == null -> Text(stringResource(R.string.no_data))
+            else -> TelemetryCard(telemetry!!)
+        }
+    }
+}
+
+@Composable
+private fun TelemetryCard(telemetry: DeviceTelemetry) {
+    val payload = telemetry.payload ?: JSONObject()
+    val system = payload.optJSONObject("system")
+    val wifi = payload.optJSONObject("wifi")
+    val network = payload.optJSONObject("network")
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("${stringResource(R.string.updated_at)}: ${telemetry.createdAt ?: stringResource(R.string.no_data)}")
+            Text("${stringResource(R.string.uptime)}: ${system?.optLong("uptime", 0) ?: 0}")
+            Text("${stringResource(R.string.load)}: ${system?.optString("load") ?: stringResource(R.string.no_data)}")
+            Text("${stringResource(R.string.wifi)}: ${wifi?.optBoolean("available", false) ?: false}")
+            Text("${stringResource(R.string.network)}: ${network?.optBoolean("available", true) ?: true}")
+            Text(payload.toString(2))
         }
     }
 }
@@ -369,6 +461,27 @@ private fun fetchDevices(serverUrl: String, accessToken: String): List<RouterDev
             lastSeenAt = item.optString("last_seen_at").takeIf { it.isNotBlank() && it != "null" }
         )
     }
+}
+
+private fun fetchLatestTelemetry(serverUrl: String, accessToken: String, deviceId: String): DeviceTelemetry {
+    val url = URL("${serverUrl.trim().trimEnd('/')}/api/v1/devices/$deviceId/telemetry/latest")
+    val connection = (url.openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = 10_000
+        readTimeout = 10_000
+        setRequestProperty("Authorization", "Bearer $accessToken")
+    }
+    val status = connection.responseCode
+    val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+    val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+    if (status !in 200..299) {
+        throw IllegalStateException("HTTP $status")
+    }
+    val json = JSONObject(response)
+    return DeviceTelemetry(
+        createdAt = json.optString("created_at").takeIf { it.isNotBlank() && it != "null" },
+        payload = json.optJSONObject("telemetry")
+    )
 }
 
 @Composable

@@ -31,6 +31,37 @@ json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+json_object_or_raw() {
+  raw="$(tr '\n' ' ' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+  case "$raw" in
+    \{*\}) printf '%s' "$raw" ;;
+    *) printf '{"raw":"%s"}' "$(json_escape "$raw")" ;;
+  esac
+}
+
+json_command_or_fallback() {
+  fallback="$1"
+  shift
+  tmp="/tmp/wrtmonitor-json-$$"
+  if "$@" >"$tmp" 2>/dev/null; then
+    json_object_or_raw <"$tmp"
+  else
+    printf '%s' "$fallback"
+  fi
+  rm -f "$tmp"
+}
+
+ubus_json() {
+  object="$1"
+  method="$2"
+  params="${3:-{}}"
+  if command -v ubus >/dev/null 2>&1; then
+    json_command_or_fallback '{"available":false}' ubus call "$object" "$method" "$params"
+  else
+    printf '{"available":false}'
+  fi
+}
+
 openwrt_firmware_description() {
   if [ -r /etc/openwrt_release ]; then
     value="$(sed -n "s/^DISTRIB_DESCRIPTION='\(.*\)'/\1/p" /etc/openwrt_release | head -n 1)"
@@ -61,16 +92,27 @@ telemetry() {
   load_value="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0)"
   case "$uptime_value" in ""|*[!0-9]*) uptime_value="0" ;; esac
   load_value="$(json_escape "$load_value")"
-  body="{\"device_id\":\"$(device_id)\",\"telemetry\":{\"system\":{\"uptime\":$uptime_value,\"load\":\"$load_value\"},\"wifi\":$(wifi_status_json)}}"
+  body="{\"device_id\":\"$(device_id)\",\"telemetry\":{\"system\":{\"uptime\":$uptime_value,\"load\":\"$load_value\",\"memory\":$(memory_json),\"ubus\":$(ubus_json system info)},\"board\":$(ubus_json system board),\"network\":$(ubus_json network.interface dump),\"wifi\":$(wifi_status_json)}}"
   api POST /api/v1/agent/telemetry "$body" >/dev/null
 }
 
+memory_json() {
+  total="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+  free="$(awk '/^MemFree:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+  available="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+  case "$total" in ""|*[!0-9]*) total="0" ;; esac
+  case "$free" in ""|*[!0-9]*) free="0" ;; esac
+  case "$available" in ""|*[!0-9]*) available="0" ;; esac
+  printf '{"total_kb":%s,"free_kb":%s,"available_kb":%s}' "$total" "$free" "$available"
+}
+
 wifi_status_json() {
-  if wifi status >/tmp/wrtmonitor-wifi-status 2>/dev/null; then
+  if command -v wifi >/dev/null 2>&1 && wifi status >/tmp/wrtmonitor-wifi-status 2>/dev/null; then
+    raw="$(json_object_or_raw </tmp/wrtmonitor-wifi-status)"
     if grep -q '"up": true' /tmp/wrtmonitor-wifi-status 2>/dev/null; then
-      printf '{"available":true,"up":true}'
+      printf '{"available":true,"up":true,"status":%s}' "$raw"
     else
-      printf '{"available":true,"up":false}'
+      printf '{"available":true,"up":false,"status":%s}' "$raw"
     fi
   else
     printf '{"available":false}'

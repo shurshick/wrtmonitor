@@ -1,13 +1,13 @@
-# Развёртывание серверной части
+﻿# Развёртывание серверной части
 
-Этот документ описывает установку сервера `wrtmonitor` для тестовой версии `0.1.0-test.9`.
+Этот документ описывает установку сервера `wrtmonitor` для тестовой версии `0.1.0-test.10`.
 
 Сервер состоит из двух контейнеров:
 
 - `wrtmonitor` — API и веб-страница первичной настройки;
 - `postgres` — база данных PostgreSQL.
 
-С версии `0.1.0-test.9` сервер ведёт состояние схемы базы через Alembic. При первом запуске существующая база помечается как базовая, а следующие изменения схемы будут применяться миграциями при старте контейнера.
+С версии `0.1.0-test.10` сервер ведёт состояние схемы базы через Alembic. При первом запуске существующая база помечается как базовая, а следующие изменения схемы будут применяться миграциями при старте контейнера.
 
 Сервер можно запускать на Docker-сервере, VPS, домашнем Linux-сервере, NAS с Docker или через TrueNAS Custom App.
 
@@ -55,6 +55,8 @@ WRTMONITOR_ENABLE_API_DOCS=false
 - `WRTMONITOR_ALLOW_INSECURE_LOCAL` — для NPM/HTTPS ставьте `false`. `true` нужен только для временного локального HTTP-теста без прокси.
 - `WRTMONITOR_ENABLE_API_DOCS` — включает `/docs`, `/redoc` и `/openapi.json`. Для внешнего тестового сервера оставьте `false`.
 
+Начиная с `0.1.0-test.10`, сервер не запускается с дефолтным `WRTMONITOR_JWT_SECRET`. Замените пример на свою длинную случайную строку до первого запуска.
+
 ## Схема с Nginx Proxy Manager
 
 ```text
@@ -85,12 +87,12 @@ PostgreSQL container
 ## Установка на TrueNAS Custom App
 
 1. Откройте релиз:
-   [v0.1.0-test.9](https://github.com/shurshick/wrtmonitor/releases/tag/v0.1.0-test.9)
+   [v0.1.0-test.10](https://github.com/shurshick/wrtmonitor/releases/tag/v0.1.0-test.10)
 
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-0.1.0-test.9.yaml
+   wrtmonitor-truenas-0.1.0-test.10.yaml
    ```
 
 3. Если пакет GHCR приватный, добавьте в TrueNAS учётные данные для `ghcr.io`.
@@ -98,7 +100,7 @@ PostgreSQL container
    Образ сервера:
 
    ```text
-   ghcr.io/shurshick/wrtmonitor:0.1.0-test.9
+   ghcr.io/shurshick/wrtmonitor:0.1.0-test.10
    ```
 
 4. Перед вставкой YAML в TrueNAS замените тестовые значения.
@@ -118,6 +120,8 @@ PostgreSQL container
    WRTMONITOR_PUBLIC_SERVER_URL: https://monitor.example.ru
    WRTMONITOR_JWT_SECRET: change-me-long-random-jwt-secret
    ```
+
+   Значение `change-me-long-random-jwt-secret` оставлено как заметный placeholder. Его обязательно нужно заменить.
 
 5. В TrueNAS создайте Custom App из подготовленного YAML.
 

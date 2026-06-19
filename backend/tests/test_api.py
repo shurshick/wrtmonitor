@@ -1,9 +1,14 @@
+import os
+
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
+from sqlalchemy.orm import sessionmaker
 
 import backend.app.main as main
-from backend.app.config import Settings
-from backend.app.db import get_db
-from backend.app.models import Device
+from backend.app.config import Settings, load_settings
+from backend.app.db import get_db, get_engine, init_db
+from backend.app.models import AppSetting, AuditLog, Device, DeviceCommand, DeviceTelemetry, User
 from backend.app.main import ALLOWED_COMMANDS, SetupRequest, app
 
 
@@ -140,3 +145,72 @@ def test_api_docs_are_disabled_by_default():
     response = client.get("/docs")
 
     assert response.status_code == 404
+
+
+def clear_database():
+    init_db()
+    session_factory = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
+    with session_factory() as session:
+        for model in (DeviceCommand, DeviceTelemetry, AuditLog, Device, AppSetting, User):
+            session.execute(delete(model))
+        session.commit()
+
+
+def test_router_registration_telemetry_and_latest_api_e2e():
+    if not os.getenv("WRTMONITOR_DATABASE_URL"):
+        pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
+    clear_database()
+    config = load_settings()
+    client = TestClient(app)
+
+    setup_response = client.post(
+        "/api/v1/setup/complete",
+        json={
+            "username": "admin@example.com",
+            "password": "secret-password",
+            "password_confirm": "secret-password",
+            "server_url": "http://127.0.0.1:8080" if config.allow_insecure_local else "https://monitor.example.ru",
+        },
+    )
+    assert setup_response.status_code == 200
+
+    login_response = client.post("/api/v1/auth/login", json={"username": "admin@example.com", "password": "secret-password"})
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {access_token}"}
+
+    provision_response = client.post(
+        "/api/v1/devices/provision",
+        headers=admin_headers,
+        json={"name": "HomeRouter", "hostname": "OpenWrt", "model": "VirtualBox", "firmware": "OpenWrt 22.03.5"},
+    )
+    assert provision_response.status_code == 200
+    device_id = provision_response.json()["device_id"]
+    device_token = provision_response.json()["device_token"]
+    agent_headers = {"Authorization": f"Bearer {device_token}"}
+
+    register_response = client.post(
+        "/api/v1/agent/register",
+        json={"device_token": device_token, "name": "HomeRouter", "hostname": "OpenWrt", "model": "VirtualBox", "firmware": "OpenWrt 22.03.5"},
+    )
+    assert register_response.status_code == 200
+    assert register_response.json()["device_id"] == device_id
+
+    telemetry = {
+        "system": {"uptime": 123, "load": "0.01", "memory": {"total_kb": 256000, "free_kb": 128000}},
+        "wifi": {"available": True, "radios": [{"name": "radio0", "up": True, "channel": "6"}]},
+        "network": {"interfaces": [{"name": "lan", "up": True}]},
+    }
+    telemetry_response = client.post(
+        "/api/v1/agent/telemetry",
+        headers=agent_headers,
+        json={"device_id": device_id, "telemetry": telemetry},
+    )
+    assert telemetry_response.status_code == 200
+
+    latest_response = client.get(f"/api/v1/devices/{device_id}/telemetry/latest", headers=admin_headers)
+    assert latest_response.status_code == 200
+    latest = latest_response.json()
+    assert latest["device_id"] == device_id
+    assert latest["telemetry"]["system"]["uptime"] == 123
+    assert latest["telemetry"]["wifi"]["radios"][0]["name"] == "radio0"

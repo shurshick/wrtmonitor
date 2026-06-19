@@ -385,6 +385,22 @@ def list_devices(_: User = Depends(current_user), db: Session = Depends(get_db))
     ]
 
 
+@app.get("/api/v1/devices/{device_id}/telemetry/latest")
+def latest_device_telemetry(device_id: UUID, _: User = Depends(current_user), db: Session = Depends(get_db)) -> dict[str, Any]:
+    device = db.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    telemetry = db.scalars(
+        select(DeviceTelemetry)
+        .where(DeviceTelemetry.device_id == device_id)
+        .order_by(DeviceTelemetry.created_at.desc())
+        .limit(1)
+    ).first()
+    if not telemetry:
+        return {"device_id": str(device_id), "telemetry": None, "created_at": None}
+    return {"device_id": str(device_id), "telemetry": telemetry.payload, "created_at": telemetry.created_at.isoformat()}
+
+
 @app.post("/api/v1/devices/provision")
 def provision_device(payload: DeviceProvisionRequest, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict[str, str]:
     device_token = secrets.token_urlsafe(32)

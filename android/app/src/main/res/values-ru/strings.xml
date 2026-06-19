@@ -24,4 +24,9 @@
     <string name="firmware">Прошивка</string>
     <string name="last_seen">Последняя связь</string>
     <string name="no_data">Нет данных</string>
+    <string name="open">Открыть</string>
+    <string name="telemetry">Телеметрия</string>
+    <string name="updated_at">Обновлено</string>
+    <string name="uptime">Время работы</string>
+    <string name="load">Нагрузка</string>
 </resources>

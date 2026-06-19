@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 
 APP_NAME = "wrtmonitor"
-APP_VERSION = "0.1.0-test.9"
+APP_VERSION = "0.1.0-test.10"
 
 
 @dataclass(frozen=True)
@@ -63,6 +63,15 @@ def validate_database_url(value: str) -> str:
     return value.strip()
 
 
+def validate_jwt_secret(value: str | None) -> str:
+    secret = (value or "").strip()
+    if secret in {"", "change-me-long-random-secret", "change-me-long-random-jwt-secret"}:
+        raise ValueError("WRTMONITOR_JWT_SECRET must be set to a unique random value")
+    if len(secret) < 32:
+        raise ValueError("WRTMONITOR_JWT_SECRET must be at least 32 characters")
+    return secret
+
+
 def load_settings() -> Settings:
     allow_insecure_local = bool_from_env(os.getenv("WRTMONITOR_ALLOW_INSECURE_LOCAL"), False)
     public_url = os.getenv("WRTMONITOR_PUBLIC_SERVER_URL", "").strip() or None
@@ -78,7 +87,7 @@ def load_settings() -> Settings:
         ),
         bind_host=os.getenv("WRTMONITOR_BIND_HOST", "0.0.0.0"),
         bind_port=int(os.getenv("WRTMONITOR_BIND_PORT", "8080")),
-        jwt_secret=os.getenv("WRTMONITOR_JWT_SECRET", "change-me-long-random-secret"),
+        jwt_secret=validate_jwt_secret(os.getenv("WRTMONITOR_JWT_SECRET")),
         default_locale=os.getenv("WRTMONITOR_DEFAULT_LOCALE", "ru"),
         allow_insecure_local=allow_insecure_local,
         enable_api_docs=bool_from_env(os.getenv("WRTMONITOR_ENABLE_API_DOCS"), False),
