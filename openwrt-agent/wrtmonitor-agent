@@ -14,7 +14,8 @@ device_id() { cfg device_id; }
 api() {
   method="$1"
   path="$2"
-  body="${3:-{}}"
+  body="${3:-}"
+  [ -n "$body" ] || body="{}"
   if [ "$method" = "GET" ]; then
     curl -fsS -X "$method" "$(server_url)$path" \
       -H "Authorization: Bearer $(device_token)"
