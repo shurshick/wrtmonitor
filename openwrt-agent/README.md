@@ -1,17 +1,47 @@
 # OpenWrt agent
 
-Минимальный агент для `wrtmonitor`.
+Краткая инструкция для установки агента на роутер.
+
+Полная инструкция: [`docs/openwrt-agent.md`](../docs/openwrt-agent.md).
+
+## Установка
 
 ```sh
-sh install-openwrt.sh --server https://monitor.example.ru --token DEVICE_TOKEN --name HomeRouter
+cd /tmp
+wget -O wrtmonitor-openwrt-agent-v0.1.0-test.11.tar.gz \
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.11/wrtmonitor-openwrt-agent-v0.1.0-test.11.tar.gz
+tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.11.tar.gz
+sh install-openwrt.sh \
+  --server https://monitor.example.ru \
+  --admin-user admin@example.com \
+  --admin-password 'your-admin-password' \
+  --name 'HomeRouter'
 ```
 
-Без параметров установщик спросит адрес сервера, device token и имя роутера в консоли.
+## Обновление
 
-Команды:
+```sh
+cd /tmp
+/etc/init.d/wrtmonitor stop 2>/dev/null
+rm -f wrtmonitor-agent install-openwrt.sh wrtmonitor.init wrtmonitor.config
+wget -O wrtmonitor-openwrt-agent-v0.1.0-test.11.tar.gz \
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.11/wrtmonitor-openwrt-agent-v0.1.0-test.11.tar.gz
+tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.11.tar.gz
+cp wrtmonitor-agent /usr/bin/wrtmonitor-agent
+chmod 0755 /usr/bin/wrtmonitor-agent
+cp wrtmonitor.init /etc/init.d/wrtmonitor
+chmod 0755 /etc/init.d/wrtmonitor
+/etc/init.d/wrtmonitor enable
+/etc/init.d/wrtmonitor restart
+wrtmonitor-agent send-now
+```
 
-- `wrtmonitor-agent register`
-- `wrtmonitor-agent send-now`
-- `wrtmonitor-agent daemon`
+## Проверка
 
-Агент работает исходящими запросами к серверу, поэтому роутеру не нужен входящий порт из интернета.
+```sh
+uci show wrtmonitor
+ps | grep wrtmonitor
+logread | grep wrtmonitor | tail -20
+```
+
+Агент работает исходящими запросами к серверу. Входящий порт на роутере открывать не нужно.

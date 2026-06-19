@@ -1,37 +1,35 @@
-﻿# Развёртывание серверной части
+# Развёртывание серверной части
 
-Этот документ описывает установку сервера `wrtmonitor` для тестовой версии `0.1.0-test.11`.
+Документ актуален для `wrtmonitor v0.1.0-test.11`.
 
 Сервер состоит из двух контейнеров:
 
-- `wrtmonitor` — API и веб-страница первичной настройки;
-- `postgres` — база данных PostgreSQL.
+- `wrtmonitor` — backend API, первичная настройка, Web UI;
+- `postgres` — PostgreSQL база данных.
 
-С версии `0.1.0-test.11` сервер ведёт состояние схемы базы через Alembic. При первом запуске существующая база помечается как базовая, а следующие изменения схемы будут применяться миграциями при старте контейнера.
+Сервер можно запускать на обычном Docker-сервере, VPS, домашнем Linux-сервере, NAS с Docker или через TrueNAS Custom App.
 
-Сервер можно запускать на Docker-сервере, VPS, домашнем Linux-сервере, NAS с Docker или через TrueNAS Custom App.
+## Важное про безопасность
 
-## Что понадобится
+Начиная с `v0.1.0-test.11`, сервер не стартует с дефолтными секретами:
 
-- Docker или TrueNAS SCALE с Custom App.
-- Доступный внешний HTTPS-адрес сервера для Android-приложения и OpenWrt-роутеров.
-- Nginx Proxy Manager или другой reverse proxy для публикации HTTPS.
-- Пароль для PostgreSQL.
-- Длинный секрет для JWT.
+- `WRTMONITOR_JWT_SECRET` не должен быть пустым, коротким или `change-me-*`;
+- пароль PostgreSQL в `WRTMONITOR_DATABASE_URL` не должен быть пустым или `change-me-*`;
+- `POSTGRES_PASSWORD` и пароль внутри `WRTMONITOR_DATABASE_URL` должны совпадать.
 
-Основной тестовый сценарий предполагает внешний доступ через Nginx Proxy Manager:
+Внешний рабочий адрес сервера должен быть HTTPS:
 
 ```text
 https://monitor.example.ru
 ```
 
-Внутренний HTTP-порт `8088` нужен только как upstream для NPM:
+Внутренний HTTP-порт `8088` используется только как upstream для reverse proxy:
 
 ```text
 http://truenas-ip:8088
 ```
 
-## Важные переменные
+## Переменные
 
 ```env
 WRTMONITOR_PUBLIC_SERVER_URL=https://monitor.example.ru
@@ -41,50 +39,23 @@ POSTGRES_PASSWORD=replace-with-db-password
 POSTGRES_DB=wrtmonitor
 POSTGRES_USER=wrtmonitor
 WRTMONITOR_ALLOW_INSECURE_LOCAL=false
+WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS=false
 WRTMONITOR_ENABLE_API_DOCS=false
 ```
 
 Назначение:
 
-- `WRTMONITOR_PUBLIC_SERVER_URL` — адрес, по которому сервер будет доступен Android-приложению и OpenWrt-агенту.
-- `WRTMONITOR_HTTP_PORT` — порт на TrueNAS/Docker-хосте, по умолчанию `8088`.
+- `WRTMONITOR_PUBLIC_SERVER_URL` — внешний адрес, доступный Android-приложению и OpenWrt-роутерам.
+- `WRTMONITOR_HTTP_PORT` — порт на Docker/TrueNAS-хосте, по умолчанию `8088`.
 - `WRTMONITOR_JWT_SECRET` — длинная случайная строка для токенов входа.
 - `POSTGRES_PASSWORD` — пароль базы данных.
 - `POSTGRES_DB` — имя базы, можно оставить `wrtmonitor`.
 - `POSTGRES_USER` — пользователь базы, можно оставить `wrtmonitor`.
-- `WRTMONITOR_ALLOW_INSECURE_LOCAL` — для NPM/HTTPS ставьте `false`. `true` нужен только для временного локального HTTP-теста без прокси.
-- `WRTMONITOR_ENABLE_API_DOCS` — включает `/docs`, `/redoc` и `/openapi.json`. Для внешнего тестового сервера оставьте `false`.
+- `WRTMONITOR_ALLOW_INSECURE_LOCAL` — `true` только для временного локального HTTP-теста.
+- `WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS` — `true` только для CI/dev. На сервере оставляйте `false`.
+- `WRTMONITOR_ENABLE_API_DOCS` — включает `/docs`, `/redoc`, `/openapi.json`. На внешнем сервере оставляйте `false`.
 
-Начиная с `0.1.0-test.11`, сервер не запускается с дефолтным `WRTMONITOR_JWT_SECRET` или дефолтным паролем PostgreSQL. Замените примеры на свои длинные случайные значения до первого запуска.
-
-## Схема с Nginx Proxy Manager
-
-```text
-Android / OpenWrt
-        |
-        | https://monitor.example.ru
-        v
-Nginx Proxy Manager
-        |
-        | http://truenas-ip:8088
-        v
-wrtmonitor container
-        |
-        v
-PostgreSQL container
-```
-
-В NPM создайте Proxy Host:
-
-- `Domain Names`: ваш домен, например `monitor.example.ru`;
-- `Scheme`: `http`;
-- `Forward Hostname / IP`: IP TrueNAS или имя сервиса, доступное NPM;
-- `Forward Port`: `8088`;
-- включите `Websockets Support` не обязательно, но можно оставить включённым;
-- во вкладке SSL выпустите сертификат Let's Encrypt;
-- включите `Force SSL`.
-
-## Установка на TrueNAS Custom App
+## TrueNAS Custom App
 
 1. Откройте релиз:
    [v0.1.0-test.11](https://github.com/shurshick/wrtmonitor/releases/tag/v0.1.0-test.11)
@@ -92,73 +63,58 @@ PostgreSQL container
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-0.1.0-test.11.yaml
+   wrtmonitor-truenas-v0.1.0-test.11.yaml
    ```
 
-3. Если пакет GHCR приватный, добавьте в TrueNAS учётные данные для `ghcr.io`.
-
-   Образ сервера:
+3. При необходимости скачайте и проверьте checksums:
 
    ```text
-   ghcr.io/shurshick/wrtmonitor:0.1.0-test.11
+   SHA256SUMS.txt
    ```
 
-4. Перед вставкой YAML в TrueNAS замените тестовые значения.
-
-   TrueNAS проверяет compose-файл до запуска, поэтому файл не должен зависеть от незаданных `${...}` переменных.
-
-   Пароль базы должен совпадать в двух местах:
-
-   ```yaml
-   POSTGRES_PASSWORD: change-me-postgres-password
-   WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:change-me-postgres-password@postgres:5432/wrtmonitor
-   ```
-
-   Также замените внешний HTTPS-адрес и JWT-секрет:
+4. В YAML замените внешний адрес:
 
    ```yaml
    WRTMONITOR_PUBLIC_SERVER_URL: https://monitor.example.ru
-   WRTMONITOR_JWT_SECRET: change-me-long-random-jwt-secret
    ```
 
-   Значения `change-me-long-random-jwt-secret` и `change-me-postgres-password` оставлены как заметные placeholders. Их обязательно нужно заменить, иначе сервер не стартует.
+5. Замените пароль PostgreSQL в двух местах на один и тот же реальный пароль:
 
-## Upgrade from v0.1.0-test.10
+   ```yaml
+   POSTGRES_PASSWORD: replace-with-db-password
+   WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:replace-with-db-password@postgres:5432/wrtmonitor
+   ```
 
-1. PostgreSQL volume удалять не нужно.
-2. Проверьте, что `POSTGRES_PASSWORD` и пароль внутри `WRTMONITOR_DATABASE_URL` не начинаются с `change-me`.
-3. Проверьте, что `WRTMONITOR_JWT_SECRET` не дефолтный и длиннее 32 символов.
-4. Обновите серверный image на `ghcr.io/shurshick/wrtmonitor:0.1.0-test.11`.
-5. Обновите OpenWrt agent на роутере, чтобы получить стабильный multi-radio telemetry collector.
-6. Обновите Android APK, чтобы экран устройства показывал новые поля telemetry.
+6. Замените JWT secret:
 
-5. В TrueNAS создайте Custom App из подготовленного YAML.
+   ```yaml
+   WRTMONITOR_JWT_SECRET: replace-with-long-random-jwt-secret
+   ```
 
-6. Запустите приложение.
+7. Создайте TrueNAS Custom App из подготовленного YAML.
 
-7. Дождитесь, пока оба контейнера перейдут в состояние `running` или `healthy`.
+8. Запустите приложение и дождитесь состояния `running` или `healthy`.
 
-8. В Nginx Proxy Manager настройте Proxy Host на внутренний адрес:
+9. В Nginx Proxy Manager создайте Proxy Host:
 
    ```text
-   http://truenas-ip:8088
+   Domain Names: monitor.example.ru
+   Scheme: http
+   Forward Hostname / IP: truenas-ip
+   Forward Port: 8088
+   SSL: Let's Encrypt
+   Force SSL: enabled
    ```
 
-9. Откройте в браузере внешний адрес:
+10. Откройте:
 
-   ```text
-   https://monitor.example.ru/setup
-   ```
+    ```text
+    https://monitor.example.ru/setup
+    ```
 
-10. Создайте первого администратора.
+11. Создайте первого администратора.
 
-   На этом шаге задаются:
-
-   - имя администратора;
-   - пароль администратора;
-   - публичный адрес сервера.
-
-11. Проверьте состояние сервера через внешний адрес:
+12. Проверьте:
 
     ```text
     https://monitor.example.ru/health
@@ -170,29 +126,9 @@ PostgreSQL container
     {"status":"ok","database":"postgresql"}
     ```
 
-## Временный локальный HTTP-тест без NPM
+## Обычный Docker Compose
 
-Используйте только для проверки в локальной сети:
-
-```env
-WRTMONITOR_PUBLIC_SERVER_URL=http://truenas-ip:8088
-WRTMONITOR_HTTP_PORT=8088
-WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
-POSTGRES_PASSWORD=replace-with-db-password
-POSTGRES_DB=wrtmonitor
-POSTGRES_USER=wrtmonitor
-WRTMONITOR_ALLOW_INSECURE_LOCAL=true
-```
-
-В этом режиме открывайте:
-
-```text
-http://truenas-ip:8088/setup
-```
-
-## Установка на обычный Docker-сервер
-
-1. Скачайте исходники или используйте `docker-compose.yml` из репозитория.
+1. Скачайте репозиторий или используйте `docker-compose.yml`.
 
 2. Создайте `.env`:
 
@@ -204,6 +140,7 @@ http://truenas-ip:8088/setup
    WRTMONITOR_JWT_SECRET=replace-with-long-random-secret
    WRTMONITOR_DEFAULT_LOCALE=ru
    WRTMONITOR_ALLOW_INSECURE_LOCAL=false
+   WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS=false
    WRTMONITOR_ENABLE_API_DOCS=false
    POSTGRES_DB=wrtmonitor
    POSTGRES_USER=wrtmonitor
@@ -216,26 +153,62 @@ http://truenas-ip:8088/setup
    docker compose up -d
    ```
 
-4. Настройте Nginx Proxy Manager или другой reverse proxy на внутренний адрес:
+4. Настройте reverse proxy на:
 
    ```text
    http://server-ip:8088
    ```
 
-5. Откройте внешний адрес `https://monitor.example.ru/setup`.
+5. Откройте `https://monitor.example.ru/setup`.
 
-6. Создайте администратора и проверьте `/health`.
+## Временный локальный HTTP-тест
+
+Только для локальной проверки без NPM:
+
+```env
+WRTMONITOR_PUBLIC_SERVER_URL=http://truenas-ip:8088
+WRTMONITOR_ALLOW_INSECURE_LOCAL=true
+```
+
+Открывайте:
+
+```text
+http://truenas-ip:8088/setup
+```
+
+## Обновление с v0.1.0-test.10
+
+1. PostgreSQL volume удалять не нужно.
+2. Проверьте, что пароль БД не начинается с `change-me`.
+3. Проверьте, что `WRTMONITOR_JWT_SECRET` не дефолтный и длиннее 32 символов.
+4. Обновите image на:
+
+   ```text
+   ghcr.io/shurshick/wrtmonitor:0.1.0-test.11
+   ```
+
+5. Перезапустите сервер.
+6. Обновите OpenWrt agent на роутере.
+7. Обновите Android APK.
 
 ## После установки сервера
 
 1. Установите Android APK из релиза.
-2. При первом запуске Android-приложение спросит адрес сервера.
-3. Затем приложение попросит логин и пароль администратора, созданного на `/setup`.
-4. Установите OpenWrt agent из релиза.
-5. Установщик агента также спросит адрес сервера и логин/пароль администратора.
-6. После входа агент получит отдельный device token. Пароль администратора на роутере не сохраняется.
+2. В Android укажите внешний HTTPS-адрес сервера.
+3. Войдите логином и паролем администратора.
+4. Установите OpenWrt agent.
+5. Проверьте `/devices` и экран устройства в Android.
 
 ## Типичные проблемы
+
+### Сервер не стартует после обновления
+
+Проверьте:
+
+- `WRTMONITOR_JWT_SECRET` заменён на реальное значение;
+- `POSTGRES_PASSWORD` заменён на реальное значение;
+- пароль в `WRTMONITOR_DATABASE_URL` совпадает с `POSTGRES_PASSWORD`;
+- `WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS=false` на сервере.
 
 ### `/setup` не открывается
 
@@ -243,49 +216,22 @@ http://truenas-ip:8088/setup
 
 - контейнер `wrtmonitor` запущен;
 - порт `8088` не занят другим приложением;
-- в TrueNAS порт опубликован наружу;
-- `WRTMONITOR_HTTP_PORT` совпадает с портом, который вы открываете в браузере.
-
-### `/health` возвращает ошибку
-
-Проверьте:
-
-- контейнер `postgres` запущен;
-- пароль `POSTGRES_PASSWORD` одинаковый для PostgreSQL и строки подключения;
-- volume PostgreSQL не содержит старую базу с другим паролем.
-
-### Сервер не принимает HTTP-адрес
-
-Для локального теста должен быть включён:
-
-```env
-WRTMONITOR_ALLOW_INSECURE_LOCAL=true
-```
-
-Для NPM/HTTPS используйте:
-
-```env
-WRTMONITOR_ALLOW_INSECURE_LOCAL=false
-```
+- reverse proxy направляет на правильный IP и порт.
 
 ### Android или OpenWrt не подключаются
 
-Проверьте, что `WRTMONITOR_PUBLIC_SERVER_URL` доступен именно с телефона и роутера, а не только с компьютера.
+Проверьте, что `WRTMONITOR_PUBLIC_SERVER_URL` доступен именно с телефона и роутера.
 
-При NPM в Android и OpenWrt указывайте внешний HTTPS-адрес:
+При NPM указывайте внешний HTTPS-адрес:
 
 ```text
 https://monitor.example.ru
 ```
 
-Не указывайте внутренний `http://truenas-ip:8088`, если телефон или роутер должны работать извне.
+Не указывайте внутренний `http://truenas-ip:8088`, если устройство должно работать извне.
 
-## Обновление тестовой версии
+## Данные и миграции
 
-1. Остановите Custom App или Docker Compose.
-2. Обновите image tag в YAML или `.env`.
-3. Запустите приложение снова.
-4. PostgreSQL volume удалять не нужно, если хотите сохранить администратора и устройства.
+Схема базы ведётся через Alembic. Новая пустая PostgreSQL база поднимается миграциями. Существующая база `v0.1.0-test.10` помечается как базовая без удаления данных.
 
-Для чистой переустановки удалите volume PostgreSQL. Это удалит администратора, устройства и всю телеметрию.
-
+PostgreSQL volume удалять нужно только для чистой переустановки. Это удалит администратора, устройства и telemetry.

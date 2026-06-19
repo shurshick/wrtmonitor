@@ -1,16 +1,43 @@
-﻿# TrueNAS Custom App
+# TrueNAS Custom App
 
-Подробная инструкция по серверной части находится здесь:
+Короткая инструкция для TrueNAS SCALE Custom App.
 
-- [Развёртывание серверной части](server-deployment.md)
+Полная инструкция: [Развёртывание серверной части](server-deployment.md).
 
-Коротко:
+## Актуальная версия
 
-1. Скачайте `wrtmonitor-truenas-0.1.0-test.11.yaml` из релиза.
-2. В YAML замените `WRTMONITOR_PUBLIC_SERVER_URL`, `WRTMONITOR_JWT_SECRET` и пароль `change-me-postgres-password` в двух местах.
-3. Создайте TrueNAS Custom App из подготовленного YAML.
-4. Настройте Nginx Proxy Manager на внутренний адрес `http://truenas-ip:8088`.
-5. Откройте внешний адрес `https://ваш-домен/setup` и создайте первого администратора.
+```text
+v0.1.0-test.11
+```
 
-Если TrueNAS публикует приложение через reverse proxy, в `WRTMONITOR_PUBLIC_SERVER_URL` указывайте внешний HTTPS-адрес, доступный Android-приложению и OpenWrt-роутерам.
+## Файл YAML
 
+Скачайте из релиза:
+
+```text
+wrtmonitor-truenas-v0.1.0-test.11.yaml
+```
+
+## Что заменить перед запуском
+
+```yaml
+WRTMONITOR_PUBLIC_SERVER_URL: https://monitor.example.ru
+POSTGRES_PASSWORD: replace-with-db-password
+WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:replace-with-db-password@postgres:5432/wrtmonitor
+WRTMONITOR_JWT_SECRET: replace-with-long-random-jwt-secret
+```
+
+Значения `change-me-*` оставлять нельзя. Сервер не стартует с дефолтными секретами.
+
+## Порядок
+
+1. Создайте Custom App из подготовленного YAML.
+2. Запустите приложение.
+3. Настройте Nginx Proxy Manager на `http://truenas-ip:8088`.
+4. Откройте `https://monitor.example.ru/setup`.
+5. Создайте первого администратора.
+6. Проверьте `https://monitor.example.ru/health`.
+
+## Обновление
+
+PostgreSQL volume удалять не нужно. Обновите image tag/YAML до `0.1.0-test.11`, проверьте секреты и перезапустите приложение.

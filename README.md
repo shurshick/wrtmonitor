@@ -9,8 +9,8 @@
 ## Компоненты
 
 - Сервер: FastAPI + PostgreSQL.
-- OpenWrt-клиент: shell-agent для регистрации, телеметрии, heartbeat и выполнения разрешённых команд.
-- Android-приложение: Material 3 клиент для мониторинга и управления.
+- OpenWrt-клиент: shell-agent для регистрации, telemetry и выполнения разрешённых команд.
+- Android-приложение: Material 3 клиент для мониторинга роутеров.
 - Docker Compose: запуск на Docker-сервере, VPS, домашнем Linux-сервере, NAS с Docker.
 - TrueNAS Custom App: отдельный сценарий развёртывания через Docker.
 
@@ -56,6 +56,12 @@ WRTMONITOR_PUBLIC_SERVER_URL=http://server-ip:8088
 
 - [`deploy/truenas/wrtmonitor-truenas.yaml`](deploy/truenas/wrtmonitor-truenas.yaml)
 
+В релизе файл называется:
+
+```text
+wrtmonitor-truenas-v0.1.0-test.11.yaml
+```
+
 Образ тестовой версии:
 
 ```text
@@ -88,26 +94,29 @@ OpenWrt agent выполняет только команды из allowlist:
 
 ## Статус
 
-Текущий каркас содержит:
+Текущая тестовая версия `v0.1.0-test.11` содержит:
 
 - backend API;
-- PostgreSQL-схему;
+- PostgreSQL и Alembic-миграции;
 - очередь команд для OpenWrt agent;
-- минимальный OpenWrt agent;
-- минимальный Android Material 3 scaffold;
+- OpenWrt agent с telemetry через `ubus`, UCI wireless и multi-radio Wi-Fi snapshot;
+- API последней телеметрии;
+- retention последних 100 telemetry snapshots на устройство;
+- Android-экран устройства с telemetry;
+- защита от дефолтных JWT/DB секретов;
+- Web UI `/devices` с авторизацией;
 - Docker Compose;
-- CI.
+- CI с backend E2E, agent smoke tests, `sh -n`, shellcheck, Docker и Android build;
 - TrueNAS YAML;
-- Android debug APK в CI artifacts.
+- Android debug APK в релизах.
 
 Следующие крупные блоки:
 
 - полноценная первичная настройка в Android;
-- локальный поиск OpenWrt-роутера из Android и подключение агента к серверу;
-- реальные Android API-клиенты вместо статических экранов;
-- расширенная телеметрия OpenWrt через `ubus`;
 - управление клиентами, Wi-Fi и сетевыми профилями;
-- сборка установочных артефактов.
+- более полный UX команд управления;
+- signed Android APK;
+- локальный поиск OpenWrt-роутера из Android и подключение агента к серверу.
 
 ## Документация
 
