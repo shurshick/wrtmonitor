@@ -15,7 +15,8 @@ services:
       retries: 10
 
   wrtmonitor:
-    image: ghcr.io/shurshick/wrtmonitor:0.1.0-test.14
+    image: ghcr.io/shurshick/wrtmonitor:latest
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       postgres:

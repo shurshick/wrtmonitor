@@ -1,43 +1,27 @@
 # TrueNAS Custom App
 
-Короткая инструкция для TrueNAS SCALE Custom App.
+Полная инструкция: [развёртывание серверной части](server-deployment.md).
 
-Полная инструкция: [Развёртывание серверной части](server-deployment.md).
+## Образ
 
-## Актуальная версия
-
-```text
-v0.1.0-test.14
-```
-
-## Файл YAML
-
-Скачайте из релиза:
+В TrueNAS YAML используется стабильная ссылка на текущую тестовую сборку:
 
 ```text
-wrtmonitor-truenas-v0.1.0-test.14.yaml
+ghcr.io/shurshick/wrtmonitor:latest
 ```
 
-## Что заменить перед запуском
+В сервисе включён `pull_policy: always`. Это означает: при redeploy TrueNAS всегда проверяет и скачивает новый образ `latest`.
 
-```yaml
-WRTMONITOR_PUBLIC_SERVER_URL: https://monitor.example.ru
-POSTGRES_PASSWORD: replace-with-db-password
-WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:replace-with-db-password@postgres:5432/wrtmonitor
-WRTMONITOR_JWT_SECRET: replace-with-long-random-jwt-secret
-```
+## Важное ограничение Docker
 
-Значения `change-me-*` оставлять нельзя. Сервер не стартует с дефолтными секретами.
-
-## Порядок
-
-1. Создайте Custom App из подготовленного YAML.
-2. Запустите приложение.
-3. Настройте Nginx Proxy Manager на `http://truenas-ip:8088`.
-4. Откройте `https://monitor.example.ru/setup`.
-5. Создайте первого администратора.
-6. Проверьте `https://monitor.example.ru/health`.
+`latest` не является автообновлением работающего контейнера. Если новый релиз опубликован, старый контейнер продолжит работать до ручного redeploy.
 
 ## Обновление
 
-PostgreSQL volume удалять не нужно. Обновите image tag/YAML до `0.1.0-test.14`, проверьте секреты и перезапустите приложение.
+1. Apps → `wrtmonitor` → **Edit**.
+2. Проверьте image `ghcr.io/shurshick/wrtmonitor:latest`.
+3. Нажмите **Save** и дождитесь redeploy.
+4. Убедитесь, что App перешёл в `Running`.
+5. Откройте `/health` через внешний HTTPS-адрес.
+
+PostgreSQL volume не удаляйте. Его удаление стирает администратора, роутеры и историю telemetry.

@@ -1,49 +1,39 @@
 # Установка на TrueNAS Custom App
 
-Актуальная тестовая версия: `v0.1.0-test.14`.
-
-Docker image:
+YAML использует образ:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.14
+ghcr.io/shurshick/wrtmonitor:latest
 ```
 
-## Быстрый порядок
+При каждом redeploy параметр `pull_policy: always` заставляет TrueNAS скачать актуальный образ.
 
-1. Скачайте из релиза `wrtmonitor-truenas-v0.1.0-test.14.yaml`.
-2. Замените в YAML внешний адрес сервера.
-3. Замените `POSTGRES_PASSWORD`.
-4. Замените пароль в `WRTMONITOR_DATABASE_URL` на тот же пароль.
-5. Замените `WRTMONITOR_JWT_SECRET`.
-6. Создайте TrueNAS Custom App из YAML.
-7. Настройте Nginx Proxy Manager на `http://truenas-ip:8088`.
-8. Откройте `https://monitor.example.ru/setup`.
+## Первичная установка
 
-## Что обязательно заменить
+1. Скачайте из последнего релиза `wrtmonitor-truenas-v0.1.0-test.15.yaml`.
+2. В YAML замените `WRTMONITOR_PUBLIC_SERVER_URL` на внешний HTTPS-адрес.
+3. Замените `POSTGRES_PASSWORD` и такой же пароль в `WRTMONITOR_DATABASE_URL`.
+4. Замените `WRTMONITOR_JWT_SECRET` на длинное случайное значение.
+5. Создайте Custom App из YAML и запустите его.
+6. В Nginx Proxy Manager направьте `https://monitor.example.ru` на `http://truenas-ip:8088`.
+7. Откройте `https://monitor.example.ru/setup` и создайте первого администратора.
 
-```yaml
-POSTGRES_PASSWORD: replace-with-db-password
-WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:replace-with-db-password@postgres:5432/wrtmonitor
-WRTMONITOR_PUBLIC_SERVER_URL: https://monitor.example.ru
-WRTMONITOR_JWT_SECRET: replace-with-long-random-jwt-secret
-```
+## Обновление latest
 
-Сервер `v0.1.0-test.14` не запустится с `change-me-*` секретами. Это нормально и сделано специально.
+Тег `latest` не обновляет уже работающий контейнер автоматически. Выполните в TrueNAS:
 
-## Nginx Proxy Manager
+1. Откройте **Apps** и выберите `wrtmonitor`.
+2. Нажмите **Edit**.
+3. Убедитесь, что image указан именно так:
 
-```text
-Scheme: http
-Forward Hostname / IP: truenas-ip
-Forward Port: 8088
-SSL: Let's Encrypt
-Force SSL: enabled
-```
+   ```text
+   ghcr.io/shurshick/wrtmonitor:latest
+   ```
 
-Проверка:
+4. Сохраните изменения и дождитесь redeploy приложения.
+5. В списке Apps дождитесь статуса `Running`.
+6. Проверьте `https://monitor.example.ru/health`.
 
-```text
-https://monitor.example.ru/health
-```
+PostgreSQL volume удалять не нужно: администратор, устройства и telemetry сохранятся.
 
-Подробная инструкция: [`docs/server-deployment.md`](../../docs/server-deployment.md).
+Если TrueNAS всё ещё показывает старую версию, остановите App, снова нажмите **Edit → Save** и запустите его. Это запускает повторный pull благодаря `pull_policy: always`.

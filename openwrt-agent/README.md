@@ -8,9 +8,9 @@
 
 ```sh
 cd /tmp
-wget -O wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.14/wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
-tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
+wget -O wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz \
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.15/wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
+tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
 sh install-openwrt.sh \
   --server https://monitor.example.ru \
   --admin-user admin@example.com \
@@ -24,9 +24,9 @@ sh install-openwrt.sh \
 cd /tmp
 /etc/init.d/wrtmonitor stop 2>/dev/null
 rm -f wrtmonitor-agent install-openwrt.sh wrtmonitor.init wrtmonitor.config
-wget -O wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.14/wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
-tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
+wget -O wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz \
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.15/wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
+tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
 cp wrtmonitor-agent /usr/bin/wrtmonitor-agent
 chmod 0755 /usr/bin/wrtmonitor-agent
 cp wrtmonitor.init /etc/init.d/wrtmonitor

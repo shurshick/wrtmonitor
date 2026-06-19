@@ -1,92 +1,26 @@
-# Release Notes
+# v0.1.0-test.15 — Stability, Web UI and TrueNAS latest
 
-## v0.1.0-test.14 — Android device control flow
+## Android
 
-Обновлён основной Android-интерфейс:
+- Исправлено падение после первого входа: adaptive launcher icon больше не используется как неподдерживаемый Compose painter.
+- Версия приложения: `0.1.0-test.15`, `versionCode 15`.
 
-- нижняя навигация переключает экраны и внутри выбранного устройства;
-- системная кнопка «Назад» и edge-swipe возвращают из устройства к списку роутеров;
-- шапка использует `WrtMonitor` и launcher icon;
-- иконки нижней навигации получили отдельные цвета;
-- telemetry прокручивается, данные памяти показаны в MB, raw telemetry больше не выглядит как пустая фиолетовая полоса;
-- Wi-Fi показывает состояние radio, умеет поставить в очередь включение/выключение и изменение SSID;
-- Сеть показывает интерфейсы из telemetry и запрашивает обновление интерфейсов через агента;
-- Система показывает uptime, load, модель, прошивку, обновляет telemetry и отправляет reboot с подтверждением;
-- в настройках добавлен рабочий выход из учётной записи.
+## Web UI
 
-Артефакты:
+- Список устройств получил обновлённый интерфейс и переход на страницу роутера.
+- Страница устройства показывает telemetry, Wi-Fi radios, сетевые интерфейсы, системные данные и историю команд.
+- Из Web UI доступны безопасные команды: включение/выключение Wi-Fi, смена SSID, запрос сетевых интерфейсов и перезагрузка с подтверждением.
 
-- Docker image: `ghcr.io/shurshick/wrtmonitor:0.1.0-test.14`;
-- TrueNAS YAML: `wrtmonitor-truenas-v0.1.0-test.14.yaml`;
-- Android APK: `wrtmonitor-android-v0.1.0-test.14-debug.apk`;
-- OpenWrt agent: `wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz`;
-- checksums: `SHA256SUMS.txt`.
+## TrueNAS
 
-## v0.1.0-test.13 — About app and update check
+- TrueNAS YAML переведён на `ghcr.io/shurshick/wrtmonitor:latest`.
+- Добавлен `pull_policy: always` для получения нового образа при redeploy.
+- Инструкции поясняют обязательный ручной redeploy в TrueNAS: работающий контейнер сам не заменяется.
 
-В Android-раздел настроек добавлен экран «О приложении»:
+## Артефакты
 
-- версия установленного приложения;
-- copyright;
-- ссылка на GitHub-проект;
-- проверка последнего релиза через GitHub API;
-- сообщение об актуальной версии или доступном обновлении;
-- переход на страницу релиза для скачивания APK.
-
-Артефакты:
-
-- Docker image: `ghcr.io/shurshick/wrtmonitor:0.1.0-test.13`;
-- TrueNAS YAML: `wrtmonitor-truenas-v0.1.0-test.13.yaml`;
-- Android APK: `wrtmonitor-android-v0.1.0-test.13-debug.apk`;
-- OpenWrt agent: `wrtmonitor-openwrt-agent-v0.1.0-test.13.tar.gz`;
-- checksums: `SHA256SUMS.txt`.
-
-## v0.1.0-test.12 — Android icon and update fix
-
-Релиз исправляет тестовую Android-сборку:
-
-- добавлена adaptive launcher icon для Android;
-- `versionCode` повышен до `12`;
-- `versionName` обновлён до `0.1.0-test.12`;
-- debug APK подписывается стабильным тестовым ключом из репозитория;
-- следующие debug APK смогут ставиться поверх предыдущих тестовых APK с этой же подписью.
-
-Важно: если на телефоне установлен APK `v0.1.0-test.11` или старее, он мог быть подписан случайным debug-ключом CI. Android не разрешает обновление при смене подписи, поэтому для перехода на `v0.1.0-test.12` может понадобиться один раз удалить старое приложение. После этого следующие тестовые версии должны обновляться поверх.
-
-Артефакты:
-
-- Docker image: `ghcr.io/shurshick/wrtmonitor:0.1.0-test.12`;
-- TrueNAS YAML: `wrtmonitor-truenas-v0.1.0-test.12.yaml`;
-- Android APK: `wrtmonitor-android-v0.1.0-test.12-debug.apk`;
-- OpenWrt agent: `wrtmonitor-openwrt-agent-v0.1.0-test.12.tar.gz`;
-- checksums: `SHA256SUMS.txt`.
-
-## v0.1.0-test.11 — agent stability
-
-Релиз закрепляет telemetry-контур `v0.1.0-test.10` и делает OpenWrt agent/backend надёжнее для дальнейших тестов.
-
-Главное:
-
-- OpenWrt agent проверяется через `sh -n`, shellcheck и agent smoke tests.
-- Критичные JSON-поля в agent читаются через `jsonfilter`, а не regex.
-- Wi-Fi telemetry готова к multi-radio конфигурациям.
-- Сервер не стартует с дефолтным JWT secret или дефолтным паролем PostgreSQL.
-- API последней телеметрии возвращает `age_seconds`, `is_stale` и `source`.
-- Сервер хранит последние 100 telemetry snapshots на устройство.
-- Android экран устройства показывает основные telemetry-поля без raw JSON как основного UI.
-
-Артефакты:
-
-- Docker image: `ghcr.io/shurshick/wrtmonitor:0.1.0-test.11`;
-- TrueNAS YAML: `wrtmonitor-truenas-v0.1.0-test.11.yaml`;
-- Android APK: `wrtmonitor-android-v0.1.0-test.11-debug.apk`;
-- OpenWrt agent: `wrtmonitor-openwrt-agent-v0.1.0-test.11.tar.gz`;
-- checksums: `SHA256SUMS.txt`.
-
-Обновление с `v0.1.0-test.10`:
-
-- PostgreSQL volume удалять не нужно.
-- Замените `WRTMONITOR_JWT_SECRET`, если он дефолтный или короткий.
-- Замените `POSTGRES_PASSWORD` и пароль в `WRTMONITOR_DATABASE_URL`, если они начинаются с `change-me`.
-- Обновите OpenWrt agent.
-- Обновите Android APK.
+- Docker image: `ghcr.io/shurshick/wrtmonitor:latest` и `ghcr.io/shurshick/wrtmonitor:0.1.0-test.15`.
+- TrueNAS YAML: `wrtmonitor-truenas-v0.1.0-test.15.yaml`.
+- Android APK: `wrtmonitor-android-v0.1.0-test.15-debug.apk`.
+- OpenWrt agent: `wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz`.
+- Checksums: `SHA256SUMS.txt`.

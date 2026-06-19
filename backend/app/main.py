@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from html import escape
+import json
 import secrets
 from typing import Any
 from uuid import UUID, uuid4
@@ -250,64 +251,146 @@ def devices_page(config: Settings = Depends(settings), db: Session = Depends(get
     user = web_user_from_session(wrtmonitor_session, config, db)
     if not user:
         return RedirectResponse("/login", status_code=303)
-    devices = db.scalars(select(Device).order_by(Device.created_at.desc())).all()
     rows = []
-    for device in devices:
-        last_seen = device.last_seen_at.isoformat() if device.last_seen_at else "нет данных"
-        delete_form = ""
-        if device.last_seen_at is None and device.status in {"provisioned", "offline"}:
-            delete_form = (
-                f'<form method="post" action="/devices/{device.id}/delete" style="margin:0">'
-                '<button type="submit">Удалить</button>'
-                "</form>"
-            )
+    for device in db.scalars(select(Device).order_by(Device.created_at.desc())).all():
+        name = escape(device.name or device.hostname or "Роутер")
+        last_seen = escape(device.last_seen_at.isoformat() if device.last_seen_at else "нет данных")
         rows.append(
             "<tr>"
-            f"<td>{escape(device.name or '')}</td>"
+            f'<td><a href="/devices/{device.id}">{name}</a></td>'
             f"<td>{escape(device.hostname or '')}</td>"
             f"<td>{escape(device.model or '')}</td>"
             f"<td>{escape(device.firmware or '')}</td>"
             f"<td>{escape(device.status)}</td>"
-            f"<td>{escape(last_seen)}</td>"
-            f"<td>{delete_form}</td>"
+            f"<td>{last_seen}</td>"
             "</tr>"
         )
-    table_body = "\n".join(rows) if rows else '<tr><td colspan="7">Устройства пока не подключены</td></tr>'
+    table_body = "\n".join(rows) if rows else '<tr><td colspan="6">Роутеры пока не подключены</td></tr>'
     return HTMLResponse(
         f"""
-        <html lang="ru">
-        <head>
-          <meta charset="utf-8">
-          <title>wrtmonitor — устройства</title>
-          <style>
-            body {{ font-family: sans-serif; margin: 32px; }}
-            table {{ border-collapse: collapse; width: 100%; }}
-            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            th {{ background: #f4f4f4; }}
-          </style>
-        </head>
-        <body>
-          <h1>Устройства</h1>
-          <p><a href="/">На главную</a></p>
-          <form method="post" action="/logout"><button type="submit">Выйти</button></form>
-          <table>
-            <thead>
-              <tr>
-                <th>Имя</th>
-                <th>Hostname</th>
-                <th>Модель</th>
-                <th>Прошивка</th>
-                <th>Статус</th>
-                <th>Последняя связь</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>{table_body}</tbody>
-          </table>
-        </body>
-        </html>
+        <html lang="ru"><head><meta charset="utf-8"><title>WrtMonitor - устройства</title>
+        <style>
+          body {{ font-family:system-ui,sans-serif; max-width:1100px; margin:32px auto; padding:0 16px; color:#24212b; background:#fcf8ff; }}
+          a {{ color:#5d46b3; }} table {{ border-collapse:collapse; width:100%; background:white; }}
+          th,td {{ border-bottom:1px solid #e7e0eb; padding:12px; text-align:left; }} th {{ color:#5d46b3; }}
+          button {{ border:0; border-radius:6px; padding:8px 12px; background:#5d46b3; color:white; cursor:pointer; }}
+          .bar {{ display:flex; align-items:center; justify-content:space-between; gap:16px; }}
+        </style></head><body>
+        <div class="bar"><div><h1>WrtMonitor</h1><p>Устройства</p></div><form method="post" action="/logout"><button>Выйти</button></form></div>
+        <table><thead><tr><th>Имя</th><th>Hostname</th><th>Модель</th><th>Прошивка</th><th>Статус</th><th>Последняя связь</th></tr></thead>
+        <tbody>{table_body}</tbody></table></body></html>
         """
     )
+
+
+@app.get("/devices/{device_id}", response_class=HTMLResponse)
+def device_page(device_id: UUID, config: Settings = Depends(settings), db: Session = Depends(get_db), wrtmonitor_session: str | None = Cookie(default=None)):
+    if is_setup_required(db, config):
+        return RedirectResponse("/setup", status_code=303)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    device = db.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    telemetry = db.scalars(
+        select(DeviceTelemetry).where(DeviceTelemetry.device_id == device_id).order_by(DeviceTelemetry.created_at.desc()).limit(1)
+    ).first()
+    payload = telemetry.payload if telemetry else {}
+    system = payload.get("system") or {}
+    memory = system.get("memory") or {}
+    wifi = payload.get("wifi") or {}
+    network = payload.get("network") or {}
+    radios = wifi.get("radios") or []
+    interfaces = network.get("interface") or []
+    commands = db.scalars(
+        select(DeviceCommand).where(DeviceCommand.device_id == device_id).order_by(DeviceCommand.created_at.desc()).limit(10)
+    ).all()
+    radio_rows = "".join(
+        f"<li>{escape(str(radio.get('name', 'radio')))}: {'включён' if radio.get('up') else 'выключен'}; "
+        f"SSID: {escape(', '.join(radio.get('ssid') or [])) or 'нет данных'}</li>"
+        for radio in radios
+    ) or "<li>Wi-Fi радио не обнаружено</li>"
+    interface_rows = "".join(
+        f"<li>{escape(str(item.get('interface', 'interface')))}: {'в сети' if item.get('up') else 'не в сети'} "
+        f"{escape(str(item.get('l3_device') or item.get('device') or ''))}</li>"
+        for item in interfaces
+    ) or "<li>Данные интерфейсов ещё не получены</li>"
+    command_rows = "".join(
+        "<tr>"
+        f"<td>{escape(command.command_type)}</td><td>{escape(command.status)}</td>"
+        f"<td>{escape(command.updated_at.isoformat())}</td>"
+        f"<td><pre>{escape(json.dumps(command.result or {}, ensure_ascii=False))}</pre></td>"
+        "</tr>"
+        for command in commands
+    ) or '<tr><td colspan="4">Команд пока нет</td></tr>'
+    latest = telemetry.created_at.isoformat() if telemetry else "нет данных"
+    age = max(0, int((now_utc() - telemetry.created_at).total_seconds())) if telemetry else None
+    return HTMLResponse(
+        f"""
+        <html lang="ru"><head><meta charset="utf-8"><title>WrtMonitor - {escape(device.name or device.hostname or 'роутер')}</title>
+        <style>
+          body {{ font-family:system-ui,sans-serif; max-width:1100px; margin:32px auto; padding:0 16px; color:#24212b; background:#fcf8ff; }}
+          a {{ color:#5d46b3; }} .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }}
+          .card {{ background:white; border:1px solid #e7e0eb; border-radius:8px; padding:18px; }}
+          dt {{ color:#6d6875; }} dd {{ margin:4px 0 12px; font-weight:600; }}
+          button {{ border:0; border-radius:6px; padding:9px 13px; background:#5d46b3; color:white; cursor:pointer; }}
+          input,select {{ padding:8px; margin:4px 0 8px; width:100%; box-sizing:border-box; }}
+          table {{ width:100%; border-collapse:collapse; background:white; }} th,td {{ border-bottom:1px solid #e7e0eb; padding:8px; text-align:left; }} pre {{ white-space:pre-wrap; margin:0; }}
+        </style></head><body>
+        <p><a href="/devices">&larr; Устройства</a></p>
+        <h1>{escape(device.name or device.hostname or 'Роутер')}</h1>
+        <p>{escape(device.model or '')} · {escape(device.firmware or '')} · <strong>{escape(device.status)}</strong></p>
+        <div class="grid">
+          <section class="card"><h2>Телеметрия</h2><dl>
+            <dt>Обновлено</dt><dd>{escape(latest)}</dd><dt>Возраст</dt><dd>{age if age is not None else 'нет данных'} сек</dd>
+            <dt>Время работы</dt><dd>{escape(str(system.get('uptime', 'нет данных')))}</dd><dt>Нагрузка</dt><dd>{escape(str(system.get('load', 'нет данных')))}</dd>
+            <dt>Память</dt><dd>{escape(str(memory.get('available_kb', '-')))} / {escape(str(memory.get('total_kb', '-')))} KB</dd>
+          </dl></section>
+          <section class="card"><h2>Wi-Fi</h2><ul>{radio_rows}</ul>
+            <form method="post" action="/devices/{device.id}/web-command"><input type="hidden" name="command_type" value="wifi.set_enabled"><label>Состояние</label><select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select><button>Применить</button></form>
+            <form method="post" action="/devices/{device.id}/web-command"><input type="hidden" name="command_type" value="wifi.set_ssid"><label>Новый SSID</label><input name="ssid" required maxlength="64"><button>Изменить SSID</button></form>
+          </section>
+          <section class="card"><h2>Сеть</h2><ul>{interface_rows}</ul><form method="post" action="/devices/{device.id}/web-command"><input type="hidden" name="command_type" value="network.interfaces"><button>Запросить интерфейсы</button></form></section>
+          <section class="card"><h2>Система</h2><p>Команда перезагрузки будет выполнена при следующем опросе агента.</p><form method="post" action="/devices/{device.id}/web-command" onsubmit="return confirm('Перезагрузить роутер?')"><input type="hidden" name="command_type" value="router.reboot"><button>Перезагрузить</button></form></section>
+        </div>
+        <h2>Последние команды</h2><table><thead><tr><th>Команда</th><th>Статус</th><th>Обновлено</th><th>Результат</th></tr></thead><tbody>{command_rows}</tbody></table>
+        <h2>Raw telemetry</h2><pre>{escape(json.dumps(payload, ensure_ascii=False, indent=2))}</pre>
+        </body></html>
+        """
+    )
+
+
+@app.post("/devices/{device_id}/web-command")
+def web_device_command(
+    device_id: UUID,
+    command_type: str = Form(...),
+    ssid: str = Form(default=""),
+    enabled: str = Form(default="true"),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    if is_setup_required(db, config):
+        return RedirectResponse("/setup", status_code=303)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    if command_type not in ALLOWED_COMMANDS or not db.get(Device, device_id):
+        raise HTTPException(status_code=400, detail="Unsupported command or device")
+    payload: dict[str, Any] = {}
+    if command_type == "wifi.set_ssid":
+        if not ssid.strip():
+            raise HTTPException(status_code=400, detail="SSID is required")
+        payload["ssid"] = ssid.strip()
+    elif command_type == "wifi.set_enabled":
+        payload["enabled"] = enabled.lower() == "true"
+    now = now_utc()
+    command = DeviceCommand(id=uuid4(), device_id=device_id, command_type=command_type, payload=payload, status="queued", result=None, created_by=user.id, created_at=now, updated_at=now)
+    db.add(command)
+    audit(db, user.id, "command.create", "device_command", str(command.id), {"command_type": command_type, "source": "web"})
+    db.commit()
+    return RedirectResponse(f"/devices/{device_id}", status_code=303)
 
 
 @app.post("/devices/{device_id}/delete")

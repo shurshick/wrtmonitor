@@ -1,6 +1,6 @@
 # Развёртывание серверной части
 
-Документ актуален для `wrtmonitor v0.1.0-test.14`.
+Документ актуален для `wrtmonitor v0.1.0-test.15`.
 
 Сервер состоит из двух контейнеров:
 
@@ -58,12 +58,12 @@ WRTMONITOR_ENABLE_API_DOCS=false
 ## TrueNAS Custom App
 
 1. Откройте релиз:
-   [v0.1.0-test.14](https://github.com/shurshick/wrtmonitor/releases/tag/v0.1.0-test.14)
+   [v0.1.0-test.15](https://github.com/shurshick/wrtmonitor/releases/tag/v0.1.0-test.15)
 
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-v0.1.0-test.14.yaml
+   wrtmonitor-truenas-v0.1.0-test.15.yaml
    ```
 
 3. При необходимости скачайте и проверьте checksums:
@@ -176,6 +176,14 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 http://truenas-ip:8088/setup
 ```
 
+## Обновление TrueNAS через latest
+
+YAML использует `ghcr.io/shurshick/wrtmonitor:latest` и `pull_policy: always`.
+
+После публикации нового релиза Docker не заменяет уже запущенный контейнер самостоятельно. В TrueNAS откройте **Apps → wrtmonitor → Edit → Save**. Это запускает redeploy и повторный pull образа. PostgreSQL volume не удаляйте.
+
+Если версия не изменилась, остановите App, снова выполните **Edit → Save**, дождитесь статуса `Running` и проверьте `/health`.
+
 ## Обновление с v0.1.0-test.10
 
 1. PostgreSQL volume удалять не нужно.
@@ -184,7 +192,7 @@ http://truenas-ip:8088/setup
 4. Обновите image на:
 
    ```text
-   ghcr.io/shurshick/wrtmonitor:0.1.0-test.14
+   ghcr.io/shurshick/wrtmonitor:latest
    ```
 
 5. Перезапустите сервер.

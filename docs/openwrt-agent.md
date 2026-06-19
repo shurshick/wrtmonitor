@@ -41,14 +41,14 @@ cd /tmp
 Скачайте архив агента из актуального релиза:
 
 ```sh
-wget -O wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.14/wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
+wget -O wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz \
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.15/wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
 ```
 
 Распакуйте архив:
 
 ```sh
-tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
+tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
 ```
 
 Запустите установщик:
@@ -156,9 +156,9 @@ logread | grep wrtmonitor | tail -20
 ```sh
 cd /tmp
 rm -f wrtmonitor-agent install-openwrt.sh wrtmonitor.init wrtmonitor.config
-wget -O wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.14/wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
-tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.14.tar.gz
+wget -O wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz \
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.15/wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
+tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
 ```
 
 Замените скрипт агента:
