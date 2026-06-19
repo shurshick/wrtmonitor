@@ -2,6 +2,8 @@
 
 START=95
 STOP=10
+EXTRA_COMMANDS="status"
+EXTRA_HELP="        status          Show service status"
 
 PID_FILE="/var/run/wrtmonitor-agent.pid"
 
