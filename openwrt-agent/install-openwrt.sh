@@ -56,6 +56,17 @@ json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+openwrt_firmware_description() {
+  if [ -r /etc/openwrt_release ]; then
+    value="$(sed -n "s/^DISTRIB_DESCRIPTION='\(.*\)'/\1/p" /etc/openwrt_release | head -n 1)"
+    if [ -n "$value" ]; then
+      printf '%s' "$value"
+      return
+    fi
+  fi
+  printf 'OpenWrt'
+}
+
 post_json() {
   path="$1"
   body="$2"
@@ -84,7 +95,7 @@ fi
 if [ -z "$DEVICE_TOKEN" ]; then
   hostname_value="$(json_escape "$(uci -q get system.@system[0].hostname 2>/dev/null || hostname)")"
   model_value="$(json_escape "$(cat /tmp/sysinfo/model 2>/dev/null || echo OpenWrt)")"
-  firmware_value="$(json_escape "$(cat /etc/openwrt_release 2>/dev/null | grep DISTRIB_DESCRIPTION | cut -d\\' -f2 || echo OpenWrt)")"
+  firmware_value="$(json_escape "$(openwrt_firmware_description)")"
   name_value="$(json_escape "$NAME")"
   login_body="{\"username\":\"$(json_escape "$ADMIN_USERNAME")\",\"password\":\"$(json_escape "$ADMIN_PASSWORD")\"}"
   login_response="$(post_json /api/v1/auth/login "$login_body")"

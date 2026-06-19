@@ -25,10 +25,21 @@ json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+openwrt_firmware_description() {
+  if [ -r /etc/openwrt_release ]; then
+    value="$(sed -n "s/^DISTRIB_DESCRIPTION='\(.*\)'/\1/p" /etc/openwrt_release | head -n 1)"
+    if [ -n "$value" ]; then
+      printf '%s' "$value"
+      return
+    fi
+  fi
+  printf 'OpenWrt'
+}
+
 register_device() {
   hostname="$(json_escape "$(uci -q get system.@system[0].hostname 2>/dev/null || hostname)")"
   model="$(json_escape "$(cat /tmp/sysinfo/model 2>/dev/null || echo OpenWrt)")"
-  firmware="$(json_escape "$(cat /etc/openwrt_release 2>/dev/null | grep DISTRIB_DESCRIPTION | cut -d\\' -f2 || echo OpenWrt)")"
+  firmware="$(json_escape "$(openwrt_firmware_description)")"
   name="$(json_escape "$(cfg name)")"
   body="{\"hostname\":\"$hostname\",\"model\":\"$model\",\"firmware\":\"$firmware\",\"name\":\"$name\",\"device_token\":\"$(json_escape "$(device_token)")\"}"
   response="$(curl -fsS -X POST "$(server_url)/api/v1/agent/register" -H "Content-Type: application/json" -d "$body")"
