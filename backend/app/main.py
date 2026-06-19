@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from html import escape
 import secrets
 from typing import Any
 from uuid import UUID, uuid4
@@ -149,8 +150,63 @@ def index(config: Settings = Depends(settings), db: Session = Depends(get_db)):
         <html lang="ru"><body>
           <h1>{APP_NAME}</h1>
           <p>Сервер работает. Версия: {APP_VERSION}</p>
+          <p><a href="/devices">Устройства</a></p>
           <p><a href="/docs">API</a></p>
         </body></html>
+        """
+    )
+
+
+@app.get("/devices", response_class=HTMLResponse)
+def devices_page(config: Settings = Depends(settings), db: Session = Depends(get_db)) -> HTMLResponse:
+    if is_setup_required(db, config):
+        return RedirectResponse("/setup", status_code=303)
+    devices = db.scalars(select(Device).order_by(Device.created_at.desc())).all()
+    rows = []
+    for device in devices:
+        last_seen = device.last_seen_at.isoformat() if device.last_seen_at else "нет данных"
+        rows.append(
+            "<tr>"
+            f"<td>{escape(device.name or '')}</td>"
+            f"<td>{escape(device.hostname or '')}</td>"
+            f"<td>{escape(device.model or '')}</td>"
+            f"<td>{escape(device.firmware or '')}</td>"
+            f"<td>{escape(device.status)}</td>"
+            f"<td>{escape(last_seen)}</td>"
+            "</tr>"
+        )
+    table_body = "\n".join(rows) if rows else '<tr><td colspan="6">Устройства пока не подключены</td></tr>'
+    return HTMLResponse(
+        f"""
+        <html lang="ru">
+        <head>
+          <meta charset="utf-8">
+          <title>wrtmonitor — устройства</title>
+          <style>
+            body {{ font-family: sans-serif; margin: 32px; }}
+            table {{ border-collapse: collapse; width: 100%; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background: #f4f4f4; }}
+          </style>
+        </head>
+        <body>
+          <h1>Устройства</h1>
+          <p><a href="/">На главную</a> · <a href="/docs">API</a></p>
+          <table>
+            <thead>
+              <tr>
+                <th>Имя</th>
+                <th>Hostname</th>
+                <th>Модель</th>
+                <th>Прошивка</th>
+                <th>Статус</th>
+                <th>Последняя связь</th>
+              </tr>
+            </thead>
+            <tbody>{table_body}</tbody>
+          </table>
+        </body>
+        </html>
         """
     )
 

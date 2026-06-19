@@ -1,6 +1,6 @@
 # Развёртывание серверной части
 
-Этот документ описывает установку сервера `wrtmonitor` для тестовой версии `0.1.0-test.4`.
+Этот документ описывает установку сервера `wrtmonitor` для тестовой версии `0.1.0-test.5`.
 
 Сервер состоит из двух контейнеров:
 
@@ -81,12 +81,12 @@ PostgreSQL container
 ## Установка на TrueNAS Custom App
 
 1. Откройте релиз:
-   [v0.1.0-test.4](https://github.com/shurshick/wrtmonitor/releases/tag/v0.1.0-test.4)
+   [v0.1.0-test.5](https://github.com/shurshick/wrtmonitor/releases/tag/v0.1.0-test.5)
 
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-0.1.0-test.4.yaml
+   wrtmonitor-truenas-0.1.0-test.5.yaml
    ```
 
 3. Если пакет GHCR приватный, добавьте в TrueNAS учётные данные для `ghcr.io`.
@@ -94,7 +94,7 @@ PostgreSQL container
    Образ сервера:
 
    ```text
-   ghcr.io/shurshick/wrtmonitor:0.1.0-test.4
+   ghcr.io/shurshick/wrtmonitor:0.1.0-test.5
    ```
 
 4. Перед вставкой YAML в TrueNAS замените тестовые значения.
