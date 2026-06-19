@@ -103,6 +103,7 @@ OpenWrt agent выполняет только команды из allowlist:
 Следующие крупные блоки:
 
 - полноценная первичная настройка в Android;
+- локальный поиск OpenWrt-роутера из Android и подключение агента к серверу;
 - реальные Android API-клиенты вместо статических экранов;
 - расширенная телеметрия OpenWrt через `ubus`;
 - управление клиентами, Wi-Fi и сетевыми профилями;
@@ -116,4 +117,5 @@ OpenWrt agent выполняет только команды из allowlist:
 - [Android-приложение](docs/android.md)
 - [TrueNAS Custom App](docs/truenas-custom-app.md)
 - [Безопасность](docs/security.md)
+- [Roadmap](docs/roadmap.md)
 
