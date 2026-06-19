@@ -59,7 +59,7 @@ WRTMONITOR_PUBLIC_SERVER_URL=http://server-ip:8088
 Образ тестовой версии:
 
 ```text
-ghcr.io/shurshick/wrtmonitor:0.1.0-test.7
+ghcr.io/shurshick/wrtmonitor:0.1.0-test.8
 ```
 
 ## Подключение клиентов

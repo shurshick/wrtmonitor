@@ -104,13 +104,31 @@ def test_devices_page_lists_devices(monkeypatch):
         yield FakeSession()
 
     monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
+    monkeypatch.setattr(main, "web_user_from_session", lambda session_token, config, db: object())
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
     try:
-        response = client.get("/devices")
+        response = client.get("/devices", cookies={"wrtmonitor_session": "token"})
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert "HomeRouter" in response.text
     assert "online" in response.text
+
+
+def test_devices_page_requires_web_session(monkeypatch):
+    def fake_db():
+        yield object()
+
+    monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
+    monkeypatch.setattr(main, "web_user_from_session", lambda session_token, config, db: None)
+    app.dependency_overrides[get_db] = fake_db
+    client = TestClient(app, follow_redirects=False)
+    try:
+        response = client.get("/devices")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"

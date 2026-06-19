@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 import jwt
 import uvicorn
-from fastapi import Depends, FastAPI, Form, Header, HTTPException
+from fastapi import Cookie, Depends, FastAPI, Form, Header, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -131,6 +131,19 @@ def device_from_token(authorization: str | None, db: Session) -> Device:
     return device
 
 
+def web_user_from_session(session_token: str | None, config: Settings, db: Session) -> User | None:
+    if not session_token:
+        return None
+    try:
+        payload = decode_access_token(session_token, config)
+    except jwt.PyJWTError:
+        return None
+    user = db.get(User, UUID(str(payload.get("sub"))))
+    if not user or user.disabled:
+        return None
+    return user
+
+
 def audit(db: Session, user_id: UUID | None, action: str, object_type: str | None = None, object_id: str | None = None, details: dict[str, Any] | None = None) -> None:
     db.add(AuditLog(id=uuid4(), user_id=user_id, action=action, object_type=object_type, object_id=object_id, details=details, created_at=now_utc()))
 
@@ -142,25 +155,76 @@ def health() -> dict[str, str]:
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(config: Settings = Depends(settings), db: Session = Depends(get_db)):
+def index(config: Settings = Depends(settings), db: Session = Depends(get_db), wrtmonitor_session: str | None = Cookie(default=None)):
     if is_setup_required(db, config):
         return RedirectResponse("/setup", status_code=303)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    devices_link = '<p><a href="/devices">Устройства</a></p>' if user else '<p><a href="/login">Войти</a></p>'
     return HTMLResponse(
         f"""
         <html lang="ru"><body>
           <h1>{APP_NAME}</h1>
           <p>Сервер работает. Версия: {APP_VERSION}</p>
-          <p><a href="/devices">Устройства</a></p>
+          {devices_link}
           <p><a href="/docs">API</a></p>
         </body></html>
         """
     )
 
 
-@app.get("/devices", response_class=HTMLResponse)
-def devices_page(config: Settings = Depends(settings), db: Session = Depends(get_db)) -> HTMLResponse:
+@app.get("/login", response_class=HTMLResponse)
+def login_page(config: Settings = Depends(settings), db: Session = Depends(get_db)) -> HTMLResponse | RedirectResponse:
     if is_setup_required(db, config):
         return RedirectResponse("/setup", status_code=303)
+    return HTMLResponse(
+        """
+        <html lang="ru">
+        <head><meta charset="utf-8"><title>wrtmonitor — вход</title></head>
+        <body>
+          <h1>Вход в wrtmonitor</h1>
+          <form method="post" action="/login">
+            <p><input name="username" placeholder="Администратор" required></p>
+            <p><input name="password" type="password" placeholder="Пароль" required></p>
+            <p><button type="submit">Войти</button></p>
+          </form>
+        </body>
+        </html>
+        """
+    )
+
+
+@app.post("/login")
+def login_form(username: str = Form(...), password: str = Form(...), config: Settings = Depends(settings), db: Session = Depends(get_db)) -> RedirectResponse | HTMLResponse:
+    if is_setup_required(db, config):
+        return RedirectResponse("/setup", status_code=303)
+    user = db.scalars(select(User).where(User.username == username, User.disabled.is_(False))).first()
+    if not user or not verify_password(password, user.password_hash):
+        return HTMLResponse('<html><body><h1>Вход не выполнен</h1><p><a href="/login">Повторить</a></p></body></html>', status_code=401)
+    response = RedirectResponse("/devices", status_code=303)
+    response.set_cookie(
+        "wrtmonitor_session",
+        create_access_token(user.id, user.role, config),
+        httponly=True,
+        samesite="lax",
+        max_age=8 * 60 * 60,
+    )
+    return response
+
+
+@app.post("/logout")
+def logout_form() -> RedirectResponse:
+    response = RedirectResponse("/", status_code=303)
+    response.delete_cookie("wrtmonitor_session")
+    return response
+
+
+@app.get("/devices", response_class=HTMLResponse)
+def devices_page(config: Settings = Depends(settings), db: Session = Depends(get_db), wrtmonitor_session: str | None = Cookie(default=None)) -> HTMLResponse | RedirectResponse:
+    if is_setup_required(db, config):
+        return RedirectResponse("/setup", status_code=303)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
     devices = db.scalars(select(Device).order_by(Device.created_at.desc())).all()
     rows = []
     for device in devices:
@@ -200,6 +264,7 @@ def devices_page(config: Settings = Depends(settings), db: Session = Depends(get
         <body>
           <h1>Устройства</h1>
           <p><a href="/">На главную</a> · <a href="/docs">API</a></p>
+          <form method="post" action="/logout"><button type="submit">Выйти</button></form>
           <table>
             <thead>
               <tr>
@@ -221,9 +286,12 @@ def devices_page(config: Settings = Depends(settings), db: Session = Depends(get
 
 
 @app.post("/devices/{device_id}/delete")
-def delete_device_page(device_id: UUID, config: Settings = Depends(settings), db: Session = Depends(get_db)) -> RedirectResponse:
+def delete_device_page(device_id: UUID, config: Settings = Depends(settings), db: Session = Depends(get_db), wrtmonitor_session: str | None = Cookie(default=None)) -> RedirectResponse:
     if is_setup_required(db, config):
         return RedirectResponse("/setup", status_code=303)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
     device = db.get(Device, device_id)
     if device and device.last_seen_at is None and device.status in {"provisioned", "offline"}:
         db.delete(device)

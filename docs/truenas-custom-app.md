@@ -6,7 +6,7 @@
 
 Коротко:
 
-1. Скачайте `wrtmonitor-truenas-0.1.0-test.7.yaml` из релиза.
+1. Скачайте `wrtmonitor-truenas-0.1.0-test.8.yaml` из релиза.
 2. В YAML замените `WRTMONITOR_PUBLIC_SERVER_URL`, `WRTMONITOR_JWT_SECRET` и пароль `change-me-postgres-password` в двух местах.
 3. Создайте TrueNAS Custom App из подготовленного YAML.
 4. Настройте Nginx Proxy Manager на внутренний адрес `http://truenas-ip:8088`.
