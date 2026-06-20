@@ -25,6 +25,7 @@ def test_setup_status_endpoint_shape(monkeypatch):
     def fake_db():
         yield object()
 
+    monkeypatch.setattr(setup_api, "is_setup_required", lambda db, config: True)
     monkeypatch.setattr(setup_api, "has_admin", lambda db: False)
     monkeypatch.setattr(setup_api, "get_public_server_url", lambda db, config: None)
     app.dependency_overrides[get_db] = fake_db
