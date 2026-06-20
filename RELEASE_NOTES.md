@@ -1,21 +1,23 @@
-# v0.1.1-rc1 — Real Router Validation and Control Polish
+# v0.1.1-rc2-architecture-refactor
 
-## Command history and diagnostics
+## Backend
 
-- Добавлен API `GET /api/v1/devices/{device_id}/commands` с lifecycle metadata.
-- OpenWrt-agent получил `version` и `support-bundle [--public]` для безопасного сбора диагностики.
+- `main.py` стал тонким ASGI entrypoint, создание приложения вынесено в `app_factory.py`.
+- Web UI перенесён с HTML строк в Jinja2 templates; CSRF и security headers сохранены.
+- Request schemas вынесены в `schemas/`, health endpoints зарегистрированы отдельным API router.
 
-## Real router validation
+## Android
 
-- Добавлен [чек-лист проверки реального роутера](docs/real-router-testing.md) с recovery-инструкциями.
-- Валидация на физическом OpenWrt с Wi-Fi radio, смена SSID, Wi-Fi on/off и reboot ещё не подтверждены: это обязательный ручной этап перед публичным `v0.1.1`.
+- `MainActivity` стал entrypoint; root UI перенесён в `WrtMonitorApp`.
+- Добавлены `WrtMonitorApi`, `ApiResult`, DTO, `SessionStore` и domain `VersionComparator` с unit test.
+- Android: `versionName 0.1.1-rc2`, `versionCode 18`.
 
-## Upgrade
+## Compatibility
 
-- Обновление с `v0.1.0-test.16` и новее сохраняет PostgreSQL volume.
-- Android: `versionName 0.1.1-rc1`, `versionCode 17`.
+- API URLs, PostgreSQL data, agent protocol и TrueNAS deployment сохранены.
+- APK ставится поверх rc1; agent version `0.1.1-rc2`.
 
 ## Known limitations
 
-- Full Android architecture refactor и Jinja2 migration ещё не выполнены.
-- APK остаётся debug-сборкой; auto-update агента, firewall, DHCP и VPN не входят в rc1.
+- Полное дробление всех Android экранов и всех API route modules продолжится следующим maintenance этапом.
+- APK остаётся debug-сборкой; auto-update агента, firewall, DHCP и VPN не входят в rc2.

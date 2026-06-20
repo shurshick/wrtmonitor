@@ -57,10 +57,10 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker build \
-            -t "$IMAGE_NAME:0.1.1-rc1" \
+            -t "$IMAGE_NAME:0.1.1-rc2" \
             -t "$IMAGE_NAME:latest" \
             .
-          docker push "$IMAGE_NAME:0.1.1-rc1"
+          docker push "$IMAGE_NAME:0.1.1-rc2"
           docker push "$IMAGE_NAME:latest"
 
   android:
@@ -79,5 +79,5 @@ jobs:
       - run: ./gradlew :android:app:testDebugUnitTest
       - uses: actions/upload-artifact@v4
         with:
-          name: wrtmonitor-android-0.1.1-rc1-debug
+          name: wrtmonitor-android-0.1.1-rc2-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk

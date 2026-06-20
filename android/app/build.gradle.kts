@@ -11,8 +11,8 @@ android {
         applicationId = "ru.wrtmonitor.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.1.1-rc1"
+        versionCode = 18
+        versionName = "0.1.1-rc2"
     }
 
     signingConfigs {

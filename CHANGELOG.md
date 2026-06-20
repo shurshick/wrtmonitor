@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.1-rc2-architecture-refactor
+
+- Вынесены factory, route layer, Jinja2 templates и schemas backend.
+- Добавлены Android API/data/domain layers и unit test сравнения версий.
+
 ## v0.1.1-rc1 — Real Router Validation and Control Polish
 
 - Добавлены API истории команд, agent version и support bundle.
