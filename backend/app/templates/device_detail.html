@@ -5,11 +5,11 @@
 <h1>{{ device.name or device.hostname or 'Роутер' }}</h1>
 <p>{{ device.model or '' }} · {{ device.firmware or '' }} · <strong>{{ device.status }}</strong></p>
 <div class="grid">
-  <section class="card"><h2>Телеметрия</h2><dl><dt>Обновлено</dt><dd>{{ latest }}</dd><dt>Возраст</dt><dd>{{ age if age is not none else 'нет данных' }} сек</dd><dt>Время работы</dt><dd>{{ system.uptime or 'нет данных' }}</dd><dt>Нагрузка</dt><dd>{{ system.load or 'нет данных' }}</dd><dt>Память</dt><dd>{{ memory.available_kb or '-' }} / {{ memory.total_kb or '-' }} KB</dd></dl></section>
-  <section class="card"><h2>Wi-Fi</h2><ul>{% for radio in radios %}<li>{{ radio.name or 'radio' }}: {{ 'включён' if radio.up else 'выключен' }}; SSID: {{ radio.ssid|join(', ') or 'нет данных' }}</li>{% else %}<li>Wi-Fi радио не обнаружено</li>{% endfor %}</ul><form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_enabled"><label>Состояние</label><select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select><button>Применить</button></form><form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_ssid"><label>Новый SSID</label><input name="ssid" required maxlength="64"><button>Изменить SSID</button></form></section>
-  <section class="card"><h2>Сеть</h2><ul>{% for item in interfaces %}<li>{{ item.interface or 'interface' }}: {{ 'в сети' if item.up else 'не в сети' }} {{ item.l3_device or item.device or '' }}</li>{% else %}<li>Данные интерфейсов ещё не получены</li>{% endfor %}</ul><form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.interfaces"><button>Запросить интерфейсы</button></form></section>
-  <section class="card"><h2>Система</h2><p>Команда перезагрузки будет выполнена при следующем опросе агента.</p><form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="router.reboot"><button>Перезагрузить</button></form></section>
+  {% include "partials/telemetry.html" %}
+  {% include "partials/wifi.html" %}
+  {% include "partials/network.html" %}
+  {% include "partials/system.html" %}
 </div>
-<h2>Последние команды</h2><table><thead><tr><th>Команда</th><th>Статус</th><th>Обновлено</th><th>Результат</th></tr></thead><tbody>{% for command in commands %}<tr><td>{{ command.command_type }}</td><td>{{ command.status }}</td><td>{{ command.updated_at }}</td><td><pre>{{ command.result or {} }}</pre></td></tr>{% else %}<tr><td colspan="4">Команд пока нет</td></tr>{% endfor %}</tbody></table>
+{% include "partials/commands.html" %}
 <h2>Raw telemetry</h2><pre>{{ raw_telemetry }}</pre>
 {% endblock %}

@@ -9,6 +9,11 @@ from .requests import (
 )
 
 __all__ = [
-    "AgentRegisterRequest", "CommandCreateRequest", "CommandResultRequest",
-    "DeviceProvisionRequest", "LoginRequest", "SetupRequest", "TelemetryRequest",
+    "AgentRegisterRequest",
+    "CommandCreateRequest",
+    "CommandResultRequest",
+    "DeviceProvisionRequest",
+    "LoginRequest",
+    "SetupRequest",
+    "TelemetryRequest",
 ]

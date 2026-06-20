@@ -1,0 +1,12 @@
+<section class="card">
+  <h2>Сеть</h2>
+  <ul>
+    {% for item in interfaces %}
+    <li>{{ item.interface or 'interface' }}: {{ 'в сети' if item.up else 'не в сети' }} {{ item.l3_device or item.device or '' }}</li>
+    {% else %}<li>Данные интерфейсов ещё не получены</li>{% endfor %}
+  </ul>
+  <form method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.interfaces">
+    <button>Запросить интерфейсы</button>
+  </form>
+</section>

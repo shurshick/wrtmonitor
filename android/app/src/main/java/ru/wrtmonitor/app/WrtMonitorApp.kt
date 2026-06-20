@@ -75,7 +75,6 @@ import ru.wrtmonitor.app.ui.screens.AdminLoginScreen
 import ru.wrtmonitor.app.ui.screens.ServerSetupScreen
 import ru.wrtmonitor.app.ui.screens.DeviceListScreen
 import ru.wrtmonitor.app.ui.screens.DeviceDetailScreen
-import ru.wrtmonitor.app.ui.screens.AppSettingsScreen
 
 private enum class Tab {
     Routers,
@@ -187,7 +186,7 @@ fun WrtMonitorApp() {
                         Tab.Wifi -> DeviceTabRequired(device) { WifiScreen(serverUrl, accessToken, it) }
                         Tab.Network -> DeviceTabRequired(device) { NetworkScreen(serverUrl, accessToken, it) }
                         Tab.System -> DeviceTabRequired(device) { SystemScreen(serverUrl, accessToken, it) }
-                        Tab.Settings -> AppSettingsScreen(
+                        Tab.Settings -> SettingsScreen(
                             currentServerUrl = serverUrl,
                             onSave = { value ->
                                 val normalized = value.trim().trimEnd('/')

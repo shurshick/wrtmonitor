@@ -26,12 +26,8 @@ def create_app() -> FastAPI:
     return app
 
 
-app = create_app()
-
-
-def register_routers() -> None:
-    # Import after app creation so decorator-based compatibility routes can attach.
-    from .web import routes  # noqa: F401
+def register_routers(app: FastAPI) -> None:
+    from .web.routes import router as web_router
     from .api.health import router as health_router
     from .api.auth import router as auth_router
     from .api.setup import router as setup_router
@@ -40,6 +36,7 @@ def register_routers() -> None:
     from .api.commands import router as commands_router
     from .api.agent import router as agent_router
 
+    app.include_router(web_router)
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(setup_router)
@@ -48,3 +45,8 @@ def register_routers() -> None:
     app.include_router(commands_router)
     app.include_router(agent_router)
 
+
+def create_application() -> FastAPI:
+    app = create_app()
+    register_routers(app)
+    return app

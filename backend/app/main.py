@@ -1,9 +1,9 @@
 import uvicorn
 
-from .app_factory import app, register_routers
+from .app_factory import create_application
 from .config import load_settings
 
-register_routers()
+app = create_application()
 
 
 if __name__ == "__main__":

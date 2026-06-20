@@ -9,11 +9,20 @@ from sqlalchemy.orm import sessionmaker
 import backend.app.main as application
 import backend.app.web.routes as main
 import backend.app.api.setup as setup_api
+import backend.app.services.setup as setup_service
 from backend.app.config import Settings, load_settings
 from backend.app.db import get_db, get_engine, init_db
-from backend.app.models import AppSetting, AuditLog, Device, DeviceCommand, DeviceTelemetry, User
+from backend.app.models import (
+    AppSetting,
+    AuditLog,
+    Device,
+    DeviceCommand,
+    DeviceTelemetry,
+    User,
+)
 from backend.app.main import app
-from backend.app.web.routes import ALLOWED_COMMANDS, SetupRequest
+from backend.app.services.commands import ALLOWED_COMMANDS
+from backend.app.schemas import SetupRequest
 
 
 def test_allowed_commands_are_explicit():
@@ -55,7 +64,9 @@ def test_complete_setup_flushes_user_before_audit(monkeypatch):
         def commit(self):
             self.events.append(("commit", None))
 
-    monkeypatch.setattr(main, "hash_password", lambda password: "hashed-password")
+    monkeypatch.setattr(
+        setup_service, "hash_password", lambda password: "hashed-password"
+    )
     db = FakeSession()
     config = Settings(
         public_server_url=None,
@@ -69,7 +80,7 @@ def test_complete_setup_flushes_user_before_audit(monkeypatch):
         enable_api_docs=False,
     )
 
-    response = main.complete_setup(
+    response = setup_service.complete_setup(
         SetupRequest(
             username="admin@example.com",
             password="secret-password",
@@ -116,7 +127,9 @@ def test_devices_page_lists_devices(monkeypatch):
         yield FakeSession()
 
     monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
-    monkeypatch.setattr(main, "web_user_from_session", lambda session_token, config, db: object())
+    monkeypatch.setattr(
+        main, "web_user_from_session", lambda session_token, config, db: object()
+    )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
     try:
@@ -134,7 +147,9 @@ def test_devices_page_requires_web_session(monkeypatch):
         yield object()
 
     monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
-    monkeypatch.setattr(main, "web_user_from_session", lambda session_token, config, db: None)
+    monkeypatch.setattr(
+        main, "web_user_from_session", lambda session_token, config, db: None
+    )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app, follow_redirects=False)
     try:
@@ -155,9 +170,18 @@ def test_api_docs_are_disabled_by_default():
 
 def clear_database():
     init_db()
-    session_factory = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
+    session_factory = sessionmaker(
+        bind=get_engine(), autoflush=False, expire_on_commit=False
+    )
     with session_factory() as session:
-        for model in (DeviceCommand, DeviceTelemetry, AuditLog, Device, AppSetting, User):
+        for model in (
+            DeviceCommand,
+            DeviceTelemetry,
+            AuditLog,
+            Device,
+            AppSetting,
+            User,
+        ):
             session.execute(delete(model))
         session.commit()
 
@@ -175,12 +199,17 @@ def test_router_registration_telemetry_and_latest_api_e2e():
             "username": "admin@example.com",
             "password": "secret-password",
             "password_confirm": "secret-password",
-            "server_url": "http://127.0.0.1:8080" if config.allow_insecure_local else "https://monitor.example.ru",
+            "server_url": "http://127.0.0.1:8080"
+            if config.allow_insecure_local
+            else "https://monitor.example.ru",
         },
     )
     assert setup_response.status_code == 200
 
-    login_response = client.post("/api/v1/auth/login", json={"username": "admin@example.com", "password": "secret-password"})
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin@example.com", "password": "secret-password"},
+    )
     assert login_response.status_code == 200
     access_token = login_response.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {access_token}"}
@@ -188,7 +217,12 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     provision_response = client.post(
         "/api/v1/devices/provision",
         headers=admin_headers,
-        json={"name": "HomeRouter", "hostname": "OpenWrt", "model": "VirtualBox", "firmware": "OpenWrt 22.03.5"},
+        json={
+            "name": "HomeRouter",
+            "hostname": "OpenWrt",
+            "model": "VirtualBox",
+            "firmware": "OpenWrt 22.03.5",
+        },
     )
     assert provision_response.status_code == 200
     device_id = provision_response.json()["device_id"]
@@ -197,14 +231,27 @@ def test_router_registration_telemetry_and_latest_api_e2e():
 
     register_response = client.post(
         "/api/v1/agent/register",
-        json={"device_token": device_token, "name": "HomeRouter", "hostname": "OpenWrt", "model": "VirtualBox", "firmware": "OpenWrt 22.03.5"},
+        json={
+            "device_token": device_token,
+            "name": "HomeRouter",
+            "hostname": "OpenWrt",
+            "model": "VirtualBox",
+            "firmware": "OpenWrt 22.03.5",
+        },
     )
     assert register_response.status_code == 200
     assert register_response.json()["device_id"] == device_id
 
     telemetry = {
-        "system": {"uptime": 123, "load": "0.01", "memory": {"total_kb": 256000, "free_kb": 128000}},
-        "wifi": {"available": True, "radios": [{"name": "radio0", "up": True, "channel": "6"}]},
+        "system": {
+            "uptime": 123,
+            "load": "0.01",
+            "memory": {"total_kb": 256000, "free_kb": 128000},
+        },
+        "wifi": {
+            "available": True,
+            "radios": [{"name": "radio0", "up": True, "channel": "6"}],
+        },
         "network": {"interfaces": [{"name": "lan", "up": True}]},
     }
     for index in range(105):
@@ -215,7 +262,9 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         )
         assert telemetry_response.status_code == 200
 
-    latest_response = client.get(f"/api/v1/devices/{device_id}/telemetry/latest", headers=admin_headers)
+    latest_response = client.get(
+        f"/api/v1/devices/{device_id}/telemetry/latest", headers=admin_headers
+    )
     assert latest_response.status_code == 200
     latest = latest_response.json()
     assert latest["device_id"] == device_id
@@ -226,7 +275,13 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert latest["is_stale"] is False
     assert latest["source"] == "agent"
 
-    session_factory = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
+    session_factory = sessionmaker(
+        bind=get_engine(), autoflush=False, expire_on_commit=False
+    )
     with session_factory() as session:
-        count = session.query(DeviceTelemetry).filter(DeviceTelemetry.device_id == UUID(device_id)).count()
+        count = (
+            session.query(DeviceTelemetry)
+            .filter(DeviceTelemetry.device_id == UUID(device_id))
+            .count()
+        )
     assert count == 100

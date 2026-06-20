@@ -56,7 +56,11 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["device_id"], ["devices.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_device_telemetry_device_created", "device_telemetry", ["device_id", sa.text("created_at DESC")])
+    op.create_index(
+        "ix_device_telemetry_device_created",
+        "device_telemetry",
+        ["device_id", sa.text("created_at DESC")],
+    )
     op.create_table(
         "device_commands",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -72,7 +76,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["device_id"], ["devices.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_device_commands_device_status", "device_commands", ["device_id", "status"])
+    op.create_index(
+        "ix_device_commands_device_status", "device_commands", ["device_id", "status"]
+    )
     op.create_table(
         "audit_log",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),

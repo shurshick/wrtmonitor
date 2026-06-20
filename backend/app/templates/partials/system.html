@@ -1,0 +1,8 @@
+<section class="card">
+  <h2>Система</h2>
+  <p>Команда перезагрузки будет выполнена при следующем опросе агента.</p>
+  <form method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="router.reboot">
+    <button>Перезагрузить</button>
+  </form>
+</section>

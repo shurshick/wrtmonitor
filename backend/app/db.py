@@ -31,12 +31,22 @@ def alembic_config() -> Config:
 
 def has_migration_state() -> bool:
     with get_engine().connect() as connection:
-        return bool(connection.execute(text("select to_regclass('public.alembic_version') is not null")).scalar())
+        return bool(
+            connection.execute(
+                text("select to_regclass('public.alembic_version') is not null")
+            ).scalar()
+        )
 
 
 def has_existing_schema() -> bool:
     with get_engine().connect() as connection:
-        return bool(connection.execute(text("select to_regclass('public.users') is not null or to_regclass('public.devices') is not null")).scalar())
+        return bool(
+            connection.execute(
+                text(
+                    "select to_regclass('public.users') is not null or to_regclass('public.devices') is not null"
+                )
+            ).scalar()
+        )
 
 
 def migrate_db() -> None:
@@ -68,6 +78,8 @@ def check_database() -> bool:
 
 
 def get_db() -> Generator[Session, None, None]:
-    session_factory = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
+    session_factory = sessionmaker(
+        bind=get_engine(), autoflush=False, expire_on_commit=False
+    )
     with session_factory() as session:
         yield session

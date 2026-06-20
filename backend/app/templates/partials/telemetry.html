@@ -1,0 +1,10 @@
+<section class="card">
+  <h2>Телеметрия</h2>
+  <dl>
+    <dt>Обновлено</dt><dd>{{ latest }}</dd>
+    <dt>Возраст</dt><dd>{{ age if age is not none else 'нет данных' }} сек</dd>
+    <dt>Время работы</dt><dd>{{ system.uptime or 'нет данных' }}</dd>
+    <dt>Нагрузка</dt><dd>{{ system.load or 'нет данных' }}</dd>
+    <dt>Память</dt><dd>{{ memory.available_kb or '-' }} / {{ memory.total_kb or '-' }} KB</dd>
+  </dl>
+</section>

@@ -1,0 +1,7 @@
+<h2>Последние команды</h2>
+<table>
+  <thead><tr><th>Команда</th><th>Статус</th><th>Обновлено</th><th>Результат</th></tr></thead>
+  <tbody>{% for command in commands %}
+    <tr><td>{{ command.command_type }}</td><td>{{ command.status }}</td><td>{{ command.updated_at }}</td><td><pre>{{ command.result or {} }}</pre></td></tr>
+  {% else %}<tr><td colspan="4">Команд пока нет</td></tr>{% endfor %}</tbody>
+</table>

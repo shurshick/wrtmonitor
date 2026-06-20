@@ -60,17 +60,31 @@ def validate_server_url(value: str, allow_insecure_local: bool = False) -> str:
 
 def validate_database_url(value: str, allow_insecure_dev_defaults: bool = False) -> str:
     parsed = urlparse(value.strip())
-    if parsed.scheme != "postgresql+psycopg" or not parsed.hostname or not parsed.path.strip("/"):
-        raise ValueError("WRTMONITOR_DATABASE_URL must be postgresql+psycopg://user:password@host:5432/db")
+    if (
+        parsed.scheme != "postgresql+psycopg"
+        or not parsed.hostname
+        or not parsed.path.strip("/")
+    ):
+        raise ValueError(
+            "WRTMONITOR_DATABASE_URL must be postgresql+psycopg://user:password@host:5432/db"
+        )
     password = unquote(parsed.password or "")
-    if not allow_insecure_dev_defaults and (not password or password.startswith("change-me")):
-        raise ValueError("WRTMONITOR_DATABASE_URL must contain a non-default database password")
+    if not allow_insecure_dev_defaults and (
+        not password or password.startswith("change-me")
+    ):
+        raise ValueError(
+            "WRTMONITOR_DATABASE_URL must contain a non-default database password"
+        )
     return value.strip()
 
 
 def validate_jwt_secret(value: str | None) -> str:
     secret = (value or "").strip()
-    if secret in {"", "change-me-long-random-secret", "change-me-long-random-jwt-secret"}:
+    if secret in {
+        "",
+        "change-me-long-random-secret",
+        "change-me-long-random-jwt-secret",
+    }:
         raise ValueError("WRTMONITOR_JWT_SECRET must be set to a unique random value")
     if len(secret) < 32:
         raise ValueError("WRTMONITOR_JWT_SECRET must be at least 32 characters")
@@ -78,8 +92,12 @@ def validate_jwt_secret(value: str | None) -> str:
 
 
 def load_settings() -> Settings:
-    allow_insecure_local = bool_from_env(os.getenv("WRTMONITOR_ALLOW_INSECURE_LOCAL"), False)
-    allow_insecure_dev_defaults = bool_from_env(os.getenv("WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS"), False)
+    allow_insecure_local = bool_from_env(
+        os.getenv("WRTMONITOR_ALLOW_INSECURE_LOCAL"), False
+    )
+    allow_insecure_dev_defaults = bool_from_env(
+        os.getenv("WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS"), False
+    )
     public_url = os.getenv("WRTMONITOR_PUBLIC_SERVER_URL", "").strip() or None
     if public_url:
         public_url = validate_server_url(public_url, allow_insecure_local)
@@ -99,6 +117,7 @@ def load_settings() -> Settings:
         allow_insecure_local=allow_insecure_local,
         allow_insecure_dev_defaults=allow_insecure_dev_defaults,
         enable_api_docs=bool_from_env(os.getenv("WRTMONITOR_ENABLE_API_DOCS"), False),
-        telemetry_retention_per_device=max(1, int(os.getenv("WRTMONITOR_TELEMETRY_RETENTION_PER_DEVICE", "100"))),
+        telemetry_retention_per_device=max(
+            1, int(os.getenv("WRTMONITOR_TELEMETRY_RETENTION_PER_DEVICE", "100"))
+        ),
     )
-
