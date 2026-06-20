@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}WrtMonitor - первая настройка{% endblock %}
+{% block content %}
+<h1>Первая настройка WrtMonitor</h1>
+<form method="post" action="/setup">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p><input name="username" placeholder="Администратор" required minlength="3"></p>
+  <p><input name="password" type="password" placeholder="Пароль" required minlength="8"></p>
+  <p><input name="password_confirm" type="password" placeholder="Повторите пароль" required minlength="8"></p>
+  <p><input name="server_url" placeholder="https://monitor.example.ru" required></p>
+  <p><button type="submit">Создать</button></p>
+</form>
+{% endblock %}

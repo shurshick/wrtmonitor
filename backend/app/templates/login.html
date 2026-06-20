@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}WrtMonitor - вход{% endblock %}
+{% block content %}
+<h1>Вход в WrtMonitor</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" action="/login">
+  <p><input name="username" placeholder="Администратор" required></p>
+  <p><input name="password" type="password" placeholder="Пароль" required></p>
+  <p><button type="submit">Войти</button></p>
+</form>
+{% endblock %}

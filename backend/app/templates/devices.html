@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}WrtMonitor - устройства{% endblock %}
+{% block content %}
+<div class="bar"><div><h1>WrtMonitor</h1><p>Устройства</p></div><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button>Выйти</button></form></div>
+<table><thead><tr><th>Имя</th><th>Hostname</th><th>Модель</th><th>Прошивка</th><th>Статус</th><th>Последняя связь</th></tr></thead><tbody>
+{% for device in devices %}<tr><td><a href="/devices/{{ device.id }}">{{ device.name or device.hostname or 'Роутер' }}</a></td><td>{{ device.hostname or '' }}</td><td>{{ device.model or '' }}</td><td>{{ device.firmware or '' }}</td><td>{{ device.status }}</td><td>{{ device.last_seen_at or 'нет данных' }}</td></tr>{% else %}<tr><td colspan="6">Роутеры пока не подключены</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

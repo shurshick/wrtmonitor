@@ -6,11 +6,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete
 from sqlalchemy.orm import sessionmaker
 
-import backend.app.main as main
+import backend.app.routes as main
 from backend.app.config import Settings, load_settings
 from backend.app.db import get_db, get_engine, init_db
 from backend.app.models import AppSetting, AuditLog, Device, DeviceCommand, DeviceTelemetry, User
-from backend.app.main import ALLOWED_COMMANDS, SetupRequest, app
+from backend.app.app_factory import app
+from backend.app.routes import ALLOWED_COMMANDS, SetupRequest
 
 
 def test_allowed_commands_are_explicit():

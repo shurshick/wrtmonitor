@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ app_name }}</h1>
+<p>Сервер работает. Версия: {{ version }}</p>
+{% if authenticated %}<p><a href="/devices">Устройства</a></p>{% else %}<p><a href="/login">Войти</a></p>{% endif %}
+{% if api_docs_enabled %}<p><a href="/docs">API</a></p>{% endif %}
+{% endblock %}
