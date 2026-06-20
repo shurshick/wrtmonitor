@@ -70,6 +70,10 @@ import ru.wrtmonitor.app.data.SessionStore
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.domain.VersionComparator
+import ru.wrtmonitor.app.ui.components.InfoRow
+import ru.wrtmonitor.app.ui.screens.AdminLoginScreen
+import ru.wrtmonitor.app.ui.screens.ServerSetupScreen
+import ru.wrtmonitor.app.ui.screens.DeviceListScreen
 
 private enum class Tab {
     Routers,
@@ -96,7 +100,7 @@ fun WrtMonitorApp() {
     var selectedDevice by remember { mutableStateOf<RouterDevice?>(null) }
     MaterialTheme {
         if (serverUrl.isBlank()) {
-            FirstRunScreen(
+            ServerSetupScreen(
                 onSave = { value ->
                     val normalized = value.trim().trimEnd('/')
                     sessionStore.serverUrl = normalized
@@ -106,7 +110,7 @@ fun WrtMonitorApp() {
             return@MaterialTheme
         }
         if (accessToken.isBlank()) {
-            LoginScreen(
+            AdminLoginScreen(
                 serverUrl = serverUrl,
                 onLogin = { token ->
                     sessionStore.accessToken = token
@@ -161,7 +165,7 @@ fun WrtMonitorApp() {
         ) { padding ->
             val device = selectedDevice
             if (device == null && tab == Tab.Routers) {
-                RoutersScreen(
+                DeviceListScreen(
                     serverUrl = serverUrl,
                     accessToken = accessToken,
                     modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
@@ -542,28 +546,6 @@ private fun StatusText(status: String) {
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.widthIn(max = 96.dp)
     )
-}
-
-@Composable
-private fun InfoRow(label: String, value: String?) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.widthIn(min = 76.dp, max = 92.dp),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = value?.takeIf { it.isNotBlank() } ?: stringResource(R.string.no_data),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
 }
 
 @Composable
