@@ -6,11 +6,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete
 from sqlalchemy.orm import sessionmaker
 
+import backend.app.main as application
 import backend.app.web.routes as main
 from backend.app.config import Settings, load_settings
 from backend.app.db import get_db, get_engine, init_db
 from backend.app.models import AppSetting, AuditLog, Device, DeviceCommand, DeviceTelemetry, User
-from backend.app.app_factory import app
+from backend.app.main import app
 from backend.app.web.routes import ALLOWED_COMMANDS, SetupRequest
 
 

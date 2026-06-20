@@ -48,5 +48,3 @@ def register_routers() -> None:
     app.include_router(commands_router)
     app.include_router(agent_router)
 
-
-register_routers()
