@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.0-test.17 — Web UI CSP hotfix
+
+- Исправлен внешний вид Web UI после внедрения CSP: inline CSS перенесён в `/static/app.css`.
+
 ## v0.1.0-test.16 — Security, Refactor and Command Reliability
 
 - Добавлены CSRF-защита Web UI, security headers и безопасный `/health/config`.

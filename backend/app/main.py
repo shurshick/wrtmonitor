@@ -9,6 +9,7 @@ import jwt
 import uvicorn
 from fastapi import Cookie, Depends, FastAPI, Form, Header, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -44,6 +45,7 @@ app = FastAPI(
     openapi_url="/openapi.json" if _startup_settings.enable_api_docs else None,
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
 
 
 class LoginRequest(BaseModel):
@@ -291,14 +293,7 @@ def devices_page(config: Settings = Depends(settings), db: Session = Depends(get
     table_body = "\n".join(rows) if rows else '<tr><td colspan="6">Роутеры пока не подключены</td></tr>'
     return HTMLResponse(
         f"""
-        <html lang="ru"><head><meta charset="utf-8"><title>WrtMonitor - устройства</title>
-        <style>
-          body {{ font-family:system-ui,sans-serif; max-width:1100px; margin:32px auto; padding:0 16px; color:#24212b; background:#fcf8ff; }}
-          a {{ color:#5d46b3; }} table {{ border-collapse:collapse; width:100%; background:white; }}
-          th,td {{ border-bottom:1px solid #e7e0eb; padding:12px; text-align:left; }} th {{ color:#5d46b3; }}
-          button {{ border:0; border-radius:6px; padding:8px 12px; background:#5d46b3; color:white; cursor:pointer; }}
-          .bar {{ display:flex; align-items:center; justify-content:space-between; gap:16px; }}
-        </style></head><body>
+        <html lang="ru"><head><meta charset="utf-8"><title>WrtMonitor - устройства</title><link rel="stylesheet" href="/static/app.css"></head><body>
         <div class="bar"><div><h1>WrtMonitor</h1><p>Устройства</p></div><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{csrf_token}"><button>Выйти</button></form></div>
         <table><thead><tr><th>Имя</th><th>Hostname</th><th>Модель</th><th>Прошивка</th><th>Статус</th><th>Последняя связь</th></tr></thead>
         <tbody>{table_body}</tbody></table></body></html>
@@ -350,16 +345,7 @@ def device_page(device_id: UUID, config: Settings = Depends(settings), db: Sessi
     age = max(0, int((now_utc() - telemetry.created_at).total_seconds())) if telemetry else None
     return HTMLResponse(
         f"""
-        <html lang="ru"><head><meta charset="utf-8"><title>WrtMonitor - {escape(device.name or device.hostname or 'роутер')}</title>
-        <style>
-          body {{ font-family:system-ui,sans-serif; max-width:1100px; margin:32px auto; padding:0 16px; color:#24212b; background:#fcf8ff; }}
-          a {{ color:#5d46b3; }} .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }}
-          .card {{ background:white; border:1px solid #e7e0eb; border-radius:8px; padding:18px; }}
-          dt {{ color:#6d6875; }} dd {{ margin:4px 0 12px; font-weight:600; }}
-          button {{ border:0; border-radius:6px; padding:9px 13px; background:#5d46b3; color:white; cursor:pointer; }}
-          input,select {{ padding:8px; margin:4px 0 8px; width:100%; box-sizing:border-box; }}
-          table {{ width:100%; border-collapse:collapse; background:white; }} th,td {{ border-bottom:1px solid #e7e0eb; padding:8px; text-align:left; }} pre {{ white-space:pre-wrap; margin:0; }}
-        </style></head><body>
+        <html lang="ru"><head><meta charset="utf-8"><title>WrtMonitor - {escape(device.name or device.hostname or 'роутер')}</title><link rel="stylesheet" href="/static/app.css"></head><body>
         <p><a href="/devices">&larr; Устройства</a></p>
         <h1>{escape(device.name or device.hostname or 'Роутер')}</h1>
         <p>{escape(device.model or '')} · {escape(device.firmware or '')} · <strong>{escape(device.status)}</strong></p>
