@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 import backend.app.main as application
 import backend.app.web.routes as main
+import backend.app.api.setup as setup_api
 from backend.app.config import Settings, load_settings
 from backend.app.db import get_db, get_engine, init_db
 from backend.app.models import AppSetting, AuditLog, Device, DeviceCommand, DeviceTelemetry, User
@@ -24,8 +25,8 @@ def test_setup_status_endpoint_shape(monkeypatch):
     def fake_db():
         yield object()
 
-    monkeypatch.setattr(main, "has_admin", lambda db: False)
-    monkeypatch.setattr(main, "get_public_server_url", lambda db, config: None)
+    monkeypatch.setattr(setup_api, "has_admin", lambda db: False)
+    monkeypatch.setattr(setup_api, "get_public_server_url", lambda db, config: None)
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
     try:
