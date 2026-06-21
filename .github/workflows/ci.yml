@@ -44,7 +44,7 @@ jobs:
       - run: sh -n openwrt-agent/wrtmonitor-agent
       - run: shellcheck openwrt-agent/wrtmonitor-agent
       - run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
-      - run: sha256sum --check openwrt-agent/SHA256SUMS.txt
+      - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
 
   docker:
     runs-on: ubuntu-latest
@@ -96,7 +96,7 @@ jobs:
       - run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
       - run: tar -czf wrtmonitor-openwrt-agent-v0.1.1-rc7.tar.gz -C openwrt-agent .
       - run: cp deploy/truenas/wrtmonitor-truenas.yaml wrtmonitor-truenas-v0.1.1-rc7.yaml
-      - run: sha256sum --check openwrt-agent/SHA256SUMS.txt
+      - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: wrtmonitor-openwrt-agent-v0.1.1-rc7

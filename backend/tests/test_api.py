@@ -232,7 +232,9 @@ def test_device_page_renders_agent_update_status(monkeypatch):
     monkeypatch.setattr(
         main, "web_user_from_session", lambda session_token, config, db: object()
     )
-    monkeypatch.setattr(main, "get_user_device_or_404", lambda db, user, device_id: device)
+    monkeypatch.setattr(
+        main, "get_user_device_or_404", lambda db, user, device_id: device
+    )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
     try:
