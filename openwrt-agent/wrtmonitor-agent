@@ -216,10 +216,12 @@ cpu_json() {
 storage_json() {
   line="$(df -k /overlay 2>/dev/null | awk 'NR==2 {print $2, $3, $4}' )"
   [ -n "$line" ] || line="$(df -k / 2>/dev/null | awk 'NR==2 {print $2, $3, $4}')"
-  set -- $line
-  total="${1:-0}"
-  used="${2:-0}"
-  available="${3:-0}"
+  total="0"
+  used="0"
+  available="0"
+  IFS=' ' read -r total used available <<EOF
+$line
+EOF
   case "$total" in ""|*[!0-9]*) total="0" ;; esac
   case "$used" in ""|*[!0-9]*) used="0" ;; esac
   case "$available" in ""|*[!0-9]*) available="0" ;; esac
