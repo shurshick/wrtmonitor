@@ -205,11 +205,13 @@ compare_versions() {
     }'
     return
   fi
+  # shellcheck disable=SC2086
   set -- $left
   left_major="$1"
   left_minor="$2"
   left_patch="$3"
   left_rc="$4"
+  # shellcheck disable=SC2086
   set -- $right
   right_major="$1"
   right_minor="$2"
