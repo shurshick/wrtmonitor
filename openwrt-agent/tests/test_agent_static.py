@@ -46,6 +46,13 @@ def test_agent_wifi_telemetry_is_multi_radio():
     assert 'wireless.@wifi-iface[$iface_index]' in source
 
 
+def test_agent_collects_extended_safe_telemetry():
+    source = agent_source()
+
+    for name in ("cpu_json", "storage_json", "thermal_json", "traffic_json", "processes_json"):
+        assert f"{name}()" in source
+
+
 def test_agent_hardening_is_present():
     source = agent_source()
 

@@ -30,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -109,7 +110,19 @@ fun WrtMonitorApp() {
         selectedDevice = null
         tab = Tab.Routers
     }
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Color(0xFF35B9D5),
+            secondary = Color(0xFF73D596),
+            tertiary = Color(0xFFF5BD4F),
+            background = Color(0xFF0B1018),
+            surface = Color(0xFF121B28),
+            surfaceVariant = Color(0xFF172234),
+            onPrimary = Color(0xFF041116),
+            onBackground = Color(0xFFE8EEF7),
+            onSurface = Color(0xFFE8EEF7)
+        )
+    ) {
         if (serverUrl.isBlank()) {
             ServerSetupScreen(
                 onSave = { value ->

@@ -17,6 +17,11 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
+    app.mount(
+        "/downloads/openwrt",
+        StaticFiles(directory="openwrt-agent"),
+        name="openwrt-downloads",
+    )
 
     @app.on_event("startup")
     def startup() -> None:

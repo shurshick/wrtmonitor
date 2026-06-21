@@ -3,7 +3,7 @@ set -eu
 
 CONFIG="wrtmonitor.main"
 LOCK_DIR="/tmp/wrtmonitor-agent.lock"
-AGENT_VERSION="0.1.1-rc3"
+AGENT_VERSION="0.1.1-rc4"
 
 cfg() {
   uci -q get "$CONFIG.$1" 2>/dev/null || true
@@ -193,7 +193,7 @@ telemetry_payload() {
   load_value="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0)"
   case "$uptime_value" in ""|*[!0-9]*) uptime_value="0" ;; esac
   load_value="$(json_escape "$load_value")"
-  printf '{"device_id":"%s","telemetry":{"system":{"uptime":%s,"load":"%s","memory":%s,"ubus":%s},"cpu":%s,"storage":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s}}' "$(device_id)" "$uptime_value" "$load_value" "$(memory_json)" "$(ubus_json system info)" "$(cpu_json)" "$(storage_json)" "$(ubus_json system board)" "$(ubus_json network.interface dump)" "$(ubus_json network.device status)" "$(wifi_status_json)" "$(ubus_json network.wireless status)"
+  printf '{"device_id":"%s","telemetry":{"system":{"uptime":%s,"load":"%s","memory":%s,"processes":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s}}' "$(device_id)" "$uptime_value" "$load_value" "$(memory_json)" "$(processes_json)" "$(ubus_json system info)" "$(cpu_json)" "$(storage_json)" "$(thermal_json)" "$(traffic_json)" "$(ubus_json system board)" "$(ubus_json network.interface dump)" "$(ubus_json network.device status)" "$(wifi_status_json)" "$(ubus_json network.wireless status)"
 }
 
 memory_json() {
@@ -226,6 +226,35 @@ EOF
   case "$used" in ""|*[!0-9]*) used="0" ;; esac
   case "$available" in ""|*[!0-9]*) available="0" ;; esac
   printf '{"mount":"/overlay","total_kb":%s,"used_kb":%s,"available_kb":%s}' "$total" "$used" "$available"
+}
+
+processes_json() {
+  count="$(ps 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
+  case "$count" in ""|*[!0-9]*) count="0" ;; esac
+  printf '{"count":%s}' "$count"
+}
+
+thermal_json() {
+  sensor="$(find /sys/class/thermal -name temp -type f 2>/dev/null | head -n 1)"
+  if [ -z "$sensor" ] || [ ! -r "$sensor" ]; then
+    printf '{"available":false}'
+    return
+  fi
+  milli_celsius="$(cat "$sensor" 2>/dev/null || echo 0)"
+  case "$milli_celsius" in ""|*[!0-9]*) milli_celsius="0" ;; esac
+  printf '{"available":true,"milli_celsius":%s}' "$milli_celsius"
+}
+
+traffic_json() {
+  values="$(awk 'NR > 2 && $1 !~ /^lo:/ { rx += $2; tx += $10 } END { printf "%d %d", rx, tx }' /proc/net/dev 2>/dev/null)"
+  rx="0"
+  tx="0"
+  IFS=' ' read -r rx tx <<EOF
+$values
+EOF
+  case "$rx" in ""|*[!0-9]*) rx="0" ;; esac
+  case "$tx" in ""|*[!0-9]*) tx="0" ;; esac
+  printf '{"rx_bytes":%s,"tx_bytes":%s}' "$rx" "$tx"
 }
 
 wifi_status_json() {

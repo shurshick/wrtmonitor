@@ -58,10 +58,10 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker build \
-            -t "$IMAGE_NAME:0.1.1-rc3" \
+            -t "$IMAGE_NAME:0.1.1-rc4" \
             -t "$IMAGE_NAME:latest" \
             .
-          docker push "$IMAGE_NAME:0.1.1-rc3"
+          docker push "$IMAGE_NAME:0.1.1-rc4"
           docker push "$IMAGE_NAME:latest"
 
   android:

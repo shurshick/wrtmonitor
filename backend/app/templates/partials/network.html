@@ -1,12 +1,18 @@
 <section class="card">
   <h2>Сеть</h2>
-  <ul>
+  <div class="metric"><span class="metric__label">Суммарный RX</span><span class="metric__value">{{ traffic.rx_bytes or 0 }} байт</span></div>
+  <div class="metric"><span class="metric__label">Суммарный TX</span><span class="metric__value">{{ traffic.tx_bytes or 0 }} байт</span></div>
+  <ul class="panel-list section">
     {% for item in interfaces %}
-    <li>{{ item.interface or 'interface' }}: {{ 'в сети' if item.up else 'не в сети' }} {{ item.l3_device or item.device or '' }}</li>
+    <li><strong>{{ item.interface or item.name or 'interface' }}</strong><br>{{ 'в сети' if item.up else 'не в сети' }}{% if item.l3_device or item.device %} · {{ item.l3_device or item.device }}{% endif %}{% if item['ipv4-address'] %} · {{ item['ipv4-address'][0].address }}{% endif %}</li>
     {% else %}<li>Данные интерфейсов ещё не получены</li>{% endfor %}
   </ul>
-  <form method="post" action="/devices/{{ device.id }}/web-command">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.interfaces">
-    <button>Запросить интерфейсы</button>
-  </form>
+  {% if network_devices %}
+  <ul class="panel-list">
+    {% for name, item in network_devices.items() %}
+    <li><strong>{{ name }}</strong><br>{{ 'активен' if item.up else 'неактивен' }}{% if item.carrier is not none %} · carrier {{ 'есть' if item.carrier else 'нет' }}{% endif %}{% if item.mtu %} · MTU {{ item.mtu }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.interfaces"><button>Запросить интерфейсы</button></form>
 </section>

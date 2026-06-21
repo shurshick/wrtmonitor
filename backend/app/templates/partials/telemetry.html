@@ -1,10 +1,12 @@
 <section class="card">
-  <h2>Телеметрия</h2>
-  <dl>
-    <dt>Обновлено</dt><dd>{{ latest }}</dd>
-    <dt>Возраст</dt><dd>{{ age if age is not none else 'нет данных' }} сек</dd>
-    <dt>Время работы</dt><dd>{{ system.uptime or 'нет данных' }}</dd>
-    <dt>Нагрузка</dt><dd>{{ system.load or 'нет данных' }}</dd>
-    <dt>Память</dt><dd>{{ memory.available_kb or '-' }} / {{ memory.total_kb or '-' }} KB</dd>
-  </dl>
+  <h2>Состояние системы</h2>
+  <div class="metric"><span class="metric__label">Последнее обновление</span><span class="metric__value">{{ latest }}</span></div>
+  <div class="metric"><span class="metric__label">Возраст telemetry</span><span class="metric__value">{{ age if age is not none else 'нет данных' }} сек</span></div>
+  <div class="metric"><span class="metric__label">Время работы</span><span class="metric__value">{{ system.uptime or 'нет данных' }} сек</span></div>
+  <div class="metric"><span class="metric__label">Нагрузка 1m</span><span class="metric__value">{{ system.load or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Память</span><span class="metric__value">{{ memory.available_kb or '-' }} / {{ memory.total_kb or '-' }} KB</span></div>
+  <div class="metric"><span class="metric__label">Процессор</span><span class="metric__value">{{ cpu.model or 'нет данных' }}{% if cpu.cores %}, {{ cpu.cores }} ядер{% endif %}</span></div>
+  <div class="metric"><span class="metric__label">Накопитель</span><span class="metric__value">{{ storage.used_kb or '-' }} / {{ storage.total_kb or '-' }} KB</span></div>
+  <div class="metric"><span class="metric__label">Температура</span><span class="metric__value">{% if thermal.available %}{{ thermal.milli_celsius / 1000 }} °C{% else %}нет датчика{% endif %}</span></div>
+  <div class="metric"><span class="metric__label">Процессы</span><span class="metric__value">{{ processes.count or 'нет данных' }}</span></div>
 </section>

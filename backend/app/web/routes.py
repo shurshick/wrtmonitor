@@ -163,8 +163,15 @@ def device_page(
     payload = telemetry.payload if telemetry else {}
     system = payload.get("system") or {}
     memory = system.get("memory") or {}
+    cpu = payload.get("cpu") or {}
+    storage = payload.get("storage") or {}
+    thermal = payload.get("thermal") or {}
+    traffic = payload.get("traffic") or {}
+    processes = system.get("processes") or {}
+    board = payload.get("board") or {}
     wifi = payload.get("wifi") or {}
     network = payload.get("network") or {}
+    network_devices = payload.get("network_devices") or {}
     radios = wifi.get("radios") or []
     interfaces = network.get("interface") or []
     commands = db.scalars(
@@ -191,8 +198,15 @@ def device_page(
             "age": age,
             "system": system,
             "memory": memory,
+            "cpu": cpu,
+            "storage": storage,
+            "thermal": thermal,
+            "traffic": traffic,
+            "processes": processes,
+            "board": board,
             "radios": radios,
             "interfaces": interfaces,
+            "network_devices": network_devices,
             "commands": commands,
             "raw_telemetry": json.dumps(payload, ensure_ascii=False, indent=2),
         },

@@ -1,293 +1,86 @@
 # OpenWrt agent
 
-OpenWrt agent — shell-клиент `wrtmonitor`, который устанавливается на роутер, регистрирует устройство на сервере, отправляет telemetry и периодически забирает разрешённые команды.
-
-Агент работает исходящими HTTPS-запросами к серверу. Входящий порт на роутере открывать не нужно.
+`wrtmonitor-agent` регистрирует роутер, отправляет telemetry и получает только разрешённые команды. Он использует исходящие HTTPS-запросы к серверу, поэтому проброс портов на роутер не требуется.
 
 ## Требования
 
 - OpenWrt с BusyBox `ash`;
-- `curl`;
-- `uci`;
-- `jsonfilter`;
-- доступ роутера к серверу `wrtmonitor`;
-- созданный администратор на сервере.
+- `curl`, `uci`, `ubus` и `jsonfilter`;
+- доступ роутера к внешнему HTTPS-адресу WrtMonitor;
+- созданный администратор сервера.
 
-`jsonfilter` нужен для безопасного чтения JSON-ответов сервера. Если его нет, агент пишет ошибку в `logread` и не выполняет команды.
-
-Проверьте пакеты на роутере:
+Проверьте и при необходимости установите зависимости:
 
 ```sh
 command -v curl
 command -v uci
+command -v ubus
 command -v jsonfilter
-```
 
-Если `jsonfilter` отсутствует:
-
-```sh
 opkg update
-opkg install jsonfilter
+opkg install curl jsonfilter
 ```
 
-## Установка с нуля
+## Установка с собственного сервера
 
-Перейдите во временную директорию:
+Это рекомендуемый способ для закрытых сетей и окружений без доступа к GitHub. После обновления контейнера WrtMonitor файлы агента автоматически доступны на вашем сервере:
+
+```text
+https://monitor.example.ru/downloads/openwrt/
+```
+
+Подставьте свой внешний HTTPS-домен и выполните на роутере:
 
 ```sh
 cd /tmp
-```
+BASE_URL='https://monitor.example.ru/downloads/openwrt'
 
-Скачайте архив агента из актуального релиза:
+wget -O wrtmonitor-agent "$BASE_URL/wrtmonitor-agent"
+wget -O wrtmonitor.init "$BASE_URL/wrtmonitor.init"
+wget -O install-openwrt.sh "$BASE_URL/install-openwrt.sh"
+chmod 0755 wrtmonitor-agent wrtmonitor.init install-openwrt.sh
 
-```sh
-wget -O wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.15/wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
-```
-
-Распакуйте архив:
-
-```sh
-tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
-```
-
-Запустите установщик:
-
-```sh
 sh install-openwrt.sh \
-  --server https://monitor.example.ru \
-  --admin-user admin@example.com \
+  --server 'https://monitor.example.ru' \
+  --admin-user 'admin@example.com' \
   --admin-password 'your-admin-password' \
   --name 'HomeRouter'
 ```
 
-Замените:
+Установщик получает короткоживущий admin token, создаёт отдельный `device_token`, записывает его в UCI и запускает сервис. Пароль администратора на роутере не сохраняется.
 
-- `https://monitor.example.ru` на внешний HTTPS-адрес сервера;
-- `admin@example.com` на логин администратора, созданного на `/setup`;
-- `your-admin-password` на пароль администратора;
-- `HomeRouter` на понятное имя роутера.
+### Интерактивная установка
 
-Что делает установщик:
-
-- логинится на сервер через `/api/v1/auth/login`;
-- вызывает `/api/v1/devices/provision`;
-- получает отдельный `device_token`;
-- сохраняет настройки в UCI `/etc/config/wrtmonitor`;
-- устанавливает `/usr/bin/wrtmonitor-agent`;
-- устанавливает init-скрипт `/etc/init.d/wrtmonitor`;
-- включает автозапуск;
-- запускает сервис.
-
-Пароль администратора на роутере не сохраняется. На роутере хранится только `device_token`.
-
-## Интерактивная установка
-
-Можно запустить установщик без параметров:
+Если параметры не передавать, установщик задаст вопросы сам:
 
 ```sh
 sh install-openwrt.sh
 ```
 
-Он спросит:
+## Установка из GitHub Release
 
-- адрес сервера;
-- логин администратора;
-- пароль администратора;
-- имя роутера;
-- интервал отправки telemetry.
-
-## Проверка после установки
-
-Проверьте конфигурацию:
-
-```sh
-uci show wrtmonitor
-```
-
-Ожидаемые поля:
-
-```text
-wrtmonitor.main.server_url='https://monitor.example.ru'
-wrtmonitor.main.device_id='...'
-wrtmonitor.main.device_token='...'
-wrtmonitor.main.name='HomeRouter'
-wrtmonitor.main.interval='60'
-```
-
-Проверьте автозапуск:
-
-```sh
-/etc/init.d/wrtmonitor enabled
-```
-
-Проверьте процесс:
-
-```sh
-ps | grep wrtmonitor
-```
-
-Отправьте telemetry вручную:
-
-```sh
-wrtmonitor-agent send-now
-```
-
-Посмотрите лог:
-
-```sh
-logread | grep wrtmonitor | tail -20
-```
-
-На сервере устройство должно появиться в `/devices`, а в Android — в списке роутеров. На экране устройства должна появиться последняя telemetry.
-
-## Обновление агента
-
-Обновление не требует повторной регистрации, если в UCI уже сохранены `device_id` и `device_token`.
-
-Остановите сервис:
-
-```sh
-/etc/init.d/wrtmonitor stop 2>/dev/null
-```
-
-Скачайте новый архив:
+Используйте этот вариант, если сервер WrtMonitor ещё не обновлён или нужен фиксированный релизный архив. Скачайте архив со страницы нужного release, распакуйте его и запустите `install-openwrt.sh` с теми же параметрами.
 
 ```sh
 cd /tmp
-rm -f wrtmonitor-agent install-openwrt.sh wrtmonitor.init wrtmonitor.config
-wget -O wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.0-test.15/wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
-tar -xzf wrtmonitor-openwrt-agent-v0.1.0-test.15.tar.gz
+wget -O wrtmonitor-agent.tar.gz \
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.1-rc3-session-telemetry/wrtmonitor-openwrt-agent-v0.1.1-rc3.tar.gz
+tar -xzf wrtmonitor-agent.tar.gz
+sh install-openwrt.sh --server 'https://monitor.example.ru' --admin-user 'admin@example.com' --admin-password 'your-admin-password' --name 'HomeRouter'
 ```
 
-Замените скрипт агента:
+## Проверка после установки
 
 ```sh
-cp wrtmonitor-agent /usr/bin/wrtmonitor-agent
-chmod 0755 /usr/bin/wrtmonitor-agent
-```
-
-Обновите init-скрипт:
-
-```sh
-cp wrtmonitor.init /etc/init.d/wrtmonitor
-chmod 0755 /etc/init.d/wrtmonitor
-```
-
-Запустите сервис:
-
-```sh
-/etc/init.d/wrtmonitor enable
-/etc/init.d/wrtmonitor restart
-```
-
-Проверьте отправку:
-
-```sh
-wrtmonitor-agent send-now
-logread | grep wrtmonitor | tail -20
-```
-
-Если `send-now` завершился без ошибки и новых `telemetry failed` в логе нет, обновление прошло успешно.
-
-## Полная переустановка агента
-
-Если нужно заново привязать роутер к серверу:
-
-```sh
-/etc/init.d/wrtmonitor stop 2>/dev/null
-rm -f /usr/bin/wrtmonitor-agent
-rm -f /etc/init.d/wrtmonitor
-rm -f /etc/config/wrtmonitor
-```
-
-После этого выполните установку с нуля.
-
-## Telemetry
-
-Агент отправляет:
-
-- `system`: uptime, load average, память, `ubus system info`;
-- `board`: `ubus system board`;
-- `network`: `ubus network.interface dump`;
-- `wifi`: multi-radio snapshot из UCI `wireless`.
-
-Wi-Fi telemetry имеет структуру:
-
-```json
-{
-  "available": true,
-  "radios": [
-    {
-      "name": "radio0",
-      "up": true,
-      "band": "2g",
-      "channel": "6",
-      "ssid": ["Home"],
-      "encryption": "psk2"
-    }
-  ]
-}
-```
-
-Если `ubus`, `wifi` или часть UCI-данных недоступны, агент должен отправить частичный snapshot, а не падать.
-
-## Команды управления
-
-Агент выполняет только команды из allowlist:
-
-- `router.reboot`;
-- `wifi.status`;
-- `wifi.set_enabled`;
-- `wifi.set_ssid`;
-- `network.interfaces`.
-
-Команды `wifi.set_enabled` и `wifi.set_ssid` поддерживают параметры `radio` и `iface`. Если они не переданы, используется первый radio/iface для обратной совместимости.
-
-Произвольные `shell.exec` и `uci.apply` не поддерживаются.
-
-## Диагностика
-
-Сервис не запущен:
-
-```sh
-/etc/init.d/wrtmonitor restart
+uci show wrtmonitor
+/etc/init.d/wrtmonitor enabled
 ps | grep wrtmonitor
-```
-
-Нет telemetry:
-
-```sh
+wrtmonitor-agent version
 wrtmonitor-agent send-now
 logread | grep wrtmonitor | tail -30
 ```
 
-Проверить URL и токен:
-
-```sh
-uci get wrtmonitor.main.server_url
-uci get wrtmonitor.main.device_id
-uci get wrtmonitor.main.device_token
-```
-
-Проверить доступность сервера:
-
-```sh
-curl -i https://monitor.example.ru/health
-```
-
-Если в логе есть `jsonfilter is required`, установите пакет:
-
-```sh
-opkg update
-opkg install jsonfilter
-```
-## Надёжность и диагностика
-
-Agent не допускает параллельный `send-now` или `daemon`: используется lock `/tmp/wrtmonitor-agent.lock`. Все запросы `curl` имеют connect timeout и общий timeout.
-
-Для диагностики доступны команды:
+Ожидается процесс `wrtmonitor-agent daemon`, а устройство должно обновиться в WebUI и Android. Для просмотра собранных данных используйте:
 
 ```sh
 wrtmonitor-agent debug
@@ -295,4 +88,74 @@ wrtmonitor-agent debug-telemetry
 wrtmonitor-agent debug-api
 ```
 
-`debug` показывает только маску device token, а не его полное значение.
+## Обновление агента с собственного сервера
+
+Обновление сохраняет `device_id` и `device_token`, поэтому повторная авторизация администратором не нужна.
+
+```sh
+cd /tmp
+/etc/init.d/wrtmonitor stop 2>/dev/null || true
+BASE_URL='https://monitor.example.ru/downloads/openwrt'
+wget -O wrtmonitor-agent "$BASE_URL/wrtmonitor-agent"
+wget -O wrtmonitor.init "$BASE_URL/wrtmonitor.init"
+chmod 0755 wrtmonitor-agent wrtmonitor.init
+cp wrtmonitor-agent /usr/bin/wrtmonitor-agent
+cp wrtmonitor.init /etc/init.d/wrtmonitor
+/etc/init.d/wrtmonitor enable
+/etc/init.d/wrtmonitor restart
+wrtmonitor-agent send-now
+```
+
+Проверьте версию и лог:
+
+```sh
+wrtmonitor-agent version
+logread | grep wrtmonitor | tail -30
+```
+
+## Полное удаление агента
+
+Команда удаляет сервис, исполняемый файл и локальную конфигурацию. Telemetry и история команд на сервере остаются как исторические данные.
+
+```sh
+/etc/init.d/wrtmonitor stop 2>/dev/null || true
+/etc/init.d/wrtmonitor disable 2>/dev/null || true
+rm -f /usr/bin/wrtmonitor-agent
+rm -f /etc/init.d/wrtmonitor
+rm -f /etc/config/wrtmonitor
+```
+
+После удаления убедитесь, что процесс отсутствует:
+
+```sh
+ps | grep wrtmonitor
+```
+
+## Состав telemetry
+
+Agent передаёт безопасный снимок состояния:
+
+- uptime, load average, память и число процессов;
+- CPU: модель и число ядер;
+- место на overlay/корневом накопителе;
+- температуру, если драйвер роутера предоставляет датчик;
+- суммарные RX/TX-счётчики без MAC-адресов и содержимого трафика;
+- board и firmware через `ubus`;
+- статусы и IP-адреса интерфейсов;
+- Wi-Fi radio, band, channel, SSID и состояние;
+- расширенные `ubus` snapshots для совместимости с разными моделями OpenWrt.
+
+MAC-адреса клиентов, пароли Wi-Fi и содержимое трафика agent не отправляет.
+
+## Диагностика
+
+Если нет telemetry:
+
+```sh
+wrtmonitor-agent send-now
+logread | grep wrtmonitor | tail -30
+uci get wrtmonitor.main.server_url
+curl -i https://monitor.example.ru/health
+```
+
+Если в логе есть `jsonfilter is required`, установите `jsonfilter` через `opkg`.

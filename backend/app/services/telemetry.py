@@ -29,6 +29,8 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
     memory = system.get("memory") or {}
     cpu = payload.get("cpu") or {}
     storage = payload.get("storage") or {}
+    thermal = payload.get("thermal") or {}
+    traffic = payload.get("traffic") or {}
     wifi = payload.get("wifi") or {}
     network = payload.get("network") or {}
     interfaces = network.get("interfaces") or network.get("interface") or []
@@ -44,6 +46,11 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "cpu_cores": cpu.get("cores"),
         "storage_total_mb": int(storage.get("total_kb", 0) or 0) // 1024,
         "storage_available_mb": int(storage.get("available_kb", 0) or 0) // 1024,
+        "temperature_celsius": (thermal.get("milli_celsius") or 0) / 1000
+        if thermal.get("available")
+        else None,
+        "traffic_rx_bytes": traffic.get("rx_bytes"),
+        "traffic_tx_bytes": traffic.get("tx_bytes"),
         "wifi_available": bool(wifi.get("available", False)),
         "wifi_radio_count": len(radios),
         "network_interface_count": len(interfaces),
