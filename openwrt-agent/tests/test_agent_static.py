@@ -59,6 +59,7 @@ def test_agent_has_disconnect_and_wifi_password_commands():
 
     assert "agent.disconnect)" in source
     assert "wifi.set_password)" in source
+    assert "diagnostics.run)" in source
     assert "agent_enabled()" in source
 
 
@@ -85,6 +86,27 @@ def test_agent_hardening_is_present():
     assert "masked_token()" in source
     assert "debug-telemetry" in source
     assert "debug-api" in source
+
+
+def test_agent_has_capabilities_and_diagnostics_cli():
+    source = agent_source()
+
+    assert "capabilities_json()" in source
+    assert "diagnostics_json()" in source
+    assert "check_server_json()" in source
+    assert "check_dns_json()" in source
+    assert "check_route_json()" in source
+    assert "check_wifi_json()" in source
+    assert "dependencies_json()" in source
+
+
+def test_agent_creates_wireless_backups_before_wifi_changes():
+    source = agent_source()
+
+    assert 'CONFIG_BACKUP_DIR="$STATUS_DIR/config-backups"' in source
+    assert "backup_wireless_config()" in source
+    assert "list_config_backups()" in source
+    assert "wireless-$timestamp-$command_id.bak" in source
 
 
 def test_installer_bootstraps_runtime_dependencies():

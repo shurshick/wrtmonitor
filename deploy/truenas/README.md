@@ -10,7 +10,7 @@ ghcr.io/shurshick/wrtmonitor:latest
 
 ## Первичная установка
 
-1. Скачайте из последнего релиза `wrtmonitor-truenas-v0.1.1-rc7.yaml`.
+1. Скачайте из последнего релиза `wrtmonitor-truenas-v0.1.1-rc8.yaml`.
 2. В YAML замените `WRTMONITOR_PUBLIC_SERVER_URL` на внешний HTTPS-адрес.
 3. Замените `POSTGRES_PASSWORD` и такой же пароль в `WRTMONITOR_DATABASE_URL`.
 4. Замените `WRTMONITOR_JWT_SECRET` на длинное случайное значение.
@@ -20,20 +20,13 @@ ghcr.io/shurshick/wrtmonitor:latest
 
 ## Обновление latest
 
-Тег `latest` не обновляет уже работающий контейнер автоматически. Выполните в TrueNAS:
+Тег `latest` не обновляет уже работающий контейнер автоматически. Выполните:
 
-1. Откройте **Apps** и выберите `wrtmonitor`.
-2. Нажмите **Edit**.
-3. Убедитесь, что image указан именно так:
+1. **Apps**
+2. выберите `wrtmonitor`
+3. **Edit**
+4. **Save**
 
-   ```text
-   ghcr.io/shurshick/wrtmonitor:latest
-   ```
+После redeploy проверьте `https://monitor.example.ru/health`.
 
-4. Сохраните изменения и дождитесь redeploy приложения.
-5. В списке Apps дождитесь статуса `Running`.
-6. Проверьте `https://monitor.example.ru/health`.
-
-PostgreSQL volume удалять не нужно: администратор, устройства и telemetry сохранятся.
-
-Если TrueNAS всё ещё показывает старую версию, остановите App, снова нажмите **Edit → Save** и запустите его. Это запускает повторный pull благодаря `pull_policy: always`.
+PostgreSQL volume удалять не нужно: администратор, устройства и telemetry сохраняются.

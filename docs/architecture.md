@@ -19,21 +19,38 @@ flowchart LR
   Agent --> Router["OpenWrt / ubus / UCI"]
 ```
 
-## Команды
+## Command architecture
 
-Сервер не выполняет команды на роутере напрямую. Он только ставит их в очередь, а agent забирает их при polling.
+Сервер не выполняет команды на роутере напрямую. Он только:
 
-Текущий allowlist:
+1. валидирует команду;
+2. проверяет capability;
+3. ставит команду в очередь;
+4. отдает ее agent при polling;
+5. сохраняет результат выполнения.
 
-- `router.reboot`
-- `wifi.set_enabled`
-- `wifi.set_ssid`
-- `wifi.set_password`
-- `network.interfaces`
-- `agent.disconnect`
-- `agent.update`
-- `agent.rollback`
-- `agent.set_auto_update`
+Командный слой строится вокруг `COMMAND_REGISTRY`, где для каждой команды определены:
+
+- `risk_level`
+- `capability`
+- `requires_confirmation`
+- `secret_fields`
+
+## Capabilities
+
+Начиная с `rc8`, agent публикует:
+
+- версию;
+- платформу;
+- `capabilities_version`;
+- булевы capabilities.
+
+Capabilities передаются в latest telemetry и через `GET /api/v1/devices/{device_id}/agent`.
+
+Если capabilities отсутствуют, сервер, Web UI и Android переходят в safe fallback:
+
+- read-only;
+- без новых опасных действий.
 
 ## Telemetry
 
@@ -49,40 +66,36 @@ POST /api/v1/agent/telemetry
 GET /api/v1/devices/{device_id}/telemetry/latest
 ```
 
-В telemetry теперь дополнительно входит блок `agent`:
+В latest telemetry теперь есть нормализованные блоки:
 
-- версия agent;
-- статус auto-update;
-- последняя проверка обновлений;
-- результат последнего обновления;
-- последняя ошибка;
-- backup availability;
-- источник обновления.
+- `agent`
+- `wifi`
+- `network`
 
-## OpenWrt agent update pipeline
+Это дает UI стабильную структуру без ручного разбора raw JSON.
 
-Источник обновления:
+## Wi-Fi management safety
 
-```text
-/downloads/openwrt/
-```
+Перед командами:
 
-Server раздаёт:
+- `wifi.set_enabled`
+- `wifi.set_ssid`
+- `wifi.set_password`
 
-- `wrtmonitor-agent`
-- `wrtmonitor.init`
-- `install-openwrt.sh`
-- `agent-version.txt`
-- `SHA256SUMS.txt`
+agent создает backup `/etc/config/wireless`. Если backup не создался, команда не применяется.
 
-Agent делает:
+## Diagnostics
 
-1. скачивание во временную директорию;
-2. проверку `SHA-256`;
-3. `sh -n` для shell-скриптов;
-4. backup текущей версии;
-5. замену файлов;
-6. rollback при ошибке.
+Agent поддерживает:
+
+- `check-server`
+- `check-dns`
+- `check-route`
+- `check-wifi`
+- `check-dependencies`
+- `diagnostics --json`
+
+Backend отдает diagnostics через обычный command lifecycle, а Web UI и Android показывают результат как structured JSON.
 
 ## Устройства
 
@@ -94,9 +107,8 @@ Agent делает:
 - `disconnecting`
 - `disabled`
 
-Удаление из списка в `rc7` сделано как soft-archive:
+Удаление из списка остается soft-archive:
 
 - удалить можно только `disabled` устройство;
 - запись скрывается из обычного списка;
-- telemetry и history команд остаются в базе;
-- для повторного подключения агент нужно зарегистрировать заново.
+- telemetry и history команд остаются в базе.

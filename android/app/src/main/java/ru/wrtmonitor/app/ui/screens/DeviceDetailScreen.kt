@@ -29,17 +29,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.time.OffsetDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
+import ru.wrtmonitor.app.api.dto.AgentStatusDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.viewmodel.DeviceDetailUiState
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun DeviceDetailScreen(
@@ -62,15 +63,25 @@ fun DeviceDetailScreen(
         state = state.copy(loading = true, error = null)
         actionError = ""
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id)
-            }) {
-                is ApiResult.Success -> state = state.copy(loading = false, telemetry = result.data)
-                is ApiResult.Error -> {
-                    if (result.isUnauthorized()) onSessionExpired()
-                    else state = state.copy(loading = false, error = result.message)
-                }
+            val api = WrtMonitorApi(serverUrl, accessToken)
+            val telemetryResult = withContext(Dispatchers.IO) { api.getLatestTelemetry(device.id) }
+            if (telemetryResult is ApiResult.Error && telemetryResult.isUnauthorized()) {
+                onSessionExpired()
+                return@launch
             }
+            val agentResult = withContext(Dispatchers.IO) { api.getDeviceAgent(device.id) }
+            if (agentResult is ApiResult.Error && agentResult.isUnauthorized()) {
+                onSessionExpired()
+                return@launch
+            }
+            val telemetry = (telemetryResult as? ApiResult.Success)?.data
+            val agent = (agentResult as? ApiResult.Success)?.data ?: telemetry?.agent
+            val error = (telemetryResult as? ApiResult.Error)?.message ?: (agentResult as? ApiResult.Error)?.message
+            state = state.copy(
+                loading = false,
+                telemetry = telemetry?.copy(agent = agent ?: telemetry.agent),
+                error = error,
+            )
         }
     }
 
@@ -79,7 +90,7 @@ fun DeviceDetailScreen(
         actionError = ""
         scope.launch {
             when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload)
+                WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload, confirmed = true)
             }) {
                 is ApiResult.Success -> {
                     actionMessage = success
@@ -116,6 +127,7 @@ fun DeviceDetailScreen(
                 InfoRow(stringResource(R.string.model), device.model, stringResource(R.string.no_data))
                 InfoRow(stringResource(R.string.firmware), device.firmware, stringResource(R.string.no_data))
                 InfoRow(stringResource(R.string.status), device.status, stringResource(R.string.no_data))
+                InfoRow(stringResource(R.string.last_seen), formatTimestamp(device.lastSeenAt), stringResource(R.string.no_data))
             }
         }
         Row(
@@ -130,12 +142,12 @@ fun DeviceDetailScreen(
             state.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            state.error != null -> Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
+            state.error != null && state.telemetry == null -> Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
             state.telemetry == null -> Text(stringResource(R.string.no_data))
             else -> TelemetrySummary(state.telemetry!!)
         }
         AgentSection(
-            telemetry = state.telemetry,
+            agent = state.telemetry?.agent,
             actionMessage = actionMessage,
             actionError = actionError,
             canArchive = device.status == "disabled",
@@ -170,7 +182,7 @@ fun DeviceDetailScreen(
         AlertDialog(
             onDismissRequest = { confirmArchive = false },
             title = { Text("Удалить из списка?") },
-            text = { Text("Этот роутер уже отключён. История telemetry и команд останется на сервере, но для повторного подключения агент нужно будет зарегистрировать заново.") },
+            text = { Text("Этот роутер уже отключен. История telemetry и команд останется на сервере, но для повторного подключения агент нужно будет зарегистрировать заново.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmArchive = false
@@ -198,10 +210,10 @@ private fun TelemetrySummary(telemetry: TelemetryDto) {
     val processes = system?.optJSONObject("processes")
     val board = payload.optJSONObject("board")
     val release = board?.optJSONObject("release")
-    val network = payload.optJSONObject("network")
+    val network = telemetry.network ?: payload.optJSONObject("network")
     val networkDevices = payload.optJSONObject("network_devices")
-    val interfaces = network?.optJSONArray("interface") ?: network?.optJSONArray("interfaces")
-    val wifi = payload.optJSONObject("wifi")
+    val interfaces = network?.optJSONArray("interfaces") ?: network?.optJSONArray("interface")
+    val wifi = telemetry.wifi ?: payload.optJSONObject("wifi")
     val radios = wifi?.optJSONArray("radios")
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         TelemetrySection("Состояние") {
@@ -216,7 +228,7 @@ private fun TelemetrySummary(telemetry: TelemetryDto) {
             InfoRow(stringResource(R.string.uptime), formatDuration(system?.optLong("uptime", 0) ?: 0))
             InfoRow(stringResource(R.string.load), system?.optString("load"), stringResource(R.string.no_data))
             InfoRow(stringResource(R.string.memory), memory?.let { memoryLabel(it) }, stringResource(R.string.no_data))
-            InfoRow("Процессор", cpu?.optString("model").orEmpty().ifBlank { "Не определён" })
+            InfoRow("Процессор", cpu?.optString("model").orEmpty().ifBlank { "Не определен" })
             InfoRow("Ядра CPU", cpu?.optLong("cores", 0)?.takeIf { it > 0 }?.toString(), stringResource(R.string.no_data))
             InfoRow("Накопитель", storage?.let { storageLabel(it) }, stringResource(R.string.no_data))
             InfoRow("Температура", thermalLabel(thermal), stringResource(R.string.no_data))
@@ -228,7 +240,11 @@ private fun TelemetrySummary(telemetry: TelemetryDto) {
         }
         TelemetrySection("Сеть") {
             InfoRow("RX / TX", traffic?.let { "${formatBytes(it.optLong("rx_bytes"))} / ${formatBytes(it.optLong("tx_bytes"))}" }, stringResource(R.string.no_data))
-            if (interfaces == null || interfaces.length() == 0) Text("Агент ещё не передал интерфейсы") else InterfaceRows(interfaces)
+            if (interfaces == null || interfaces.length() == 0) {
+                Text("Агент еще не передал интерфейсы")
+            } else {
+                InterfaceRows(interfaces)
+            }
             if (networkDevices != null) NetworkDeviceRows(networkDevices)
         }
         TelemetrySection("Wi-Fi") {
@@ -239,7 +255,7 @@ private fun TelemetrySummary(telemetry: TelemetryDto) {
 
 @Composable
 private fun AgentSection(
-    telemetry: TelemetryDto?,
+    agent: AgentStatusDto?,
     actionMessage: String,
     actionError: String,
     canArchive: Boolean,
@@ -249,26 +265,39 @@ private fun AgentSection(
     onRollback: () -> Unit,
     onArchive: () -> Unit,
 ) {
-    val agent = telemetry?.payload?.optJSONObject("agent")
-    val autoUpdateEnabled = agent?.optBoolean("auto_update_enabled", true) == true
+    val capabilities = agent?.capabilities ?: emptyMap()
+    val autoUpdateEnabled = agent?.autoUpdateEnabled == true
     TelemetrySection("Agent") {
-        InfoRow("Версия", agent?.optString("version"), stringResource(R.string.no_data))
+        InfoRow("Версия", agent?.version, stringResource(R.string.no_data))
+        InfoRow("Статус", agent?.status, stringResource(R.string.no_data))
         InfoRow("Auto-update", if (agent == null) null else if (autoUpdateEnabled) "Включено" else "Выключено", stringResource(R.string.no_data))
-        InfoRow("Доступная версия", agent?.optString("available_version"), stringResource(R.string.no_data))
-        InfoRow("Последняя проверка", formatTimestamp(agent?.optString("last_update_check")), stringResource(R.string.no_data))
-        InfoRow("Статус обновления", agent?.optString("last_update_status"), stringResource(R.string.no_data))
-        InfoRow("Последнее успешное обновление", formatTimestamp(agent?.optString("last_successful_update")), stringResource(R.string.no_data))
-        InfoRow("Последняя ошибка", agent?.optString("last_update_error"), stringResource(R.string.no_data))
-        InfoRow("Backup", if (agent == null) null else if (agent.optBoolean("backup_available", false)) "Доступен" else "Нет", stringResource(R.string.no_data))
-        InfoRow("Источник", agent?.optString("update_source"), stringResource(R.string.no_data))
+        InfoRow("Доступная версия", agent?.availableVersion, stringResource(R.string.no_data))
+        InfoRow("Последняя проверка", formatTimestamp(agent?.lastUpdateCheck), stringResource(R.string.no_data))
+        InfoRow("Статус обновления", agent?.lastUpdateStatus, stringResource(R.string.no_data))
+        InfoRow("Последнее успешное обновление", formatTimestamp(agent?.lastSuccessfulUpdate), stringResource(R.string.no_data))
+        InfoRow("Последняя ошибка", agent?.lastUpdateError, stringResource(R.string.no_data))
+        InfoRow("Rollback", if (agent == null) null else if (agent.rollbackAvailable) "Доступен" else "Нет", stringResource(R.string.no_data))
+        InfoRow("Источник", agent?.updateSource, stringResource(R.string.no_data))
+        InfoRow("Capabilities", capabilities.keys.sorted().takeIf { it.isNotEmpty() }?.joinToString(", "), stringResource(R.string.no_data))
+
         if (actionMessage.isNotBlank()) Text(actionMessage, color = MaterialTheme.colorScheme.primary)
         if (actionError.isNotBlank()) Text(actionError, color = MaterialTheme.colorScheme.error)
-        Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth()) { Text("Проверить обновление") }
-        Button(
-            onClick = if (autoUpdateEnabled) onDisableAutoUpdate else onEnableAutoUpdate,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(if (autoUpdateEnabled) "Выключить auto-update" else "Включить auto-update") }
-        Button(onClick = onRollback, modifier = Modifier.fillMaxWidth()) { Text("Rollback agent") }
+
+        if (capabilities["agent.update"] == true) {
+            Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth()) { Text("Проверить обновление") }
+        }
+        if (capabilities["agent.update"] == true) {
+            Button(
+                onClick = if (autoUpdateEnabled) onDisableAutoUpdate else onEnableAutoUpdate,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (autoUpdateEnabled) "Выключить auto-update" else "Включить auto-update") }
+        }
+        if (capabilities["agent.rollback"] == true) {
+            Button(onClick = onRollback, modifier = Modifier.fillMaxWidth()) { Text("Rollback agent") }
+        }
+        if (capabilities.isEmpty()) {
+            Text("Старый агент: доступны только данные без управляющих действий.", color = MaterialTheme.colorScheme.secondary)
+        }
         if (canArchive) {
             TextButton(onClick = onArchive, modifier = Modifier.fillMaxWidth()) {
                 Text("Удалить из списка", color = MaterialTheme.colorScheme.error)
@@ -293,8 +322,11 @@ private fun InterfaceRows(interfaces: JSONArray) {
         val item = interfaces.optJSONObject(index) ?: continue
         val name = item.optString("interface", item.optString("name", "interface"))
         val state = if (item.optBoolean("up", false)) "В сети" else "Не в сети"
-        val address = firstAddress(item.optJSONArray("ipv4-address"))
-        InfoRow(name, listOf(state, address).filter { it.isNotBlank() }.joinToString(" · "))
+        val proto = item.optString("proto").takeIf { it.isNotBlank() }
+        val device = item.optString("device").takeIf { it.isNotBlank() }
+        val ipv4 = item.optJSONArray("ipv4")?.optString(0).takeIf { !it.isNullOrBlank() }
+            ?: firstAddress(item.optJSONArray("ipv4-address")).takeIf { it.isNotBlank() }
+        InfoRow(name, listOfNotNull(state, proto, device, ipv4).joinToString(" · "))
     }
 }
 
@@ -306,15 +338,27 @@ private fun RadioRows(radios: JSONArray?) {
     }
     for (index in 0 until radios.length()) {
         val radio = radios.optJSONObject(index) ?: continue
-        val name = radio.optString("name", "radio$index")
-        val ssid = radio.optJSONArray("ssid")?.optString(0).orEmpty()
-        val details = listOf(
-            if (radio.optBoolean("up", false)) "Включён" else "Выключен",
-            ssid,
-            radio.optString("band"),
-            radio.optString("channel"),
-        ).filter { it.isNotBlank() }.joinToString(" · ")
+        val name = radio.optString("name", radio.optString("id", "radio$index"))
+        val details = listOfNotNull(
+            if (radio.optBoolean("up", false)) "Включен" else "Выключен",
+            radio.optString("band").takeIf { it.isNotBlank() },
+            radio.optString("channel").takeIf { it.isNotBlank() }?.let { "канал $it" },
+        ).joinToString(" · ")
         InfoRow(name, details)
+        val interfaces = radio.optJSONArray("interfaces")
+        if (interfaces != null) {
+            for (ifaceIndex in 0 until interfaces.length()) {
+                val iface = interfaces.optJSONObject(ifaceIndex) ?: continue
+                InfoRow(
+                    "SSID ${ifaceIndex + 1}",
+                    listOfNotNull(
+                        iface.optString("ssid").takeIf { it.isNotBlank() },
+                        if (iface.optBoolean("enabled", true)) "активен" else "выключен",
+                        iface.optString("encryption").takeIf { it.isNotBlank() },
+                    ).joinToString(" · "),
+                )
+            }
+        }
     }
 }
 

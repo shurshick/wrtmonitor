@@ -9,10 +9,14 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import DeviceTelemetry, User
 from ..services.auth import current_user, device_from_token, settings
-from ..services.devices import get_user_device_or_404
+from ..services.devices import get_latest_agent_status, get_user_device_or_404
 from ..services.telemetry import TELEMETRY_STALE_SECONDS, cleanup_device_telemetry
 from ..schemas import TelemetryRequest
-from ..services.telemetry import build_telemetry_summary
+from ..services.telemetry import (
+    build_telemetry_summary,
+    normalize_network_summary,
+    normalize_wifi_summary,
+)
 
 
 router = APIRouter()
@@ -38,6 +42,9 @@ def latest_device_telemetry(
             "is_stale": False,
             "source": "agent",
             "summary": None,
+            "agent": {},
+            "wifi": {"available": False, "radios": []},
+            "network": {"interfaces": []},
         }
     age_seconds = max(
         0, int((datetime.now(UTC) - telemetry.created_at).total_seconds())
@@ -50,6 +57,9 @@ def latest_device_telemetry(
         "is_stale": age_seconds > TELEMETRY_STALE_SECONDS,
         "source": "agent",
         "summary": build_telemetry_summary(telemetry.payload),
+        "agent": get_latest_agent_status(db, device_id),
+        "wifi": normalize_wifi_summary(telemetry.payload),
+        "network": normalize_network_summary(telemetry.payload),
     }
 
 

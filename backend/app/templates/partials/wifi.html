@@ -1,11 +1,83 @@
 <section class="card">
   <h2>Wi-Fi</h2>
+  {% if capabilities %}
+  <p class="notice">Перед изменением SSID, пароля или состояния агент создаст backup <code>/etc/config/wireless</code>.</p>
+  {% endif %}
   <ul class="panel-list">
     {% for radio in radios %}
-    <li><strong>{{ radio.name or 'radio' }}</strong><br>{{ 'включён' if radio.up else 'выключен' }}{% if radio.band %} · {{ radio.band }}{% endif %}{% if radio.channel %} · канал {{ radio.channel }}{% endif %}<br>SSID: {{ radio.ssid|join(', ') or 'нет данных' }}</li>
-    {% else %}<li>Wi-Fi радио не обнаружено</li>{% endfor %}
+    <li>
+      <strong>{{ radio.name or radio.id or 'radio' }}</strong><br>
+      {{ 'включён' if radio.up else 'выключен' }}
+      {% if radio.band %} · {{ radio.band }}{% endif %}
+      {% if radio.channel %} · канал {{ radio.channel }}{% endif %}
+      {% if radio.interfaces %}
+      <div class="sub-list">
+        {% for iface in radio.interfaces %}
+        <div class="sub-list__item">
+          <strong>{{ iface.ssid or 'SSID не задан' }}</strong>
+          <span>{{ 'активен' if iface.enabled else 'выключен' }}{% if iface.encryption %} · {{ iface.encryption }}{% endif %}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </li>
+    {% else %}
+    <li>Wi-Fi радио не обнаружено</li>
+    {% endfor %}
   </ul>
-  <form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_enabled"><label>Состояние<select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select></label><button>Применить</button></form>
-  <form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_ssid"><label>Новый SSID<input name="ssid" required maxlength="64"></label><button>Изменить SSID</button></form>
-  <form method="post" action="/devices/{{ device.id }}/web-command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_password"><label>Новый пароль Wi-Fi<input name="wifi_password" type="password" required minlength="8" autocomplete="new-password"></label><button>Изменить пароль</button></form>
+
+  {% if capabilities.get('wifi.enable') or capabilities.get('wifi.disable') %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="wifi.set_enabled">
+    <input type="hidden" name="confirmed" value="true">
+    <input type="hidden" name="radio" value="{{ radios[0].id if radios else '' }}">
+    <label>Состояние
+      <select name="enabled">
+        <option value="true">Включить</option>
+        <option value="false">Выключить</option>
+      </select>
+    </label>
+    <div class="button-row">
+      <button type="submit">Применить</button>
+      <span class="risk-badge">risk: level 3</span>
+    </div>
+  </form>
+  {% endif %}
+
+  {% if capabilities.get('wifi.set_ssid') %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="wifi.set_ssid">
+    <input type="hidden" name="confirmed" value="true">
+    <input type="hidden" name="iface" value="{{ radios[0].interfaces[0].id if radios and radios[0].interfaces else '' }}">
+    <label>Новый SSID
+      <input name="ssid" required maxlength="32">
+    </label>
+    <div class="button-row">
+      <button type="submit">Изменить SSID</button>
+      <span class="risk-badge">risk: level 3</span>
+    </div>
+  </form>
+  {% endif %}
+
+  {% if capabilities.get('wifi.set_password') %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="wifi.set_password">
+    <input type="hidden" name="confirmed" value="true">
+    <input type="hidden" name="iface" value="{{ radios[0].interfaces[0].id if radios and radios[0].interfaces else '' }}">
+    <label>Новый пароль Wi-Fi
+      <input name="wifi_password" type="password" required minlength="8" maxlength="63" autocomplete="new-password">
+    </label>
+    <div class="button-row">
+      <button type="submit">Изменить пароль</button>
+      <span class="risk-badge">risk: level 3</span>
+    </div>
+  </form>
+  {% endif %}
+
+  {% if not capabilities %}
+  <p class="muted">Для старого агента блок управления скрыт до получения capabilities.</p>
+  {% endif %}
 </section>

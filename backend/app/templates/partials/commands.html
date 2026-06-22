@@ -2,14 +2,48 @@
   <h2>Последние команды</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Команда</th><th>Статус</th><th>Обновлено</th><th>Результат</th></tr></thead>
-      <tbody>{% for command in commands %}
+      <thead>
+        <tr>
+          <th>Команда</th>
+          <th>Статус</th>
+          <th>Risk</th>
+          <th>Capability</th>
+          <th>Source</th>
+          <th>Payload</th>
+          <th>Результат</th>
+          <th>Создано</th>
+          <th>Взято</th>
+          <th>Завершено</th>
+          <th>TTL</th>
+          <th>Ошибка</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for command in commands %}
         <tr>
           <td><code>{{ command.command_type }}</code></td>
           <td><span class="status status--{{ command.status|lower }}">{{ command.status }}</span></td>
-          <td>{{ command.updated_at }}</td><td><code>{{ command.result or {} }}</code></td>
+          <td>{{ command.risk_level or '-' }}</td>
+          <td><code>{{ command.capability or '-' }}</code></td>
+          <td>{{ command.source }}</td>
+          <td><code>{{ command.payload or {} }}</code></td>
+          <td><code>{{ command.result or {} }}</code></td>
+          <td>{{ command.created_at or '-' }}</td>
+          <td>{{ command.picked_at or '-' }}</td>
+          <td>{{ command.completed_at or '-' }}</td>
+          <td>{{ command.expires_at or '-' }}</td>
+          <td>{{ command.last_error or '-' }}</td>
         </tr>
-      {% else %}<tr><td class="empty-state" colspan="4">Команд пока нет</td></tr>{% endfor %}</tbody>
+        {% else %}
+        <tr><td class="empty-state" colspan="12">Команд пока нет</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
+  {% if latest_diagnostics %}
+  <div class="section">
+    <h3>Последняя диагностика</h3>
+    <pre class="raw-telemetry">{{ latest_diagnostics.result or {} }}</pre>
+  </div>
+  {% endif %}
 </div>

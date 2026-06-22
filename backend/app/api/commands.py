@@ -10,13 +10,14 @@ from ..db import get_db
 from ..models import DeviceCommand, User
 from ..services.audit import audit
 from ..services.auth import current_user
-from ..services.devices import get_user_device_or_404
+from ..services.devices import device_supports, get_user_device_or_404
 from ..schemas import CommandCreateRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
+    command_history_entry,
     create_device_command,
     expire_old_commands,
-    public_command_payload,
+    validate_command_request,
 )
 
 
@@ -33,11 +34,17 @@ def create_command(
     if payload.command_type not in ALLOWED_COMMANDS:
         raise HTTPException(status_code=400, detail="Command is not allowed")
     get_user_device_or_404(db, user, device_id)
+    normalized_payload = validate_command_request(
+        command_type=payload.command_type,
+        payload=payload.payload,
+        confirmed=payload.confirmed,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
     command = create_device_command(
         db,
         device_id=device_id,
         command_type=payload.command_type,
-        payload=payload.payload,
+        payload=normalized_payload,
         created_by=user.id,
         source="api",
     )
@@ -47,7 +54,7 @@ def create_command(
         "command.create",
         "device_command",
         str(command.id),
-        {"command_type": payload.command_type},
+        {"command_type": payload.command_type, "confirmed": payload.confirmed},
     )
     db.commit()
     return {"command_id": str(command.id), "status": command.status}
@@ -102,22 +109,4 @@ def list_device_commands(
     ).all()
     db.commit()
 
-    def iso(value):
-        return value.isoformat() if value else None
-
-    return [
-        {
-            "id": str(command.id),
-            "command_type": command.command_type,
-            "status": command.status,
-            "source": command.source,
-            "payload": public_command_payload(command.command_type, command.payload),
-            "result": command.result,
-            "created_at": iso(command.created_at),
-            "picked_at": iso(command.picked_at),
-            "completed_at": iso(command.completed_at),
-            "expires_at": iso(command.expires_at),
-            "last_error": command.last_error,
-        }
-        for command in commands
-    ]
+    return [command_history_entry(command) for command in commands]

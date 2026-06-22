@@ -39,6 +39,7 @@ class TelemetryRequest(BaseModel):
 class CommandCreateRequest(BaseModel):
     command_type: str
     payload: dict[str, Any] = Field(default_factory=dict)
+    confirmed: bool = False
 
 
 class CommandResultRequest(BaseModel):

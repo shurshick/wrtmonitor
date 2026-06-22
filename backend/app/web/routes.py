@@ -17,13 +17,22 @@ from ..schemas import SetupRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
     build_command_payload_from_web_form,
+    command_history_entry,
     create_device_command,
+    validate_command_request,
 )
-from ..services.devices import archive_device_or_409, get_user_device_or_404
+from ..services.devices import (
+    archive_device_or_409,
+    device_supports,
+    get_latest_agent_status,
+    get_user_device_or_404,
+    latest_device_telemetry,
+)
 from ..security import hash_token
 from ..services.audit import audit
 from ..services.auth import settings, web_user_from_session
 from ..services.setup import complete_setup, is_setup_required
+from ..services.telemetry import normalize_network_summary, normalize_wifi_summary
 from .csrf import generate_csrf_token, verify_csrf_token
 
 
@@ -186,12 +195,7 @@ def device_page(
         return RedirectResponse("/login", status_code=303)
     device = get_user_device_or_404(db, user, device_id)
     csrf_token = generate_csrf_token(wrtmonitor_session or "", config.jwt_secret)
-    telemetry = db.scalars(
-        select(DeviceTelemetry)
-        .where(DeviceTelemetry.device_id == device_id)
-        .order_by(DeviceTelemetry.created_at.desc())
-        .limit(1)
-    ).first()
+    telemetry = latest_device_telemetry(db, device_id)
     payload = telemetry.payload if telemetry else {}
     system = payload.get("system") or {}
     memory = system.get("memory") or {}
@@ -201,18 +205,27 @@ def device_page(
     traffic = payload.get("traffic") or {}
     processes = system.get("processes") or {}
     board = payload.get("board") or {}
-    wifi = payload.get("wifi") or {}
-    agent = payload.get("agent") or {}
-    network = payload.get("network") or {}
+    wifi = normalize_wifi_summary(payload)
+    agent = get_latest_agent_status(db, device_id)
+    network = normalize_network_summary(payload)
     network_devices = payload.get("network_devices") or {}
     radios = wifi.get("radios") or []
-    interfaces = network.get("interface") or []
+    interfaces = network.get("interfaces") or []
     commands = db.scalars(
         select(DeviceCommand)
         .where(DeviceCommand.device_id == device_id)
         .order_by(DeviceCommand.created_at.desc())
         .limit(10)
     ).all()
+    command_entries = [command_history_entry(command) for command in commands]
+    latest_diagnostics = next(
+        (
+            command
+            for command in command_entries
+            if command["command_type"] == "diagnostics.run"
+        ),
+        None,
+    )
     latest = format_timestamp(telemetry.created_at) if telemetry else "нет данных"
 
     age = (
@@ -237,10 +250,12 @@ def device_page(
             "processes": processes,
             "board": board,
             "agent": agent,
+            "capabilities": agent.get("capabilities") or {},
             "radios": radios,
             "interfaces": interfaces,
             "network_devices": network_devices,
-            "commands": commands,
+            "commands": command_entries,
+            "latest_diagnostics": latest_diagnostics,
             "raw_telemetry": json.dumps(payload, ensure_ascii=False, indent=2),
         },
     )
@@ -253,6 +268,10 @@ def web_device_command(
     ssid: str = Form(default=""),
     enabled: str = Form(default="true"),
     wifi_password: str = Form(default=""),
+    radio: str = Form(default=""),
+    iface: str = Form(default=""),
+    confirmed: bool = Form(default=False),
+    diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
@@ -268,11 +287,26 @@ def web_device_command(
     if command_type not in ALLOWED_COMMANDS:
         raise HTTPException(status_code=400, detail="Unsupported command or device")
     try:
-        payload = build_command_payload_from_web_form(
-            command_type, ssid, enabled, wifi_password
+        raw_payload = build_command_payload_from_web_form(
+            command_type,
+            ssid=ssid,
+            enabled=enabled,
+            wifi_password=wifi_password,
+            radio=radio,
+            iface=iface,
+            diagnostics_checks=diagnostics_checks,
         )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        payload = validate_command_request(
+            command_type=command_type,
+            payload=raw_payload,
+            confirmed=confirmed,
+            device_supports=lambda capability: device_supports(
+                db, device_id, capability
+            ),
+        )
+    except (ValueError, HTTPException) as exc:
+        detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
+        raise HTTPException(status_code=400, detail=detail) from exc
     command = create_device_command(
         db,
         device_id=device_id,
@@ -287,7 +321,7 @@ def web_device_command(
         "command.create",
         "device_command",
         str(command.id),
-        {"command_type": command_type, "source": "web"},
+        {"command_type": command_type, "source": "web", "confirmed": confirmed},
     )
     db.commit()
     return RedirectResponse(f"/devices/{device_id}", status_code=303)

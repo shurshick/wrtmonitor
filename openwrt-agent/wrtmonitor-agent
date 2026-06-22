@@ -7,8 +7,10 @@ UPDATE_LOCK_FILE="/tmp/wrtmonitor-agent-update.lock"
 UPDATE_LOCK_STALE_SECONDS="1800"
 STATUS_DIR="/etc/wrtmonitor"
 BACKUP_DIR="$STATUS_DIR/backup"
+CONFIG_BACKUP_DIR="$STATUS_DIR/config-backups"
 STATUS_FILE="$STATUS_DIR/update-status.env"
-AGENT_VERSION="0.1.1-rc7"
+AGENT_VERSION="0.1.1-rc8"
+CAPABILITIES_VERSION="1"
 DEFAULT_UPDATE_INTERVAL_HOURS="6"
 PENDING_AGENT_EXEC=0
 
@@ -41,7 +43,7 @@ shell_escape_single() {
 }
 
 ensure_state_dirs() {
-  mkdir -p "$STATUS_DIR" "$BACKUP_DIR"
+  mkdir -p "$STATUS_DIR" "$BACKUP_DIR" "$CONFIG_BACKUP_DIR"
 }
 
 backup_available() {
@@ -483,7 +485,7 @@ update_status_json() {
 
 agent_status_json() {
   load_status
-  printf '{"version":"%s","auto_update_enabled":%s,"last_update_check":"%s","last_update_status":"%s","last_update_error":"%s","last_successful_update":"%s","backup_available":%s,"update_source":"%s","available_version":"%s"}' \
+  printf '{"version":"%s","status":"running","platform":"openwrt","auto_update_enabled":%s,"last_update_check":"%s","last_update_status":"%s","last_update_error":"%s","last_successful_update":"%s","backup_available":%s,"update_source":"%s","available_version":"%s","capabilities":%s}' \
     "$(json_escape "$CURRENT_VERSION")" \
     "$( [ "$AUTO_UPDATE_STATUS" = "enabled" ] && printf true || printf false )" \
     "$(json_escape "$LAST_UPDATE_CHECK")" \
@@ -492,7 +494,130 @@ agent_status_json() {
     "$(json_escape "$LAST_SUCCESSFUL_UPDATE")" \
     "$( [ "$BACKUP_AVAILABLE" = "1" ] && printf true || printf false )" \
     "$(json_escape "$UPDATE_SOURCE_VALUE")" \
-    "$(json_escape "$AVAILABLE_VERSION")"
+    "$(json_escape "$AVAILABLE_VERSION")" \
+    "$(capabilities_flags_json)"
+}
+
+capabilities_flags_json() {
+  printf '{"agent.status":true,"agent.update":true,"agent.rollback":true,"agent.restart":true,"agent.support_bundle":true,"agent.disable":true,"telemetry.system":true,"telemetry.hardware":true,"telemetry.network":true,"telemetry.wifi":true,"wifi.read":true,"wifi.enable":true,"wifi.disable":true,"wifi.set_ssid":true,"wifi.set_password":true,"network.read":true,"network.restart":false,"network.write":false,"system.reboot":true,"diagnostics.check_server":true,"diagnostics.check_dependencies":true,"diagnostics.check_dns":true,"diagnostics.check_route":true,"diagnostics.check_wifi":true}'
+}
+
+capabilities_json() {
+  printf '{"agent":{"version":"%s","platform":"openwrt","capabilities_version":%s},"capabilities":%s}' \
+    "$(json_escape "$AGENT_VERSION")" \
+    "$CAPABILITIES_VERSION" \
+    "$(capabilities_flags_json)"
+}
+
+server_host() {
+  server_url | sed -n 's#^[a-zA-Z]*://\([^/:]*\).*$#\1#p'
+}
+
+dependencies_json() {
+  missing=""
+  for tool in curl jsonfilter uci ubus sha256sum; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      [ -n "$missing" ] && missing="$missing,"
+      missing="$missing\"$tool\""
+    fi
+  done
+  if ! [ -r /etc/ssl/certs/ca-certificates.crt ] && ! [ -r /etc/ssl/cert.pem ] && ! [ -r /etc/ssl/certs/ca-bundle.crt ]; then
+    [ -n "$missing" ] && missing="$missing,"
+    missing="$missing\"ca-bundle\""
+  fi
+  if [ -n "$missing" ]; then
+    printf '{"status":"failed","missing":[%s]}' "$missing"
+  else
+    printf '{"status":"ok","missing":[]}'
+  fi
+}
+
+check_server_json() {
+  url="$(server_url)"
+  if [ -z "$url" ]; then
+    printf '{"status":"failed","reason":"server_url not configured"}'
+    return
+  fi
+  if ! command -v curl >/dev/null 2>&1; then
+    printf '{"status":"failed","reason":"curl not installed"}'
+    return
+  fi
+  status="$(curl -sS --connect-timeout 5 --max-time 15 -o /tmp/wrtmonitor-health-$$ -w '%{http_code}' "$url/health" 2>/dev/null || true)"
+  rm -f /tmp/wrtmonitor-health-$$
+  case "$status" in
+    200) printf '{"status":"ok","http_status":200}' ;;
+    "") printf '{"status":"failed","reason":"request failed"}' ;;
+    *) printf '{"status":"failed","http_status":%s}' "$status" ;;
+  esac
+}
+
+check_dns_json() {
+  host="$(server_host)"
+  if [ -z "$host" ]; then
+    printf '{"status":"failed","reason":"server host not configured"}'
+    return
+  fi
+  if nslookup "$host" >/dev/null 2>&1 || ping -c 1 -W 1 "$host" >/dev/null 2>&1; then
+    printf '{"status":"ok"}'
+  else
+    printf '{"status":"failed","reason":"dns lookup failed"}'
+  fi
+}
+
+check_route_json() {
+  default_route="$(ip route 2>/dev/null | awk '/^default / {print; exit}')"
+  if [ -n "$default_route" ]; then
+    gateway="$(printf '%s' "$default_route" | awk '{for (i = 1; i <= NF; i++) if ($i == "via") {print $(i + 1); exit}}')"
+    printf '{"status":"ok","gateway":"%s"}' "$(json_escape "$gateway")"
+  else
+    printf '{"status":"failed","reason":"default route not found"}'
+  fi
+}
+
+check_wifi_json() {
+  if ! uci -q get wireless.@wifi-device[0] >/dev/null 2>&1; then
+    printf '{"status":"unavailable","reason":"no radio","radio_count":0}'
+    return
+  fi
+  count=0
+  while uci -q get "wireless.@wifi-device[$count]" >/dev/null 2>&1; do
+    count=$((count + 1))
+  done
+  printf '{"status":"ok","wifi_status_available":%s,"iwinfo_available":%s,"radio_count":%s}' \
+    "$(command -v wifi >/dev/null 2>&1 && printf true || printf false)" \
+    "$(command -v iwinfo >/dev/null 2>&1 && printf true || printf false)" \
+    "$count"
+}
+
+diagnostics_json() {
+  printf '{"server":%s,"dns":%s,"route":%s,"wifi":%s,"dependencies":%s}' \
+    "$(check_server_json)" \
+    "$(check_dns_json)" \
+    "$(check_route_json)" \
+    "$(check_wifi_json)" \
+    "$(dependencies_json)"
+}
+
+diagnostics_checks_json() {
+  checks="$1"
+  printf '{'
+  first=1
+  case ",$checks," in
+    *",server,"*) printf '"server":%s' "$(check_server_json)"; first=0 ;;
+  esac
+  case ",$checks," in
+    *",dns,"*) [ "$first" -eq 0 ] && printf ','; printf '"dns":%s' "$(check_dns_json)"; first=0 ;;
+  esac
+  case ",$checks," in
+    *",route,"*) [ "$first" -eq 0 ] && printf ','; printf '"route":%s' "$(check_route_json)"; first=0 ;;
+  esac
+  case ",$checks," in
+    *",wifi,"*) [ "$first" -eq 0 ] && printf ','; printf '"wifi":%s' "$(check_wifi_json)"; first=0 ;;
+  esac
+  case ",$checks," in
+    *",dependencies,"*) [ "$first" -eq 0 ] && printf ','; printf '"dependencies":%s' "$(dependencies_json)" ;;
+  esac
+  printf '}'
 }
 
 debug_telemetry() {
@@ -519,11 +644,12 @@ support_bundle() {
   mkdir -p "$bundle_dir"
   printf 'agent_version=%s\n' "$AGENT_VERSION" >"$bundle_dir/version.txt"
   cat /etc/openwrt_release 2>/dev/null >>"$bundle_dir/version.txt" || true
-  uci show wrtmonitor 2>/dev/null | sed -E "s/(device_token=).*/\1'***'/" >"$bundle_dir/wrtmonitor.conf" || true
+  uci show wrtmonitor 2>/dev/null | sed -E "s/(device_token=).*/\1'***'/; s/(password=).*/\1'***'/; s/(key=).*/\1'***'/" >"$bundle_dir/wrtmonitor.conf" || true
   [ ! -r "$STATUS_FILE" ] || cp "$STATUS_FILE" "$bundle_dir/update-status.env"
-  logread 2>/dev/null | grep -i wrtmonitor | tail -100 >"$bundle_dir/wrtmonitor.log" || true
+  logread 2>/dev/null | grep -i wrtmonitor | tail -100 | sed -E 's/(Authorization: Bearer )[A-Za-z0-9._-]+/\1***/g; s/(device_token=).*/\1***/g; s/(password=).*/\1***/g; s/(key=).*/\1***/g' >"$bundle_dir/wrtmonitor.log" || true
   debug_api >"$bundle_dir/debug-api.txt" 2>&1 || true
   debug_telemetry >"$bundle_dir/debug-telemetry.txt" 2>&1 || true
+  sed -i -E 's/(Authorization: Bearer )[A-Za-z0-9._-]+/\1***/g; s/(device_token["=: ]+)[^", ]+/\1***/g; s/(password["=: ]+)[^", ]+/\1***/g; s/(key["=: ]+)[^", ]+/\1***/g' "$bundle_dir"/debug-*.txt 2>/dev/null || true
   if [ "$public_mode" = "--public" ]; then
     sed -i -E 's/[0-9a-fA-F-]{16,}/***DEVICE***/g; s#https?://[^ /]+#https://***SERVER***#g' "$bundle_dir"/* 2>/dev/null || true
   fi
@@ -632,7 +758,7 @@ telemetry_payload() {
   load_value="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0)"
   case "$uptime_value" in ""|*[!0-9]*) uptime_value="0" ;; esac
   load_value="$(json_escape "$load_value")"
-  printf '{"device_id":"%s","telemetry":{"system":{"uptime":%s,"load":"%s","memory":%s,"processes":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"agent":%s}}' "$(device_id)" "$uptime_value" "$load_value" "$(memory_json)" "$(processes_json)" "$(ubus_json system info)" "$(cpu_json)" "$(storage_json)" "$(thermal_json)" "$(traffic_json)" "$(ubus_json system board)" "$(ubus_json network.interface dump)" "$(ubus_json network.device status)" "$(wifi_status_json)" "$(ubus_json network.wireless status)" "$(agent_status_json)"
+  printf '{"device_id":"%s","telemetry":{"system":{"uptime":%s,"load":"%s","memory":%s,"processes":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"agent":%s}}' "$(device_id)" "$uptime_value" "$load_value" "$(memory_json)" "$(processes_json)" "$(ubus_json system info)" "$(cpu_json)" "$(storage_json)" "$(thermal_json)" "$(traffic_json)" "$(ubus_json system board)" "$(network_summary_json)" "$(ubus_json network.device status)" "$(wifi_status_json)" "$(ubus_json network.wireless status)" "$(agent_status_json)"
 }
 
 memory_json() {
@@ -696,6 +822,145 @@ EOF
   printf '{"rx_bytes":%s,"tx_bytes":%s}' "$rx" "$tx"
 }
 
+list_config_backups() {
+  ensure_state_dirs
+  find "$CONFIG_BACKUP_DIR" -maxdepth 1 -type f -name 'wireless-*.bak' | sort
+}
+
+backup_wireless_config() {
+  command_id="$1"
+  command_type="$2"
+  ensure_state_dirs
+  [ -r /etc/config/wireless ] || return 1
+  timestamp="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo unknown)"
+  backup_file="$CONFIG_BACKUP_DIR/wireless-$timestamp-$command_id.bak"
+  meta_file="$CONFIG_BACKUP_DIR/wireless-$timestamp-$command_id.meta"
+  cp /etc/config/wireless "$backup_file"
+  {
+    printf 'command_id=%s\n' "$command_id"
+    printf 'command_type=%s\n' "$command_type"
+    printf 'created_at=%s\n' "$(iso_now)"
+    printf 'agent_version=%s\n' "$AGENT_VERSION"
+    printf 'config_file=/etc/config/wireless\n'
+  } >"$meta_file"
+  printf '%s' "$backup_file"
+}
+
+command_success_result() {
+  message="$1"
+  extra="${2:-}"
+  if [ -n "$extra" ]; then
+    printf '{"message":"%s",%s}' "$(json_escape "$message")" "$extra"
+  else
+    printf '{"message":"%s"}' "$(json_escape "$message")"
+  fi
+}
+
+command_failed_result() {
+  message="$1"
+  printf '{"error":"%s"}' "$(json_escape "$message")"
+}
+
+resolve_wifi_radio() {
+  requested="$1"
+  if [ -n "$requested" ]; then
+    if uci -q get "wireless.$requested" >/dev/null 2>&1; then
+      printf '%s' "$requested"
+      return 0
+    fi
+    printf '%s' ""
+    return 1
+  fi
+  count=0
+  resolved=""
+  while uci -q get "wireless.@wifi-device[$count]" >/dev/null 2>&1; do
+    resolved="radio$count"
+    count=$((count + 1))
+  done
+  if [ "$count" -eq 1 ]; then
+    printf '%s' "$resolved"
+    return 0
+  fi
+  printf '%s' ""
+  return 1
+}
+
+resolve_wifi_iface() {
+  requested="$1"
+  radio_name="$2"
+  if [ -n "$requested" ]; then
+    if uci -q get "wireless.$requested" >/dev/null 2>&1; then
+      printf '%s' "$requested"
+      return 0
+    fi
+    printf '%s' ""
+    return 1
+  fi
+  count=0
+  matches=0
+  resolved=""
+  while uci -q get "wireless.@wifi-iface[$count]" >/dev/null 2>&1; do
+    iface_device="$(uci -q get "wireless.@wifi-iface[$count].device" 2>/dev/null || true)"
+    if [ "$iface_device" = "$radio_name" ]; then
+      resolved="@wifi-iface[$count]"
+      matches=$((matches + 1))
+    fi
+    count=$((count + 1))
+  done
+  if [ "$matches" -eq 1 ]; then
+    printf '%s' "$resolved"
+    return 0
+  fi
+  printf '%s' ""
+  return 1
+}
+
+network_summary_json() {
+  tmp="/tmp/wrtmonitor-network-$$.json"
+  if ! ubus call network.interface dump >"$tmp" 2>/dev/null; then
+    rm -f "$tmp"
+    printf '{"interfaces":[]}'
+    return
+  fi
+  if ! require_json_tool; then
+    rm -f "$tmp"
+    printf '{"interfaces":[]}'
+    return
+  fi
+  index=0
+  items=""
+  while true; do
+    name="$(json_get_string "$tmp" "@.interface[$index].interface")"
+    [ -n "$name" ] || break
+    up="$(json_get_bool "$tmp" "@.interface[$index].up")"
+    proto="$(json_get_string "$tmp" "@.interface[$index].proto")"
+    device_name="$(json_get_string "$tmp" "@.interface[$index].l3_device")"
+    gateway="$(jsonfilter -i "$tmp" -e "@.interface[$index].route[@.target='0.0.0.0'].nexthop" 2>/dev/null | head -n 1)"
+    ip4="$(jsonfilter -i "$tmp" -e "@.interface[$index]['ipv4-address'][*].address" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
+    dns="$(jsonfilter -i "$tmp" -e "@.interface[$index]['dns-server'][*]" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
+    ipv4_json=""
+    dns_json=""
+    OLDIFS="$IFS"
+    IFS=','
+    for value in $ip4; do
+      [ -n "$value" ] || continue
+      [ -n "$ipv4_json" ] && ipv4_json="$ipv4_json,"
+      ipv4_json="$ipv4_json\"$(json_escape "$value")\""
+    done
+    for value in $dns; do
+      [ -n "$value" ] || continue
+      [ -n "$dns_json" ] && dns_json="$dns_json,"
+      dns_json="$dns_json\"$(json_escape "$value")\""
+    done
+    IFS="$OLDIFS"
+    [ -n "$items" ] && items="$items,"
+    items="$items{\"interface\":\"$(json_escape "$name")\",\"up\":$( [ "$up" = "true" ] && printf true || printf false ),\"proto\":\"$(json_escape "$proto")\",\"device\":\"$(json_escape "$device_name")\",\"ipv4\":[${ipv4_json}],\"gateway\":\"$(json_escape "$gateway")\",\"dns\":[${dns_json}],\"errors\":[]}"
+    index=$((index + 1))
+  done
+  rm -f "$tmp"
+  printf '{"interfaces":[%s]}' "$items"
+}
+
 wifi_status_json() {
   radios=""
   index=0
@@ -705,6 +970,7 @@ wifi_status_json() {
     channel="$(uci -q get "wireless.@wifi-device[$index].channel" 2>/dev/null || true)"
     band="$(uci -q get "wireless.@wifi-device[$index].band" 2>/dev/null || true)"
     ssids=""
+    interfaces=""
     encryption=""
     iface_index=0
     while uci -q get "wireless.@wifi-iface[$iface_index]" >/dev/null 2>&1; do
@@ -712,16 +978,19 @@ wifi_status_json() {
       if [ "$iface_device" = "$name" ]; then
         ssid="$(uci -q get "wireless.@wifi-iface[$iface_index].ssid" 2>/dev/null || true)"
         encryption="$(uci -q get "wireless.@wifi-iface[$iface_index].encryption" 2>/dev/null || true)"
+        iface_disabled="$(uci -q get "wireless.@wifi-iface[$iface_index].disabled" 2>/dev/null || echo 0)"
         if [ -n "$ssid" ]; then
           [ -n "$ssids" ] && ssids="$ssids,"
           ssids="$ssids\"$(json_escape "$ssid")\""
         fi
+        [ -n "$interfaces" ] && interfaces="$interfaces,"
+        interfaces="$interfaces{\"id\":\"@wifi-iface[$iface_index]\",\"index\":$iface_index,\"ssid\":\"$(json_escape "$ssid")\",\"enabled\":$( [ "$iface_disabled" = "1" ] && printf false || printf true ),\"encryption\":\"$(json_escape "$encryption")\"}"
       fi
       iface_index=$((iface_index + 1))
     done
     up=true
     [ "$disabled" = "1" ] && up=false
-    radio="{\"name\":\"$name\",\"up\":$up,\"ssid\":[$ssids]"
+    radio="{\"id\":\"$name\",\"name\":\"$name\",\"up\":$up,\"disabled\":$( [ "$disabled" = "1" ] && printf true || printf false ),\"ssid\":[$ssids],\"interfaces\":[${interfaces}]"
     [ -n "$channel" ] && radio="$radio,\"channel\":\"$(json_escape "$channel")\""
     [ -n "$band" ] && radio="$radio,\"band\":\"$(json_escape "$band")\""
     [ -n "${encryption:-}" ] && radio="$radio,\"encryption\":\"$(json_escape "$encryption")\""
@@ -777,7 +1046,7 @@ execute_command() {
   disconnect_after=0
   case "$command_type" in
     router.reboot)
-      result='{"message":"reboot scheduled"}'
+      result="$(command_success_result "reboot scheduled")"
       (sleep 2; reboot) >/dev/null 2>&1 &
       ;;
     wifi.status)
@@ -788,28 +1057,60 @@ execute_command() {
       enabled="$(json_get_bool /tmp/wrtmonitor-command-payload '@.enabled')"
       radio="$(json_get_string /tmp/wrtmonitor-command-payload '@.radio')"
       rm -f /tmp/wrtmonitor-command-payload
-      [ -n "$radio" ] || radio="@wifi-device[0]"
-      if [ "$enabled" = "false" ]; then
-        uci set "wireless.$radio.disabled=1" >/dev/null 2>&1 || status="failed"
+      resolved_radio="$(resolve_wifi_radio "$radio" || true)"
+      if [ -z "$resolved_radio" ]; then
+        status="failed"
+        result="$(command_failed_result "wifi radio is ambiguous or not found")"
       else
-        uci set "wireless.$radio.disabled=0" >/dev/null 2>&1 || status="failed"
+        backup_file="$(backup_wireless_config "$command_id" "$command_type" || true)"
+        if [ -z "$backup_file" ]; then
+          status="failed"
+          result="$(command_failed_result "failed to create wireless config backup")"
+        else
+          if [ "$enabled" = "false" ]; then
+            uci set "wireless.$resolved_radio.disabled=1" >/dev/null 2>&1 || status="failed"
+          else
+            uci set "wireless.$resolved_radio.disabled=0" >/dev/null 2>&1 || status="failed"
+          fi
+          uci commit wireless >/dev/null 2>&1 || status="failed"
+          wifi reload >/dev/null 2>&1 || status="failed"
+          if [ "$status" = "done" ]; then
+            result="$(command_success_result "Wi-Fi state updated" "\"backup\":\"$(json_escape "$backup_file")\",\"radio\":\"$(json_escape "$resolved_radio")\"")"
+          else
+            result="$(command_failed_result "failed to update Wi-Fi state")"
+          fi
+        fi
       fi
-      uci commit wireless >/dev/null 2>&1 || status="failed"
-      wifi reload >/dev/null 2>&1 || status="failed"
       ;;
     wifi.set_ssid)
       printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
       ssid="$(json_get_string /tmp/wrtmonitor-command-payload '@.ssid')"
       iface="$(json_get_string /tmp/wrtmonitor-command-payload '@.iface')"
       rm -f /tmp/wrtmonitor-command-payload
-      [ -n "$iface" ] || iface="@wifi-iface[0]"
       if [ -n "$ssid" ]; then
-        uci set "wireless.$iface.ssid=$ssid" >/dev/null 2>&1 || status="failed"
-        uci commit wireless >/dev/null 2>&1 || status="failed"
-        wifi reload >/dev/null 2>&1 || status="failed"
+        resolved_iface="$(resolve_wifi_iface "$iface" "$(resolve_wifi_radio "" || true)" || true)"
+        if [ -z "$resolved_iface" ]; then
+          status="failed"
+          result="$(command_failed_result "wifi iface is ambiguous or not found")"
+        else
+          backup_file="$(backup_wireless_config "$command_id" "$command_type" || true)"
+          if [ -z "$backup_file" ]; then
+            status="failed"
+            result="$(command_failed_result "failed to create wireless config backup")"
+          else
+            uci set "wireless.$resolved_iface.ssid=$ssid" >/dev/null 2>&1 || status="failed"
+            uci commit wireless >/dev/null 2>&1 || status="failed"
+            wifi reload >/dev/null 2>&1 || status="failed"
+            if [ "$status" = "done" ]; then
+              result="$(command_success_result "Wi-Fi SSID updated" "\"backup\":\"$(json_escape "$backup_file")\",\"iface\":\"$(json_escape "$resolved_iface")\"")"
+            else
+              result="$(command_failed_result "failed to update Wi-Fi SSID")"
+            fi
+          fi
+        fi
       else
         status="failed"
-        result='{"error":"ssid is required"}'
+        result="$(command_failed_result "ssid is required")"
       fi
       ;;
     wifi.set_password)
@@ -817,21 +1118,47 @@ execute_command() {
       wifi_key="$(json_get_string /tmp/wrtmonitor-command-payload '@.key')"
       iface="$(json_get_string /tmp/wrtmonitor-command-payload '@.iface')"
       rm -f /tmp/wrtmonitor-command-payload
-      [ -n "$iface" ] || iface="@wifi-iface[0]"
       if [ "${#wifi_key}" -ge 8 ]; then
-        uci set "wireless.$iface.key=$wifi_key" >/dev/null 2>&1 || status="failed"
-        uci commit wireless >/dev/null 2>&1 || status="failed"
-        wifi reload >/dev/null 2>&1 || status="failed"
+        resolved_iface="$(resolve_wifi_iface "$iface" "$(resolve_wifi_radio "" || true)" || true)"
+        if [ -z "$resolved_iface" ]; then
+          status="failed"
+          result="$(command_failed_result "wifi iface is ambiguous or not found")"
+        else
+          backup_file="$(backup_wireless_config "$command_id" "$command_type" || true)"
+          if [ -z "$backup_file" ]; then
+            status="failed"
+            result="$(command_failed_result "failed to create wireless config backup")"
+          else
+            uci set "wireless.$resolved_iface.key=$wifi_key" >/dev/null 2>&1 || status="failed"
+            uci commit wireless >/dev/null 2>&1 || status="failed"
+            wifi reload >/dev/null 2>&1 || status="failed"
+            if [ "$status" = "done" ]; then
+              result="$(command_success_result "Wi-Fi password updated" "\"backup\":\"$(json_escape "$backup_file")\",\"iface\":\"$(json_escape "$resolved_iface")\"")"
+            else
+              result="$(command_failed_result "failed to update Wi-Fi password")"
+            fi
+          fi
+        fi
       else
         status="failed"
-        result='{"error":"password must contain at least 8 characters"}'
+        result="$(command_failed_result "password must contain at least 8 characters")"
       fi
       ;;
     network.interfaces)
-      result="{\"ifstatus\":\"$(ifstatus lan 2>/dev/null | sed 's/\"/\\\\\"/g' | tr '\n' ' ')\"}"
+      result="$(network_summary_json)"
+      ;;
+    diagnostics.run)
+      printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+      checks="$(jsonfilter -i /tmp/wrtmonitor-command-payload -e '@.checks[*]' 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
+      rm -f /tmp/wrtmonitor-command-payload
+      if [ -n "$checks" ]; then
+        result="$(diagnostics_checks_json "$checks")"
+      else
+        result="$(diagnostics_json)"
+      fi
       ;;
     agent.disconnect)
-      result='{"message":"agent disabled"}'
+      result="$(command_success_result "agent disabled")"
       disconnect_after=1
       ;;
     agent.update)
@@ -923,6 +1250,25 @@ manual_rollback() {
 }
 
 case "${1:-}" in
+  capabilities)
+    if [ "${2:-}" = "--json" ]; then
+      capabilities_json
+      printf '\n'
+    else
+      capabilities_json
+      printf '\n'
+    fi
+    ;;
+  check-server) check_server_json; printf '\n' ;;
+  check-dns) check_dns_json; printf '\n' ;;
+  check-route) check_route_json; printf '\n' ;;
+  check-wifi) check_wifi_json; printf '\n' ;;
+  check-dependencies) dependencies_json; printf '\n' ;;
+  diagnostics)
+    diagnostics_json
+    printf '\n'
+    ;;
+  list-config-backups) list_config_backups ;;
   register) register_device ;;
   update) shift; manual_update "$@" ;;
   rollback) manual_rollback ;;
@@ -941,5 +1287,5 @@ case "${1:-}" in
   debug-api) debug_api ;;
   version) printf '%s\n' "$AGENT_VERSION" ;;
   support-bundle) support_bundle "${2:-}" ;;
-  *) echo "Usage: wrtmonitor-agent register|send-now|daemon|update [--force] [--allow-downgrade]|rollback|update-status [--json]|debug|debug-telemetry|debug-api|version|support-bundle [--public]" >&2; exit 1 ;;
+  *) echo "Usage: wrtmonitor-agent capabilities [--json]|check-server|check-dns|check-route|check-wifi|check-dependencies|diagnostics [--json]|list-config-backups|register|send-now|daemon|update [--force] [--allow-downgrade]|rollback|update-status [--json]|debug|debug-telemetry|debug-api|version|support-bundle [--public]" >&2; exit 1 ;;
 esac

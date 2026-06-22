@@ -11,7 +11,11 @@ from ..db import get_db
 from ..models import Device, User
 from ..services.audit import audit
 from ..services.auth import current_user
-from ..services.devices import archive_device_or_409, get_user_device_or_404
+from ..services.devices import (
+    archive_device_or_409,
+    get_latest_agent_status,
+    get_user_device_or_404,
+)
 from ..schemas import DeviceProvisionRequest
 from ..security import hash_token
 
@@ -117,3 +121,13 @@ def archive_device(
     )
     db.commit()
     return {"status": "archived"}
+
+
+@router.get("/{device_id}/agent")
+def get_device_agent(
+    device_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    get_user_device_or_404(db, user, device_id)
+    return get_latest_agent_status(db, device_id)

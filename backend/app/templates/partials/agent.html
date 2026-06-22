@@ -1,30 +1,77 @@
 <section class="card">
   <h2>Агент</h2>
   <div class="metric"><span class="metric__label">Версия</span><span class="metric__value">{{ agent.get('version') or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Статус</span><span class="metric__value">{{ agent.get('status') or 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Автообновление</span><span class="metric__value">{{ 'включено' if agent.get('auto_update_enabled') else 'выключено' if agent else 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Доступная версия</span><span class="metric__value">{{ agent.get('available_version') or 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Последняя проверка</span><span class="metric__value">{{ agent.get('last_update_check') or 'нет данных' }}</span></div>
-  <div class="metric"><span class="metric__label">Статус обновления</span><span class="metric__value">{{ agent.get('last_update_status') or 'нет данных' }}</span></div>
-  <div class="metric"><span class="metric__label">Последнее успешное обновление</span><span class="metric__value">{{ agent.get('last_successful_update') or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Последний статус обновления</span><span class="metric__value">{{ agent.get('last_update_status') or 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Последняя ошибка</span><span class="metric__value">{{ agent.get('last_update_error') or 'нет данных' }}</span></div>
-  <div class="metric"><span class="metric__label">Backup</span><span class="metric__value">{{ 'доступен' if agent.get('backup_available') else 'нет' if agent else 'нет данных' }}</span></div>
-  <div class="metric"><span class="metric__label">Источник</span><span class="metric__value">{{ agent.get('update_source') or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Rollback</span><span class="metric__value">{{ 'доступен' if agent.get('rollback_available') else 'нет' if agent else 'нет данных' }}</span></div>
+  <div class="metric">
+    <span class="metric__label">Capabilities</span>
+    <span class="metric__value metric__value--small">
+      {% if capabilities %}
+        {{ capabilities|length }} поддерживаемых действий
+      {% else %}
+        нет данных
+      {% endif %}
+    </span>
+  </div>
+  {% if capabilities %}
+  <ul class="panel-list section">
+    {% for name, enabled in capabilities.items() %}
+    <li><strong>{{ name }}</strong><br>{{ 'available' if enabled else 'disabled' }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
   <div class="form-stack">
-    <form method="post" action="/devices/{{ device.id }}/web-command">
+    {% if capabilities.get('agent.update') %}
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.update">
-      <button type="submit">Проверить обновление</button>
+      <input type="hidden" name="confirmed" value="true">
+      <div class="button-row">
+        <button type="submit">Проверить обновление</button>
+        <span class="risk-badge risk-badge--safe">level 2</span>
+      </div>
     </form>
-    <form method="post" action="/devices/{{ device.id }}/web-command">
+    {% endif %}
+    {% if capabilities.get('agent.update') %}
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.set_auto_update">
-      <input type="hidden" name="enabled" value="{{ 'false' if agent.auto_update_enabled else 'true' }}">
-      <button class="button button--secondary" type="submit">{{ 'Выключить auto-update' if agent.auto_update_enabled else 'Включить auto-update' }}</button>
+      <input type="hidden" name="enabled" value="{{ 'false' if agent.get('auto_update_enabled') else 'true' }}">
+      <input type="hidden" name="confirmed" value="true">
+      <button class="button button--secondary" type="submit">{{ 'Выключить auto-update' if agent.get('auto_update_enabled') else 'Включить auto-update' }}</button>
     </form>
-    <form method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Выполнить rollback агента к предыдущей версии?');">
+    {% endif %}
+    {% if capabilities.get('agent.rollback') %}
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Выполнить rollback агента к предыдущей версии?');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.rollback">
-      <button class="button--danger" type="submit">Rollback agent</button>
+      <input type="hidden" name="confirmed" value="true">
+      <div class="button-row">
+        <button class="button--danger" type="submit">Rollback agent</button>
+        <span class="risk-badge risk-badge--safe">level 2</span>
+      </div>
     </form>
+    {% endif %}
+    {% if capabilities.get('diagnostics.check_server') %}
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="command_type" value="diagnostics.run">
+      <input type="hidden" name="confirmed" value="true">
+      <label><input type="checkbox" name="diagnostics_checks" value="server" checked> server</label>
+      <label><input type="checkbox" name="diagnostics_checks" value="dns" checked> dns</label>
+      <label><input type="checkbox" name="diagnostics_checks" value="route" checked> route</label>
+      <label><input type="checkbox" name="diagnostics_checks" value="wifi" checked> wifi</label>
+      <label><input type="checkbox" name="diagnostics_checks" value="dependencies" checked> dependencies</label>
+      <div class="button-row">
+        <button type="submit">Диагностика</button>
+        <span class="risk-badge risk-badge--readonly">read only</span>
+      </div>
+    </form>
+    {% endif %}
   </div>
 </section>

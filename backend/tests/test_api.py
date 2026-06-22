@@ -26,6 +26,13 @@ from backend.app.services.commands import ALLOWED_COMMANDS, public_command_paylo
 from backend.app.schemas import SetupRequest
 
 
+def postgres_e2e_enabled() -> bool:
+    return (
+        bool(os.getenv("WRTMONITOR_DATABASE_URL"))
+        and os.getenv("WRTMONITOR_SKIP_E2E", "0") != "1"
+    )
+
+
 def test_allowed_commands_are_explicit():
     assert "router.reboot" in ALLOWED_COMMANDS
     assert "agent.disconnect" in ALLOWED_COMMANDS
@@ -196,9 +203,9 @@ def test_device_page_renders_agent_update_status(monkeypatch):
         device_id=device.id,
         payload={
             "agent": {
-                "version": "0.1.1-rc7",
+                "version": "0.1.1-rc8",
                 "auto_update_enabled": True,
-                "available_version": "0.1.1-rc7",
+                "available_version": "0.1.1-rc8",
                 "last_update_status": "success",
             }
         },
@@ -246,7 +253,7 @@ def test_device_page_renders_agent_update_status(monkeypatch):
 
     assert response.status_code == 200
     assert "Агент" in response.text
-    assert "0.1.1-rc7" in response.text
+    assert "0.1.1-rc8" in response.text
     assert "success" in response.text
 
 
@@ -295,7 +302,7 @@ def clear_database():
 
 
 def test_router_registration_telemetry_and_latest_api_e2e():
-    if not os.getenv("WRTMONITOR_DATABASE_URL"):
+    if not postgres_e2e_enabled():
         pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
     clear_database()
     config = load_settings()
@@ -362,14 +369,14 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         },
         "network": {"interfaces": [{"name": "lan", "up": True}]},
         "agent": {
-            "version": "0.1.1-rc7",
+            "version": "0.1.1-rc8",
             "auto_update_enabled": True,
             "last_update_status": "success",
             "last_update_error": "",
             "last_update_check": "2026-06-21T10:00:00Z",
             "last_successful_update": "2026-06-21T10:00:00Z",
             "backup_available": True,
-            "available_version": "0.1.1-rc7",
+            "available_version": "0.1.1-rc8",
             "update_source": "https://monitor.example.ru/downloads/openwrt",
         },
     }
@@ -389,7 +396,7 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert latest["device_id"] == device_id
     assert latest["telemetry"]["system"]["uptime"] == 123
     assert latest["telemetry"]["wifi"]["radios"][0]["name"] == "radio0"
-    assert latest["telemetry"]["agent"]["version"] == "0.1.1-rc7"
+    assert latest["telemetry"]["agent"]["version"] == "0.1.1-rc8"
     assert latest["telemetry"]["sequence"] == 104
     assert latest["age_seconds"] >= 0
     assert latest["is_stale"] is False
@@ -408,7 +415,7 @@ def test_router_registration_telemetry_and_latest_api_e2e():
 
 
 def test_disabled_device_can_be_archived_but_online_device_cannot():
-    if not os.getenv("WRTMONITOR_DATABASE_URL"):
+    if not postgres_e2e_enabled():
         pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
     clear_database()
     config = load_settings()

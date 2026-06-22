@@ -1,76 +1,24 @@
 # Changelog
 
+## v0.1.1-rc8-router-management-core
+
+- Добавлены `agent capabilities`, нормализованные `agent/wifi/network` блоки telemetry и endpoint `GET /api/v1/devices/{device_id}/agent`.
+- Backend получил `COMMAND_REGISTRY`, risk levels, masking секретов и валидацию payload для управляющих команд.
+- OpenWrt agent получил diagnostics CLI, capability report и backup `wireless` перед изменением Wi-Fi.
+- Web UI и Android стали capability-aware и показывают diagnostics и metadata команд.
+
+## v0.1.1-rc7-agent-update-safety
+
+- Добавлено безопасное автообновление OpenWrt agent через `SHA256SUMS.txt`.
+- Добавлены backup, rollback, защита от downgrade и статус обновления в Web UI и Android.
+- Удаление устройства из списка закреплено как soft-archive только для `disabled` устройств.
+
 ## v0.1.1-rc2-architecture-refactor
 
 - Вынесены factory, route layer, Jinja2 templates и schemas backend.
 - Добавлены Android API/data/domain layers и unit test сравнения версий.
 
-## v0.1.1-rc1 — Real Router Validation and Control Polish
+## v0.1.1-rc1 - Real Router Validation and Control Polish
 
 - Добавлены API истории команд, agent version и support bundle.
 - Добавлен чек-лист валидации на реальном OpenWrt-роутере.
-
-## v0.1.0-test.17 — Web UI CSP hotfix
-
-- Исправлен внешний вид Web UI после внедрения CSP: inline CSS перенесён в `/static/app.css`.
-
-## v0.1.0-test.16 — Security, Refactor and Command Reliability
-
-- Добавлены CSRF-защита Web UI, security headers и безопасный `/health/config`.
-- Команды получили source, expiry, picked/completed timestamps, retry count и last error.
-- Latest telemetry возвращает нормализованный summary; retention настраивается через environment.
-- OpenWrt-agent получил lock, curl timeouts и диагностические команды с маскированным token.
-- Android `versionCode` повышен до 16.
-
-## v0.1.0-test.15
-
-- Исправлено Android-падение после первого входа.
-- Web UI расширен до страницы устройства с telemetry и безопасными командами управления.
-- TrueNAS YAML использует `latest` и `pull_policy: always`.
-- Инструкции TrueNAS дополнены обязательным redeploy для обновления образа.
-- Release notes разделены: описание каждого GitHub-релиза содержит только изменения своей версии.
-
-## v0.1.0-test.14
-
-- Исправлена Android-навигация для экрана устройства и системной кнопки «Назад».
-- Нижние вкладки получили цветные иконки и рабочее переключение экранов.
-- Вкладки Wi-Fi, Сеть и Система подключены к telemetry и очереди команд агента.
-- Добавлена смена SSID, переключение Wi-Fi, запрос сетевых интерфейсов и подтверждённая перезагрузка роутера.
-- Исправлена прокрутка и компактность блока telemetry.
-- Название приложения в интерфейсе изменено на `WrtMonitor`.
-
-## v0.1.0-test.13
-
-- В настройках Android добавлен раздел «О приложении».
-- Добавлены версия приложения, copyright и ссылка на GitHub-проект.
-- Добавлена проверка обновлений через GitHub latest release API.
-- При доступном обновлении приложение открывает страницу релиза для скачивания APK.
-
-## v0.1.0-test.12
-
-- Добавлена adaptive launcher icon для Android-приложения.
-- Android `versionCode` повышен до `12`.
-- Android `versionName` обновлён до `0.1.0-test.12`.
-- Debug APK теперь подписывается стабильным тестовым ключом из репозитория.
-- Исправлена причина, из-за которой тестовые APK приходилось удалять перед установкой новой версии.
-
-## v0.1.0-test.11
-
-- Стабилизирован OpenWrt agent для BusyBox `ash`.
-- Исправлена установка и обновление агента на OpenWrt без зависимости от команды `install`.
-- Добавлен разбор ответов API через `jsonfilter`.
-- Исправлена отправка telemetry из агента: JSON больше не ломается на вложенных данных Wi-Fi.
-- Добавлена структура multi-radio Wi-Fi telemetry.
-- Сервер отклоняет запуск с дефолтными паролями базы данных.
-- API последней телеметрии возвращает `age_seconds`, `is_stale` и `source`.
-- Добавлено ограничение хранения telemetry: последние 100 snapshots на устройство.
-- Добавлены backend E2E tests и smoke tests для агента.
-- Улучшен Android-экран устройства с отображением telemetry.
-- Обновлены release assets: TrueNAS YAML, OpenWrt agent archive, Android debug APK и `SHA256SUMS.txt`.
-
-## v0.1.0-test.10
-
-- Добавлен первый end-to-end telemetry flow.
-- Добавлен API последней телеметрии.
-- Добавлен Android-экран устройства.
-- Добавлена защита от дефолтных JWT-секретов.
