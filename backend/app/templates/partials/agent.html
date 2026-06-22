@@ -26,7 +26,7 @@
   </ul>
   {% endif %}
   <div class="form-stack">
-    {% if capabilities.get('agent.update') %}
+    {% if supports.agent_update %}
     <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.update">
@@ -37,7 +37,7 @@
       </div>
     </form>
     {% endif %}
-    {% if capabilities.get('agent.update') %}
+    {% if supports.agent_update %}
     <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.set_auto_update">
@@ -46,7 +46,7 @@
       <button class="button button--secondary" type="submit">{{ 'Выключить auto-update' if agent.get('auto_update_enabled') else 'Включить auto-update' }}</button>
     </form>
     {% endif %}
-    {% if capabilities.get('agent.rollback') %}
+    {% if supports.agent_rollback %}
     <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Выполнить rollback агента к предыдущей версии?');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.rollback">
@@ -57,7 +57,7 @@
       </div>
     </form>
     {% endif %}
-    {% if capabilities.get('diagnostics.check_server') %}
+    {% if supports.diagnostics %}
     <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="diagnostics.run">
@@ -72,6 +72,9 @@
         <span class="risk-badge risk-badge--readonly">read only</span>
       </div>
     </form>
+    {% endif %}
+    {% if legacy_agent %}
+    <p class="muted">Агент работает в режиме совместимости: базовые команды доступны без блока capabilities.</p>
     {% endif %}
   </div>
 </section>

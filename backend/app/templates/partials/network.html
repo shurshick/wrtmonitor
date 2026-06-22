@@ -25,7 +25,7 @@
     {% endfor %}
   </ul>
   {% endif %}
-  {% if capabilities.get('network.read') %}
+  {% if supports.network_read %}
   <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="network.interfaces">

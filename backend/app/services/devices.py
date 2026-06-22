@@ -7,6 +7,18 @@ from sqlalchemy.orm import Session
 from ..models import Device, DeviceTelemetry, User
 
 
+LEGACY_AGENT_CAPABILITIES = {
+    "agent.rollback",
+    "agent.update",
+    "network.read",
+    "system.reboot",
+    "wifi.disable",
+    "wifi.enable",
+    "wifi.set_password",
+    "wifi.set_ssid",
+}
+
+
 def get_device_or_404(db: Session, device_id: UUID) -> Device:
     device = db.scalars(
         select(Device).where(Device.id == device_id, Device.archived_at.is_(None))
@@ -57,5 +69,5 @@ def get_latest_agent_capabilities(db: Session, device_id: UUID) -> dict[str, boo
 def device_supports(db: Session, device_id: UUID, capability: str) -> bool:
     capabilities = get_latest_agent_capabilities(db, device_id)
     if not capabilities:
-        return False
+        return capability in LEGACY_AGENT_CAPABILITIES
     return bool(capabilities.get(capability, False))

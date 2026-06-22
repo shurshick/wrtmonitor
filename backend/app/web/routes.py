@@ -211,6 +211,18 @@ def device_page(
     network_devices = payload.get("network_devices") or {}
     radios = wifi.get("radios") or []
     interfaces = network.get("interfaces") or []
+    capabilities = agent.get("capabilities") or {}
+    supports = {
+        "agent_update": device_supports(db, device_id, "agent.update"),
+        "agent_rollback": device_supports(db, device_id, "agent.rollback"),
+        "diagnostics": device_supports(db, device_id, "diagnostics.check_server"),
+        "network_read": device_supports(db, device_id, "network.read"),
+        "system_reboot": device_supports(db, device_id, "system.reboot"),
+        "wifi_toggle": device_supports(db, device_id, "wifi.enable")
+        or device_supports(db, device_id, "wifi.disable"),
+        "wifi_ssid": device_supports(db, device_id, "wifi.set_ssid"),
+        "wifi_password": device_supports(db, device_id, "wifi.set_password"),
+    }
     commands = db.scalars(
         select(DeviceCommand)
         .where(DeviceCommand.device_id == device_id)
@@ -250,7 +262,9 @@ def device_page(
             "processes": processes,
             "board": board,
             "agent": agent,
-            "capabilities": agent.get("capabilities") or {},
+            "capabilities": capabilities,
+            "legacy_agent": not bool(capabilities),
+            "supports": supports,
             "radios": radios,
             "interfaces": interfaces,
             "network_devices": network_devices,

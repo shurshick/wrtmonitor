@@ -2,6 +2,8 @@
   <h2>Wi-Fi</h2>
   {% if capabilities %}
   <p class="notice">Перед изменением SSID, пароля или состояния агент создаст backup <code>/etc/config/wireless</code>.</p>
+  {% elif legacy_agent %}
+  <p class="notice">Устройство подключено через старый агент. Управление Wi-Fi работает в режиме совместимости.</p>
   {% endif %}
   <ul class="panel-list">
     {% for radio in radios %}
@@ -26,7 +28,7 @@
     {% endfor %}
   </ul>
 
-  {% if capabilities.get('wifi.enable') or capabilities.get('wifi.disable') %}
+  {% if supports.wifi_toggle %}
   <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_enabled">
@@ -45,7 +47,7 @@
   </form>
   {% endif %}
 
-  {% if capabilities.get('wifi.set_ssid') %}
+  {% if supports.wifi_ssid %}
   <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_ssid">
@@ -61,7 +63,7 @@
   </form>
   {% endif %}
 
-  {% if capabilities.get('wifi.set_password') %}
+  {% if supports.wifi_password %}
   <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_password">
@@ -75,9 +77,5 @@
       <span class="risk-badge">risk: level 3</span>
     </div>
   </form>
-  {% endif %}
-
-  {% if not capabilities %}
-  <p class="muted">Для старого агента блок управления скрыт до получения capabilities.</p>
   {% endif %}
 </section>

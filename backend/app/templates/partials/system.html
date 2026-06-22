@@ -1,7 +1,7 @@
 <section class="card">
   <h2>Система</h2>
   <p>Команда перезагрузки будет выполнена при следующем опросе агента.</p>
-  {% if capabilities.get('system.reboot') %}
+  {% if supports.system_reboot %}
   <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="router.reboot">
@@ -12,6 +12,6 @@
     </div>
   </form>
   {% else %}
-  <p class="muted">Команда скрыта: у текущего агента нет capability <code>system.reboot</code>.</p>
+  <p class="muted">Команда скрыта: агент ещё не подтвердил поддержку перезагрузки.</p>
   {% endif %}
 </section>
