@@ -27,6 +27,7 @@ data class AgentStatusDto(
     val version: String?,
     val status: String?,
     val autoUpdateEnabled: Boolean,
+    val telemetryIntervalSeconds: Int?,
     val lastUpdateStatus: String?,
     val lastUpdateError: String?,
     val lastUpdateCheck: String?,

@@ -34,6 +34,8 @@ Installer сам подтягивает зависимости через `opkg 
 - `ca-bundle`
 - `coreutils-sha256sum`
 
+По умолчанию агент отправляет telemetry и опрашивает команды раз в `60` секунд. Интервал можно менять из Web UI и Android, минимальное значение `5` секунд.
+
 ## Установка с уже развернутого сервера
 
 Рекомендуемый вариант:
@@ -204,6 +206,25 @@ uci get wrtmonitor.main.auto_update
 uci set wrtmonitor.main.auto_update='0'
 uci commit wrtmonitor
 ```
+
+## Интервал telemetry
+
+Посмотреть текущее значение:
+
+```sh
+uci get wrtmonitor.main.interval
+wrtmonitor-agent debug | grep '^interval='
+```
+
+Изменить вручную:
+
+```sh
+uci set wrtmonitor.main.interval='15'
+uci commit wrtmonitor
+/etc/init.d/wrtmonitor restart
+```
+
+Минимально допустимое значение: `5` секунд.
 
 ## Удаление агента
 

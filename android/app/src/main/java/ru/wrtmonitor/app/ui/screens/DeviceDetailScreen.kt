@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -153,6 +156,13 @@ fun DeviceDetailScreen(
             actionError = actionError,
             canArchive = device.status == "disabled",
             onCheckUpdate = { queueCommand("agent.update", success = "Команда проверки обновления добавлена") },
+            onSetInterval = { seconds ->
+                queueCommand(
+                    "agent.set_interval",
+                    JSONObject().put("interval_seconds", seconds),
+                    "Новый интервал telemetry будет применён при следующем цикле агента",
+                )
+            },
             onEnableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", true), "Автообновление будет включено при следующем опросе агента") },
             onDisableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", false), "Автообновление будет выключено при следующем опросе агента") },
             onRollback = { confirmRollback = true },
@@ -261,6 +271,7 @@ private fun AgentSection(
     actionError: String,
     canArchive: Boolean,
     onCheckUpdate: () -> Unit,
+    onSetInterval: (Int) -> Unit,
     onEnableAutoUpdate: () -> Unit,
     onDisableAutoUpdate: () -> Unit,
     onRollback: () -> Unit,
@@ -269,10 +280,16 @@ private fun AgentSection(
     val capabilities = agent?.capabilities ?: emptyMap()
     val autoUpdateEnabled = agent?.autoUpdateEnabled == true
     var showCapabilities by rememberSaveable { mutableStateOf(false) }
+    var intervalInput by rememberSaveable(agent?.telemetryIntervalSeconds) {
+        mutableStateOf(agent?.telemetryIntervalSeconds?.toString() ?: "60")
+    }
+    val intervalValue = intervalInput.toIntOrNull()
+    val intervalError = intervalInput.isNotBlank() && (intervalValue == null || intervalValue < 5)
     TelemetrySection("Агент") {
         InfoRow("Версия", agent?.version, stringResource(R.string.no_data))
         InfoRow("Статус", agent?.status, stringResource(R.string.no_data))
         InfoRow("Автообновление", if (agent == null) null else if (autoUpdateEnabled) "Включено" else "Выключено", stringResource(R.string.no_data))
+        InfoRow("Интервал telemetry", agent?.telemetryIntervalSeconds?.let { "$it сек" }, stringResource(R.string.no_data))
         InfoRow("Доступная версия", agent?.availableVersion, stringResource(R.string.no_data))
         InfoRow("Последняя проверка", formatTimestamp(agent?.lastUpdateCheck), stringResource(R.string.no_data))
         InfoRow("Статус обновления", agent?.lastUpdateStatus, stringResource(R.string.no_data))
@@ -303,6 +320,23 @@ private fun AgentSection(
                 onClick = if (autoUpdateEnabled) onDisableAutoUpdate else onEnableAutoUpdate,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (autoUpdateEnabled) "Выключить автообновление" else "Включить автообновление") }
+        }
+        if (capabilities["agent.set_interval"] == true) {
+            OutlinedTextField(
+                value = intervalInput,
+                onValueChange = { value -> intervalInput = value.filter(Char::isDigit) },
+                label = { Text("Интервал telemetry, сек") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = intervalError,
+                supportingText = { Text(if (intervalError) "Минимум 5 секунд" else "Минимум 5 секунд") },
+            )
+            Button(
+                onClick = { intervalValue?.let(onSetInterval) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = intervalValue != null && intervalValue >= 5,
+            ) { Text("Изменить интервал") }
         }
         if (capabilities["agent.rollback"] == true) {
             Button(onClick = onRollback, modifier = Modifier.fillMaxWidth()) { Text("Rollback agent") }

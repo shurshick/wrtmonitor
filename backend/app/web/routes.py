@@ -281,6 +281,7 @@ def device_page(
     capabilities_message = capabilities_hint(capabilities)
     supports = {
         "agent_update": device_supports(db, device_id, "agent.update"),
+        "agent_set_interval": device_supports(db, device_id, "agent.set_interval"),
         "agent_rollback": device_supports(db, device_id, "agent.rollback"),
         "diagnostics": device_supports(db, device_id, "diagnostics.check_server"),
         "network_read": device_supports(db, device_id, "network.read"),
@@ -351,6 +352,7 @@ def web_device_command(
     ssid: str = Form(default=""),
     enabled: str = Form(default="true"),
     wifi_password: str = Form(default=""),
+    interval_seconds: str = Form(default=""),
     radio: str = Form(default=""),
     iface: str = Form(default=""),
     confirmed: bool = Form(default=False),
@@ -375,6 +377,7 @@ def web_device_command(
             ssid=ssid,
             enabled=enabled,
             wifi_password=wifi_password,
+            interval_seconds=interval_seconds,
             radio=radio,
             iface=iface,
             diagnostics_checks=diagnostics_checks,

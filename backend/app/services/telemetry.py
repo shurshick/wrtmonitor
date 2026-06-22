@@ -34,6 +34,7 @@ def extract_agent_status(payload: dict[str, Any]) -> dict[str, Any]:
         "status": agent.get("status", "running"),
         "platform": agent.get("platform", "openwrt"),
         "auto_update_enabled": bool(agent.get("auto_update_enabled", False)),
+        "telemetry_interval_seconds": agent.get("telemetry_interval_seconds"),
         "last_update_status": agent.get("last_update_status") or "",
         "last_update_error": agent.get("last_update_error") or "",
         "last_update_check": agent.get("last_update_check") or "",

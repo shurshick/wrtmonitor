@@ -62,7 +62,7 @@ daemon() {
         fi
         telemetry || log_notice "telemetry failed"
         poll_commands || log_notice "command polling failed"
-        sleep "$(cfg interval)"
+        sleep "$(telemetry_interval_seconds)"
     done
 }
 
@@ -71,7 +71,7 @@ debug() {
     printf 'server_url=%s\n' "$(server_url)"
     printf 'device_id=%s\n' "$(device_id)"
     printf 'device_token=%s\n' "$(masked_token)"
-    printf 'interval=%s\n' "$(cfg interval)"
+    printf 'interval=%s\n' "$(telemetry_interval_seconds)"
     printf 'auto_update=%s\n' "$AUTO_UPDATE_STATUS"
     printf 'agent_version=%s\n' "$CURRENT_VERSION"
     printf 'available_version=%s\n' "$AVAILABLE_VERSION"

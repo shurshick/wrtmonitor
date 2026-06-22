@@ -44,6 +44,7 @@
   "version": "0.1.1-rc9",
   "status": "running",
   "auto_update_enabled": true,
+  "telemetry_interval_seconds": 60,
   "last_update_status": "success",
   "last_update_error": "",
   "rollback_available": true,
@@ -66,6 +67,18 @@ Body:
   "payload": {
     "ssid": "HomeWiFi",
     "iface": "@wifi-iface[0]"
+  },
+  "confirmed": true
+}
+```
+
+Для изменения интервала telemetry:
+
+```json
+{
+  "command_type": "agent.set_interval",
+  "payload": {
+    "interval_seconds": 15
   },
   "confirmed": true
 }

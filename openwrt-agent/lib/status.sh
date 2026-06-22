@@ -96,9 +96,10 @@ update_status_json() {
 
 agent_status_json() {
     load_status
-    printf '{"version":"%s","status":"running","platform":"openwrt","auto_update_enabled":%s,"last_update_check":"%s","last_update_status":"%s","last_update_error":"%s","last_successful_update":"%s","rollback_available":%s,"update_source":"%s","available_version":"%s","capabilities":%s}' \
+    printf '{"version":"%s","status":"running","platform":"openwrt","auto_update_enabled":%s,"telemetry_interval_seconds":%s,"last_update_check":"%s","last_update_status":"%s","last_update_error":"%s","last_successful_update":"%s","rollback_available":%s,"update_source":"%s","available_version":"%s","capabilities":%s}' \
         "$(json_escape "$CURRENT_VERSION")" \
         "$( [ "$AUTO_UPDATE_STATUS" = "enabled" ] && printf true || printf false )" \
+        "$(telemetry_interval_seconds)" \
         "$(json_escape "$LAST_UPDATE_CHECK")" \
         "$(json_escape "$LAST_UPDATE_STATUS")" \
         "$(json_escape "$LAST_UPDATE_ERROR")" \

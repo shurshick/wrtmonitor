@@ -83,6 +83,12 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "agent.set_interval": {
+        "risk_level": "level_2_safe_action",
+        "capability": "agent.set_interval",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
 }
 
 ALLOWED_COMMANDS = set(COMMAND_REGISTRY)
@@ -197,6 +203,28 @@ def _normalize_auto_update_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {"enabled": payload["enabled"]}
 
 
+def _normalize_interval_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    value = payload.get("interval_seconds")
+    if value is None or isinstance(value, bool):
+        raise HTTPException(
+            status_code=400,
+            detail="Field 'interval_seconds' must be an integer not less than 5",
+        )
+    try:
+        normalized = int(str(value).strip())
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Field 'interval_seconds' must be an integer not less than 5",
+        ) from exc
+    if normalized < 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Field 'interval_seconds' must be an integer not less than 5",
+        )
+    return {"interval_seconds": normalized}
+
+
 def validate_command_payload(
     command_type: str, payload: dict[str, Any]
 ) -> dict[str, Any]:
@@ -211,6 +239,8 @@ def validate_command_payload(
         return _normalize_diagnostics_payload(normalized_payload)
     if command_type == "agent.set_auto_update":
         return _normalize_auto_update_payload(normalized_payload)
+    if command_type == "agent.set_interval":
+        return _normalize_interval_payload(normalized_payload)
     return normalized_payload
 
 
@@ -220,6 +250,7 @@ def build_command_payload_from_web_form(
     ssid: str = "",
     enabled: str = "true",
     wifi_password: str = "",
+    interval_seconds: str = "",
     radio: str = "",
     iface: str = "",
     diagnostics_checks: list[str] | None = None,
@@ -235,6 +266,8 @@ def build_command_payload_from_web_form(
         payload = {"password": wifi_password, "iface": iface}
     elif command_type == "agent.set_auto_update":
         payload = {"enabled": enabled.lower() == "true"}
+    elif command_type == "agent.set_interval":
+        payload = {"interval_seconds": interval_seconds}
     elif command_type == "diagnostics.run":
         payload = {"checks": diagnostics_checks or []}
     try:

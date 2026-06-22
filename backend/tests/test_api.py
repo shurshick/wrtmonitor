@@ -40,6 +40,7 @@ def test_allowed_commands_are_explicit():
     assert "agent.update" in ALLOWED_COMMANDS
     assert "agent.rollback" in ALLOWED_COMMANDS
     assert "agent.set_auto_update" in ALLOWED_COMMANDS
+    assert "agent.set_interval" in ALLOWED_COMMANDS
     assert "shell.exec" not in ALLOWED_COMMANDS
 
 

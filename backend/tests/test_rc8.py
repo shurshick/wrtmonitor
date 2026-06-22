@@ -50,6 +50,20 @@ def test_wifi_password_validation_rejects_short_password():
         raise AssertionError("Expected validation error for short password")
 
 
+def test_agent_interval_validation_rejects_values_below_minimum():
+    try:
+        validate_command_payload("agent.set_interval", {"interval_seconds": 4})
+    except Exception as exc:
+        assert "not less than 5" in str(exc.detail)
+    else:
+        raise AssertionError("Expected validation error for short interval")
+
+
+def test_agent_interval_validation_accepts_integer_strings():
+    payload = validate_command_payload("agent.set_interval", {"interval_seconds": "15"})
+    assert payload == {"interval_seconds": 15}
+
+
 def test_get_latest_agent_capabilities_returns_mapping():
     device_id = uuid4()
 
@@ -104,6 +118,7 @@ def test_device_agent_endpoint_returns_normalized_status(monkeypatch):
         lambda db, device_id: {
             "version": "0.1.1-rc8",
             "status": "running",
+            "telemetry_interval_seconds": 15,
             "capabilities": {"wifi.set_password": True},
         },
     )
@@ -119,6 +134,7 @@ def test_device_agent_endpoint_returns_normalized_status(monkeypatch):
         app.dependency_overrides.clear()
     assert response.status_code == 200
     assert response.json()["version"] == "0.1.1-rc8"
+    assert response.json()["telemetry_interval_seconds"] == 15
     assert response.json()["capabilities"]["wifi.set_password"] is True
 
 

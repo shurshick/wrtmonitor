@@ -3,6 +3,7 @@
   <div class="metric"><span class="metric__label">Версия</span><span class="metric__value">{{ agent.get('version') or 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Статус</span><span class="metric__value">{{ agent.get('status') or 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Автообновление</span><span class="metric__value">{{ 'включено' if agent.get('auto_update_enabled') else 'выключено' if agent else 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Интервал telemetry</span><span class="metric__value">{{ agent.get('telemetry_interval_seconds') ~ ' сек' if agent.get('telemetry_interval_seconds') else 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Доступная версия</span><span class="metric__value">{{ agent.get('available_version') or 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Последняя проверка</span><span class="metric__value">{{ agent.get('last_update_check') or 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Последний статус обновления</span><span class="metric__value">{{ agent.get('last_update_status') or 'нет данных' }}</span></div>
@@ -49,6 +50,19 @@
       <input type="hidden" name="enabled" value="{{ 'false' if agent.get('auto_update_enabled') else 'true' }}">
       <input type="hidden" name="confirmed" value="true">
       <button class="button button--secondary" type="submit">{{ 'Выключить auto-update' if agent.get('auto_update_enabled') else 'Включить auto-update' }}</button>
+    </form>
+    {% endif %}
+    {% if supports.agent_set_interval %}
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="command_type" value="agent.set_interval">
+      <input type="hidden" name="confirmed" value="true">
+      <label for="interval-seconds">Интервал telemetry, сек</label>
+      <input id="interval-seconds" type="number" name="interval_seconds" min="5" step="1" value="{{ agent.get('telemetry_interval_seconds') or 60 }}">
+      <div class="button-row">
+        <button type="submit">Изменить интервал</button>
+        <span class="risk-badge risk-badge--safe">min 5 sec</span>
+      </div>
     </form>
     {% endif %}
     {% if supports.agent_rollback %}

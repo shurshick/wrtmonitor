@@ -262,6 +262,27 @@ execute_command() {
             fi
             result="$(agent_status_json)"
             ;;
+        agent.set_interval)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            interval_seconds="$(json_get_number /tmp/wrtmonitor-command-payload '@.interval_seconds')"
+            rm -f /tmp/wrtmonitor-command-payload
+            case "$interval_seconds" in
+                ""|*[!0-9]*)
+                    status="failed"
+                    result="$(command_failed_result "interval_seconds must be numeric")"
+                    ;;
+                *)
+                    if [ "$interval_seconds" -lt 5 ]; then
+                        status="failed"
+                        result="$(command_failed_result "interval_seconds must be at least 5")"
+                    else
+                        uci set "$CONFIG.interval=$interval_seconds"
+                        uci commit wrtmonitor
+                        result="$(agent_status_json)"
+                    fi
+                    ;;
+            esac
+            ;;
         *)
             status="failed"
             result='{"error":"unsupported command"}'

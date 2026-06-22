@@ -13,6 +13,17 @@ cfg() {
     uci -q get "$CONFIG.$1" 2>/dev/null || true
 }
 
+telemetry_interval_seconds() {
+    value="$(cfg interval)"
+    case "$value" in
+        ""|*[!0-9]*) value="60" ;;
+    esac
+    if [ "$value" -lt 5 ]; then
+        value="5"
+    fi
+    printf '%s' "$value"
+}
+
 server_url() {
     cfg server_url | sed 's#/$##'
 }

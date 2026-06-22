@@ -128,6 +128,7 @@ def test_smoke_cli_capabilities_json():
     )
     assert '"capabilities"' in completed.stdout
     assert '"agent.update":true' in completed.stdout
+    assert '"agent.set_interval":true' in completed.stdout
 
 
 def test_smoke_cli_diagnostics_json():

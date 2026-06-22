@@ -121,6 +121,11 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         version = json.optString("version").takeIf { it.isNotBlank() },
         status = json.optString("status").takeIf { it.isNotBlank() },
         autoUpdateEnabled = json.optBoolean("auto_update_enabled", false),
+        telemetryIntervalSeconds = if (json.has("telemetry_interval_seconds") && !json.isNull("telemetry_interval_seconds")) {
+            json.optInt("telemetry_interval_seconds")
+        } else {
+            null
+        },
         lastUpdateStatus = json.optString("last_update_status").takeIf { it.isNotBlank() },
         lastUpdateError = json.optString("last_update_error").takeIf { it.isNotBlank() },
         lastUpdateCheck = json.optString("last_update_check").takeIf { it.isNotBlank() },
