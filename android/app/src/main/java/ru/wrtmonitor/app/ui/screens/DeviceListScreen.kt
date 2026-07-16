@@ -6,15 +6,25 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Router
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,8 +45,12 @@ import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.isUnauthorized
-import ru.wrtmonitor.app.ui.components.InfoRow
+import ru.wrtmonitor.app.ui.components.RouterPageHeader
+import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.viewmodel.DevicesUiState
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun DeviceListScreen(
@@ -94,14 +108,12 @@ fun DeviceListScreen(
     LaunchedEffect(serverUrl, accessToken, refreshNonce) { refresh() }
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.routers), style = MaterialTheme.typography.titleLarge)
-            Button({ refresh() }, enabled = !state.loading) { Text(stringResource(R.string.refresh)) }
-        }
+        RouterPageHeader(
+            title = stringResource(R.string.routers),
+            subtitle = stringResource(R.string.routers_summary),
+            refreshing = state.loading,
+            onRefresh = ::refresh,
+        )
         if (actionError.isNotBlank()) {
             Text(actionError, color = MaterialTheme.colorScheme.error)
         }
@@ -114,7 +126,7 @@ fun DeviceListScreen(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.load_error))
                     Text(state.error.orEmpty())
-                    Button({ refresh() }) { Text(stringResource(R.string.refresh)) }
+                    OutlinedButton({ refresh() }) { Text(stringResource(R.string.refresh)) }
                 }
             }
             state.devices.isEmpty() -> Card(Modifier.fillMaxWidth()) {
@@ -182,26 +194,76 @@ private fun DeviceListCard(
     onDisconnect: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                device.name.ifBlank { device.hostname.ifBlank { stringResource(R.string.router) } },
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            InfoRow(stringResource(R.string.hostname), device.hostname, stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.firmware), device.firmware, stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.status), device.status, stringResource(R.string.no_data))
-            Button({ onOpenDevice(device) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.open)) }
-            if (device.status !in setOf("disabled", "disconnecting")) {
-                TextButton(onClick = onDisconnect, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.disconnect_router_action), color = MaterialTheme.colorScheme.error)
-                }
+    var menuExpanded by remember { mutableStateOf(false) }
+    val online = device.status == "online"
+    Card(onClick = { onOpenDevice(device) }, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f),
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Icon(Icons.Default.Router, null, Modifier.padding(10.dp).size(24.dp))
             }
-            TextButton(onClick = onDelete, modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(R.string.remove_from_list), color = MaterialTheme.colorScheme.error)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    device.name.ifBlank { device.hostname.ifBlank { stringResource(R.string.router) } },
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    device.model.ifBlank { device.hostname },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    formatDeviceTime(device.lastSeenAt) ?: stringResource(R.string.no_data),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                StatusPill(
+                    if (online) stringResource(R.string.online) else stringResource(R.string.offline),
+                    online,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.KeyboardArrowRight, null, Modifier.size(20.dp))
+                    IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.MoreVert, stringResource(R.string.router_actions))
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        if (device.status !in setOf("disabled", "disconnecting")) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.disconnect_router_action)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDisconnect()
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.remove_from_list), color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            },
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+private fun formatDeviceTime(value: String?): String? = runCatching {
+    OffsetDateTime.parse(value).atZoneSameInstant(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+}.getOrNull()

@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +38,9 @@ import org.json.JSONArray
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.domain.VersionComparator
 import ru.wrtmonitor.app.ui.components.InfoRow
+import ru.wrtmonitor.app.ui.components.ActionRow
+import ru.wrtmonitor.app.ui.components.RouterPageHeader
+import ru.wrtmonitor.app.ui.components.SectionCard
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -77,16 +80,22 @@ fun AppSettingsScreen(currentServerUrl: String, onSave: (String) -> Unit, onLogo
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge)
-        OutlinedTextField(serverUrl, { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Button({ onSave(serverUrl) }) { Text(stringResource(R.string.save)) }
-        TextButton(onLogout) { Text(stringResource(R.string.logout)) }
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.about_app), style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.about_app_summary), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button({ showAbout = true }, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.open)) }
+        RouterPageHeader(
+            title = stringResource(R.string.settings),
+            subtitle = stringResource(R.string.settings_summary),
+        )
+        SectionCard(stringResource(R.string.server_connection), subtitle = currentServerUrl) {
+            OutlinedTextField(serverUrl, { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            ActionRow {
+                Button({ onSave(serverUrl) }) { Text(stringResource(R.string.save)) }
+                OutlinedButton(onLogout) { Text(stringResource(R.string.logout)) }
             }
+        }
+        SectionCard(
+            title = stringResource(R.string.about_app),
+            subtitle = stringResource(R.string.about_app_summary),
+        ) {
+            Button({ showAbout = true }, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.open)) }
         }
     }
 }
@@ -99,26 +108,20 @@ private fun AboutScreen(updateState: UpdateState?, checkingUpdate: Boolean, onBa
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
             Text(stringResource(R.string.about_app), style = MaterialTheme.typography.titleLarge)
         }
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-                InfoRow(stringResource(R.string.app_version), appVersionName(LocalContext.current))
-                Text(stringResource(R.string.copyright), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(onOpenProject, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.project_page)) }
-            }
+        SectionCard(stringResource(R.string.app_name)) {
+            InfoRow(stringResource(R.string.app_version), appVersionName(LocalContext.current))
+            Text(stringResource(R.string.copyright), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onOpenProject, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.project_page)) }
         }
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.updates), style = MaterialTheme.typography.titleMedium)
-                when (val state = updateState) {
-                    null -> Text(stringResource(R.string.update_check_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    is UpdateState.UpToDate -> Text(stringResource(R.string.app_up_to_date, state.latestVersion))
-                    is UpdateState.Available -> { Text(stringResource(R.string.update_available, state.latestVersion)); Button({ onOpenRelease(state.releaseUrl) }, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.download_update)) } }
-                    UpdateState.Error -> Text(stringResource(R.string.update_check_error), color = MaterialTheme.colorScheme.error)
-                }
-                Button(onCheckUpdates, enabled = !checkingUpdate, modifier = Modifier.align(Alignment.End)) {
-                    if (checkingUpdate) CircularProgressIndicator(modifier = Modifier.widthIn(max = 20.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.check_updates))
-                }
+        SectionCard(stringResource(R.string.updates)) {
+            when (val state = updateState) {
+                null -> Text(stringResource(R.string.update_check_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                is UpdateState.UpToDate -> Text(stringResource(R.string.app_up_to_date, state.latestVersion))
+                is UpdateState.Available -> { Text(stringResource(R.string.update_available, state.latestVersion)); Button({ onOpenRelease(state.releaseUrl) }, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.download_update)) } }
+                UpdateState.Error -> Text(stringResource(R.string.update_check_error), color = MaterialTheme.colorScheme.error)
+            }
+            Button(onCheckUpdates, enabled = !checkingUpdate, modifier = Modifier.align(Alignment.End)) {
+                if (checkingUpdate) CircularProgressIndicator(modifier = Modifier.widthIn(max = 20.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.check_updates))
             }
         }
     }

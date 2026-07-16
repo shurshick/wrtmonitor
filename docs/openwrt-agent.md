@@ -16,7 +16,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.3.0-rc3` сохраняет модульный layout и обновляется поверх предыдущих RC штатным update-механизмом.
+Версия `0.3.0-rc4` сохраняет модульный layout и обновляется поверх предыдущих RC штатным update-механизмом.
 
 ## Требования
 
@@ -70,7 +70,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.3.0-rc3/wrtmonitor-openwrt-agent-v0.3.0-rc3.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.3.0-rc4/wrtmonitor-openwrt-agent-v0.3.0-rc4.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \

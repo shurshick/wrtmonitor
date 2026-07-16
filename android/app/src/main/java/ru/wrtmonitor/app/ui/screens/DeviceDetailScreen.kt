@@ -9,12 +9,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,15 +31,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
@@ -43,6 +46,15 @@ import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.ui.components.InfoRow
+import ru.wrtmonitor.app.ui.components.DestinationRow
+import ru.wrtmonitor.app.ui.components.ActionRow
+import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
+import ru.wrtmonitor.app.ui.components.MessageBanner
+import ru.wrtmonitor.app.ui.components.MetricTile
+import ru.wrtmonitor.app.ui.components.RouterPageHeader
+import ru.wrtmonitor.app.ui.components.SectionCard
+import ru.wrtmonitor.app.ui.components.StatusPill
+import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.viewmodel.DeviceDetailUiState
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -54,6 +66,10 @@ fun DeviceDetailScreen(
     accessToken: String,
     device: DeviceDto,
     onSessionExpired: () -> Unit,
+    onOpenClients: () -> Unit,
+    onOpenWifi: () -> Unit,
+    onOpenNetwork: () -> Unit,
+    onOpenSystem: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var state by remember(device.id) {
@@ -81,31 +97,40 @@ fun DeviceDetailScreen(
     LaunchedEffect(serverUrl, accessToken, device.id) { refresh() }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Text(device.name.ifBlank { device.hostname }, style = MaterialTheme.typography.headlineSmall)
-                Text(device.model, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Button({ refresh() }, enabled = !state.loading) { Text(stringResource(R.string.refresh)) }
-        }
+        RouterPageHeader(
+            title = stringResource(R.string.nav_overview),
+            subtitle = device.firmware.ifBlank { device.model },
+            refreshing = state.loading,
+            onRefresh = ::refresh,
+        )
         when {
             state.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
             state.error != null && state.telemetry == null -> Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
             state.telemetry == null -> Text(stringResource(R.string.no_data))
-            else -> RouterOverview(device, state.telemetry!!)
+            else -> RouterOverview(
+                device,
+                state.telemetry!!,
+                onOpenClients,
+                onOpenWifi,
+                onOpenNetwork,
+                onOpenSystem,
+            )
         }
     }
 
 }
 
 @Composable
-private fun RouterOverview(device: DeviceDto, telemetry: TelemetryDto) {
+private fun RouterOverview(
+    device: DeviceDto,
+    telemetry: TelemetryDto,
+    onOpenClients: () -> Unit,
+    onOpenWifi: () -> Unit,
+    onOpenNetwork: () -> Unit,
+    onOpenSystem: () -> Unit,
+) {
     val payload = telemetry.payload
     val system = payload?.optJSONObject("system")
     val memory = system?.optJSONObject("memory")
@@ -130,131 +155,64 @@ private fun RouterOverview(device: DeviceDto, telemetry: TelemetryDto) {
     val availableMb = memory?.optLong("available_kb", 0)?.div(1024) ?: 0
     val totalMb = memory?.optLong("total_kb", 0)?.div(1024) ?: 0
 
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(
-                if (device.status == "online" && !telemetry.isStale) stringResource(R.string.router_healthy) else stringResource(R.string.router_attention),
-                style = MaterialTheme.typography.titleLarge,
-                color = if (device.status == "online" && !telemetry.isStale) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary,
+    val healthy = device.status == "online" && !telemetry.isStale
+    SectionCard(
+        title = if (healthy) stringResource(R.string.router_healthy) else stringResource(R.string.router_attention),
+        subtitle = stringResource(R.string.last_contact_value, formatTimestamp(telemetry.createdAt) ?: stringResource(R.string.no_data)),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(device.model, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            StatusPill(if (healthy) stringResource(R.string.online) else stringResource(R.string.offline), healthy)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MetricTile(stringResource(R.string.uptime), formatDuration(uptime), Modifier.weight(1f))
+            MetricTile(
+                stringResource(R.string.memory),
+                stringResource(R.string.memory_value_mb, availableMb, totalMb),
+                Modifier.weight(1f),
+                MaterialTheme.colorScheme.secondary,
             )
-            Text(device.firmware.ifBlank { stringResource(R.string.no_data) }, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                stringResource(R.string.last_contact_value, formatTimestamp(telemetry.createdAt) ?: stringResource(R.string.no_data)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OverviewTile(
-            title = stringResource(R.string.internet),
-            value = if (wanUp) stringResource(R.string.connected) else stringResource(R.string.disconnected),
-            detail = wanAddress,
-            accent = if (wanUp) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
-            modifier = Modifier.weight(1f),
+    SectionCard(title = stringResource(R.string.router_sections)) {
+        DestinationRow(
+            Icons.Default.Public,
+            stringResource(R.string.internet),
+            if (wanUp) stringResource(R.string.connected) else stringResource(R.string.disconnected),
+            wanAddress,
+            if (wanUp) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+            onOpenNetwork,
         )
-        OverviewTile(
-            title = stringResource(R.string.home_network),
-            value = clientCount.toString(),
-            detail = stringResource(R.string.connected_devices),
-            accent = Color(0xFF73D596),
-            modifier = Modifier.weight(1f),
+        DestinationRow(
+            Icons.Default.People,
+            stringResource(R.string.home_network),
+            clientCount.toString(),
+            stringResource(R.string.connected_devices),
+            MaterialTheme.colorScheme.secondary,
+            onOpenClients,
         )
-    }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OverviewTile(
-            title = stringResource(R.string.wifi),
-            value = wifiLabel,
-            detail = stringResource(R.string.radio_count_value, radios?.length() ?: 0),
-            accent = Color(0xFF6FA8FF),
-            modifier = Modifier.weight(1f),
+        DestinationRow(
+            Icons.Default.Wifi,
+            stringResource(R.string.wifi),
+            wifiLabel,
+            stringResource(R.string.radio_count_value, radios?.length() ?: 0),
+            MaterialTheme.colorScheme.primary,
+            onOpenWifi,
         )
-        OverviewTile(
-            title = stringResource(R.string.system),
-            value = formatDuration(uptime),
-            detail = stringResource(R.string.memory_value_mb, availableMb, totalMb),
-            accent = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.weight(1f),
+        DestinationRow(
+            Icons.Default.Memory,
+            stringResource(R.string.system),
+            formatDuration(uptime),
+            stringResource(R.string.system_resources_summary),
+            MaterialTheme.colorScheme.tertiary,
+            onOpenSystem,
         )
-    }
-    Text(
-        stringResource(R.string.overview_navigation_hint),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-    )
-}
-
-@Composable
-private fun OverviewTile(title: String, value: String, detail: String, accent: Color, modifier: Modifier = Modifier) {
-    Card(modifier) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(title, style = MaterialTheme.typography.labelLarge, color = accent)
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-        }
-    }
-}
-
-@Composable
-private fun TelemetrySummary(telemetry: TelemetryDto) {
-    val payload = telemetry.payload ?: return
-    val system = payload.optJSONObject("system")
-    val memory = system?.optJSONObject("memory")
-    val cpu = payload.optJSONObject("cpu")
-    val storage = payload.optJSONObject("storage")
-    val thermal = payload.optJSONObject("thermal")
-    val traffic = payload.optJSONObject("traffic")
-    val processes = system?.optJSONObject("processes")
-    val board = payload.optJSONObject("board")
-    val release = board?.optJSONObject("release")
-    val network = telemetry.network ?: payload.optJSONObject("network")
-    val networkDevices = payload.optJSONObject("network_devices")
-    val interfaces = network?.optJSONArray("interfaces") ?: network?.optJSONArray("interface")
-    val wifi = telemetry.wifi ?: payload.optJSONObject("wifi")
-    val radios = wifi?.optJSONArray("radios")
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        TelemetrySection(stringResource(R.string.telemetry_state_title)) {
-            InfoRow(stringResource(R.string.updated_at), formatTimestamp(telemetry.createdAt), stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.age), telemetry.ageSeconds?.let { stringResource(R.string.seconds_value, it.toInt()) }, stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.source), telemetry.source, stringResource(R.string.no_data))
-            if (telemetry.isStale) {
-                Text(stringResource(R.string.stale_telemetry), color = MaterialTheme.colorScheme.error)
-            }
-        }
-        TelemetrySection(stringResource(R.string.telemetry_system_title)) {
-            InfoRow(stringResource(R.string.uptime), formatDuration(system?.optLong("uptime", 0) ?: 0))
-            InfoRow(stringResource(R.string.load), system?.optString("load"), stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.memory), memory?.let { memoryLabel(it) }, stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.cpu), cpu?.optString("model").orEmpty().ifBlank { stringResource(R.string.not_detected) }, stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.cpu_cores), cpu?.optLong("cores", 0)?.takeIf { it > 0 }?.toString(), stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.storage), storage?.let { storageLabel(it) }, stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.temperature), thermalLabel(thermal), stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.processes), processes?.optLong("count", 0)?.takeIf { it > 0 }?.toString(), stringResource(R.string.no_data))
-        }
-        TelemetrySection(stringResource(R.string.telemetry_hardware_title)) {
-            InfoRow(stringResource(R.string.model), board?.optString("model").orEmpty().ifBlank { null }, stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.firmware), release?.optString("description").orEmpty().ifBlank { release?.optString("version") }, stringResource(R.string.no_data))
-        }
-        TelemetrySection(stringResource(R.string.telemetry_network_title)) {
-            InfoRow(stringResource(R.string.network_rx_tx), traffic?.let { "${formatBytes(it.optLong("rx_bytes"))} / ${formatBytes(it.optLong("tx_bytes"))}" }, stringResource(R.string.no_data))
-            if (interfaces == null || interfaces.length() == 0) {
-                Text(stringResource(R.string.interfaces_missing))
-            } else {
-                InterfaceRows(interfaces)
-            }
-            if (networkDevices != null) NetworkDeviceRows(networkDevices)
-        }
-        TelemetrySection(stringResource(R.string.telemetry_wifi_title)) {
-            if (wifi?.optBoolean("available", false) != true) Text(stringResource(R.string.wifi_unavailable)) else RadioRows(radios)
-        }
     }
 }
 
 @Composable
 internal fun AgentSection(
     agent: AgentStatusDto?,
-    actionMessage: String,
     actionError: String,
     onCheckUpdate: () -> Unit,
     onSetInterval: (Int) -> Unit,
@@ -264,173 +222,86 @@ internal fun AgentSection(
 ) {
     val capabilities = agent?.capabilities ?: emptyMap()
     val autoUpdateEnabled = agent?.autoUpdateEnabled == true
-    var showCapabilities by rememberSaveable { mutableStateOf(false) }
     var intervalInput by rememberSaveable(agent?.telemetryIntervalSeconds) {
         mutableStateOf(agent?.telemetryIntervalSeconds?.toString() ?: "60")
     }
     val intervalValue = intervalInput.toIntOrNull()
     val intervalError = intervalInput.isNotBlank() && (intervalValue == null || intervalValue < 5)
-    TelemetrySection(stringResource(R.string.agent_section_title)) {
-        InfoRow(stringResource(R.string.version), agent?.version, stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.status), agent?.status, stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.auto_update), if (agent == null) null else if (autoUpdateEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value), stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.telemetry_interval), agent?.telemetryIntervalSeconds?.let { stringResource(R.string.seconds_value, it) }, stringResource(R.string.no_data))
+    SectionCard(
+        title = stringResource(R.string.agent_section_title),
+        subtitle = stringResource(R.string.agent_section_summary),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(agent?.version ?: stringResource(R.string.no_data), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.telemetry_interval_value, agent?.telemetryIntervalSeconds ?: 0),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            StatusPill(
+                agent?.status ?: stringResource(R.string.no_data),
+                agent?.status?.lowercase() in setOf("running", "online", "ok"),
+            )
+        }
         InfoRow(stringResource(R.string.available_version), agent?.availableVersion, stringResource(R.string.no_data))
         InfoRow(stringResource(R.string.last_update_check), formatTimestamp(agent?.lastUpdateCheck), stringResource(R.string.no_data))
         InfoRow(stringResource(R.string.update_status), agent?.lastUpdateStatus, stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.last_successful_update), formatTimestamp(agent?.lastSuccessfulUpdate), stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.last_error), agent?.lastUpdateError, stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.rollback), if (agent == null) null else if (agent.rollbackAvailable) stringResource(R.string.rollback_available) else stringResource(R.string.rollback_unavailable), stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.update_source), agent?.updateSource, stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.capabilities), capabilitiesSummary(capabilities), stringResource(R.string.no_data))
-        if (capabilities.isNotEmpty()) {
-            TextButton(onClick = { showCapabilities = !showCapabilities }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (showCapabilities) stringResource(R.string.hide_capabilities) else stringResource(R.string.show_capabilities))
+        agent?.lastUpdateError?.takeIf(String::isNotBlank)?.let { MessageBanner(it, error = true) }
+        if (capabilities.isEmpty()) MessageBanner(stringResource(R.string.capabilities_missing_reinstall))
+    }
+    if (capabilities["agent.update"] == true || capabilities["agent.set_interval"] == true || capabilities["agent.rollback"] == true) {
+        ExpandableSettingsCard(
+            title = stringResource(R.string.agent_management),
+            summary = if (autoUpdateEnabled) stringResource(R.string.auto_update_enabled_summary) else stringResource(R.string.auto_update_disabled_summary),
+        ) {
+            if (capabilities["agent.update"] == true) {
+                SwitchSettingRow(
+                    title = stringResource(R.string.auto_update),
+                    subtitle = if (autoUpdateEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value),
+                    checked = autoUpdateEnabled,
+                    onCheckedChange = { value -> if (value) onEnableAutoUpdate() else onDisableAutoUpdate() },
+                )
+                FilledTonalButton(onClick = onCheckUpdate, modifier = Modifier.align(Alignment.End)) {
+                    Text(stringResource(R.string.check_update))
+                }
             }
-            if (showCapabilities) {
-                groupedCapabilities(capabilities).forEach { (title, values) ->
-                    InfoRow(title, values.joinToString(", "))
+            if (capabilities["agent.set_interval"] == true) {
+                OutlinedTextField(
+                    value = intervalInput,
+                    onValueChange = { value -> intervalInput = value.filter(Char::isDigit) },
+                    label = { Text(stringResource(R.string.telemetry_interval_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = intervalError,
+                    supportingText = { Text(stringResource(R.string.min_five_seconds)) },
+                )
+                Button(
+                    onClick = { intervalValue?.let(onSetInterval) },
+                    modifier = Modifier.align(Alignment.End),
+                    enabled = intervalValue != null && intervalValue >= 5,
+                ) { Text(stringResource(R.string.change_interval)) }
+            }
+            if (capabilities["agent.rollback"] == true) {
+                OutlinedButton(onClick = onRollback, modifier = Modifier.align(Alignment.End)) {
+                    Text(stringResource(R.string.rollback_action))
                 }
             }
         }
-
-        if (actionMessage.isNotBlank()) Text(actionMessage, color = MaterialTheme.colorScheme.primary)
-        if (actionError.isNotBlank()) Text(actionError, color = MaterialTheme.colorScheme.error)
-
-        if (capabilities["agent.update"] == true) {
-            Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.check_update)) }
-        }
-        if (capabilities["agent.update"] == true) {
-            Button(
-                onClick = if (autoUpdateEnabled) onDisableAutoUpdate else onEnableAutoUpdate,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (autoUpdateEnabled) stringResource(R.string.disable_auto_update) else stringResource(R.string.enable_auto_update)) }
-        }
-        if (capabilities["agent.set_interval"] == true) {
-            OutlinedTextField(
-                value = intervalInput,
-                onValueChange = { value -> intervalInput = value.filter(Char::isDigit) },
-                label = { Text(stringResource(R.string.telemetry_interval_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = intervalError,
-                supportingText = { Text(stringResource(R.string.min_five_seconds)) },
-            )
-            Button(
-                onClick = { intervalValue?.let(onSetInterval) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = intervalValue != null && intervalValue >= 5,
-            ) { Text(stringResource(R.string.change_interval)) }
-        }
-        if (capabilities["agent.rollback"] == true) {
-            Button(onClick = onRollback, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.rollback_action)) }
-        }
-        if (capabilities.isEmpty()) {
-            Text(
-                stringResource(R.string.capabilities_missing_reinstall),
-                color = MaterialTheme.colorScheme.secondary,
-            )
-        }
     }
-}
-
-@Composable
-private fun TelemetrySection(title: String, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            content()
-        }
-    }
-}
-
-@Composable
-private fun InterfaceRows(interfaces: JSONArray) {
-    for (index in 0 until interfaces.length()) {
-        val item = interfaces.optJSONObject(index) ?: continue
-        val name = item.optString("interface", item.optString("name", "interface"))
-        val state = if (item.optBoolean("up", false)) stringResource(R.string.in_network) else stringResource(R.string.out_of_network)
-        val proto = item.optString("proto").takeIf { it.isNotBlank() }
-        val device = item.optString("device").takeIf { it.isNotBlank() }
-        val ipv4 = item.optJSONArray("ipv4")?.optString(0).takeIf { !it.isNullOrBlank() }
-            ?: firstAddress(item.optJSONArray("ipv4-address")).takeIf { it.isNotBlank() }
-        InfoRow(name, listOfNotNull(state, proto, device, ipv4).joinToString(" · "))
-    }
-}
-
-@Composable
-private fun RadioRows(radios: JSONArray?) {
-    if (radios == null || radios.length() == 0) {
-        Text(stringResource(R.string.wifi_unavailable))
-        return
-    }
-    for (index in 0 until radios.length()) {
-        val radio = radios.optJSONObject(index) ?: continue
-        val name = radio.optString("name", radio.optString("id", "radio$index"))
-        val details = listOfNotNull(
-            if (radio.optBoolean("up", false)) stringResource(R.string.wifi_enabled_state) else stringResource(R.string.wifi_disabled_state),
-            radio.optString("band").takeIf { it.isNotBlank() },
-            radio.optString("channel").takeIf { it.isNotBlank() }?.let { stringResource(R.string.channel_value, it) },
-        ).joinToString(" · ")
-        InfoRow(name, details)
-        val interfaces = radio.optJSONArray("interfaces")
-        if (interfaces != null) {
-            for (ifaceIndex in 0 until interfaces.length()) {
-                val iface = interfaces.optJSONObject(ifaceIndex) ?: continue
-                InfoRow(
-                    stringResource(R.string.ssid_item, ifaceIndex + 1),
-                    listOfNotNull(
-                        iface.optString("ssid").takeIf { it.isNotBlank() },
-                        if (iface.optBoolean("enabled", true)) stringResource(R.string.radio_active) else stringResource(R.string.radio_disabled),
-                        iface.optString("encryption").takeIf { it.isNotBlank() },
-                    ).joinToString(" · "),
-                )
+    if (capabilities.isNotEmpty()) {
+        ExpandableSettingsCard(
+            title = stringResource(R.string.capabilities),
+            summary = capabilitiesSummary(capabilities),
+        ) {
+            groupedCapabilities(capabilities).forEach { (title, values) ->
+                InfoRow(title, values.joinToString(", "))
             }
         }
     }
-}
-
-@Composable
-private fun NetworkDeviceRows(devices: JSONObject) {
-    val names = devices.keys().asSequence().toList().sorted()
-    for (name in names) {
-        val item = devices.optJSONObject(name) ?: continue
-        val details = listOf(
-            if (item.optBoolean("up", false)) stringResource(R.string.device_active) else stringResource(R.string.device_inactive),
-            if (item.optBoolean("carrier", false)) stringResource(R.string.carrier_present) else stringResource(R.string.carrier_missing),
-            item.optLong("mtu", 0).takeIf { it > 0 }?.let { "MTU $it" }.orEmpty(),
-        ).filter { it.isNotBlank() }.joinToString(" · ")
-        InfoRow(name, details)
-    }
-}
-
-private fun firstAddress(addresses: JSONArray?): String =
-    addresses?.optJSONObject(0)?.optString("address").orEmpty()
-
-private fun memoryLabel(memory: JSONObject): String =
-    "${memory.optLong("available_kb") / 1024} / ${memory.optLong("total_kb") / 1024} MB"
-
-@Composable
-private fun storageLabel(storage: JSONObject): String =
-    androidx.compose.ui.platform.LocalContext.current.getString(
-        R.string.storage_used_free,
-        storage.optLong("used_kb") / 1024,
-        storage.optLong("available_kb") / 1024,
-    )
-
-private fun thermalLabel(thermal: JSONObject?): String? =
-    if (thermal?.optBoolean("available", false) == true) {
-        "${thermal.optLong("milli_celsius") / 1000.0} °C"
-    } else {
-        null
-    }
-
-private fun formatBytes(bytes: Long): String = when {
-    bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
-    bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
-    bytes >= 1024 -> "%.1f KB".format(bytes / 1024.0)
-    else -> "$bytes B"
+    MessageBanner(actionError, error = true)
 }
 
 private fun formatTimestamp(value: String?): String? = runCatching {
