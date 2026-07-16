@@ -10,7 +10,7 @@ ghcr.io/shurshick/wrtmonitor:latest
 
 ## Первичная установка
 
-1. Скачайте из последнего релиза `wrtmonitor-truenas-v0.3.0-rc1.yaml`.
+1. Скачайте из последнего релиза `wrtmonitor-truenas-v0.3.0-rc2.yaml`.
 2. В YAML замените `WRTMONITOR_PUBLIC_SERVER_URL` на внешний HTTPS-адрес.
 3. Замените `POSTGRES_PASSWORD` и такой же пароль в `WRTMONITOR_DATABASE_URL`.
 4. Замените `WRTMONITOR_JWT_SECRET` на длинное случайное значение.

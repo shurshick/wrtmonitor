@@ -358,6 +358,7 @@ def device_page(
         "device_detail.html",
         {
             "device": device,
+            "server_version": APP_VERSION,
             "section": section,
             "csrf_token": csrf_token,
             "latest": latest,

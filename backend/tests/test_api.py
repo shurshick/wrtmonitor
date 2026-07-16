@@ -393,8 +393,11 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
 
     assert response.status_code == 200
     assert "2 enabled / 1 disabled" in response.text
-    assert "Показать capabilities" in response.text
-    assert '<details class="section">' in response.text
+    assert "Технические данные" in response.text
+    assert "Обновление агента" in response.text
+    assert "Обмен данными" in response.text
+    assert "Диагностика" in response.text
+    assert '<details class="technical-panel section">' in response.text
 
 
 def test_devices_page_requires_web_session(monkeypatch):

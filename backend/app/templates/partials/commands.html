@@ -1,5 +1,5 @@
 <div>
-  <div class="section-heading section-heading--compact"><p class="eyebrow">История</p><h2>Последние команды</h2></div>
+  <div class="section-heading section-heading--compact"><p class="eyebrow">Журнал операций</p><h2>Последние команды</h2><p>Только действия управления; подробный payload скрыт внутри каждой записи.</p></div>
   <div class="command-list">
     {% for command in commands %}
     <article class="command-item">
@@ -21,7 +21,4 @@
     <div class="empty-state card">Команд пока нет</div>
     {% endfor %}
   </div>
-  {% if latest_diagnostics %}
-  <details class="debug-panel section"><summary>Последняя диагностика</summary><pre class="raw-telemetry">{{ latest_diagnostics.result or {} }}</pre></details>
-  {% endif %}
 </div>
