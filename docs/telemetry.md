@@ -20,12 +20,18 @@ GET /api/v1/devices/{device_id}/telemetry/latest
 - `is_stale` — `true`, если snapshot старше 5 минут;
 - `source` — сейчас всегда `agent`;
 - `telemetry` — последний payload или `null`, если данных ещё нет.
+- `system`, `services`, `clients`, `wifi`, `network` — нормализованные блоки для интерфейсов.
 
 OpenWrt agent собирает:
 
-- `system`: uptime, load average, память, `ubus system info`;
+- `system`: uptime, load 1/5/15, память, hostname, kernel, conntrack, сервисы и `ubus system info`;
 - `board`: `ubus system board`;
-- `network`: `ubus network.interface dump`;
-- `wifi`: multi-radio snapshot из UCI wireless config.
+- `network`: интерфейсы, адреса, gateway, DNS, устройства и traffic;
+- `wifi`: multi-radio snapshot, SSID, channel, country, htmode и параметры интерфейсов;
+- `clients`: DHCP leases и neighbour table;
+- `dhcp`: динамические и статические leases;
+- `agent`: версия, update status, interval и capabilities.
+
+`schema_version=2` обозначает новый контракт `v0.2.0-rc1`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
 
 Retention: сервер хранит последние 100 telemetry snapshots на устройство. Старые snapshots удаляются после успешного ingest.

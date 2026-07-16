@@ -139,13 +139,13 @@ fun DeviceListScreen(
     disconnectTarget?.let { device ->
         AlertDialog(
             onDismissRequest = { disconnectTarget = null },
-            title = { Text("Отключить роутер?") },
-            text = { Text("Агент завершит работу на роутере. Для повторного подключения потребуется заново запустить установку агента.") },
+            title = { Text(stringResource(R.string.disconnect_router_title)) },
+            text = { Text(stringResource(R.string.disconnect_router_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     disconnectTarget = null
                     disconnect(device)
-                }) { Text("Отключить") }
+                }) { Text(stringResource(R.string.disconnect_router_action)) }
             },
             dismissButton = {
                 TextButton(onClick = { disconnectTarget = null }) {
@@ -158,13 +158,13 @@ fun DeviceListScreen(
     archiveTarget?.let { device ->
         AlertDialog(
             onDismissRequest = { archiveTarget = null },
-            title = { Text("Удалить из списка?") },
-            text = { Text("Этот роутер уже отключён. История telemetry и команд останется на сервере, но для повторного подключения агент нужно будет зарегистрировать заново.") },
+            title = { Text(stringResource(R.string.archive_router_title)) },
+            text = { Text(stringResource(R.string.archive_router_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     archiveTarget = null
                     archive(device)
-                }) { Text("Удалить") }
+                }) { Text(stringResource(R.string.archive_router_action)) }
             },
             dismissButton = {
                 TextButton(onClick = { archiveTarget = null }) {
@@ -196,12 +196,12 @@ private fun DeviceListCard(
             Button({ onOpenDevice(device) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.open)) }
             if (device.status !in setOf("disabled", "disconnecting")) {
                 TextButton(onClick = onDisconnect, modifier = Modifier.align(Alignment.End)) {
-                    Text("Отключить", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.disconnect_router_action), color = MaterialTheme.colorScheme.error)
                 }
             }
             if (device.status == "disabled") {
                 TextButton(onClick = onArchive, modifier = Modifier.align(Alignment.End)) {
-                    Text("Удалить из списка", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.remove_from_list), color = MaterialTheme.colorScheme.error)
                 }
             }
         }

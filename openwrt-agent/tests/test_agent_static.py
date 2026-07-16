@@ -7,6 +7,7 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = ROOT.parent
 AGENT = ROOT / "wrtmonitor-agent"
 INSTALLER = ROOT / "install-openwrt.sh"
 LIB_DIR = ROOT / "lib"
@@ -43,10 +44,11 @@ def read_text(path: Path) -> str:
 
 def test_agent_entrypoint_exists_and_is_thin():
     source = read_text(AGENT)
+    expected_version = read_text(REPO_ROOT / "VERSION").strip()
     assert AGENT.exists()
     assert source.startswith("#!/bin/sh\nset -eu")
     assert len(source.splitlines()) <= 200
-    assert 'AGENT_VERSION="0.1.1-rc9"' in source
+    assert f'AGENT_VERSION="{expected_version}"' in source
     for name in REQUIRED_LIBS:
         assert f"load_lib {name}" in source
     assert "main \"$@\"" in source
@@ -112,7 +114,7 @@ def test_smoke_cli_version():
         text=True,
         env=shell_env(),
     )
-    assert completed.stdout.strip() == "0.1.1-rc9"
+    assert completed.stdout.strip() == read_text(REPO_ROOT / "VERSION").strip()
 
 
 def test_smoke_cli_capabilities_json():
@@ -158,5 +160,22 @@ def test_installer_bootstraps_runtime_dependencies():
 
 
 def test_agent_version_file_matches_entrypoint():
-    assert read_text(AGENT_VERSION).strip() == "0.1.1-rc9"
-    assert 'AGENT_VERSION="0.1.1-rc9"' in read_text(AGENT)
+    expected_version = read_text(REPO_ROOT / "VERSION").strip()
+    assert read_text(AGENT_VERSION).strip() == expected_version
+    assert f'AGENT_VERSION="{expected_version}"' in read_text(AGENT)
+
+
+def test_management_capabilities_cover_full_router_foundation():
+    source = read_text(ROOT / "lib" / "capabilities.sh")
+    for capability in (
+        "telemetry.clients",
+        "wifi.set_channel",
+        "wifi.set_country",
+        "network.interface_restart",
+        "network.restart",
+        "dhcp.set_lease",
+        "dhcp.delete_lease",
+        "system.set_hostname",
+        "system.restart_service",
+    ):
+        assert f'"{capability}":true' in source

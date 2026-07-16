@@ -5,6 +5,7 @@
 - Первый администратор создаётся через `/setup`.
 - Пароли хранятся как Argon2 hash.
 - Android получает JWT access token через `/api/v1/auth/login`.
+- Android хранит серверный URL, access token и базовую сессию в `EncryptedSharedPreferences`.
 - OpenWrt agent использует отдельный device token.
 - Device token хранится на сервере только как hash.
 - Web UI `/devices` требует вход через `/login`.
@@ -12,6 +13,7 @@
 - API-документация `/docs`, `/redoc`, `/openapi.json` по умолчанию выключена.
 - Команды управления выполняются только через allowlist.
 - Произвольные shell-команды на роутере не поддерживаются.
+- Доступ к серверным устройствам сейчас жёстко ограничен моделью `single-owner`.
 
 ## Startup checks
 

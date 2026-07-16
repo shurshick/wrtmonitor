@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from uuid import uuid4
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -15,7 +16,12 @@ from backend.app.services.commands import (
     public_command_payload,
     validate_command_payload,
 )
+from backend.app.config import APP_VERSION
 from backend.app.services.devices import get_latest_agent_capabilities
+from backend.app.services.telemetry import (
+    normalize_clients_summary,
+    normalize_system_summary,
+)
 
 
 def test_allowed_commands_derived_from_registry():
@@ -62,6 +68,77 @@ def test_agent_interval_validation_rejects_values_below_minimum():
 def test_agent_interval_validation_accepts_integer_strings():
     payload = validate_command_payload("agent.set_interval", {"interval_seconds": "15"})
     assert payload == {"interval_seconds": 15}
+
+
+def test_wifi_channel_and_country_validation():
+    assert validate_command_payload(
+        "wifi.set_channel", {"radio": "radio0", "channel": "36"}
+    ) == {"radio": "radio0", "channel": "36"}
+    assert validate_command_payload(
+        "wifi.set_country", {"radio": "radio0", "country": "ru"}
+    ) == {"radio": "radio0", "country": "RU"}
+
+
+def test_network_and_service_allowlists_reject_shell_input():
+    for command_type, payload in (
+        ("network.interface_restart", {"interface": "wan; reboot"}),
+        ("system.restart_service", {"service": "dropbear"}),
+    ):
+        try:
+            validate_command_payload(command_type, payload)
+        except Exception as exc:
+            assert exc.status_code == 400
+        else:
+            raise AssertionError("Expected command payload to be rejected")
+
+
+def test_dhcp_lease_validation_normalizes_mac_and_ipv4():
+    assert validate_command_payload(
+        "dhcp.set_lease",
+        {"hostname": "printer", "mac": "AA-BB-CC-DD-EE-FF", "ip": "192.168.1.50"},
+    ) == {
+        "hostname": "printer",
+        "mac": "aa:bb:cc:dd:ee:ff",
+        "ip": "192.168.1.50",
+    }
+
+
+def test_clients_and_system_telemetry_are_normalized():
+    payload = {
+        "clients": {
+            "dhcp": {
+                "leases": [
+                    {
+                        "mac": "AA:BB:CC:DD:EE:FF",
+                        "ip": "192.168.1.50",
+                        "hostname": "printer",
+                    }
+                ]
+            },
+            "neighbours": [
+                {
+                    "mac": "aa:bb:cc:dd:ee:ff",
+                    "ip": "192.168.1.50",
+                    "interface": "br-lan",
+                    "state": "REACHABLE",
+                }
+            ],
+        },
+        "system": {
+            "hostname": "router",
+            "kernel": "6.6.1",
+            "conntrack": {"count": 10, "max": 16384},
+            "services": {"dnsmasq": "running"},
+        },
+    }
+    clients = normalize_clients_summary(payload)
+    assert clients["count"] == 1
+    assert clients["items"][0]["source"] == "dhcp+neighbour"
+    assert clients["items"][0]["interface"] == "br-lan"
+    system = normalize_system_summary(payload)
+    assert system["hostname"] == "router"
+    assert system["conntrack_count"] == 10
+    assert system["services"]["dnsmasq"] == "running"
 
 
 def test_get_latest_agent_capabilities_returns_mapping():
@@ -116,7 +193,7 @@ def test_device_agent_endpoint_returns_normalized_status(monkeypatch):
         devices_api,
         "get_latest_agent_status",
         lambda db, device_id: {
-            "version": "0.1.1-rc8",
+            "version": APP_VERSION,
             "status": "running",
             "telemetry_interval_seconds": 15,
             "capabilities": {"wifi.set_password": True},
@@ -133,7 +210,7 @@ def test_device_agent_endpoint_returns_normalized_status(monkeypatch):
     finally:
         app.dependency_overrides.clear()
     assert response.status_code == 200
-    assert response.json()["version"] == "0.1.1-rc8"
+    assert response.json()["version"] == APP_VERSION
     assert response.json()["telemetry_interval_seconds"] == 15
     assert response.json()["capabilities"]["wifi.set_password"] is True
 
@@ -198,3 +275,24 @@ def test_commands_api_lists_risk_and_capability(monkeypatch):
     assert body["risk_level"] == "level_3_reversible_config"
     assert body["capability"] == "wifi.set_password"
     assert body["payload"]["password"] == "********"
+
+
+def test_web_ui_templates_expose_v2_management_controls():
+    templates_dir = (
+        Path(__file__).resolve().parents[1] / "app" / "templates" / "partials"
+    )
+    content = "\n".join(
+        (templates_dir / filename).read_text(encoding="utf-8")
+        for filename in ("clients.html", "wifi.html", "network.html", "system.html")
+    )
+    for command_type in (
+        "dhcp.set_lease",
+        "dhcp.delete_lease",
+        "wifi.set_channel",
+        "wifi.set_country",
+        "network.interface_restart",
+        "network.restart",
+        "system.set_hostname",
+        "system.restart_service",
+    ):
+        assert f'value="{command_type}"' in content

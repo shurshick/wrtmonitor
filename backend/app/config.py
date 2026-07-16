@@ -1,11 +1,20 @@
 import ipaddress
 import os
+from pathlib import Path
 from dataclasses import dataclass
 from urllib.parse import unquote, urlparse
 
 
 APP_NAME = "WrtMonitor"
-APP_VERSION = "0.1.1-rc9"
+ACCESS_MODEL = "single-owner"
+
+
+def read_repo_version() -> str:
+    version_file = Path(__file__).resolve().parents[2] / "VERSION"
+    return version_file.read_text(encoding="utf-8").strip()
+
+
+APP_VERSION = read_repo_version()
 
 
 @dataclass(frozen=True)

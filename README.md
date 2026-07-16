@@ -1,30 +1,28 @@
 # WrtMonitor
 
-`WrtMonitor` - self-hosted сервер, Web UI, Android-приложение и OpenWrt-агент для мониторинга и базового управления роутерами OpenWrt.
+`WrtMonitor` - self-hosted сервер, Web UI, Android-приложение и OpenWrt-агент для мониторинга и удалённого управления роутерами OpenWrt.
 
 ## Текущая версия
 
-Текущий internal prerelease: `v0.1.1-rc9-agent-modularization-and-ui-fixes`.
+Текущий prerelease: `v0.2.0-rc1-full-router-foundation`.
 
-Что вошло в `rc9`:
+Главное в `0.2.0-rc1`:
 
-- OpenWrt-агент разбит на модульную структуру `wrtmonitor-agent + lib/*.sh`;
-- installer и update pipeline переведены на manifest `openwrt-agent-files.txt`;
-- сервер раздаёт полный набор agent-файлов для установки и обновления;
-- Web UI и Android показывают compact summary для capabilities вместо длинного списка;
-- в Web UI и Android закреплено удаление из активного списка только для `disabled` роутеров;
-- переходная логика для старых prerelease-агентов упрощена.
-
-Важно: `rc9` меняет layout файлов OpenWrt-агента. Для внутреннего тестирования рекомендуется clean reinstall агента. Обратная совместимость автообновления с `rc7/rc8` намеренно не гарантируется.
+- telemetry schema v2 и единая серверная нормализация данных;
+- клиенты сети и статические DHCP-выдачи;
+- расширенное управление Wi-Fi, сетью и системными сервисами;
+- одинаковый capability-aware функционал в Android и Web UI;
+- обязательная валидация, подтверждение, аудит и backup для изменений конфигурации.
 
 ## Что уже есть
 
 - сервер `FastAPI + PostgreSQL + Alembic`;
+- текущая модель доступа: `single-owner`, без ролей и мультипользовательского режима;
 - Web UI в тёмной dashboard-теме;
 - Android-клиент;
 - OpenWrt-агент для регистрации, telemetry, очереди команд, diagnostics и автообновления;
 - установка через Docker Compose, VPS, домашний Linux-сервер, NAS с Docker и TrueNAS Custom App;
-- управление Wi-Fi, базовой сетью, диагностикой и жизненным циклом агента;
+- управление Wi-Fi, сетью, DHCP, системными сервисами, диагностикой и жизненным циклом агента;
 - release artifacts для сервера, агента и Android.
 
 ## Быстрый старт
@@ -57,7 +55,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 В релизе он публикуется как:
 
 ```text
-wrtmonitor-truenas-v0.1.1-rc9.yaml
+wrtmonitor-truenas-v0.2.0-rc1.yaml
 ```
 
 Контейнер использует:
@@ -102,3 +100,5 @@ OpenWrt-агент можно установить:
 - [Android](docs/android.md)
 - [Roadmap](docs/roadmap.md)
 - [Changelog](CHANGELOG.md)
+
+История релизов теперь ведётся в одном месте: [CHANGELOG.md](CHANGELOG.md). Отдельные старые промежуточные release notes больше не поддерживаются.

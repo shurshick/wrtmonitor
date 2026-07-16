@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -9,12 +11,21 @@ from .web.security_headers import SecurityHeadersMiddleware
 
 def create_app() -> FastAPI:
     settings = load_settings()
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        ensure_openwrt_download_metadata()
+        init_db()
+        check_database()
+        yield
+
     app = FastAPI(
         title=APP_NAME,
         version=APP_VERSION,
         docs_url="/docs" if settings.enable_api_docs else None,
         redoc_url="/redoc" if settings.enable_api_docs else None,
         openapi_url="/openapi.json" if settings.enable_api_docs else None,
+        lifespan=lifespan,
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
@@ -23,12 +34,6 @@ def create_app() -> FastAPI:
         StaticFiles(directory="openwrt-agent"),
         name="openwrt-downloads",
     )
-
-    @app.on_event("startup")
-    def startup() -> None:
-        ensure_openwrt_download_metadata()
-        init_db()
-        check_database()
 
     return app
 

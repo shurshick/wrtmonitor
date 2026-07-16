@@ -1,6 +1,6 @@
 list_config_backups() {
     ensure_state_dirs
-    find "$CONFIG_BACKUP_DIR" -maxdepth 1 -type f -name 'wireless-*.bak' | sort
+    find "$CONFIG_BACKUP_DIR" -maxdepth 1 -type f -name '*.bak' | sort
 }
 
 backup_wireless_config() {
@@ -19,6 +19,26 @@ backup_wireless_config() {
         printf 'agent_version=%s\n' "$AGENT_VERSION"
         printf 'config_file=/etc/config/wireless\n'
     } >"$meta_file"
+    printf '%s' "$backup_file"
+}
+
+backup_config() {
+    config_name="$1"
+    command_id="$2"
+    command_type="$3"
+    ensure_state_dirs
+    config_file="/etc/config/$config_name"
+    [ -r "$config_file" ] || return 1
+    timestamp="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo unknown)"
+    backup_file="$CONFIG_BACKUP_DIR/$config_name-$timestamp-$command_id.bak"
+    cp "$config_file" "$backup_file"
+    {
+        printf 'command_id=%s\n' "$command_id"
+        printf 'command_type=%s\n' "$command_type"
+        printf 'created_at=%s\n' "$(iso_now)"
+        printf 'agent_version=%s\n' "$AGENT_VERSION"
+        printf 'config_file=%s\n' "$config_file"
+    } >"$CONFIG_BACKUP_DIR/$config_name-$timestamp-$command_id.meta"
     printf '%s' "$backup_file"
 }
 
@@ -88,6 +108,20 @@ resolve_wifi_iface() {
         return 0
     fi
     printf '%s' ""
+    return 1
+}
+
+resolve_dhcp_host_by_mac() {
+    requested_mac="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+    host_index=0
+    while uci -q get "dhcp.@host[$host_index]" >/dev/null 2>&1; do
+        current_mac="$(uci -q get "dhcp.@host[$host_index].mac" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+        if [ "$current_mac" = "$requested_mac" ]; then
+            printf '@host[%s]' "$host_index"
+            return 0
+        fi
+        host_index=$((host_index + 1))
+    done
     return 1
 }
 
@@ -210,8 +244,145 @@ execute_command() {
                 result="$(command_failed_result "password must contain at least 8 characters")"
             fi
             ;;
+        wifi.set_channel)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            radio="$(json_get_string /tmp/wrtmonitor-command-payload '@.radio')"
+            channel="$(json_get_string /tmp/wrtmonitor-command-payload '@.channel')"
+            rm -f /tmp/wrtmonitor-command-payload
+            resolved_radio="$(resolve_wifi_radio "$radio" || true)"
+            backup_file="$(backup_wireless_config "$command_id" "$command_type" || true)"
+            if [ -z "$resolved_radio" ] || [ -z "$backup_file" ]; then
+                status="failed"
+                result="$(command_failed_result "wifi radio or backup is unavailable")"
+            elif uci set "wireless.$resolved_radio.channel=$channel" && uci commit wireless && wifi reload; then
+                result="$(command_success_result "Wi-Fi channel updated" "\"backup\":\"$(json_escape "$backup_file")\",\"radio\":\"$(json_escape "$resolved_radio")\",\"channel\":\"$(json_escape "$channel")\"")"
+            else
+                status="failed"
+                result="$(command_failed_result "failed to update Wi-Fi channel")"
+            fi
+            ;;
+        wifi.set_country)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            radio="$(json_get_string /tmp/wrtmonitor-command-payload '@.radio')"
+            country="$(json_get_string /tmp/wrtmonitor-command-payload '@.country')"
+            rm -f /tmp/wrtmonitor-command-payload
+            resolved_radio="$(resolve_wifi_radio "$radio" || true)"
+            backup_file="$(backup_wireless_config "$command_id" "$command_type" || true)"
+            if [ -z "$resolved_radio" ] || [ -z "$backup_file" ]; then
+                status="failed"
+                result="$(command_failed_result "wifi radio or backup is unavailable")"
+            elif uci set "wireless.$resolved_radio.country=$country" && uci commit wireless && wifi reload; then
+                result="$(command_success_result "Wi-Fi country updated" "\"backup\":\"$(json_escape "$backup_file")\",\"radio\":\"$(json_escape "$resolved_radio")\",\"country\":\"$(json_escape "$country")\"")"
+            else
+                status="failed"
+                result="$(command_failed_result "failed to update Wi-Fi country")"
+            fi
+            ;;
         network.interfaces)
             result="$(network_summary_json)"
+            ;;
+        network.interface_restart)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            interface="$(json_get_string /tmp/wrtmonitor-command-payload '@.interface')"
+            rm -f /tmp/wrtmonitor-command-payload
+            case "$interface" in
+                ""|*[!A-Za-z0-9_.-]*)
+                    status="failed"
+                    result="$(command_failed_result "invalid interface")"
+                    ;;
+                *)
+                    if ifdown "$interface" >/dev/null 2>&1 && ifup "$interface" >/dev/null 2>&1; then
+                        result="$(command_success_result "network interface restarted" "\"interface\":\"$(json_escape "$interface")\"")"
+                    else
+                        status="failed"
+                        result="$(command_failed_result "failed to restart network interface")"
+                    fi
+                    ;;
+            esac
+            ;;
+        network.restart)
+            result="$(command_success_result "network restart scheduled")"
+            (sleep 2; /etc/init.d/network restart) >/dev/null 2>&1 &
+            ;;
+        system.set_hostname)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            hostname_value="$(json_get_string /tmp/wrtmonitor-command-payload '@.hostname')"
+            rm -f /tmp/wrtmonitor-command-payload
+            backup_file="$(backup_config system "$command_id" "$command_type" || true)"
+            if [ -z "$hostname_value" ] || [ -z "$backup_file" ]; then
+                status="failed"
+                result="$(command_failed_result "hostname or backup is unavailable")"
+            elif uci set "system.@system[0].hostname=$hostname_value" && uci commit system; then
+                hostname "$hostname_value" >/dev/null 2>&1 || true
+                result="$(command_success_result "hostname updated" "\"backup\":\"$(json_escape "$backup_file")\",\"hostname\":\"$(json_escape "$hostname_value")\"")"
+            else
+                status="failed"
+                result="$(command_failed_result "failed to update hostname")"
+            fi
+            ;;
+        system.restart_service)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            service="$(json_get_string /tmp/wrtmonitor-command-payload '@.service')"
+            rm -f /tmp/wrtmonitor-command-payload
+            case "$service" in
+                network)
+                    result="$(command_success_result "service restart scheduled" "\"service\":\"network\"")"
+                    (sleep 2; /etc/init.d/network restart) >/dev/null 2>&1 &
+                    ;;
+                dnsmasq|firewall|odhcpd)
+                    if [ -x "/etc/init.d/$service" ] && "/etc/init.d/$service" restart >/dev/null 2>&1; then
+                        result="$(command_success_result "service restarted" "\"service\":\"$(json_escape "$service")\"")"
+                    else
+                        status="failed"
+                        result="$(command_failed_result "failed to restart service")"
+                    fi
+                    ;;
+                *)
+                    status="failed"
+                    result="$(command_failed_result "service is not allowed")"
+                    ;;
+            esac
+            ;;
+        dhcp.set_lease)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            lease_mac="$(json_get_string /tmp/wrtmonitor-command-payload '@.mac')"
+            lease_ip="$(json_get_string /tmp/wrtmonitor-command-payload '@.ip')"
+            lease_hostname="$(json_get_string /tmp/wrtmonitor-command-payload '@.hostname')"
+            rm -f /tmp/wrtmonitor-command-payload
+            backup_file="$(backup_config dhcp "$command_id" "$command_type" || true)"
+            lease_name="wrtmonitor_$(printf '%s' "$lease_mac" | tr -d ':')"
+            lease_ref="$(resolve_dhcp_host_by_mac "$lease_mac" || true)"
+            [ -n "$lease_ref" ] || lease_ref="$lease_name"
+            if [ -z "$backup_file" ]; then
+                status="failed"
+                result="$(command_failed_result "failed to create DHCP config backup")"
+            elif uci set "dhcp.$lease_ref=host" \
+                && uci set "dhcp.$lease_ref.mac=$lease_mac" \
+                && uci set "dhcp.$lease_ref.ip=$lease_ip" \
+                && uci set "dhcp.$lease_ref.name=$lease_hostname" \
+                && uci commit dhcp \
+                && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then
+                result="$(command_success_result "static DHCP lease saved" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$lease_mac")\",\"ip\":\"$(json_escape "$lease_ip")\"")"
+            else
+                status="failed"
+                result="$(command_failed_result "failed to save static DHCP lease")"
+            fi
+            ;;
+        dhcp.delete_lease)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            lease_mac="$(json_get_string /tmp/wrtmonitor-command-payload '@.mac')"
+            rm -f /tmp/wrtmonitor-command-payload
+            backup_file="$(backup_config dhcp "$command_id" "$command_type" || true)"
+            lease_ref="$(resolve_dhcp_host_by_mac "$lease_mac" || true)"
+            if [ -z "$backup_file" ]; then
+                status="failed"
+                result="$(command_failed_result "failed to create DHCP config backup")"
+            elif [ -n "$lease_ref" ] && uci -q delete "dhcp.$lease_ref" && uci commit dhcp && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then
+                result="$(command_success_result "static DHCP lease deleted" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$lease_mac")\"")"
+            else
+                status="failed"
+                result="$(command_failed_result "static DHCP lease not found")"
+            fi
             ;;
         diagnostics.run)
             printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload

@@ -41,10 +41,27 @@ Invoke-Step "& 'C:\Program Files\Git\usr\bin\sh.exe' -n openwrt-agent/wrtmonitor
 Invoke-Step "Get-ChildItem openwrt-agent/lib/*.sh | ForEach-Object { & 'C:\Program Files\Git\usr\bin\sh.exe' -n `$_`.FullName; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE } }"
 Invoke-Step "& 'C:\Program Files\Git\usr\bin\sh.exe' -n openwrt-agent/install-openwrt.sh"
 
-if (Get-Command shellcheck -ErrorAction SilentlyContinue) {
-    Invoke-Step "shellcheck openwrt-agent/wrtmonitor-agent"
-    Invoke-Step "Get-ChildItem openwrt-agent/lib/*.sh | ForEach-Object { shellcheck `$_`.FullName; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE } }"
-    Invoke-Step "shellcheck openwrt-agent/install-openwrt.sh"
+function Resolve-Shellcheck {
+    $command = Get-Command shellcheck -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $wingetBinary = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter shellcheck.exe -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if ($wingetBinary) {
+        return $wingetBinary
+    }
+
+    return $null
+}
+
+$shellcheck = Resolve-Shellcheck
+
+if ($shellcheck) {
+    Invoke-Step "& '$shellcheck' -s sh openwrt-agent/wrtmonitor-agent"
+    Invoke-Step "Get-ChildItem openwrt-agent/lib/*.sh | ForEach-Object { & '$shellcheck' -s sh `$_`.FullName; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE } }"
+    Invoke-Step "& '$shellcheck' -s sh openwrt-agent/install-openwrt.sh"
 }
 else {
     Write-Host "shellcheck not found locally, skipping"

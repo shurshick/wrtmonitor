@@ -4,6 +4,24 @@
   <p class="notice">{{ capabilities_message }}</p>
   {% endif %}
   <p>Команда перезагрузки будет выполнена при следующем опросе агента.</p>
+  <div class="metric"><span class="metric__label">Hostname</span><span class="metric__value">{{ system_summary.hostname or device.hostname or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Kernel</span><span class="metric__value metric__value--small">{{ system_summary.kernel or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Conntrack</span><span class="metric__value">{{ system_summary.conntrack_count or 0 }} / {{ system_summary.conntrack_max or 0 }}</span></div>
+  {% if services %}<div class="service-grid">{% for name, state in services.items() %}<span class="service-pill service-pill--{{ state }}">{{ name }}: {{ state }}</span>{% endfor %}</div>{% endif %}
+  {% if supports.system_set_hostname %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_hostname"><input type="hidden" name="confirmed" value="true">
+    <label>Новый hostname<input name="hostname" required maxlength="63" value="{{ system_summary.hostname or device.hostname or '' }}"></label>
+    <div class="button-row"><button type="submit">Изменить hostname</button><span class="risk-badge">risk: level 3</span></div>
+  </form>
+  {% endif %}
+  {% if supports.system_restart_service %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.restart_service"><input type="hidden" name="confirmed" value="true">
+    <label>Сервис<select name="service"><option value="dnsmasq">dnsmasq</option><option value="firewall">firewall</option><option value="odhcpd">odhcpd</option><option value="network">network</option></select></label>
+    <div class="button-row"><button type="submit">Перезапустить сервис</button><span class="risk-badge">risk: level 3</span></div>
+  </form>
+  {% endif %}
   {% if supports.system_reboot %}
   <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

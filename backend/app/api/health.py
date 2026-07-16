@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 
-from ..config import Settings, load_settings
+from ..config import ACCESS_MODEL, Settings, load_settings
 from ..db import check_database
 from ..services.openwrt_downloads import openwrt_download_metadata
 
@@ -28,5 +28,6 @@ def health_config(config: Settings = Depends(settings)) -> dict[str, Any]:
         "jwt_secret_configured": bool(config.jwt_secret),
         "public_server_url_configured": bool(config.public_server_url),
         "api_docs_enabled": config.enable_api_docs,
+        "access_model": ACCESS_MODEL,
         **openwrt_download_metadata(),
     }

@@ -8,17 +8,27 @@ telemetry() {
 telemetry_payload() {
     [ -n "$(device_id)" ] || register_device
     uptime_value="$(cut -d. -f1 /proc/uptime 2>/dev/null || echo 0)"
-    load_value="$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0)"
+    load_values="$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo '0 0 0')"
+    load_value="$(printf '%s' "$load_values" | cut -d' ' -f1)"
+    load_5m="$(printf '%s' "$load_values" | cut -d' ' -f2)"
+    load_15m="$(printf '%s' "$load_values" | cut -d' ' -f3)"
     case "$uptime_value" in
         ""|*[!0-9]*) uptime_value="0" ;;
     esac
     load_value="$(json_escape "$load_value")"
-    printf '{"device_id":"%s","telemetry":{"system":{"uptime":%s,"load":"%s","memory":%s,"processes":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"agent":%s}}' \
+    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"agent":%s}}' \
         "$(device_id)" \
         "$uptime_value" \
         "$load_value" \
+        "$(json_escape "$load_5m")" \
+        "$(json_escape "$load_15m")" \
+        "$(json_escape "$(uci -q get system.@system[0].hostname 2>/dev/null || hostname)")" \
+        "$(json_escape "$(uname -r 2>/dev/null || true)")" \
+        "$(json_escape "$(iso_now)")" \
         "$(memory_json)" \
         "$(processes_json)" \
+        "$(conntrack_json)" \
+        "$(services_json)" \
         "$(ubus_json system info)" \
         "$(cpu_json)" \
         "$(storage_json)" \
@@ -29,6 +39,8 @@ telemetry_payload() {
         "$(ubus_json network.device status)" \
         "$(wifi_status_json)" \
         "$(ubus_json network.wireless status)" \
+        "$(clients_json)" \
+        "$(dhcp_json)" \
         "$(agent_status_json)"
 }
 
@@ -91,6 +103,74 @@ processes_json() {
     count="$(ps 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
     case "$count" in ""|*[!0-9]*) count="0" ;; esac
     printf '{"count":%s}' "$count"
+}
+
+conntrack_json() {
+    count="$(cat /proc/sys/net/netfilter/nf_conntrack_count 2>/dev/null || echo 0)"
+    maximum="$(cat /proc/sys/net/netfilter/nf_conntrack_max 2>/dev/null || echo 0)"
+    case "$count" in ""|*[!0-9]*) count="0" ;; esac
+    case "$maximum" in ""|*[!0-9]*) maximum="0" ;; esac
+    printf '{"count":%s,"max":%s}' "$count" "$maximum"
+}
+
+service_state() {
+    service_name="$1"
+    if [ ! -x "/etc/init.d/$service_name" ]; then
+        printf 'unavailable'
+    elif "/etc/init.d/$service_name" running >/dev/null 2>&1; then
+        printf 'running'
+    else
+        printf 'stopped'
+    fi
+}
+
+services_json() {
+    printf '{"network":"%s","dnsmasq":"%s","firewall":"%s","odhcpd":"%s"}' \
+        "$(service_state network)" \
+        "$(service_state dnsmasq)" \
+        "$(service_state firewall)" \
+        "$(service_state odhcpd)"
+}
+
+dhcp_json() {
+    leases=""
+    static_leases=""
+    lease_file="/tmp/dhcp.leases"
+    if [ -r "$lease_file" ]; then
+        while IFS=' ' read -r expires mac ip hostname client_id; do
+            [ -n "$mac" ] || continue
+            [ -n "$leases" ] && leases="$leases,"
+            leases="$leases{\"expires\":\"$(json_escape "$expires")\",\"mac\":\"$(json_escape "$mac")\",\"ip\":\"$(json_escape "$ip")\",\"hostname\":\"$(json_escape "$hostname")\",\"client_id\":\"$(json_escape "$client_id")\"}"
+        done <"$lease_file"
+    fi
+    host_index=0
+    while uci -q get "dhcp.@host[$host_index]" >/dev/null 2>&1; do
+        static_name="$(uci -q get "dhcp.@host[$host_index].name" 2>/dev/null || true)"
+        static_mac="$(uci -q get "dhcp.@host[$host_index].mac" 2>/dev/null || true)"
+        static_ip="$(uci -q get "dhcp.@host[$host_index].ip" 2>/dev/null || true)"
+        if [ -n "$static_mac" ]; then
+            [ -n "$static_leases" ] && static_leases="$static_leases,"
+            static_leases="$static_leases{\"mac\":\"$(json_escape "$static_mac")\",\"ip\":\"$(json_escape "$static_ip")\",\"hostname\":\"$(json_escape "$static_name")\"}"
+        fi
+        host_index=$((host_index + 1))
+    done
+    printf '{"leases":[%s],"static_leases":[%s]}' "$leases" "$static_leases"
+}
+
+clients_json() {
+    neighbours=""
+    if command -v ip >/dev/null 2>&1; then
+        while IFS=' ' read -r ip_address dev_word device lladdr_word mac state; do
+            [ "$dev_word" = "dev" ] || continue
+            [ "$lladdr_word" = "lladdr" ] || continue
+            [ -n "$mac" ] || continue
+            [ -n "$neighbours" ] && neighbours="$neighbours,"
+            neighbours="$neighbours{\"ip\":\"$(json_escape "$ip_address")\",\"mac\":\"$(json_escape "$mac")\",\"interface\":\"$(json_escape "$device")\",\"state\":\"$(json_escape "$state")\"}"
+        done <<EOF
+$(ip neigh show 2>/dev/null || true)
+EOF
+    fi
+    printf '{"neighbours":[%s],"dhcp":%s}' "$neighbours" "$(dhcp_json)"
 }
 
 network_summary_json() {
@@ -156,13 +236,17 @@ wifi_status_json() {
             if [ "$iface_device" = "$name" ]; then
                 ssid="$(uci -q get "wireless.@wifi-iface[$iface_index].ssid" 2>/dev/null || true)"
                 encryption="$(uci -q get "wireless.@wifi-iface[$iface_index].encryption" 2>/dev/null || true)"
+                mode="$(uci -q get "wireless.@wifi-iface[$iface_index].mode" 2>/dev/null || true)"
+                network="$(uci -q get "wireless.@wifi-iface[$iface_index].network" 2>/dev/null || true)"
+                hidden="$(uci -q get "wireless.@wifi-iface[$iface_index].hidden" 2>/dev/null || echo 0)"
+                isolate="$(uci -q get "wireless.@wifi-iface[$iface_index].isolate" 2>/dev/null || echo 0)"
                 iface_disabled="$(uci -q get "wireless.@wifi-iface[$iface_index].disabled" 2>/dev/null || echo 0)"
                 if [ -n "$ssid" ]; then
                     [ -n "$ssids" ] && ssids="$ssids,"
                     ssids="$ssids\"$(json_escape "$ssid")\""
                 fi
                 [ -n "$interfaces" ] && interfaces="$interfaces,"
-                interfaces="$interfaces{\"id\":\"@wifi-iface[$iface_index]\",\"index\":$iface_index,\"ssid\":\"$(json_escape "$ssid")\",\"enabled\":$( [ "$iface_disabled" = "1" ] && printf false || printf true ),\"encryption\":\"$(json_escape "$encryption")\"}"
+                interfaces="$interfaces{\"id\":\"@wifi-iface[$iface_index]\",\"index\":$iface_index,\"ssid\":\"$(json_escape "$ssid")\",\"enabled\":$( [ "$iface_disabled" = "1" ] && printf false || printf true ),\"encryption\":\"$(json_escape "$encryption")\",\"mode\":\"$(json_escape "$mode")\",\"network\":\"$(json_escape "$network")\",\"hidden\":$( [ "$hidden" = "1" ] && printf true || printf false ),\"isolate\":$( [ "$isolate" = "1" ] && printf true || printf false )}"
             fi
             iface_index=$((iface_index + 1))
         done
@@ -171,6 +255,12 @@ wifi_status_json() {
         radio="{\"id\":\"$name\",\"name\":\"$name\",\"up\":$up,\"disabled\":$( [ "$disabled" = "1" ] && printf true || printf false ),\"ssid\":[$ssids],\"interfaces\":[${interfaces}]"
         [ -n "$channel" ] && radio="$radio,\"channel\":\"$(json_escape "$channel")\""
         [ -n "$band" ] && radio="$radio,\"band\":\"$(json_escape "$band")\""
+        country="$(uci -q get "wireless.@wifi-device[$index].country" 2>/dev/null || true)"
+        htmode="$(uci -q get "wireless.@wifi-device[$index].htmode" 2>/dev/null || true)"
+        txpower="$(uci -q get "wireless.@wifi-device[$index].txpower" 2>/dev/null || true)"
+        [ -n "$country" ] && radio="$radio,\"country\":\"$(json_escape "$country")\""
+        [ -n "$htmode" ] && radio="$radio,\"htmode\":\"$(json_escape "$htmode")\""
+        [ -n "$txpower" ] && radio="$radio,\"txpower\":\"$(json_escape "$txpower")\""
         [ -n "${encryption:-}" ] && radio="$radio,\"encryption\":\"$(json_escape "$encryption")\""
         radio="$radio}"
         [ -n "$radios" ] && radios="$radios,"

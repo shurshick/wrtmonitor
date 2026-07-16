@@ -4,9 +4,11 @@
   <div class="metric"><span class="metric__label">Возраст telemetry</span><span class="metric__value">{{ age if age is not none else 'нет данных' }}{% if age is not none %} сек{% endif %}</span></div>
   <div class="metric"><span class="metric__label">Время работы</span><span class="metric__value">{{ system.get('uptime')|duration if system.get('uptime') is not none else 'нет данных' }}</span></div>
   <div class="metric"><span class="metric__label">Нагрузка 1m</span><span class="metric__value">{{ system.get('load') or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Нагрузка 5m / 15m</span><span class="metric__value">{{ system.get('load_5m') or '-' }} / {{ system.get('load_15m') or '-' }}</span></div>
   <div class="metric"><span class="metric__label">Память</span><span class="metric__value">{{ memory.get('available_kb') or '-' }} / {{ memory.get('total_kb') or '-' }} KB</span></div>
   <div class="metric"><span class="metric__label">Процессор</span><span class="metric__value">{{ cpu.get('model') or 'нет данных' }}{% if cpu.get('cores') %}, {{ cpu.get('cores') }} ядер{% endif %}</span></div>
   <div class="metric"><span class="metric__label">Накопитель</span><span class="metric__value">{{ storage.get('used_kb') or '-' }} / {{ storage.get('total_kb') or '-' }} KB</span></div>
   <div class="metric"><span class="metric__label">Температура</span><span class="metric__value">{% if thermal.get('available') %}{{ thermal.get('milli_celsius', 0) / 1000 }} °C{% else %}нет датчика{% endif %}</span></div>
   <div class="metric"><span class="metric__label">Процессы</span><span class="metric__value">{{ processes.get('count') or 'нет данных' }}</span></div>
+  <div class="metric"><span class="metric__label">Клиенты</span><span class="metric__value">{{ client_count }}</span></div>
 </section>

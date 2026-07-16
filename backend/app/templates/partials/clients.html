@@ -1,0 +1,48 @@
+<section class="card card--wide">
+  <div class="card__heading">
+    <div>
+      <h2>Клиенты</h2>
+      <p class="muted">Обнаружено: {{ client_count }}</p>
+    </div>
+  </div>
+  <div class="client-grid">
+    {% for client in clients %}
+    <article class="client-item">
+      <div>
+        <strong>{{ client.hostname or 'Неизвестное устройство' }}</strong>
+        <div class="muted">{{ client.mac }}</div>
+      </div>
+      <div class="client-item__meta">
+        <span>{{ client.ip or 'IP не определён' }}</span>
+        <span>{{ client.interface or client.source or 'сеть' }}</span>
+        <span class="status status--{{ 'online' if client.state and client.state|lower not in ['failed', 'incomplete'] else 'offline' }}">{{ client.state or 'lease' }}</span>
+      </div>
+      {% if supports.dhcp_delete_lease and client.is_static %}
+      <form method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Удалить статическую DHCP-выдачу для {{ client.mac }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="command_type" value="dhcp.delete_lease">
+        <input type="hidden" name="confirmed" value="true">
+        <input type="hidden" name="mac" value="{{ client.mac }}">
+        <button class="button button--secondary button--small" type="submit">Удалить lease</button>
+      </form>
+      {% endif %}
+    </article>
+    {% else %}
+    <div class="empty-inline">Клиенты пока не обнаружены. Данные появятся после следующей telemetry.</div>
+    {% endfor %}
+  </div>
+  {% if supports.dhcp_set_lease %}
+  <form class="control-form control-form--columns" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="dhcp.set_lease">
+    <input type="hidden" name="confirmed" value="true">
+    <label>Имя устройства<input name="hostname" required maxlength="63" placeholder="printer"></label>
+    <label>MAC-адрес<input name="mac" required maxlength="17" placeholder="00:11:22:33:44:55"></label>
+    <label>Постоянный IPv4<input name="ip" required maxlength="15" placeholder="192.168.1.50"></label>
+    <div class="button-row control-form__actions">
+      <button type="submit">Закрепить адрес</button>
+      <span class="risk-badge">risk: level 3</span>
+    </div>
+  </form>
+  {% endif %}
+</section>

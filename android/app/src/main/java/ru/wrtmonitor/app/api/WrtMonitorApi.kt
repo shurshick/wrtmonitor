@@ -73,6 +73,9 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 agent = json.optJSONObject("agent")?.let(::parseAgentStatus),
                 wifi = json.optJSONObject("wifi"),
                 network = json.optJSONObject("network"),
+                clients = json.optJSONObject("clients"),
+                system = json.optJSONObject("system"),
+                services = json.optJSONObject("services"),
             )
         }
     }.fold({ ApiResult.Success(it) }, ::toApiError)

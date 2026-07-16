@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from ipaddress import IPv4Address, AddressValueError
+import re
 from typing import Any, Callable
 from uuid import UUID, uuid4
 
@@ -47,10 +49,58 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": ["password", "wifi_password", "key"],
     },
+    "wifi.set_channel": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.set_channel",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "wifi.set_country": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.set_country",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "network.interfaces": {
         "risk_level": "level_1_readonly",
         "capability": "network.read",
         "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "network.interface_restart": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "network.interface_restart",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.restart": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.restart",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "system.set_hostname": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "system.set_hostname",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "system.restart_service": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "system.restart_service",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "dhcp.set_lease": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "dhcp.set_lease",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "dhcp.delete_lease": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "dhcp.delete_lease",
+        "requires_confirmation": True,
         "secret_fields": [],
     },
     "diagnostics.run": {
@@ -173,6 +223,88 @@ def _normalize_wifi_password_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _safe_identifier(value: str, field: str, pattern: str) -> str:
+    if not re.fullmatch(pattern, value):
+        raise HTTPException(
+            status_code=400, detail=f"Field '{field}' has invalid format"
+        )
+    return value
+
+
+def _normalize_wifi_channel_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    radio = _safe_identifier(
+        _require_string(payload, "radio", max_length=40),
+        "radio",
+        r"[A-Za-z0-9_@.\[\]-]+",
+    )
+    channel = _require_string(payload, "channel", max_length=4).lower()
+    if channel != "auto":
+        try:
+            channel_number = int(channel)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400, detail="Invalid Wi-Fi channel"
+            ) from exc
+        if channel_number < 1 or channel_number > 233:
+            raise HTTPException(status_code=400, detail="Invalid Wi-Fi channel")
+        channel = str(channel_number)
+    return {"radio": radio, "channel": channel}
+
+
+def _normalize_wifi_country_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    radio = _safe_identifier(
+        _require_string(payload, "radio", max_length=40),
+        "radio",
+        r"[A-Za-z0-9_@.\[\]-]+",
+    )
+    country = _require_string(payload, "country", min_length=2, max_length=2).upper()
+    _safe_identifier(country, "country", r"[A-Z]{2}")
+    return {"radio": radio, "country": country}
+
+
+def _normalize_interface_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    interface = _require_string(payload, "interface", max_length=32)
+    return {"interface": _safe_identifier(interface, "interface", r"[A-Za-z0-9_.-]+")}
+
+
+def _normalize_hostname_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    hostname = _require_string(payload, "hostname", max_length=63)
+    return {
+        "hostname": _safe_identifier(
+            hostname, "hostname", r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?"
+        )
+    }
+
+
+def _normalize_service_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    service = _require_string(payload, "service", max_length=32)
+    if service not in {"network", "dnsmasq", "firewall", "odhcpd"}:
+        raise HTTPException(status_code=400, detail="Service is not allowed")
+    return {"service": service}
+
+
+def _normalize_mac(value: str) -> str:
+    normalized = value.lower().replace("-", ":")
+    return _safe_identifier(normalized, "mac", r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}")
+
+
+def _normalize_dhcp_lease_payload(
+    payload: dict[str, Any], *, delete: bool = False
+) -> dict[str, Any]:
+    mac = _normalize_mac(_require_string(payload, "mac", max_length=17))
+    if delete:
+        return {"mac": mac}
+    ip = _require_string(payload, "ip", max_length=15)
+    try:
+        ip = str(IPv4Address(ip))
+    except AddressValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid IPv4 address") from exc
+    hostname = _normalize_hostname_payload(
+        {"hostname": _require_string(payload, "hostname", max_length=63)}
+    )["hostname"]
+    return {"mac": mac, "ip": ip, "hostname": hostname}
+
+
 def _normalize_diagnostics_payload(payload: dict[str, Any]) -> dict[str, Any]:
     checks = payload.get("checks")
     if checks in (None, [], ()):
@@ -235,6 +367,20 @@ def validate_command_payload(
         return _normalize_wifi_ssid_payload(normalized_payload)
     if command_type == "wifi.set_password":
         return _normalize_wifi_password_payload(normalized_payload)
+    if command_type == "wifi.set_channel":
+        return _normalize_wifi_channel_payload(normalized_payload)
+    if command_type == "wifi.set_country":
+        return _normalize_wifi_country_payload(normalized_payload)
+    if command_type == "network.interface_restart":
+        return _normalize_interface_payload(normalized_payload)
+    if command_type == "system.set_hostname":
+        return _normalize_hostname_payload(normalized_payload)
+    if command_type == "system.restart_service":
+        return _normalize_service_payload(normalized_payload)
+    if command_type == "dhcp.set_lease":
+        return _normalize_dhcp_lease_payload(normalized_payload)
+    if command_type == "dhcp.delete_lease":
+        return _normalize_dhcp_lease_payload(normalized_payload, delete=True)
     if command_type == "diagnostics.run":
         return _normalize_diagnostics_payload(normalized_payload)
     if command_type == "agent.set_auto_update":
@@ -250,9 +396,16 @@ def build_command_payload_from_web_form(
     ssid: str = "",
     enabled: str = "true",
     wifi_password: str = "",
+    channel: str = "",
+    country: str = "",
     interval_seconds: str = "",
     radio: str = "",
     iface: str = "",
+    interface: str = "",
+    hostname: str = "",
+    service: str = "",
+    mac: str = "",
+    ip: str = "",
     diagnostics_checks: list[str] | None = None,
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
@@ -264,6 +417,20 @@ def build_command_payload_from_web_form(
         payload = {"enabled": enabled.lower() == "true", "radio": radio}
     elif command_type == "wifi.set_password":
         payload = {"password": wifi_password, "iface": iface}
+    elif command_type == "wifi.set_channel":
+        payload = {"channel": channel, "radio": radio}
+    elif command_type == "wifi.set_country":
+        payload = {"country": country, "radio": radio}
+    elif command_type == "network.interface_restart":
+        payload = {"interface": interface}
+    elif command_type == "system.set_hostname":
+        payload = {"hostname": hostname}
+    elif command_type == "system.restart_service":
+        payload = {"service": service}
+    elif command_type == "dhcp.set_lease":
+        payload = {"mac": mac, "ip": ip, "hostname": hostname}
+    elif command_type == "dhcp.delete_lease":
+        payload = {"mac": mac}
     elif command_type == "agent.set_auto_update":
         payload = {"enabled": enabled.lower() == "true"}
     elif command_type == "agent.set_interval":

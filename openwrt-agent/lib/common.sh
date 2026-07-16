@@ -1,3 +1,5 @@
+# Shared globals consumed by other sourced modules.
+# shellcheck disable=SC2034
 RUN_LOCK_DIR="/tmp/wrtmonitor-agent.lock"
 UPDATE_LOCK_FILE="/tmp/wrtmonitor-agent-update.lock"
 UPDATE_LOCK_STALE_SECONDS="1800"

@@ -14,7 +14,10 @@ from ..services.telemetry import TELEMETRY_STALE_SECONDS, cleanup_device_telemet
 from ..schemas import TelemetryRequest
 from ..services.telemetry import (
     build_telemetry_summary,
+    normalize_clients_summary,
     normalize_network_summary,
+    normalize_services_summary,
+    normalize_system_summary,
     normalize_wifi_summary,
 )
 
@@ -45,6 +48,9 @@ def latest_device_telemetry(
             "agent": {},
             "wifi": {"available": False, "radios": []},
             "network": {"interfaces": []},
+            "clients": {"count": 0, "items": []},
+            "system": {},
+            "services": {},
         }
     age_seconds = max(
         0, int((datetime.now(UTC) - telemetry.created_at).total_seconds())
@@ -60,6 +66,9 @@ def latest_device_telemetry(
         "agent": get_latest_agent_status(db, device_id),
         "wifi": normalize_wifi_summary(telemetry.payload),
         "network": normalize_network_summary(telemetry.payload),
+        "clients": normalize_clients_summary(telemetry.payload),
+        "system": normalize_system_summary(telemetry.payload),
+        "services": normalize_services_summary(telemetry.payload),
     }
 
 

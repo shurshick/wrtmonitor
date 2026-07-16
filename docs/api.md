@@ -30,8 +30,11 @@
 - `agent`
 - `wifi`
 - `network`
+- `clients`
+- `system`
+- `services`
 
-Нормализованные блоки `agent`, `wifi`, `network` предназначены для Web UI и Android. Старый `telemetry` JSON сохраняется для совместимости.
+Нормализованные блоки предназначены для Web UI и Android. Исходный `telemetry` JSON сохраняется для диагностики.
 
 ## Agent status
 
@@ -41,7 +44,7 @@
 
 ```json
 {
-  "version": "0.1.1-rc9",
+  "version": "0.2.0-rc1",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -54,6 +57,13 @@
   }
 }
 ```
+
+`GET /health/config` дополнительно возвращает технические признаки текущего сервера, включая:
+
+- `version`
+- `openwrt_downloads_enabled`
+- `openwrt_downloads_path`
+- `access_model`
 
 ## Создание команд
 
@@ -98,6 +108,16 @@ Body:
 - `level_1_readonly`
 - `level_2_safe_action`
 - `level_3_reversible_config`
+- `level_4_disruptive`
+
+### Управляющие команды v0.2.0-rc1
+
+- `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
+- `network.interfaces`, `network.interface_restart`, `network.restart`
+- `dhcp.set_lease`, `dhcp.delete_lease`
+- `system.set_hostname`, `system.restart_service`, `router.reboot`
+- `agent.update`, `agent.rollback`, `agent.set_auto_update`, `agent.set_interval`, `agent.disconnect`
+- `diagnostics.run`
 
 ### Secret masking
 

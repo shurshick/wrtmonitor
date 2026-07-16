@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..config import APP_NAME, APP_VERSION, Settings
 from ..db import get_db
-from ..models import Device, DeviceCommand, DeviceTelemetry, User
+from ..models import Device, DeviceCommand, User
 from ..security import create_access_token, verify_password
 from ..schemas import SetupRequest
 from ..services.commands import (
@@ -32,7 +32,13 @@ from ..security import hash_token
 from ..services.audit import audit
 from ..services.auth import settings, web_user_from_session
 from ..services.setup import complete_setup, is_setup_required
-from ..services.telemetry import normalize_network_summary, normalize_wifi_summary
+from ..services.telemetry import (
+    normalize_clients_summary,
+    normalize_network_summary,
+    normalize_services_summary,
+    normalize_system_summary,
+    normalize_wifi_summary,
+)
 from .csrf import generate_csrf_token, verify_csrf_token
 
 
@@ -45,6 +51,7 @@ CAPABILITY_GROUPS = {
     "Telemetry": ("telemetry.",),
     "Wi-Fi": ("wifi.",),
     "Network": ("network.",),
+    "Clients & DHCP": ("clients.", "dhcp."),
     "Diagnostics": ("diagnostics.",),
     "System": ("system.",),
 }
@@ -117,7 +124,9 @@ def grouped_capabilities(capabilities: dict[str, bool]) -> list[dict[str, object
             {
                 "title": "Other",
                 "enabled": [name for name, enabled in remaining.items() if enabled],
-                "disabled": [name for name, enabled in remaining.items() if not enabled],
+                "disabled": [
+                    name for name, enabled in remaining.items() if not enabled
+                ],
             }
         )
     return grouped
@@ -126,10 +135,7 @@ def grouped_capabilities(capabilities: dict[str, bool]) -> list[dict[str, object
 def capabilities_hint(capabilities: dict[str, bool]) -> str | None:
     if capabilities:
         return None
-    return (
-        "Агент ещё не передал capabilities. Для управления установите агент rc9 "
-        "заново."
-    )
+    return "Агент ещё не передал capabilities. Обновите или переустановите агент."
 
 
 def require_web_csrf(
@@ -272,6 +278,9 @@ def device_page(
     wifi = normalize_wifi_summary(payload)
     agent = get_latest_agent_status(db, device_id)
     network = normalize_network_summary(payload)
+    clients = normalize_clients_summary(payload)
+    system_summary = normalize_system_summary(payload)
+    services = normalize_services_summary(payload)
     network_devices = payload.get("network_devices") or {}
     radios = wifi.get("radios") or []
     interfaces = network.get("interfaces") or []
@@ -285,11 +294,24 @@ def device_page(
         "agent_rollback": device_supports(db, device_id, "agent.rollback"),
         "diagnostics": device_supports(db, device_id, "diagnostics.check_server"),
         "network_read": device_supports(db, device_id, "network.read"),
+        "network_interface_restart": device_supports(
+            db, device_id, "network.interface_restart"
+        ),
+        "network_restart": device_supports(db, device_id, "network.restart"),
+        "clients_read": device_supports(db, device_id, "clients.read"),
+        "dhcp_set_lease": device_supports(db, device_id, "dhcp.set_lease"),
+        "dhcp_delete_lease": device_supports(db, device_id, "dhcp.delete_lease"),
         "system_reboot": device_supports(db, device_id, "system.reboot"),
+        "system_set_hostname": device_supports(db, device_id, "system.set_hostname"),
+        "system_restart_service": device_supports(
+            db, device_id, "system.restart_service"
+        ),
         "wifi_toggle": device_supports(db, device_id, "wifi.enable")
         or device_supports(db, device_id, "wifi.disable"),
         "wifi_ssid": device_supports(db, device_id, "wifi.set_ssid"),
         "wifi_password": device_supports(db, device_id, "wifi.set_password"),
+        "wifi_channel": device_supports(db, device_id, "wifi.set_channel"),
+        "wifi_country": device_supports(db, device_id, "wifi.set_country"),
     }
     commands = db.scalars(
         select(DeviceCommand)
@@ -338,6 +360,10 @@ def device_page(
             "radios": radios,
             "interfaces": interfaces,
             "network_devices": network_devices,
+            "clients": clients.get("items") or [],
+            "client_count": clients.get("count", 0),
+            "system_summary": system_summary,
+            "services": services,
             "commands": command_entries,
             "latest_diagnostics": latest_diagnostics,
             "raw_telemetry": json.dumps(payload, ensure_ascii=False, indent=2),
@@ -352,9 +378,16 @@ def web_device_command(
     ssid: str = Form(default=""),
     enabled: str = Form(default="true"),
     wifi_password: str = Form(default=""),
+    channel: str = Form(default=""),
+    country: str = Form(default=""),
     interval_seconds: str = Form(default=""),
     radio: str = Form(default=""),
     iface: str = Form(default=""),
+    interface: str = Form(default=""),
+    hostname: str = Form(default=""),
+    service: str = Form(default=""),
+    mac: str = Form(default=""),
+    ip: str = Form(default=""),
     confirmed: bool = Form(default=False),
     diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
@@ -377,9 +410,16 @@ def web_device_command(
             ssid=ssid,
             enabled=enabled,
             wifi_password=wifi_password,
+            channel=channel,
+            country=country,
             interval_seconds=interval_seconds,
             radio=radio,
             iface=iface,
+            interface=interface,
+            hostname=hostname,
+            service=service,
+            mac=mac,
+            ip=ip,
             diagnostics_checks=diagnostics_checks,
         )
         payload = validate_command_request(

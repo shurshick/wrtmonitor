@@ -75,6 +75,10 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                     "ssid": iface.get("ssid"),
                     "enabled": bool(iface.get("enabled", True)),
                     "encryption": iface.get("encryption"),
+                    "mode": iface.get("mode"),
+                    "network": iface.get("network"),
+                    "hidden": bool(iface.get("hidden", False)),
+                    "isolate": bool(iface.get("isolate", False)),
                 }
             )
         if not normalized_interfaces and radio.get("ssid"):
@@ -99,6 +103,9 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "disabled": bool(radio.get("disabled", False)),
                 "band": radio.get("band"),
                 "channel": radio.get("channel"),
+                "country": radio.get("country"),
+                "htmode": radio.get("htmode"),
+                "txpower": radio.get("txpower"),
                 "interfaces": normalized_interfaces,
                 "ssid": radio.get("ssid") or [],
                 "encryption": radio.get("encryption"),
@@ -146,6 +153,114 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
     return {"interfaces": normalized_interfaces}
 
 
+def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    clients = payload.get("clients") or {}
+    dhcp = clients.get("dhcp") or payload.get("dhcp") or {}
+    leases = dhcp.get("leases") or []
+    static_leases = dhcp.get("static_leases") or []
+    neighbours = clients.get("neighbours") or []
+    by_mac: dict[str, dict[str, Any]] = {}
+
+    for lease in static_leases:
+        if not isinstance(lease, dict):
+            continue
+        mac = str(lease.get("mac") or "").lower()
+        if not mac:
+            continue
+        by_mac[mac] = {
+            "mac": mac,
+            "ip": lease.get("ip"),
+            "hostname": lease.get("hostname") or None,
+            "interface": None,
+            "state": "reserved",
+            "source": "static-dhcp",
+            "expires": None,
+            "is_static": True,
+        }
+
+    for lease in leases:
+        if not isinstance(lease, dict):
+            continue
+        mac = str(lease.get("mac") or "").lower()
+        if not mac:
+            continue
+        item = by_mac.setdefault(
+            mac,
+            {
+                "mac": mac,
+                "ip": lease.get("ip"),
+                "hostname": None,
+                "interface": None,
+                "state": "leased",
+                "source": "dhcp",
+                "expires": lease.get("expires"),
+                "is_static": False,
+            },
+        )
+        item["ip"] = lease.get("ip") or item.get("ip")
+        item["hostname"] = (
+            lease.get("hostname")
+            if lease.get("hostname") not in (None, "", "*")
+            else item.get("hostname")
+        )
+        item["expires"] = lease.get("expires") or item.get("expires")
+
+    for neighbour in neighbours:
+        if not isinstance(neighbour, dict):
+            continue
+        mac = str(neighbour.get("mac") or "").lower()
+        if not mac:
+            continue
+        item = by_mac.setdefault(
+            mac,
+            {
+                "mac": mac,
+                "ip": neighbour.get("ip"),
+                "hostname": None,
+                "interface": None,
+                "state": None,
+                "source": "neighbour",
+                "expires": None,
+                "is_static": False,
+            },
+        )
+        item["ip"] = neighbour.get("ip") or item.get("ip")
+        item["interface"] = neighbour.get("interface") or item.get("interface")
+        item["state"] = neighbour.get("state") or item.get("state")
+        if item.get("source") in {"dhcp", "static-dhcp"}:
+            item["source"] = "dhcp+neighbour"
+
+    items = sorted(
+        by_mac.values(),
+        key=lambda item: (str(item.get("hostname") or "~"), str(item.get("ip") or "")),
+    )
+    return {"count": len(items), "items": items}
+
+
+def normalize_services_summary(payload: dict[str, Any]) -> dict[str, str]:
+    services = (payload.get("system") or {}).get("services") or {}
+    if not isinstance(services, dict):
+        return {}
+    return {str(name): str(status) for name, status in services.items()}
+
+
+def normalize_system_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    system = payload.get("system") or {}
+    conntrack = system.get("conntrack") or {}
+    return {
+        "hostname": system.get("hostname"),
+        "kernel": system.get("kernel"),
+        "local_time": system.get("local_time"),
+        "uptime_seconds": system.get("uptime"),
+        "load_1m": system.get("load"),
+        "load_5m": system.get("load_5m"),
+        "load_15m": system.get("load_15m"),
+        "conntrack_count": conntrack.get("count"),
+        "conntrack_max": conntrack.get("max"),
+        "services": normalize_services_summary(payload),
+    }
+
+
 def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
     system = payload.get("system") or {}
     memory = system.get("memory") or {}
@@ -157,6 +272,8 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
     network = normalize_network_summary(payload)
     interfaces = network.get("interfaces") or []
     radios = wifi.get("radios") or []
+    clients = normalize_clients_summary(payload)
+    system_summary = normalize_system_summary(payload)
     return {
         "uptime_seconds": system.get("uptime"),
         "load_1m": system.get("load"),
@@ -177,4 +294,9 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "wifi_radio_count": len(radios),
         "network_interface_count": len(interfaces),
         "agent_capability_count": len(extract_agent_capabilities(payload)),
+        "client_count": clients["count"],
+        "hostname": system_summary.get("hostname"),
+        "kernel": system_summary.get("kernel"),
+        "conntrack_count": system_summary.get("conntrack_count"),
+        "conntrack_max": system_summary.get("conntrack_max"),
     }

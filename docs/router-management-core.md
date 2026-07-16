@@ -1,15 +1,15 @@
 # Router Management Core
 
-Документ фиксирует фундамент `v0.1.1-rc9-agent-modularization-and-ui-fixes`.
+Документ фиксирует фундамент `v0.2.0-rc1-full-router-foundation`.
 
-## Что закреплено в rc9
+## Что закреплено
 
 - `agent capabilities`
 - command metadata и risk levels
 - backend validation payload
 - diagnostics commands
 - backup `wireless` перед Wi-Fi-изменениями
-- нормализованные `wifi` и `network` summary
+- telemetry schema v2 и нормализованные `system`, `services`, `clients`, `wifi`, `network` summary
 - compact capabilities UX в Web UI и Android
 - модульная структура OpenWrt-агента
 
@@ -46,9 +46,9 @@ lib/api.sh
 - `agent.capabilities_version`
 - набором булевых capabilities
 
-В `rc9` интерфейсы по умолчанию показывают краткий summary capabilities, а полный список раскрывается по запросу.
+Интерфейсы по умолчанию показывают краткий summary capabilities, а полный список раскрывается по запросу.
 
-Если capabilities отсутствуют, сервер не делает сложный compatibility bootstrap для старых prerelease-агентов, а переводит управление в режим явного сообщения о необходимости reinstall `rc9`.
+Если capabilities отсутствуют, управление скрывается до обновления или переустановки агента.
 
 ## Update/install pipeline
 
@@ -66,15 +66,18 @@ Installer и updater:
 - выполняют `sh -n` для entrypoint, installer, init и `lib/*.sh`;
 - устанавливают `/usr/bin/wrtmonitor-agent`, `/etc/init.d/wrtmonitor`, `/usr/lib/wrtmonitor/*.sh`.
 
-Для internal prerelease testing clean reinstall считается допустимым и основным путём миграции на `rc9`.
+Обычный переход с `rc9` выполняется встроенным обновлением агента. Clean reinstall остаётся аварийным сценарием.
 
 ## Risk levels
 
 - `level_1_readonly`
 - `level_2_safe_action`
 - `level_3_reversible_config`
+- `level_4_disruptive`
 
 `level_3_reversible_config` требует подтверждения и должен сопровождаться понятным UI.
+
+`level_4_disruptive` используется для действий, которые временно обрывают связь с сервером, например полного перезапуска сети.
 
 ## Diagnostics
 
@@ -89,9 +92,9 @@ Installer и updater:
 
 Backend использует `diagnostics.run` как обычную queued-команду.
 
-## Wi-Fi backup before change
+## Config backup before change
 
-Перед командами Wi-Fi агент создаёт:
+Перед изменением `wireless`, `system` или `dhcp` агент создаёт:
 
 - `.bak` файл конфигурации;
 - `.meta` файл с metadata.

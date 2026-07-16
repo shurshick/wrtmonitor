@@ -39,4 +39,21 @@
     </div>
   </form>
   {% endif %}
+  {% if supports.network_interface_restart %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Переподключить выбранный интерфейс? Связь может кратковременно пропасть.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="network.interface_restart">
+    <input type="hidden" name="confirmed" value="true">
+    <label>Интерфейс<select name="interface">{% for item in interfaces %}<option value="{{ item.interface }}">{{ item.interface }}</option>{% endfor %}</select></label>
+    <div class="button-row"><button type="submit">Переподключить</button><span class="risk-badge">risk: level 3</span></div>
+  </form>
+  {% endif %}
+  {% if supports.network_restart %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Перезапустить всю сеть? Роутер временно потеряет подключение к серверу.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="network.restart">
+    <input type="hidden" name="confirmed" value="true">
+    <div class="button-row"><button class="button--danger" type="submit">Перезапустить сеть</button><span class="risk-badge risk-badge--danger">risk: level 4</span></div>
+  </form>
+  {% endif %}
 </section>

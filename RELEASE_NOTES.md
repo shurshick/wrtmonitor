@@ -1,30 +1,40 @@
-# v0.1.1-rc9-agent-modularization-and-ui-fixes
+# v0.2.0-rc1-full-router-foundation
 
-## Что вошло в релиз
+Первый релиз новой функциональной ветки WrtMonitor. Основная цель - перейти от набора отдельных кнопок к единой модели управления OpenWrt через сервер, Android и Web UI.
 
-- OpenWrt-агент переведён на модульную структуру: `wrtmonitor-agent` стал тонким entrypoint, основная логика вынесена в `lib/common.sh`, `status.sh`, `update.sh`, `telemetry.sh`, `capabilities.sh`, `diagnostics.sh`, `commands.sh`, `api.sh`.
-- Installer и update pipeline переведены на manifest `openwrt-agent-files.txt` и полный набор checksums для новой структуры.
-- Clean reinstall агента теперь считается основным сценарием для internal prerelease testing после перехода на новый layout файлов.
-- В Web UI добавлено компактное отображение capabilities: summary по умолчанию и раскрытие полного списка через `<details>`.
-- В Android экран устройства переведён на тот же compact capabilities UX.
-- В Web UI и Android закреплена кнопка удаления из активного списка только для `disabled` роутеров.
-- Для старых prerelease-агентов интерфейс теперь явно показывает, что capabilities ещё не переданы и для управления нужен reinstall `rc9`.
+## Что изменилось
 
-## Важно для обновления
+- OpenWrt agent отправляет telemetry schema v2: система, hostname, kernel, load 1/5/15, conntrack, сервисы, интерфейсы, расширенный Wi-Fi, DHCP leases и сетевые клиенты.
+- Сервер нормализует `system`, `services`, `network`, `wifi` и `clients`, поэтому интерфейсы больше не разбирают сырой `ubus` самостоятельно.
+- Добавлены команды изменения Wi-Fi канала и региона.
+- Добавлены переподключение отдельного интерфейса и полный перезапуск сети.
+- Добавлены изменение hostname и перезапуск сервисов из allowlist: `network`, `dnsmasq`, `firewall`, `odhcpd`.
+- Добавлено создание, изменение и удаление статических DHCP-выдач.
+- Все изменения UCI проходят серверную валидацию, требуют подтверждение, попадают в аудит и создают backup затронутого config-файла.
+- Web UI получил отдельный блок клиентов и новые элементы управления сетью, Wi-Fi и системой.
+- Android получил вкладку клиентов и тот же набор capability-aware команд.
+- Настройки Android вынесены из нижней навигации в кнопку верхней панели; нижняя навигация теперь посвящена управлению роутером.
+- FastAPI startup переведён на lifespan API, старые deprecation warnings тестового контура убраны.
 
-`rc9` меняет layout файлов OpenWrt-агента.
+## Обновление
 
-Для внутреннего тестирования рекомендуется:
+Сервер обновляется обычным redeploy образа `ghcr.io/shurshick/wrtmonitor:latest`. PostgreSQL volume сохраняется.
 
-- остановить старый агент;
-- выполнить clean reinstall;
-- затем заново запустить сервис.
+Агент `0.2.0-rc1` можно обновить через Web UI/Android или вручную:
 
-Backward-compatible auto-update с `rc7/rc8` намеренно не гарантируется.
+```sh
+wrtmonitor-agent update
+wrtmonitor-agent version
+wrtmonitor-agent send-now
+```
 
-## Артефакты релиза
+После обновления проверьте `agent capabilities`: новая панель управления появляется только после первой telemetry от нового агента.
 
-- `wrtmonitor-truenas-v0.1.1-rc9.yaml`
-- `wrtmonitor-openwrt-agent-v0.1.1-rc9.tar.gz`
-- `wrtmonitor-android-v0.1.1-rc9-debug.apk`
+## Артефакты
+
+- `wrtmonitor-truenas-v0.2.0-rc1.yaml`
+- `wrtmonitor-openwrt-agent-v0.2.0-rc1.tar.gz`
+- `wrtmonitor-android-v0.2.0-rc1-debug.apk`
 - `SHA256SUMS.txt`
+
+Это prerelease для тестирования. Полное управление OpenWrt остаётся направлением развития; этот релиз закладывает расширяемый и проверяемый фундамент.

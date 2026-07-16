@@ -1,6 +1,6 @@
 # Развёртывание серверной части
 
-Документ актуален для `WrtMonitor v0.1.1-rc9`.
+Документ актуален для `WrtMonitor v0.2.0-rc1`.
 
 ## Перед первым запуском
 
@@ -18,6 +18,8 @@ openssl rand -base64 32
 
 `WRTMONITOR_PUBLIC_SERVER_URL` должен содержать внешний HTTPS-адрес сервера.
 
+Текущая серверная модель доступа: `single-owner`. Это ранний тестовый контур без ролей и мультиарендности. Один владелец управляет всеми устройствами этого сервера.
+
 ## Переменные
 
 ```env
@@ -34,11 +36,11 @@ WRTMONITOR_ENABLE_API_DOCS=false
 
 ## TrueNAS Custom App
 
-1. Откройте релиз `v0.1.1-rc9-agent-modularization-and-ui-fixes`.
+1. Откройте релиз `v0.2.0-rc1-full-router-foundation`.
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-v0.1.1-rc9.yaml
+   wrtmonitor-truenas-v0.2.0-rc1.yaml
    ```
 
 3. При необходимости скачайте и проверьте `SHA256SUMS.txt`.

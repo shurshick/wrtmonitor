@@ -2,7 +2,7 @@
 
 `wrtmonitor-agent` регистрирует роутер, отправляет telemetry, получает команды с сервера и умеет обновлять сам себя.
 
-Начиная с `rc9`, агент использует модульную структуру:
+Агент использует модульную структуру:
 
 ```text
 wrtmonitor-agent
@@ -16,7 +16,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Важно: `rc9` меняет layout файлов агента. Для внутреннего тестирования рекомендуется clean reinstall. Обратная совместимость автообновления с `rc7/rc8` намеренно не гарантируется.
+Версия `0.2.0-rc1` сохраняет модульный layout и обновляется поверх `rc9` штатным update-механизмом.
 
 ## Требования
 
@@ -70,7 +70,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.1.1-rc9-agent-modularization-and-ui-fixes/wrtmonitor-openwrt-agent-v0.1.1-rc9.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.2.0-rc1-full-router-foundation/wrtmonitor-openwrt-agent-v0.2.0-rc1.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -81,7 +81,7 @@ sh install-openwrt.sh \
 
 ## Clean reinstall
 
-Для перехода на `rc9` рекомендуется:
+Clean reinstall нужен только при повреждённой или очень старой установке:
 
 ```sh
 cd /tmp
@@ -180,6 +180,8 @@ wrtmonitor-agent diagnostics --json
 - `wifi.set_enabled`
 - `wifi.set_ssid`
 - `wifi.set_password`
+- `wifi.set_channel`
+- `wifi.set_country`
 
 агент создаёт backup:
 
@@ -198,6 +200,8 @@ wrtmonitor-agent diagnostics --json
 ```sh
 wrtmonitor-agent list-config-backups
 ```
+
+Для команд `system.set_hostname`, `dhcp.set_lease` и `dhcp.delete_lease` аналогично создаются backup файлов `system` и `dhcp`. Перезапуск сети и сервисов не меняет UCI-конфигурацию.
 
 ## Отключение автообновления
 

@@ -1,7 +1,10 @@
 #!/bin/sh
 set -eu
 
-AGENT_VERSION="0.1.1-rc9"
+# Used by sourced libraries from lib/*.sh.
+# shellcheck disable=SC2034
+AGENT_VERSION="0.2.0-rc1"
+# shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
 SCRIPT_PATH="$(readlink -f "$0" 2>/dev/null || printf '%s\n' "$0")"

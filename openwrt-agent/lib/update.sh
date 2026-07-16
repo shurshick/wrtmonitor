@@ -312,6 +312,7 @@ check_for_update() {
             perform_rollback "manual" "service restart failed" || true
             return 1
         fi
+        # shellcheck disable=SC2034
         PENDING_AGENT_EXEC=0
     fi
     return 0

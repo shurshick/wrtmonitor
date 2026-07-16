@@ -15,6 +15,15 @@ def settings() -> Settings:
     return load_settings()
 
 
+def ensure_single_owner_access(user: User) -> User:
+    if user.role != "owner":
+        raise HTTPException(
+            status_code=403,
+            detail="This deployment supports only the owner account",
+        )
+    return user
+
+
 def bearer_token(authorization: str | None) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Bearer token required")
@@ -35,7 +44,7 @@ def current_user(
     user = db.get(User, user_id)
     if not user or user.disabled:
         raise HTTPException(status_code=401, detail="Invalid access token")
-    return user
+    return ensure_single_owner_access(user)
 
 
 def device_from_token(authorization: str | None, db: Session) -> Device:
@@ -62,4 +71,9 @@ def web_user_from_session(
     except (ValueError, jwt.PyJWTError):
         return None
     user = db.get(User, user_id)
-    return user if user and not user.disabled else None
+    if not user or user.disabled:
+        return None
+    try:
+        return ensure_single_owner_access(user)
+    except HTTPException:
+        return None

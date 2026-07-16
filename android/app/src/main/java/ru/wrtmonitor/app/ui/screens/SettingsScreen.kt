@@ -101,7 +101,7 @@ private fun AboutScreen(updateState: UpdateState?, checkingUpdate: Boolean, onBa
         }
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("WrtMonitor", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
                 InfoRow(stringResource(R.string.app_version), appVersionName(LocalContext.current))
                 Text(stringResource(R.string.copyright), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(onOpenProject, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.project_page)) }

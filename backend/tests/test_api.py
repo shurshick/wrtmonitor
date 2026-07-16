@@ -21,6 +21,7 @@ from backend.app.models import (
     User,
 )
 from backend.app.main import app
+from backend.app.config import APP_VERSION
 from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata
 from backend.app.services.commands import ALLOWED_COMMANDS, public_command_payload
 from backend.app.schemas import SetupRequest
@@ -75,6 +76,7 @@ def test_health_config_exposes_openwrt_downloads_without_secrets():
     payload = response.json()
     assert payload["openwrt_downloads_enabled"] is True
     assert payload["openwrt_downloads_path"] == "/downloads/openwrt/"
+    assert payload["access_model"] == "single-owner"
     assert "jwt_secret" not in payload
 
 
@@ -177,8 +179,9 @@ def test_devices_page_lists_devices(monkeypatch):
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
+    client.cookies.set("wrtmonitor_session", "token")
     try:
-        response = client.get("/devices", cookies={"wrtmonitor_session": "token"})
+        response = client.get("/devices")
     finally:
         app.dependency_overrides.clear()
 
@@ -230,15 +233,16 @@ def test_devices_page_shows_archive_button_only_for_disabled_devices(monkeypatch
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
+    client.cookies.set("wrtmonitor_session", "token")
     try:
-        response = client.get("/devices", cookies={"wrtmonitor_session": "token"})
+        response = client.get("/devices")
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.text.count("Удалить из списка") == 1
-    assert '/devices/a0f55bcd-3a85-4d94-8a50-f62e463682b8/archive' in response.text
-    assert '/devices/b0f55bcd-3a85-4d94-8a50-f62e463682b8/archive' not in response.text
+    assert "/devices/a0f55bcd-3a85-4d94-8a50-f62e463682b8/archive" in response.text
+    assert "/devices/b0f55bcd-3a85-4d94-8a50-f62e463682b8/archive" not in response.text
 
 
 def test_device_page_renders_agent_update_status(monkeypatch):
@@ -258,9 +262,9 @@ def test_device_page_renders_agent_update_status(monkeypatch):
         device_id=device.id,
         payload={
             "agent": {
-                "version": "0.1.1-rc8",
+                "version": APP_VERSION,
                 "auto_update_enabled": True,
-                "available_version": "0.1.1-rc8",
+                "available_version": APP_VERSION,
                 "last_update_status": "success",
             }
         },
@@ -299,16 +303,15 @@ def test_device_page_renders_agent_update_status(monkeypatch):
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
+    client.cookies.set("wrtmonitor_session", "token")
     try:
-        response = client.get(
-            f"/devices/{device.id}", cookies={"wrtmonitor_session": "token"}
-        )
+        response = client.get(f"/devices/{device.id}")
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert "Агент" in response.text
-    assert "0.1.1-rc8" in response.text
+    assert APP_VERSION in response.text
     assert "success" in response.text
 
 
@@ -329,7 +332,7 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
         device_id=device.id,
         payload={
             "agent": {
-                "version": "0.1.1-rc9",
+                "version": APP_VERSION,
                 "capabilities": {
                     "agent.update": True,
                     "wifi.set_ssid": True,
@@ -370,16 +373,15 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
     monkeypatch.setattr(
         main,
         "device_supports",
-        lambda db, device_id, capability: telemetry.payload["agent"]["capabilities"].get(
-            capability, False
-        ),
+        lambda db, device_id, capability: telemetry.payload["agent"][
+            "capabilities"
+        ].get(capability, False),
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
+    client.cookies.set("wrtmonitor_session", "token")
     try:
-        response = client.get(
-            f"/devices/{device.id}", cookies={"wrtmonitor_session": "token"}
-        )
+        response = client.get(f"/devices/{device.id}")
     finally:
         app.dependency_overrides.clear()
 
@@ -501,14 +503,14 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         },
         "network": {"interfaces": [{"name": "lan", "up": True}]},
         "agent": {
-            "version": "0.1.1-rc8",
+            "version": APP_VERSION,
             "auto_update_enabled": True,
             "last_update_status": "success",
             "last_update_error": "",
             "last_update_check": "2026-06-21T10:00:00Z",
             "last_successful_update": "2026-06-21T10:00:00Z",
             "backup_available": True,
-            "available_version": "0.1.1-rc8",
+            "available_version": APP_VERSION,
             "update_source": "https://monitor.example.ru/downloads/openwrt",
         },
     }
@@ -528,11 +530,14 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert latest["device_id"] == device_id
     assert latest["telemetry"]["system"]["uptime"] == 123
     assert latest["telemetry"]["wifi"]["radios"][0]["name"] == "radio0"
-    assert latest["telemetry"]["agent"]["version"] == "0.1.1-rc8"
+    assert latest["telemetry"]["agent"]["version"] == APP_VERSION
     assert latest["telemetry"]["sequence"] == 104
     assert latest["age_seconds"] >= 0
     assert latest["is_stale"] is False
     assert latest["source"] == "agent"
+    assert latest["clients"] == {"count": 0, "items": []}
+    assert "system" in latest
+    assert "services" in latest
 
     session_factory = sessionmaker(
         bind=get_engine(), autoflush=False, expire_on_commit=False

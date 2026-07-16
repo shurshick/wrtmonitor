@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import Device, DeviceTelemetry, User
+from .auth import ensure_single_owner_access
 
 
 def get_device_or_404(db: Session, device_id: UUID) -> Device:
@@ -17,9 +18,7 @@ def get_device_or_404(db: Session, device_id: UUID) -> Device:
 
 
 def get_user_device_or_404(db: Session, user: User, device_id: UUID) -> Device:
-    # Current deployment model is single-owner. Keeping the user parameter here
-    # prevents future multi-user routes from accidentally bypassing ownership.
-    del user
+    ensure_single_owner_access(user)
     return get_device_or_404(db, device_id)
 
 

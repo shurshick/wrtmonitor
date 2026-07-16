@@ -21,6 +21,9 @@ data class TelemetryDto(
     val agent: AgentStatusDto? = null,
     val wifi: JSONObject? = null,
     val network: JSONObject? = null,
+    val clients: JSONObject? = null,
+    val system: JSONObject? = null,
+    val services: JSONObject? = null,
 )
 
 data class AgentStatusDto(

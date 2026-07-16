@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val appVersionName = rootProject.file("VERSION").readText().trim()
+val appVersionCode = rootProject.file("VERSION_CODE").readText().trim().toInt()
+
 android {
     namespace = "ru.wrtmonitor.app"
     compileSdk = 35
@@ -11,8 +14,8 @@ android {
         applicationId = "ru.wrtmonitor.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 25
-        versionName = "0.1.1-rc9"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {
@@ -49,6 +52,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")

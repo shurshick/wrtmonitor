@@ -31,7 +31,7 @@ import ru.wrtmonitor.app.api.WrtMonitorApi
 fun ServerSetupScreen(onSave: (String) -> Unit) {
     var serverUrl by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("WrtMonitor", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
         Text(stringResource(R.string.first_run_server_prompt))
         OutlinedTextField(serverUrl, { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Button(onClick = { onSave(serverUrl) }, enabled = serverUrl.isNotBlank()) { Text(stringResource(R.string.save)) }
@@ -45,8 +45,8 @@ fun AdminLoginScreen(serverUrl: String, onLogin: (String) -> Unit, onChangeServe
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.login), style = MaterialTheme.typography.headlineMedium)
-        OutlinedTextField(username, { username = it }, label = { Text("Администратор") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(password, { password = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), singleLine = true)
+        OutlinedTextField(username, { username = it }, label = { Text(stringResource(R.string.admin_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.password_label)) }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), singleLine = true)
         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
         Button(onClick = { loading = true; scope.launch { when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl).login(username, password) }) { is ApiResult.Success -> onLogin(result.data); is ApiResult.Error -> { error = result.message; loading = false } } } }, enabled = !loading && username.isNotBlank() && password.isNotBlank()) { if (loading) CircularProgressIndicator() else Text(stringResource(R.string.login)) }
         Button(onClick = onChangeServer, enabled = !loading) { Text(stringResource(R.string.change_server)) }

@@ -12,6 +12,8 @@
       {{ 'включён' if radio.up else 'выключен' }}
       {% if radio.band %} · {{ radio.band }}{% endif %}
       {% if radio.channel %} · канал {{ radio.channel }}{% endif %}
+      {% if radio.country %} · {{ radio.country }}{% endif %}
+      {% if radio.htmode %} · {{ radio.htmode }}{% endif %}
       {% if radio.interfaces %}
       <div class="sub-list">
         {% for iface in radio.interfaces %}
@@ -76,6 +78,28 @@
       <button type="submit">Изменить пароль</button>
       <span class="risk-badge">risk: level 3</span>
     </div>
+  </form>
+  {% endif %}
+
+  {% if supports.wifi_channel and radios %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="wifi.set_channel">
+    <input type="hidden" name="confirmed" value="true">
+    <input type="hidden" name="radio" value="{{ radios[0].id }}">
+    <label>Канал<input name="channel" required maxlength="4" value="{{ radios[0].channel or 'auto' }}"></label>
+    <div class="button-row"><button type="submit">Изменить канал</button><span class="risk-badge">risk: level 3</span></div>
+  </form>
+  {% endif %}
+
+  {% if supports.wifi_country and radios %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="command_type" value="wifi.set_country">
+    <input type="hidden" name="confirmed" value="true">
+    <input type="hidden" name="radio" value="{{ radios[0].id }}">
+    <label>Регион (ISO 3166-1 alpha-2)<input name="country" required minlength="2" maxlength="2" value="{{ radios[0].country or '' }}" placeholder="RU"></label>
+    <div class="button-row"><button type="submit">Изменить регион</button><span class="risk-badge">risk: level 3</span></div>
   </form>
   {% endif %}
 </section>

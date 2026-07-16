@@ -14,7 +14,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun InfoRow(label: String, value: String?, fallback: String = "Нет данных") {
+fun InfoRow(label: String, value: String?, fallback: String = "—") {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.widthIn(min = 76.dp, max = 92.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(value?.takeIf { it.isNotBlank() } ?: fallback, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Normal, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)

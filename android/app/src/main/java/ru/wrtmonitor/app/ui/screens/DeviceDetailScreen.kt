@@ -62,6 +62,11 @@ fun DeviceDetailScreen(
     var actionError by remember(device.id) { mutableStateOf("") }
     var confirmRollback by remember(device.id) { mutableStateOf(false) }
     var confirmArchive by remember(device.id) { mutableStateOf(false) }
+    val updateCheckQueued = stringResource(R.string.update_check_queued)
+    val intervalChangeQueued = stringResource(R.string.interval_change_queued)
+    val autoUpdateEnableQueued = stringResource(R.string.auto_update_enable_queued)
+    val autoUpdateDisableQueued = stringResource(R.string.auto_update_disable_queued)
+    val rollbackQueued = stringResource(R.string.rollback_queued)
 
     fun refresh() {
         state = state.copy(loading = true, error = null)
@@ -155,16 +160,16 @@ fun DeviceDetailScreen(
             actionMessage = actionMessage,
             actionError = actionError,
             canArchive = device.status == "disabled",
-            onCheckUpdate = { queueCommand("agent.update", success = "Команда проверки обновления добавлена") },
+            onCheckUpdate = { queueCommand("agent.update", success = updateCheckQueued) },
             onSetInterval = { seconds ->
                 queueCommand(
                     "agent.set_interval",
                     JSONObject().put("interval_seconds", seconds),
-                    "Новый интервал telemetry будет применён при следующем цикле агента",
+                    intervalChangeQueued,
                 )
             },
-            onEnableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", true), "Автообновление будет включено при следующем опросе агента") },
-            onDisableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", false), "Автообновление будет выключено при следующем опросе агента") },
+            onEnableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", true), autoUpdateEnableQueued) },
+            onDisableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", false), autoUpdateDisableQueued) },
             onRollback = { confirmRollback = true },
             onArchive = { confirmArchive = true },
         )
@@ -173,13 +178,13 @@ fun DeviceDetailScreen(
     if (confirmRollback) {
         AlertDialog(
             onDismissRequest = { confirmRollback = false },
-            title = { Text("Вернуть предыдущую версию агента?") },
-            text = { Text("Агент попробует восстановить предыдущую рабочую версию и перезапуститься.") },
+            title = { Text(stringResource(R.string.rollback_confirm_title)) },
+            text = { Text(stringResource(R.string.rollback_confirm_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmRollback = false
-                    queueCommand("agent.rollback", success = "Команда rollback добавлена")
-                }) { Text("Rollback") }
+                    queueCommand("agent.rollback", success = rollbackQueued)
+                }) { Text(stringResource(R.string.rollback_action)) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmRollback = false }) {
@@ -192,13 +197,13 @@ fun DeviceDetailScreen(
     if (confirmArchive) {
         AlertDialog(
             onDismissRequest = { confirmArchive = false },
-            title = { Text("Удалить из списка?") },
-            text = { Text("Этот роутер уже отключён. История telemetry и команд останется на сервере, но для повторного подключения агент нужно будет зарегистрировать заново.") },
+            title = { Text(stringResource(R.string.archive_router_title)) },
+            text = { Text(stringResource(R.string.archive_router_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmArchive = false
                     archiveDevice()
-                }) { Text("Удалить") }
+                }) { Text(stringResource(R.string.archive_router_action)) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmArchive = false }) {
@@ -227,38 +232,38 @@ private fun TelemetrySummary(telemetry: TelemetryDto) {
     val wifi = telemetry.wifi ?: payload.optJSONObject("wifi")
     val radios = wifi?.optJSONArray("radios")
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        TelemetrySection("Состояние") {
+        TelemetrySection(stringResource(R.string.telemetry_state_title)) {
             InfoRow(stringResource(R.string.updated_at), formatTimestamp(telemetry.createdAt), stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.age), telemetry.ageSeconds?.let { "$it сек" }, stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.age), telemetry.ageSeconds?.let { stringResource(R.string.seconds_value, it.toInt()) }, stringResource(R.string.no_data))
             InfoRow(stringResource(R.string.source), telemetry.source, stringResource(R.string.no_data))
             if (telemetry.isStale) {
                 Text(stringResource(R.string.stale_telemetry), color = MaterialTheme.colorScheme.error)
             }
         }
-        TelemetrySection("Система") {
+        TelemetrySection(stringResource(R.string.telemetry_system_title)) {
             InfoRow(stringResource(R.string.uptime), formatDuration(system?.optLong("uptime", 0) ?: 0))
             InfoRow(stringResource(R.string.load), system?.optString("load"), stringResource(R.string.no_data))
             InfoRow(stringResource(R.string.memory), memory?.let { memoryLabel(it) }, stringResource(R.string.no_data))
-            InfoRow("Процессор", cpu?.optString("model").orEmpty().ifBlank { "Не определен" })
-            InfoRow("Ядра CPU", cpu?.optLong("cores", 0)?.takeIf { it > 0 }?.toString(), stringResource(R.string.no_data))
-            InfoRow("Накопитель", storage?.let { storageLabel(it) }, stringResource(R.string.no_data))
-            InfoRow("Температура", thermalLabel(thermal), stringResource(R.string.no_data))
-            InfoRow("Процессы", processes?.optLong("count", 0)?.takeIf { it > 0 }?.toString(), stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.cpu), cpu?.optString("model").orEmpty().ifBlank { stringResource(R.string.not_detected) }, stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.cpu_cores), cpu?.optLong("cores", 0)?.takeIf { it > 0 }?.toString(), stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.storage), storage?.let { storageLabel(it) }, stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.temperature), thermalLabel(thermal), stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.processes), processes?.optLong("count", 0)?.takeIf { it > 0 }?.toString(), stringResource(R.string.no_data))
         }
-        TelemetrySection("Оборудование") {
+        TelemetrySection(stringResource(R.string.telemetry_hardware_title)) {
             InfoRow(stringResource(R.string.model), board?.optString("model").orEmpty().ifBlank { null }, stringResource(R.string.no_data))
             InfoRow(stringResource(R.string.firmware), release?.optString("description").orEmpty().ifBlank { release?.optString("version") }, stringResource(R.string.no_data))
         }
-        TelemetrySection("Сеть") {
-            InfoRow("RX / TX", traffic?.let { "${formatBytes(it.optLong("rx_bytes"))} / ${formatBytes(it.optLong("tx_bytes"))}" }, stringResource(R.string.no_data))
+        TelemetrySection(stringResource(R.string.telemetry_network_title)) {
+            InfoRow(stringResource(R.string.network_rx_tx), traffic?.let { "${formatBytes(it.optLong("rx_bytes"))} / ${formatBytes(it.optLong("tx_bytes"))}" }, stringResource(R.string.no_data))
             if (interfaces == null || interfaces.length() == 0) {
-                Text("Агент еще не передал интерфейсы")
+                Text(stringResource(R.string.interfaces_missing))
             } else {
                 InterfaceRows(interfaces)
             }
             if (networkDevices != null) NetworkDeviceRows(networkDevices)
         }
-        TelemetrySection("Wi-Fi") {
+        TelemetrySection(stringResource(R.string.telemetry_wifi_title)) {
             if (wifi?.optBoolean("available", false) != true) Text(stringResource(R.string.wifi_unavailable)) else RadioRows(radios)
         }
     }
@@ -285,22 +290,22 @@ private fun AgentSection(
     }
     val intervalValue = intervalInput.toIntOrNull()
     val intervalError = intervalInput.isNotBlank() && (intervalValue == null || intervalValue < 5)
-    TelemetrySection("Агент") {
-        InfoRow("Версия", agent?.version, stringResource(R.string.no_data))
-        InfoRow("Статус", agent?.status, stringResource(R.string.no_data))
-        InfoRow("Автообновление", if (agent == null) null else if (autoUpdateEnabled) "Включено" else "Выключено", stringResource(R.string.no_data))
-        InfoRow("Интервал telemetry", agent?.telemetryIntervalSeconds?.let { "$it сек" }, stringResource(R.string.no_data))
-        InfoRow("Доступная версия", agent?.availableVersion, stringResource(R.string.no_data))
-        InfoRow("Последняя проверка", formatTimestamp(agent?.lastUpdateCheck), stringResource(R.string.no_data))
-        InfoRow("Статус обновления", agent?.lastUpdateStatus, stringResource(R.string.no_data))
-        InfoRow("Последнее успешное обновление", formatTimestamp(agent?.lastSuccessfulUpdate), stringResource(R.string.no_data))
-        InfoRow("Последняя ошибка", agent?.lastUpdateError, stringResource(R.string.no_data))
-        InfoRow("Rollback", if (agent == null) null else if (agent.rollbackAvailable) "Доступен" else "Нет", stringResource(R.string.no_data))
-        InfoRow("Источник", agent?.updateSource, stringResource(R.string.no_data))
-        InfoRow("Capabilities", capabilitiesSummary(capabilities), stringResource(R.string.no_data))
+    TelemetrySection(stringResource(R.string.agent_section_title)) {
+        InfoRow(stringResource(R.string.version), agent?.version, stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.status), agent?.status, stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.auto_update), if (agent == null) null else if (autoUpdateEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value), stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.telemetry_interval), agent?.telemetryIntervalSeconds?.let { stringResource(R.string.seconds_value, it) }, stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.available_version), agent?.availableVersion, stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.last_update_check), formatTimestamp(agent?.lastUpdateCheck), stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.update_status), agent?.lastUpdateStatus, stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.last_successful_update), formatTimestamp(agent?.lastSuccessfulUpdate), stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.last_error), agent?.lastUpdateError, stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.rollback), if (agent == null) null else if (agent.rollbackAvailable) stringResource(R.string.rollback_available) else stringResource(R.string.rollback_unavailable), stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.update_source), agent?.updateSource, stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.capabilities), capabilitiesSummary(capabilities), stringResource(R.string.no_data))
         if (capabilities.isNotEmpty()) {
             TextButton(onClick = { showCapabilities = !showCapabilities }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (showCapabilities) "Скрыть capabilities" else "Показать capabilities")
+                Text(if (showCapabilities) stringResource(R.string.hide_capabilities) else stringResource(R.string.show_capabilities))
             }
             if (showCapabilities) {
                 groupedCapabilities(capabilities).forEach { (title, values) ->
@@ -313,43 +318,43 @@ private fun AgentSection(
         if (actionError.isNotBlank()) Text(actionError, color = MaterialTheme.colorScheme.error)
 
         if (capabilities["agent.update"] == true) {
-            Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth()) { Text("Проверить обновление") }
+            Button(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.check_update)) }
         }
         if (capabilities["agent.update"] == true) {
             Button(
                 onClick = if (autoUpdateEnabled) onDisableAutoUpdate else onEnableAutoUpdate,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (autoUpdateEnabled) "Выключить автообновление" else "Включить автообновление") }
+            ) { Text(if (autoUpdateEnabled) stringResource(R.string.disable_auto_update) else stringResource(R.string.enable_auto_update)) }
         }
         if (capabilities["agent.set_interval"] == true) {
             OutlinedTextField(
                 value = intervalInput,
                 onValueChange = { value -> intervalInput = value.filter(Char::isDigit) },
-                label = { Text("Интервал telemetry, сек") },
+                label = { Text(stringResource(R.string.telemetry_interval_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = intervalError,
-                supportingText = { Text(if (intervalError) "Минимум 5 секунд" else "Минимум 5 секунд") },
+                supportingText = { Text(stringResource(R.string.min_five_seconds)) },
             )
             Button(
                 onClick = { intervalValue?.let(onSetInterval) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = intervalValue != null && intervalValue >= 5,
-            ) { Text("Изменить интервал") }
+            ) { Text(stringResource(R.string.change_interval)) }
         }
         if (capabilities["agent.rollback"] == true) {
-            Button(onClick = onRollback, modifier = Modifier.fillMaxWidth()) { Text("Rollback agent") }
+            Button(onClick = onRollback, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.rollback_action)) }
         }
         if (capabilities.isEmpty()) {
             Text(
-                "Агент ещё не передал capabilities. Для управления установите агент rc9 заново.",
+                stringResource(R.string.capabilities_missing_reinstall),
                 color = MaterialTheme.colorScheme.secondary,
             )
         }
         if (canArchive) {
             TextButton(onClick = onArchive, modifier = Modifier.fillMaxWidth()) {
-                Text("Удалить из списка", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.archive_router_action), color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -370,7 +375,7 @@ private fun InterfaceRows(interfaces: JSONArray) {
     for (index in 0 until interfaces.length()) {
         val item = interfaces.optJSONObject(index) ?: continue
         val name = item.optString("interface", item.optString("name", "interface"))
-        val state = if (item.optBoolean("up", false)) "В сети" else "Не в сети"
+        val state = if (item.optBoolean("up", false)) stringResource(R.string.in_network) else stringResource(R.string.out_of_network)
         val proto = item.optString("proto").takeIf { it.isNotBlank() }
         val device = item.optString("device").takeIf { it.isNotBlank() }
         val ipv4 = item.optJSONArray("ipv4")?.optString(0).takeIf { !it.isNullOrBlank() }
@@ -389,9 +394,9 @@ private fun RadioRows(radios: JSONArray?) {
         val radio = radios.optJSONObject(index) ?: continue
         val name = radio.optString("name", radio.optString("id", "radio$index"))
         val details = listOfNotNull(
-            if (radio.optBoolean("up", false)) "Включен" else "Выключен",
+            if (radio.optBoolean("up", false)) stringResource(R.string.wifi_enabled_state) else stringResource(R.string.wifi_disabled_state),
             radio.optString("band").takeIf { it.isNotBlank() },
-            radio.optString("channel").takeIf { it.isNotBlank() }?.let { "канал $it" },
+            radio.optString("channel").takeIf { it.isNotBlank() }?.let { stringResource(R.string.channel_value, it) },
         ).joinToString(" · ")
         InfoRow(name, details)
         val interfaces = radio.optJSONArray("interfaces")
@@ -399,10 +404,10 @@ private fun RadioRows(radios: JSONArray?) {
             for (ifaceIndex in 0 until interfaces.length()) {
                 val iface = interfaces.optJSONObject(ifaceIndex) ?: continue
                 InfoRow(
-                    "SSID ${ifaceIndex + 1}",
+                    stringResource(R.string.ssid_item, ifaceIndex + 1),
                     listOfNotNull(
                         iface.optString("ssid").takeIf { it.isNotBlank() },
-                        if (iface.optBoolean("enabled", true)) "активен" else "выключен",
+                        if (iface.optBoolean("enabled", true)) stringResource(R.string.radio_active) else stringResource(R.string.radio_disabled),
                         iface.optString("encryption").takeIf { it.isNotBlank() },
                     ).joinToString(" · "),
                 )
@@ -417,8 +422,8 @@ private fun NetworkDeviceRows(devices: JSONObject) {
     for (name in names) {
         val item = devices.optJSONObject(name) ?: continue
         val details = listOf(
-            if (item.optBoolean("up", false)) "Активен" else "Неактивен",
-            if (item.optBoolean("carrier", false)) "carrier есть" else "carrier нет",
+            if (item.optBoolean("up", false)) stringResource(R.string.device_active) else stringResource(R.string.device_inactive),
+            if (item.optBoolean("carrier", false)) stringResource(R.string.carrier_present) else stringResource(R.string.carrier_missing),
             item.optLong("mtu", 0).takeIf { it > 0 }?.let { "MTU $it" }.orEmpty(),
         ).filter { it.isNotBlank() }.joinToString(" · ")
         InfoRow(name, details)
@@ -431,8 +436,13 @@ private fun firstAddress(addresses: JSONArray?): String =
 private fun memoryLabel(memory: JSONObject): String =
     "${memory.optLong("available_kb") / 1024} / ${memory.optLong("total_kb") / 1024} MB"
 
+@Composable
 private fun storageLabel(storage: JSONObject): String =
-    "${storage.optLong("used_kb") / 1024} использовано, ${storage.optLong("available_kb") / 1024} MB свободно"
+    androidx.compose.ui.platform.LocalContext.current.getString(
+        R.string.storage_used_free,
+        storage.optLong("used_kb") / 1024,
+        storage.optLong("available_kb") / 1024,
+    )
 
 private fun thermalLabel(thermal: JSONObject?): String? =
     if (thermal?.optBoolean("available", false) == true) {
@@ -454,13 +464,14 @@ private fun formatTimestamp(value: String?): String? = runCatching {
         .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"))
 }.getOrNull()
 
+@Composable
 private fun formatDuration(seconds: Long): String {
     val days = seconds / 86_400
     val hours = (seconds % 86_400) / 3_600
     val minutes = (seconds % 3_600) / 60
     return listOfNotNull(
-        days.takeIf { it > 0 }?.let { "$it д" },
-        hours.takeIf { it > 0 }?.let { "$it ч" },
-        minutes.let { "$it мин" },
+        days.takeIf { it > 0 }?.let { stringResource(R.string.duration_days_short, it.toInt()) },
+        hours.takeIf { it > 0 }?.let { stringResource(R.string.duration_hours_short, it.toInt()) },
+        stringResource(R.string.duration_minutes_short, minutes.toInt()),
     ).joinToString(" ")
 }
