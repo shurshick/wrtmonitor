@@ -58,9 +58,16 @@ CAPABILITY_GROUPS = {
 }
 
 
-def format_timestamp(value: datetime | None) -> str:
+def format_timestamp(value: datetime | str | None) -> str:
     if value is None:
         return "нет данных"
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return value
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
     return value.astimezone(UTC).strftime("%d.%m.%Y %H:%M:%S UTC")
 
 
@@ -303,9 +310,15 @@ def device_page(
         "network_read": has("network.read"),
         "network_interface_restart": has("network.interface_restart"),
         "network_restart": has("network.restart"),
+        "network_wan_configure": has("network.wan.configure"),
+        "network_lan_configure": has("network.lan.configure"),
         "clients_read": has("clients.read"),
+        "clients_block": has("clients.block"),
         "dhcp_set_lease": has("dhcp.set_lease"),
         "dhcp_delete_lease": has("dhcp.delete_lease"),
+        "dhcp_configure": has("dhcp.configure"),
+        "dns_configure": has("dns.configure"),
+        "firewall_port_forward": has("firewall.port_forward"),
         "system_reboot": has("system.reboot"),
         "system_set_hostname": has("system.set_hostname"),
         "system_restart_service": has("system.restart_service"),
@@ -314,6 +327,9 @@ def device_page(
         "wifi_password": has("wifi.set_password"),
         "wifi_channel": has("wifi.set_channel"),
         "wifi_country": has("wifi.set_country"),
+        "wifi_guest": has("wifi.guest"),
+        "system_timezone": has("system.set_timezone"),
+        "system_ntp": has("system.set_ntp"),
     }
     commands = db.scalars(
         select(DeviceCommand)
@@ -392,6 +408,25 @@ def web_device_command(
     service: str = Form(default=""),
     mac: str = Form(default=""),
     ip: str = Form(default=""),
+    protocol: str = Form(default=""),
+    ip_address: str = Form(default=""),
+    netmask: str = Form(default=""),
+    gateway: str = Form(default=""),
+    dns: str = Form(default=""),
+    username: str = Form(default=""),
+    password: str = Form(default=""),
+    mtu: str = Form(default=""),
+    start: str = Form(default=""),
+    limit: str = Form(default=""),
+    leasetime: str = Form(default=""),
+    servers: str = Form(default=""),
+    name: str = Form(default=""),
+    external_port: str = Form(default=""),
+    internal_ip: str = Form(default=""),
+    internal_port: str = Form(default=""),
+    blocked: str = Form(default="true"),
+    zonename: str = Form(default=""),
+    timezone: str = Form(default=""),
     confirmed: bool = Form(default=False),
     diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
@@ -424,6 +459,25 @@ def web_device_command(
             service=service,
             mac=mac,
             ip=ip,
+            protocol=protocol,
+            ip_address=ip_address,
+            netmask=netmask,
+            gateway=gateway,
+            dns=dns,
+            username=username,
+            password=password,
+            mtu=mtu,
+            start=start,
+            limit=limit,
+            leasetime=leasetime,
+            servers=servers,
+            name=name,
+            external_port=external_port,
+            internal_ip=internal_ip,
+            internal_port=internal_port,
+            blocked=blocked,
+            zonename=zonename,
+            timezone=timezone,
             diagnostics_checks=diagnostics_checks,
         )
         payload = validate_command_request(

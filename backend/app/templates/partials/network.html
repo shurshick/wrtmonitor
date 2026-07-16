@@ -1,3 +1,4 @@
+<div class="content-grid content-grid--two">
 <section class="card">
   <h2>Сеть</h2>
   {% if capabilities_message and not supports.network_read %}
@@ -57,3 +58,26 @@
   </form>
   {% endif %}
 </section>
+{% if supports.network_wan_configure %}
+<section class="card">
+  <h2>Подключение WAN</h2>
+  <p class="muted">Изменение параметров кратковременно прервёт связь роутера с сервером.</p>
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Применить новые параметры WAN?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.set_wan"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="interface" value="wan">
+    <label>Тип подключения<select name="protocol"><option value="dhcp">Автоматический IP (DHCP)</option><option value="static">Статический IP</option><option value="pppoe">PPPoE</option></select></label>
+    <div class="form-grid"><label>IPv4<input name="ip_address" placeholder="192.0.2.2"></label><label>Маска<input name="netmask" placeholder="255.255.255.0"></label><label>Шлюз<input name="gateway" placeholder="192.0.2.1"></label><label>MTU<input name="mtu" type="number" min="576" max="9200" placeholder="1500"></label></div>
+    <label>DNS-серверы<input name="dns" placeholder="1.1.1.1, 8.8.8.8"></label>
+    <div class="form-grid"><label>Логин PPPoE<input name="username" autocomplete="username"></label><label>Пароль PPPoE<input name="password" type="password" autocomplete="new-password"></label></div>
+    <div class="button-row"><button type="submit">Сохранить WAN</button><span class="risk-badge risk-badge--danger">risk: level 4</span></div>
+  </form>
+</section>
+{% endif %}
+{% if supports.dns_configure or supports.firewall_port_forward %}
+<section class="card card--wide">
+  <h2>DNS и доступ из интернета</h2>
+  {% if supports.dns_configure %}<form class="control-form control-form--columns" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dns.set_servers"><input type="hidden" name="confirmed" value="true"><label>DNS-серверы<input name="servers" required placeholder="1.1.1.1, 8.8.8.8"></label><div class="button-row control-form__actions"><button type="submit">Применить DNS</button><span class="risk-badge">risk: level 3</span></div></form>{% endif %}
+  {% if supports.firewall_port_forward %}<form class="control-form control-form--columns" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Открыть указанный порт из интернета?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.set_port_forward"><input type="hidden" name="confirmed" value="true"><label>Название<input name="name" required placeholder="home-server"></label><label>Протокол<select name="protocol"><option value="tcp">TCP</option><option value="udp">UDP</option><option value="tcpudp">TCP + UDP</option></select></label><label>Внешний порт<input name="external_port" required type="number" min="1" max="65535"></label><label>Внутренний IP<input name="internal_ip" required placeholder="192.168.1.10"></label><label>Внутренний порт<input name="internal_port" required type="number" min="1" max="65535"></label><div class="button-row control-form__actions"><button type="submit">Добавить правило</button><span class="risk-badge risk-badge--danger">risk: level 4</span></div></form>
+  <form class="control-form control-form--columns" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.delete_port_forward"><input type="hidden" name="confirmed" value="true"><label>Название правила<input name="name" required></label><div class="button-row control-form__actions"><button class="button--danger" type="submit">Удалить правило</button></div></form>{% endif %}
+</section>
+{% endif %}
+</div>

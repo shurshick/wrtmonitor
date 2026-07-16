@@ -173,9 +173,35 @@ def test_management_capabilities_cover_full_router_foundation():
         "wifi.set_country",
         "network.interface_restart",
         "network.restart",
+        "network.wan.configure",
+        "network.lan.configure",
+        "clients.block",
         "dhcp.set_lease",
         "dhcp.delete_lease",
+        "dhcp.configure",
+        "dns.configure",
+        "firewall.port_forward",
+        "wifi.guest",
         "system.set_hostname",
         "system.restart_service",
+        "system.set_timezone",
+        "system.set_ntp",
     ):
         assert f'"{capability}":true' in source
+
+
+def test_management_commands_have_openwrt_handlers():
+    source = read_text(ROOT / "lib" / "commands.sh")
+    for command in (
+        "network.set_wan",
+        "network.set_lan",
+        "dhcp.set_pool",
+        "dns.set_servers",
+        "firewall.set_port_forward",
+        "firewall.delete_port_forward",
+        "client.set_blocked",
+        "wifi.set_guest",
+        "system.set_timezone",
+        "system.set_ntp",
+    ):
+        assert f"{command})" in source

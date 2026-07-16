@@ -1,6 +1,6 @@
 # Router Management Core
 
-Документ фиксирует фундамент ветки `v0.2.0` (актуальная сборка `rc2`).
+Документ фиксирует фундамент ветки `v0.3.0` (актуальная сборка `rc1`).
 
 ## Что закреплено
 
@@ -12,6 +12,7 @@
 - telemetry schema v2 и нормализованные `system`, `services`, `clients`, `wifi`, `network` summary
 - compact capabilities UX в Web UI и Android
 - модульная структура OpenWrt-агента
+- WAN/LAN, DHCP/DNS, firewall, client policy, guest Wi-Fi и системное время
 
 ## OpenWrt-агент
 
@@ -94,7 +95,7 @@ Backend использует `diagnostics.run` как обычную queued-ко
 
 ## Config backup before change
 
-Перед изменением `wireless`, `system` или `dhcp` агент создаёт:
+Перед изменением `wireless`, `network`, `firewall`, `system` или `dhcp` агент создаёт:
 
 - `.bak` файл конфигурации;
 - `.meta` файл с metadata.

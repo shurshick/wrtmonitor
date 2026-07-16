@@ -79,6 +79,18 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "network.set_wan": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.wan.configure",
+        "requires_confirmation": True,
+        "secret_fields": ["password"],
+    },
+    "network.set_lan": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.lan.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "system.set_hostname": {
         "risk_level": "level_3_reversible_config",
         "capability": "system.set_hostname",
@@ -100,6 +112,54 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
     "dhcp.delete_lease": {
         "risk_level": "level_3_reversible_config",
         "capability": "dhcp.delete_lease",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "dhcp.set_pool": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "dhcp.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "dns.set_servers": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "dns.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.set_port_forward": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.port_forward",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.delete_port_forward": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.port_forward",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "client.set_blocked": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "clients.block",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "wifi.set_guest": {
+        "risk_level": "level_4_disruptive",
+        "capability": "wifi.guest",
+        "requires_confirmation": True,
+        "secret_fields": ["password", "key"],
+    },
+    "system.set_timezone": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "system.set_timezone",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "system.set_ntp": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "system.set_ntp",
         "requires_confirmation": True,
         "secret_fields": [],
     },
@@ -305,6 +365,210 @@ def _normalize_dhcp_lease_payload(
     return {"mac": mac, "ip": ip, "hostname": hostname}
 
 
+def _ipv4(payload: dict[str, Any], key: str, *, required: bool = True) -> str | None:
+    value = _optional_string(payload, key)
+    if not value:
+        if required:
+            raise HTTPException(status_code=400, detail=f"Field '{key}' is required")
+        return None
+    try:
+        return str(IPv4Address(value))
+    except AddressValueError as exc:
+        raise HTTPException(
+            status_code=400, detail=f"Field '{key}' is not a valid IPv4 address"
+        ) from exc
+
+
+def _integer(
+    payload: dict[str, Any],
+    key: str,
+    minimum: int,
+    maximum: int,
+    *,
+    required: bool = True,
+) -> int | None:
+    value = payload.get(key)
+    if value in (None, ""):
+        if required:
+            raise HTTPException(status_code=400, detail=f"Field '{key}' is required")
+        return None
+    try:
+        result = int(str(value).strip())
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400, detail=f"Field '{key}' must be an integer"
+        ) from exc
+    if result < minimum or result > maximum:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Field '{key}' must be between {minimum} and {maximum}",
+        )
+    return result
+
+
+def _string_list(
+    payload: dict[str, Any], key: str, *, required: bool = False
+) -> list[str]:
+    raw = payload.get(key, [])
+    values = raw if isinstance(raw, list) else re.split(r"[\s,;]+", str(raw).strip())
+    result = [str(value).strip() for value in values if str(value).strip()]
+    if required and not result:
+        raise HTTPException(status_code=400, detail=f"Field '{key}' is required")
+    if len(result) > 8:
+        raise HTTPException(
+            status_code=400, detail=f"Field '{key}' contains too many values"
+        )
+    return result
+
+
+def _normalize_wan_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    interface = _safe_identifier(
+        str(payload.get("interface") or "wan"), "interface", r"[A-Za-z0-9_.-]+"
+    )
+    protocol = str(payload.get("protocol") or "dhcp").lower()
+    if protocol not in {"dhcp", "static", "pppoe"}:
+        raise HTTPException(
+            status_code=400, detail="WAN protocol must be dhcp, static or pppoe"
+        )
+    result: dict[str, Any] = {"interface": interface, "protocol": protocol}
+    mtu = _integer(payload, "mtu", 576, 9200, required=False)
+    if mtu is not None:
+        result["mtu"] = mtu
+    dns = _string_list(payload, "dns")
+    for server in dns:
+        try:
+            IPv4Address(server)
+        except AddressValueError as exc:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid DNS server: {server}"
+            ) from exc
+    if dns:
+        result["dns"] = dns
+    if protocol == "static":
+        result.update(
+            ip_address=_ipv4(payload, "ip_address"), netmask=_ipv4(payload, "netmask")
+        )
+        gateway = _ipv4(payload, "gateway", required=False)
+        if gateway:
+            result["gateway"] = gateway
+    elif protocol == "pppoe":
+        result["username"] = _require_string(payload, "username", max_length=128)
+        result["password"] = _require_string(payload, "password", max_length=128)
+    return result
+
+
+def _normalize_lan_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    interface = _safe_identifier(
+        str(payload.get("interface") or "lan"), "interface", r"[A-Za-z0-9_.-]+"
+    )
+    return {
+        "interface": interface,
+        "ip_address": _ipv4(payload, "ip_address"),
+        "netmask": _ipv4(payload, "netmask"),
+    }
+
+
+def _normalize_dhcp_pool_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    interface = _safe_identifier(
+        str(payload.get("interface") or "lan"), "interface", r"[A-Za-z0-9_.-]+"
+    )
+    leasetime = _require_string(payload, "leasetime", max_length=12).lower()
+    _safe_identifier(leasetime, "leasetime", r"[1-9][0-9]*[mh]")
+    return {
+        "interface": interface,
+        "start": _integer(payload, "start", 1, 254),
+        "limit": _integer(payload, "limit", 1, 253),
+        "leasetime": leasetime,
+    }
+
+
+def _normalize_dns_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    servers = _string_list(payload, "servers", required=True)
+    for server in servers:
+        try:
+            IPv4Address(server)
+        except AddressValueError as exc:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid DNS server: {server}"
+            ) from exc
+    return {"servers": servers}
+
+
+def _normalize_port_forward_payload(
+    payload: dict[str, Any], *, delete: bool = False
+) -> dict[str, Any]:
+    name = _safe_identifier(
+        _require_string(payload, "name", max_length=40), "name", r"[A-Za-z0-9_.-]+"
+    )
+    if delete:
+        return {"name": name}
+    protocol = str(payload.get("protocol") or "tcp").lower()
+    if protocol not in {"tcp", "udp", "tcpudp"}:
+        raise HTTPException(
+            status_code=400, detail="Protocol must be tcp, udp or tcpudp"
+        )
+    return {
+        "name": name,
+        "protocol": protocol,
+        "external_port": _integer(payload, "external_port", 1, 65535),
+        "internal_ip": _ipv4(payload, "internal_ip"),
+        "internal_port": _integer(payload, "internal_port", 1, 65535),
+    }
+
+
+def _normalize_client_block_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload.get("blocked"), bool):
+        raise HTTPException(
+            status_code=400, detail="Field 'blocked' must be provided as boolean"
+        )
+    return {
+        "mac": _normalize_mac(_require_string(payload, "mac", max_length=17)),
+        "blocked": payload["blocked"],
+    }
+
+
+def _normalize_guest_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload.get("enabled"), bool):
+        raise HTTPException(
+            status_code=400, detail="Field 'enabled' must be provided as boolean"
+        )
+    result: dict[str, Any] = {"enabled": payload["enabled"]}
+    if payload["enabled"]:
+        result["ssid"] = _require_string(payload, "ssid", max_length=32)
+        result["password"] = _require_string(
+            payload, "password", min_length=8, max_length=63
+        )
+    radio = _optional_string(payload, "radio")
+    if radio:
+        result["radio"] = _safe_identifier(radio, "radio", r"[A-Za-z0-9_.@\[\]-]+")
+    return result
+
+
+def _normalize_timezone_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    zonename = _safe_identifier(
+        _require_string(payload, "zonename", max_length=64),
+        "zonename",
+        r"[A-Za-z0-9_+./-]+",
+    )
+    timezone = _safe_identifier(
+        _require_string(payload, "timezone", max_length=64),
+        "timezone",
+        r"[A-Za-z0-9_+,:./<>-]+",
+    )
+    return {"zonename": zonename, "timezone": timezone}
+
+
+def _normalize_ntp_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload.get("enabled"), bool):
+        raise HTTPException(
+            status_code=400, detail="Field 'enabled' must be provided as boolean"
+        )
+    servers = _string_list(payload, "servers", required=payload["enabled"])
+    for server in servers:
+        _safe_identifier(server, "servers", r"[A-Za-z0-9_.:-]+")
+    return {"enabled": payload["enabled"], "servers": servers}
+
+
 def _normalize_diagnostics_payload(payload: dict[str, Any]) -> dict[str, Any]:
     checks = payload.get("checks")
     if checks in (None, [], ()):
@@ -373,6 +637,10 @@ def validate_command_payload(
         return _normalize_wifi_country_payload(normalized_payload)
     if command_type == "network.interface_restart":
         return _normalize_interface_payload(normalized_payload)
+    if command_type == "network.set_wan":
+        return _normalize_wan_payload(normalized_payload)
+    if command_type == "network.set_lan":
+        return _normalize_lan_payload(normalized_payload)
     if command_type == "system.set_hostname":
         return _normalize_hostname_payload(normalized_payload)
     if command_type == "system.restart_service":
@@ -381,6 +649,22 @@ def validate_command_payload(
         return _normalize_dhcp_lease_payload(normalized_payload)
     if command_type == "dhcp.delete_lease":
         return _normalize_dhcp_lease_payload(normalized_payload, delete=True)
+    if command_type == "dhcp.set_pool":
+        return _normalize_dhcp_pool_payload(normalized_payload)
+    if command_type == "dns.set_servers":
+        return _normalize_dns_payload(normalized_payload)
+    if command_type == "firewall.set_port_forward":
+        return _normalize_port_forward_payload(normalized_payload)
+    if command_type == "firewall.delete_port_forward":
+        return _normalize_port_forward_payload(normalized_payload, delete=True)
+    if command_type == "client.set_blocked":
+        return _normalize_client_block_payload(normalized_payload)
+    if command_type == "wifi.set_guest":
+        return _normalize_guest_payload(normalized_payload)
+    if command_type == "system.set_timezone":
+        return _normalize_timezone_payload(normalized_payload)
+    if command_type == "system.set_ntp":
+        return _normalize_ntp_payload(normalized_payload)
     if command_type == "diagnostics.run":
         return _normalize_diagnostics_payload(normalized_payload)
     if command_type == "agent.set_auto_update":
@@ -407,6 +691,25 @@ def build_command_payload_from_web_form(
     mac: str = "",
     ip: str = "",
     diagnostics_checks: list[str] | None = None,
+    protocol: str = "",
+    ip_address: str = "",
+    netmask: str = "",
+    gateway: str = "",
+    dns: str = "",
+    username: str = "",
+    password: str = "",
+    mtu: str = "",
+    start: str = "",
+    limit: str = "",
+    leasetime: str = "",
+    servers: str = "",
+    name: str = "",
+    external_port: str = "",
+    internal_ip: str = "",
+    internal_port: str = "",
+    blocked: str = "true",
+    zonename: str = "",
+    timezone: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -423,6 +726,24 @@ def build_command_payload_from_web_form(
         payload = {"country": country, "radio": radio}
     elif command_type == "network.interface_restart":
         payload = {"interface": interface}
+    elif command_type == "network.set_wan":
+        payload = {
+            "interface": interface or "wan",
+            "protocol": protocol,
+            "ip_address": ip_address,
+            "netmask": netmask,
+            "gateway": gateway,
+            "dns": dns,
+            "username": username,
+            "password": password,
+            "mtu": mtu,
+        }
+    elif command_type == "network.set_lan":
+        payload = {
+            "interface": interface or "lan",
+            "ip_address": ip_address,
+            "netmask": netmask,
+        }
     elif command_type == "system.set_hostname":
         payload = {"hostname": hostname}
     elif command_type == "system.restart_service":
@@ -431,6 +752,38 @@ def build_command_payload_from_web_form(
         payload = {"mac": mac, "ip": ip, "hostname": hostname}
     elif command_type == "dhcp.delete_lease":
         payload = {"mac": mac}
+    elif command_type == "dhcp.set_pool":
+        payload = {
+            "interface": interface or "lan",
+            "start": start,
+            "limit": limit,
+            "leasetime": leasetime,
+        }
+    elif command_type == "dns.set_servers":
+        payload = {"servers": servers}
+    elif command_type == "firewall.set_port_forward":
+        payload = {
+            "name": name,
+            "protocol": protocol,
+            "external_port": external_port,
+            "internal_ip": internal_ip,
+            "internal_port": internal_port,
+        }
+    elif command_type == "firewall.delete_port_forward":
+        payload = {"name": name}
+    elif command_type == "client.set_blocked":
+        payload = {"mac": mac, "blocked": blocked.lower() == "true"}
+    elif command_type == "wifi.set_guest":
+        payload = {
+            "enabled": enabled.lower() == "true",
+            "ssid": ssid,
+            "password": wifi_password,
+            "radio": radio,
+        }
+    elif command_type == "system.set_timezone":
+        payload = {"zonename": zonename, "timezone": timezone}
+    elif command_type == "system.set_ntp":
+        payload = {"enabled": enabled.lower() == "true", "servers": servers}
     elif command_type == "agent.set_auto_update":
         payload = {"enabled": enabled.lower() == "true"}
     elif command_type == "agent.set_interval":

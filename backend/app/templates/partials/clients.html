@@ -26,6 +26,14 @@
         <button class="button button--secondary button--small" type="submit">Удалить lease</button>
       </form>
       {% endif %}
+      {% if supports.clients_block and client.mac %}
+      <form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Изменить доступ в интернет для {{ client.mac }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="client.set_blocked"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><input type="hidden" name="blocked" value="true"><button class="button button--secondary button--small" type="submit">Заблокировать интернет</button>
+      </form>
+      <form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="client.set_blocked"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><input type="hidden" name="blocked" value="false"><button class="button button--secondary button--small" type="submit">Вернуть интернет</button>
+      </form>
+      {% endif %}
     </article>
     {% else %}
     <div class="empty-inline">Клиенты пока не обнаружены. Данные появятся после следующей telemetry.</div>
@@ -44,5 +52,11 @@
       <span class="risk-badge">risk: level 3</span>
     </div>
   </form>
+  {% endif %}
+  {% if supports.network_lan_configure or supports.dhcp_configure %}
+  <div class="settings-grid section">
+    {% if supports.network_lan_configure %}<form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Адрес панели роутера изменится. Продолжить?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.set_lan"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="interface" value="lan"><h3>Адрес домашней сети</h3><label>IPv4 роутера<input name="ip_address" required value="192.168.1.1"></label><label>Маска<input name="netmask" required value="255.255.255.0"></label><div class="button-row"><button type="submit">Сохранить LAN</button><span class="risk-badge risk-badge--danger">risk: level 4</span></div></form>{% endif %}
+    {% if supports.dhcp_configure %}<form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.set_pool"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="interface" value="lan"><h3>Пул DHCP</h3><div class="form-grid"><label>Начало<input name="start" type="number" min="1" max="254" value="100"></label><label>Количество<input name="limit" type="number" min="1" max="253" value="150"></label></div><label>Срок аренды<input name="leasetime" value="12h" pattern="[1-9][0-9]*[mh]"></label><div class="button-row"><button type="submit">Сохранить DHCP</button><span class="risk-badge">risk: level 3</span></div></form>{% endif %}
+  </div>
   {% endif %}
 </section>

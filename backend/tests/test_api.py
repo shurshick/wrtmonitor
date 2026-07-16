@@ -45,6 +45,12 @@ def test_allowed_commands_are_explicit():
     assert "shell.exec" not in ALLOWED_COMMANDS
 
 
+def test_web_timestamp_filter_accepts_command_history_iso_strings():
+    assert (
+        main.format_timestamp("2026-07-16T10:49:59+00:00") == "16.07.2026 10:49:59 UTC"
+    )
+
+
 def test_password_command_payload_is_redacted_for_clients():
     assert public_command_payload("wifi.set_password", {"key": "secret-pass"}) == {
         "key": "********"

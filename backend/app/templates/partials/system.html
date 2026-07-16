@@ -35,4 +35,10 @@
   {% else %}
   <p class="muted">Команда скрыта: агент ещё не подтвердил поддержку перезагрузки.</p>
   {% endif %}
+  {% if supports.system_timezone %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_timezone"><input type="hidden" name="confirmed" value="true"><h3>Часовой пояс</h3><label>Регион<input name="zonename" required value="Europe/Moscow"></label><label>POSIX timezone<input name="timezone" required value="MSK-3"></label><div class="button-row"><button type="submit">Сохранить время</button><span class="risk-badge">risk: level 3</span></div></form>
+  {% endif %}
+  {% if supports.system_ntp %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_ntp"><input type="hidden" name="confirmed" value="true"><h3>Синхронизация времени</h3><label>Состояние<select name="enabled"><option value="true">Включена</option><option value="false">Выключена</option></select></label><label>NTP-серверы<input name="servers" value="0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org"></label><div class="button-row"><button type="submit">Сохранить NTP</button><span class="risk-badge">risk: level 3</span></div></form>
+  {% endif %}
 </section>

@@ -304,6 +304,63 @@ execute_command() {
             result="$(command_success_result "network restart scheduled")"
             (sleep 2; /etc/init.d/network restart) >/dev/null 2>&1 &
             ;;
+        network.set_wan)
+            payload_file="/tmp/wrtmonitor-command-payload"
+            printf '%s' "$command_payload" >"$payload_file"
+            wan_interface="$(json_get_string "$payload_file" '@.interface')"
+            wan_protocol="$(json_get_string "$payload_file" '@.protocol')"
+            wan_ip="$(json_get_string "$payload_file" '@.ip_address')"
+            wan_netmask="$(json_get_string "$payload_file" '@.netmask')"
+            wan_gateway="$(json_get_string "$payload_file" '@.gateway')"
+            wan_username="$(json_get_string "$payload_file" '@.username')"
+            wan_password="$(json_get_string "$payload_file" '@.password')"
+            wan_mtu="$(json_get_number "$payload_file" '@.mtu')"
+            wan_dns="$(jsonfilter -i "$payload_file" -e '@.dns[*]' 2>/dev/null || true)"
+            rm -f "$payload_file"
+            backup_file="$(backup_config network "$command_id" "$command_type" || true)"
+            [ -n "$wan_interface" ] || wan_interface="wan"
+            if [ -z "$backup_file" ]; then
+                status="failed"; result="$(command_failed_result "failed to create network backup")"
+            else
+                uci set "network.$wan_interface=interface" && uci set "network.$wan_interface.proto=$wan_protocol" || status="failed"
+                for option in ipaddr netmask gateway username password mtu dns peerdns; do uci -q delete "network.$wan_interface.$option" || true; done
+                case "$wan_protocol" in
+                    static)
+                        uci set "network.$wan_interface.ipaddr=$wan_ip" && uci set "network.$wan_interface.netmask=$wan_netmask" || status="failed"
+                        [ -z "$wan_gateway" ] || uci set "network.$wan_interface.gateway=$wan_gateway" || status="failed"
+                        ;;
+                    pppoe)
+                        uci set "network.$wan_interface.username=$wan_username" && uci set "network.$wan_interface.password=$wan_password" || status="failed"
+                        ;;
+                    dhcp) ;;
+                    *) status="failed" ;;
+                esac
+                [ -z "$wan_mtu" ] || uci set "network.$wan_interface.mtu=$wan_mtu" || status="failed"
+                if [ -n "$wan_dns" ]; then
+                    uci set "network.$wan_interface.peerdns=0" || status="failed"
+                    printf '%s\n' "$wan_dns" | while IFS= read -r server; do [ -z "$server" ] || uci add_list "network.$wan_interface.dns=$server"; done
+                fi
+                uci commit network || status="failed"
+                if [ "$status" = "done" ]; then
+                    result="$(command_success_result "WAN configuration saved" "\"backup\":\"$(json_escape "$backup_file")\",\"interface\":\"$(json_escape "$wan_interface")\",\"protocol\":\"$(json_escape "$wan_protocol")\"")"
+                    (sleep 2; ifdown "$wan_interface"; ifup "$wan_interface") >/dev/null 2>&1 &
+                else result="$(command_failed_result "failed to configure WAN")"; fi
+            fi
+            ;;
+        network.set_lan)
+            payload_file="/tmp/wrtmonitor-command-payload"
+            printf '%s' "$command_payload" >"$payload_file"
+            lan_interface="$(json_get_string "$payload_file" '@.interface')"
+            lan_ip="$(json_get_string "$payload_file" '@.ip_address')"
+            lan_netmask="$(json_get_string "$payload_file" '@.netmask')"
+            rm -f "$payload_file"
+            [ -n "$lan_interface" ] || lan_interface="lan"
+            backup_file="$(backup_config network "$command_id" "$command_type" || true)"
+            if [ -n "$backup_file" ] && uci set "network.$lan_interface=interface" && uci set "network.$lan_interface.proto=static" && uci set "network.$lan_interface.ipaddr=$lan_ip" && uci set "network.$lan_interface.netmask=$lan_netmask" && uci commit network; then
+                result="$(command_success_result "LAN configuration saved; connection address may change" "\"backup\":\"$(json_escape "$backup_file")\",\"interface\":\"$(json_escape "$lan_interface")\",\"ip_address\":\"$(json_escape "$lan_ip")\"")"
+                (sleep 3; /etc/init.d/network restart) >/dev/null 2>&1 &
+            else status="failed"; result="$(command_failed_result "failed to configure LAN")"; fi
+            ;;
         system.set_hostname)
             printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
             hostname_value="$(json_get_string /tmp/wrtmonitor-command-payload '@.hostname')"
@@ -383,6 +440,82 @@ execute_command() {
                 status="failed"
                 result="$(command_failed_result "static DHCP lease not found")"
             fi
+            ;;
+        dhcp.set_pool)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
+            pool_interface="$(json_get_string "$payload_file" '@.interface')"; pool_start="$(json_get_number "$payload_file" '@.start')"; pool_limit="$(json_get_number "$payload_file" '@.limit')"; pool_leasetime="$(json_get_string "$payload_file" '@.leasetime')"; rm -f "$payload_file"
+            [ -n "$pool_interface" ] || pool_interface="lan"
+            backup_file="$(backup_config dhcp "$command_id" "$command_type" || true)"
+            if [ -n "$backup_file" ] && uci set "dhcp.$pool_interface=dhcp" && uci set "dhcp.$pool_interface.interface=$pool_interface" && uci set "dhcp.$pool_interface.start=$pool_start" && uci set "dhcp.$pool_interface.limit=$pool_limit" && uci set "dhcp.$pool_interface.leasetime=$pool_leasetime" && uci commit dhcp && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then
+                result="$(command_success_result "DHCP pool updated" "\"backup\":\"$(json_escape "$backup_file")\"")"
+            else status="failed"; result="$(command_failed_result "failed to update DHCP pool")"; fi
+            ;;
+        dns.set_servers)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; dns_servers="$(jsonfilter -i "$payload_file" -e '@.servers[*]' 2>/dev/null || true)"; rm -f "$payload_file"
+            backup_file="$(backup_config dhcp "$command_id" "$command_type" || true)"
+            if [ -n "$backup_file" ] && [ -n "$dns_servers" ]; then
+                uci -q delete 'dhcp.@dnsmasq[0].server' || true
+                printf '%s\n' "$dns_servers" | while IFS= read -r server; do [ -z "$server" ] || uci add_list "dhcp.@dnsmasq[0].server=$server"; done
+                if uci commit dhcp && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then result="$(command_success_result "DNS servers updated" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "failed to update DNS servers")"; fi
+            else status="failed"; result="$(command_failed_result "DNS servers or backup are unavailable")"; fi
+            ;;
+        firewall.set_port_forward)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
+            forward_name="$(json_get_string "$payload_file" '@.name')"; forward_proto="$(json_get_string "$payload_file" '@.protocol')"; external_port="$(json_get_number "$payload_file" '@.external_port')"; internal_ip="$(json_get_string "$payload_file" '@.internal_ip')"; internal_port="$(json_get_number "$payload_file" '@.internal_port')"; rm -f "$payload_file"
+            forward_ref="wrtmonitor_redirect_$forward_name"; [ "$forward_proto" != "tcpudp" ] || forward_proto="tcp udp"
+            backup_file="$(backup_config firewall "$command_id" "$command_type" || true)"
+            if [ -n "$backup_file" ] && uci set "firewall.$forward_ref=redirect" && uci set "firewall.$forward_ref.name=WrtMonitor-$forward_name" && uci set "firewall.$forward_ref.src=wan" && uci set "firewall.$forward_ref.dest=lan" && uci set "firewall.$forward_ref.proto=$forward_proto" && uci set "firewall.$forward_ref.src_dport=$external_port" && uci set "firewall.$forward_ref.dest_ip=$internal_ip" && uci set "firewall.$forward_ref.dest_port=$internal_port" && uci set "firewall.$forward_ref.target=DNAT" && uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then
+                result="$(command_success_result "port forwarding rule saved" "\"backup\":\"$(json_escape "$backup_file")\",\"name\":\"$(json_escape "$forward_name")\"")"
+            else status="failed"; result="$(command_failed_result "failed to save port forwarding rule")"; fi
+            ;;
+        firewall.delete_port_forward)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; forward_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; forward_ref="wrtmonitor_redirect_$forward_name"
+            backup_file="$(backup_config firewall "$command_id" "$command_type" || true)"
+            if [ -n "$backup_file" ] && uci -q delete "firewall.$forward_ref" && uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "port forwarding rule deleted" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "port forwarding rule not found")"; fi
+            ;;
+        client.set_blocked)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; client_mac="$(json_get_string "$payload_file" '@.mac')"; client_blocked="$(json_get_bool "$payload_file" '@.blocked')"; rm -f "$payload_file"
+            client_ref="wrtmonitor_block_$(printf '%s' "$client_mac" | tr -d ':')"; backup_file="$(backup_config firewall "$command_id" "$command_type" || true)"
+            if [ -z "$backup_file" ]; then status="failed"; result="$(command_failed_result "failed to create firewall backup")"
+            elif [ "$client_blocked" = "true" ]; then
+                if uci set "firewall.$client_ref=rule" && uci set "firewall.$client_ref.name=WrtMonitor block $client_mac" && uci set "firewall.$client_ref.src=lan" && uci set "firewall.$client_ref.dest=wan" && uci set "firewall.$client_ref.src_mac=$client_mac" && uci set "firewall.$client_ref.target=REJECT" && uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "client internet access blocked" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\"")"; else status="failed"; result="$(command_failed_result "failed to block client")"; fi
+            else
+                uci -q delete "firewall.$client_ref" || true
+                if uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "client internet access restored" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\"")"; else status="failed"; result="$(command_failed_result "failed to unblock client")"; fi
+            fi
+            ;;
+        wifi.set_guest)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
+            [ -n "$guest_radio" ] || guest_radio="$(resolve_wifi_radio "" || true)"; [ -n "$guest_radio" ] || guest_radio="radio0"
+            wireless_backup="$(backup_config wireless "$command_id" "$command_type" || true)"; network_backup="$(backup_config network "$command_id" "$command_type" || true)"; dhcp_backup="$(backup_config dhcp "$command_id" "$command_type" || true)"; firewall_backup="$(backup_config firewall "$command_id" "$command_type" || true)"
+            if [ -z "$wireless_backup" ] || [ -z "$network_backup" ] || [ -z "$dhcp_backup" ] || [ -z "$firewall_backup" ]; then status="failed"; result="$(command_failed_result "failed to create guest network backups")"
+            else
+                uci set network.wrtmonitor_guest=interface; uci set network.wrtmonitor_guest.proto=static; uci set network.wrtmonitor_guest.ipaddr=192.168.3.1; uci set network.wrtmonitor_guest.netmask=255.255.255.0
+                uci set dhcp.wrtmonitor_guest=dhcp; uci set dhcp.wrtmonitor_guest.interface=wrtmonitor_guest; uci set dhcp.wrtmonitor_guest.start=100; uci set dhcp.wrtmonitor_guest.limit=150; uci set dhcp.wrtmonitor_guest.leasetime=12h
+                uci set firewall.wrtmonitor_guest=zone; uci set firewall.wrtmonitor_guest.name=wrtmonitor_guest; uci add_list firewall.wrtmonitor_guest.network=wrtmonitor_guest; uci set firewall.wrtmonitor_guest.input=REJECT; uci set firewall.wrtmonitor_guest.output=ACCEPT; uci set firewall.wrtmonitor_guest.forward=REJECT
+                uci set firewall.wrtmonitor_guest_forward=forwarding; uci set firewall.wrtmonitor_guest_forward.src=wrtmonitor_guest; uci set firewall.wrtmonitor_guest_forward.dest=wan
+                uci set wireless.wrtmonitor_guest=wifi-iface; uci set wireless.wrtmonitor_guest.device="$guest_radio"; uci set wireless.wrtmonitor_guest.network=wrtmonitor_guest; uci set wireless.wrtmonitor_guest.mode=ap; uci set wireless.wrtmonitor_guest.isolate=1
+                if [ "$guest_enabled" = "true" ]; then uci set wireless.wrtmonitor_guest.disabled=0; uci set wireless.wrtmonitor_guest.ssid="$guest_ssid"; uci set wireless.wrtmonitor_guest.encryption=psk2; uci set wireless.wrtmonitor_guest.key="$guest_password"; else uci set wireless.wrtmonitor_guest.disabled=1; fi
+                if uci commit network && uci commit dhcp && uci commit firewall && uci commit wireless; then result="$(command_success_result "guest Wi-Fi configuration saved")"; (sleep 2; /etc/init.d/network restart; /etc/init.d/dnsmasq restart; /etc/init.d/firewall reload; wifi reload) >/dev/null 2>&1 & else status="failed"; result="$(command_failed_result "failed to configure guest Wi-Fi")"; fi
+            fi
+            ;;
+        system.set_timezone)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; zonename="$(json_get_string "$payload_file" '@.zonename')"; timezone="$(json_get_string "$payload_file" '@.timezone')"; rm -f "$payload_file"; backup_file="$(backup_config system "$command_id" "$command_type" || true)"
+            if [ -n "$backup_file" ] && uci set "system.@system[0].zonename=$zonename" && uci set "system.@system[0].timezone=$timezone" && uci commit system; then result="$(command_success_result "timezone updated" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "failed to update timezone")"; fi
+            ;;
+        system.set_ntp)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; ntp_enabled="$(json_get_bool "$payload_file" '@.enabled')"; ntp_servers="$(jsonfilter -i "$payload_file" -e '@.servers[*]' 2>/dev/null || true)"; rm -f "$payload_file"; backup_file="$(backup_config system "$command_id" "$command_type" || true)"
+            if [ -n "$backup_file" ]; then
+                uci set system.ntp=timeserver
+                if [ "$ntp_enabled" = "true" ]; then
+                    uci set system.ntp.enabled=1
+                else
+                    uci set system.ntp.enabled=0
+                fi
+                uci -q delete system.ntp.server || true
+                printf '%s\n' "$ntp_servers" | while IFS= read -r server; do [ -z "$server" ] || uci add_list "system.ntp.server=$server"; done
+                if uci commit system && /etc/init.d/sysntpd restart >/dev/null 2>&1; then result="$(command_success_result "NTP settings updated" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "failed to update NTP settings")"; fi
+            else status="failed"; result="$(command_failed_result "failed to create system backup")"; fi
             ;;
         diagnostics.run)
             printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload

@@ -2,7 +2,7 @@
 
 Цель проекта - максимально полное удалённое управление OpenWrt через Android и Web UI. Ориентир по удобству - мобильное приложение Keenetic, но реализация строится на возможностях OpenWrt, UCI, ubus и capability report конкретного агента.
 
-## Готово: v0.2.0-rc2
+## Готово: v0.3.0-rc1
 
 - единая telemetry schema v2;
 - система, ресурсы, conntrack и ключевые сервисы;
@@ -16,12 +16,12 @@
 - безопасное обновление агента и rollback;
 - сервер на PostgreSQL, Docker/TrueNAS deployment и Android APK.
 - Web UI разделён на рабочие разделы, Android получил отдельный обзор сети.
+- WAN DHCP/static/PPPoE, DNS, gateway и MTU;
+- LAN address, DHCP pool и NTP/timezone;
+- проброс портов, блокировка клиентов и гостевая Wi-Fi сеть.
 
-## Следующий слой: интернет и адресация
+## Следующий слой: расширенная адресация
 
-- полноценная настройка WAN: DHCP, static IPv4, PPPoE;
-- DNS, gateway и MTU;
-- LAN address и DHCP pool;
 - IPv6/RA/DHCPv6;
 - несколько WAN и переключение приоритета;
 - проверка конфигурации до применения и автоматический rollback при потере связи.

@@ -102,4 +102,10 @@
     <div class="button-row"><button type="submit">Изменить регион</button><span class="risk-badge">risk: level 3</span></div>
   </form>
   {% endif %}
+  {% if supports.wifi_guest %}
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Применить настройки гостевой сети?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_guest"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="radio" value="{{ radios[0].id if radios else '' }}">
+    <h3>Гостевая сеть</h3><label>Состояние<select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select></label><label>SSID<input name="ssid" maxlength="32" value="Guest Wi-Fi"></label><label>Пароль<input name="wifi_password" type="password" minlength="8" maxlength="63" autocomplete="new-password"></label><div class="button-row"><button type="submit">Применить гостевую сеть</button><span class="risk-badge risk-badge--danger">risk: level 4</span></div>
+  </form>
+  {% endif %}
 </section>

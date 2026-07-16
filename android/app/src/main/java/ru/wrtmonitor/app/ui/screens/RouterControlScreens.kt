@@ -44,6 +44,9 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var hostname by remember { mutableStateOf("") }
     var mac by remember { mutableStateOf("") }
     var ip by remember { mutableStateOf("") }
+    var poolStart by remember { mutableStateOf("100") }
+    var poolLimit by remember { mutableStateOf("150") }
+    var leaseTime by remember { mutableStateOf("12h") }
     var message by remember { mutableStateOf("") }
     var pendingCommand by remember { mutableStateOf<Pair<String, JSONObject>?>(null) }
 
@@ -98,6 +101,16 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.delete_lease)) }
                 }
+                if (capabilities["clients.block"] == true && clientMac.isNotBlank()) {
+                    TextButton(
+                        onClick = { pendingCommand = "client.set_blocked" to JSONObject().put("mac", clientMac).put("blocked", true) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.block_client)) }
+                    TextButton(
+                        onClick = { pendingCommand = "client.set_blocked" to JSONObject().put("mac", clientMac).put("blocked", false) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.unblock_client)) }
+                }
             }
         }
     }
@@ -114,6 +127,17 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                     enabled = hostname.isNotBlank() && mac.length >= 17 && ip.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.save_lease)) }
+            }
+        }
+    }
+    if (capabilities["dhcp.configure"] == true) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(R.string.dhcp_pool), style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(poolStart, { poolStart = it }, label = { Text(stringResource(R.string.pool_start)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(poolLimit, { poolLimit = it }, label = { Text(stringResource(R.string.pool_size)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(leaseTime, { leaseTime = it }, label = { Text(stringResource(R.string.lease_time)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = { pendingCommand = "dhcp.set_pool" to JSONObject().put("interface", "lan").put("start", poolStart).put("limit", poolLimit).put("leasetime", leaseTime) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save_dhcp)) }
             }
         }
     }
@@ -141,6 +165,9 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var enabled by remember { mutableStateOf(true) }
     var channel by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("") }
+    var guestSsid by remember { mutableStateOf("Guest Wi-Fi") }
+    var guestPassword by remember { mutableStateOf("") }
+    var guestEnabled by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
     var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
@@ -265,6 +292,18 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.change_country)) }
             }
+            if (capabilities["wifi.guest"] == true) {
+                Text(stringResource(R.string.guest_wifi), style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(guestSsid, { guestSsid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(guestPassword, { guestPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+                InfoRow(stringResource(R.string.wifi_state), if (guestEnabled) stringResource(R.string.wifi_enabled_state) else stringResource(R.string.wifi_disabled_state))
+                Switch(checked = guestEnabled, onCheckedChange = { guestEnabled = it })
+                Button(
+                    onClick = { pendingAction = { queue("wifi.set_guest", JSONObject().put("enabled", guestEnabled).put("ssid", guestSsid).put("password", guestPassword).put("radio", radioId), wifiToggleQueued) } },
+                    enabled = !guestEnabled || (guestSsid.isNotBlank() && guestPassword.length >= 8),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.apply_guest_wifi)) }
+            }
 
             if (capabilities.isEmpty()) {
                 Text(
@@ -301,6 +340,20 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var message by remember { mutableStateOf("") }
     var interfaceName by remember { mutableStateOf("wan") }
+    var wanProtocol by remember { mutableStateOf("dhcp") }
+    var wanIp by remember { mutableStateOf("") }
+    var wanNetmask by remember { mutableStateOf("") }
+    var wanGateway by remember { mutableStateOf("") }
+    var wanDns by remember { mutableStateOf("") }
+    var wanUsername by remember { mutableStateOf("") }
+    var wanPassword by remember { mutableStateOf("") }
+    var lanIp by remember { mutableStateOf("192.168.1.1") }
+    var lanNetmask by remember { mutableStateOf("255.255.255.0") }
+    var dnsServers by remember { mutableStateOf("1.1.1.1, 8.8.8.8") }
+    var forwardName by remember { mutableStateOf("") }
+    var forwardExternalPort by remember { mutableStateOf("") }
+    var forwardInternalIp by remember { mutableStateOf("") }
+    var forwardInternalPort by remember { mutableStateOf("") }
     var pendingCommand by remember { mutableStateOf<Pair<String, JSONObject>?>(null) }
     val refresh: () -> Unit = {
         scope.launch {
@@ -385,6 +438,40 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.restart_network)) }
             }
+            if (capabilities["network.wan.configure"] == true) {
+                Text(stringResource(R.string.wan_settings), style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(wanProtocol, { wanProtocol = it.lowercase() }, label = { Text(stringResource(R.string.connection_type)) }, supportingText = { Text("dhcp / static / pppoe") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                if (wanProtocol == "static") {
+                    OutlinedTextField(wanIp, { wanIp = it }, label = { Text(stringResource(R.string.ip_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(wanNetmask, { wanNetmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(wanGateway, { wanGateway = it }, label = { Text(stringResource(R.string.gateway)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                }
+                if (wanProtocol == "pppoe") {
+                    OutlinedTextField(wanUsername, { wanUsername = it }, label = { Text(stringResource(R.string.username)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(wanPassword, { wanPassword = it }, label = { Text(stringResource(R.string.password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+                }
+                OutlinedTextField(wanDns, { wanDns = it }, label = { Text(stringResource(R.string.dns_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = { pendingCommand = "network.set_wan" to JSONObject().put("interface", "wan").put("protocol", wanProtocol).put("ip_address", wanIp).put("netmask", wanNetmask).put("gateway", wanGateway).put("dns", wanDns).put("username", wanUsername).put("password", wanPassword) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save_wan)) }
+            }
+            if (capabilities["network.lan.configure"] == true) {
+                Text(stringResource(R.string.lan_settings), style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(lanIp, { lanIp = it }, label = { Text(stringResource(R.string.router_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(lanNetmask, { lanNetmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = { pendingCommand = "network.set_lan" to JSONObject().put("interface", "lan").put("ip_address", lanIp).put("netmask", lanNetmask) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save_lan)) }
+            }
+            if (capabilities["dns.configure"] == true) {
+                OutlinedTextField(dnsServers, { dnsServers = it }, label = { Text(stringResource(R.string.dns_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = { pendingCommand = "dns.set_servers" to JSONObject().put("servers", dnsServers) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.apply_dns)) }
+            }
+            if (capabilities["firewall.port_forward"] == true) {
+                Text(stringResource(R.string.port_forwarding), style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(forwardName, { forwardName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(forwardExternalPort, { forwardExternalPort = it }, label = { Text(stringResource(R.string.external_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(forwardInternalIp, { forwardInternalIp = it }, label = { Text(stringResource(R.string.internal_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(forwardInternalPort, { forwardInternalPort = it }, label = { Text(stringResource(R.string.internal_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = { pendingCommand = "firewall.set_port_forward" to JSONObject().put("name", forwardName).put("protocol", "tcp").put("external_port", forwardExternalPort).put("internal_ip", forwardInternalIp).put("internal_port", forwardInternalPort) }, enabled = forwardName.isNotBlank() && forwardExternalPort.isNotBlank() && forwardInternalIp.isNotBlank() && forwardInternalPort.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_port_forward)) }
+                TextButton(onClick = { pendingCommand = "firewall.delete_port_forward" to JSONObject().put("name", forwardName) }, enabled = forwardName.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.delete_port_forward)) }
+            }
             if (message.isNotBlank()) Text(message, color = MaterialTheme.colorScheme.primary)
             TextButton(onClick = refresh, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.refresh)) }
         }
@@ -414,6 +501,9 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     var confirmReboot by remember { mutableStateOf(false) }
     var confirmAgentRollback by remember { mutableStateOf(false) }
     var hostnameValue by remember { mutableStateOf("") }
+    var zoneName by remember { mutableStateOf("Europe/Moscow") }
+    var timezoneValue by remember { mutableStateOf("MSK-3") }
+    var ntpServers by remember { mutableStateOf("0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org") }
     var pendingSystemCommand by remember { mutableStateOf<Pair<String, JSONObject>?>(null) }
     val refresh: () -> Unit = {
         scope.launch {
@@ -495,6 +585,16 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("${stringResource(R.string.restart_service)}: $service") }
                 }
+            }
+            if (capabilities["system.set_timezone"] == true) {
+                Text(stringResource(R.string.time_settings), style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(zoneName, { zoneName = it }, label = { Text(stringResource(R.string.timezone_region)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(timezoneValue, { timezoneValue = it }, label = { Text("POSIX timezone") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = { pendingSystemCommand = "system.set_timezone" to JSONObject().put("zonename", zoneName).put("timezone", timezoneValue) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save_time_settings)) }
+            }
+            if (capabilities["system.set_ntp"] == true) {
+                OutlinedTextField(ntpServers, { ntpServers = it }, label = { Text(stringResource(R.string.ntp_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = { pendingSystemCommand = "system.set_ntp" to JSONObject().put("enabled", true).put("servers", ntpServers) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.apply_ntp)) }
             }
 
             if (capabilities["system.reboot"] == true) {

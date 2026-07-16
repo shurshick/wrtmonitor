@@ -44,7 +44,7 @@
 
 ```json
 {
-  "version": "0.2.0-rc2",
+  "version": "0.3.0-rc1",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -110,12 +110,15 @@ Body:
 - `level_3_reversible_config`
 - `level_4_disruptive`
 
-### Управляющие команды v0.2.0-rc2
+### Управляющие команды v0.3.0-rc1
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`
-- `dhcp.set_lease`, `dhcp.delete_lease`
-- `system.set_hostname`, `system.restart_service`, `router.reboot`
+- `network.set_wan`, `network.set_lan`
+- `dhcp.set_lease`, `dhcp.delete_lease`, `dhcp.set_pool`, `dns.set_servers`
+- `firewall.set_port_forward`, `firewall.delete_port_forward`, `client.set_blocked`
+- `wifi.set_guest`
+- `system.set_hostname`, `system.restart_service`, `system.set_timezone`, `system.set_ntp`, `router.reboot`
 - `agent.update`, `agent.rollback`, `agent.set_auto_update`, `agent.set_interval`, `agent.disconnect`
 - `diagnostics.run`
 

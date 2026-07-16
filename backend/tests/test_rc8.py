@@ -38,6 +38,20 @@ def test_wifi_password_payload_is_masked():
     assert payload["iface"] == "@wifi-iface[0]"
 
 
+def test_wan_and_guest_passwords_are_masked():
+    assert public_command_payload(
+        "network.set_wan",
+        {"protocol": "pppoe", "username": "owner", "password": "secret"},
+    ) == {"protocol": "pppoe", "username": "owner", "password": "********"}
+    assert (
+        public_command_payload(
+            "wifi.set_guest",
+            {"enabled": True, "ssid": "Guest", "password": "secret-pass"},
+        )["password"]
+        == "********"
+    )
+
+
 def test_wifi_ssid_validation_rejects_control_chars():
     try:
         validate_command_payload("wifi.set_ssid", {"ssid": "bad\nssid"})
@@ -101,6 +115,83 @@ def test_dhcp_lease_validation_normalizes_mac_and_ipv4():
         "mac": "aa:bb:cc:dd:ee:ff",
         "ip": "192.168.1.50",
     }
+
+
+def test_wan_and_lan_management_payloads_are_normalized():
+    assert validate_command_payload(
+        "network.set_wan",
+        {
+            "interface": "wan",
+            "protocol": "static",
+            "ip_address": "192.0.2.2",
+            "netmask": "255.255.255.0",
+            "gateway": "192.0.2.1",
+            "dns": "1.1.1.1, 8.8.8.8",
+            "mtu": "1500",
+        },
+    ) == {
+        "interface": "wan",
+        "protocol": "static",
+        "ip_address": "192.0.2.2",
+        "netmask": "255.255.255.0",
+        "gateway": "192.0.2.1",
+        "dns": ["1.1.1.1", "8.8.8.8"],
+        "mtu": 1500,
+    }
+    assert (
+        validate_command_payload(
+            "network.set_lan",
+            {"ip_address": "192.168.10.1", "netmask": "255.255.255.0"},
+        )["interface"]
+        == "lan"
+    )
+
+
+def test_router_management_rejects_invalid_high_risk_payloads():
+    invalid = (
+        ("network.set_wan", {"protocol": "shell"}),
+        (
+            "firewall.set_port_forward",
+            {
+                "name": "bad;reboot",
+                "protocol": "tcp",
+                "external_port": 80,
+                "internal_ip": "192.168.1.2",
+                "internal_port": 80,
+            },
+        ),
+        ("dhcp.set_pool", {"start": 0, "limit": 150, "leasetime": "12h"}),
+        ("client.set_blocked", {"mac": "not-a-mac", "blocked": True}),
+    )
+    for command_type, payload in invalid:
+        try:
+            validate_command_payload(command_type, payload)
+        except Exception as exc:
+            assert exc.status_code == 400
+        else:
+            raise AssertionError(f"Expected {command_type} payload to be rejected")
+
+
+def test_guest_wifi_and_time_management_payloads():
+    assert (
+        validate_command_payload(
+            "wifi.set_guest",
+            {
+                "enabled": True,
+                "ssid": "Guests",
+                "password": "strong-password",
+                "radio": "radio0",
+            },
+        )["ssid"]
+        == "Guests"
+    )
+    assert validate_command_payload(
+        "system.set_timezone", {"zonename": "Europe/Moscow", "timezone": "MSK-3"}
+    ) == {"zonename": "Europe/Moscow", "timezone": "MSK-3"}
+    assert validate_command_payload(
+        "system.set_ntp",
+        {"enabled": True, "servers": "0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org"},
+    )["servers"] == ["0.openwrt.pool.ntp.org", "1.openwrt.pool.ntp.org"]
 
 
 def test_clients_and_system_telemetry_are_normalized():
