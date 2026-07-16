@@ -1,54 +1,40 @@
 {% extends "base.html" %}
-{% block title %}WrtMonitor - Устройства{% endblock %}
+{% block title %}WrtMonitor - Роутеры{% endblock %}
 {% block content %}
 <div class="page-heading">
   <div>
-    <p class="eyebrow">Сервер WrtMonitor</p>
-    <h1>Устройства</h1>
-    <p class="page-heading__description">Подключённые OpenWrt-роутеры и их последнее состояние.</p>
+    <p class="eyebrow">WrtMonitor</p>
+    <h1>Мои сети</h1>
+    <p class="page-heading__description">Роутеры и текущее состояние подключений.</p>
   </div>
   <form method="post" action="/logout">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button class="button--secondary" type="submit">Выйти</button>
   </form>
 </div>
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Устройство</th>
-        <th>Hostname</th>
-        <th>Модель</th>
-        <th>Прошивка</th>
-        <th>Статус</th>
-        <th>Последняя связь</th>
-        <th>Действия</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for device in devices %}
-      <tr>
-        <td><a href="/devices/{{ device.id }}">{{ device.name or device.hostname or 'Роутер' }}</a></td>
-        <td>{{ device.hostname or '—' }}</td>
-        <td>{{ device.model or '—' }}</td>
-        <td>{{ device.firmware or '—' }}</td>
-        <td><span class="status status--{{ device.status|lower }}">{{ device.status }}</span></td>
-        <td>{{ device.last_seen_at|timestamp }}</td>
-        <td>
-          {% if device.status == 'disabled' %}
-          <form method="post" action="/devices/{{ device.id }}/archive" onsubmit="return confirm('Удалить отключённый роутер из списка? История telemetry и команд останется в базе, но для повторного подключения потребуется заново зарегистрировать агент.');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="button--danger" type="submit">Удалить из списка</button>
-          </form>
-          {% else %}
-          <span class="muted">—</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% else %}
-      <tr><td class="empty-state" colspan="7">Роутеры пока не подключены</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="router-list">
+  {% for device in devices %}
+  <article class="router-card">
+    <a class="router-card__main" href="/devices/{{ device.id }}">
+      <span class="router-card__icon">R</span>
+      <span class="router-card__identity">
+        <strong>{{ device.name or device.hostname or 'Роутер' }}</strong>
+        <small>{{ device.model or 'OpenWrt-устройство' }}</small>
+      </span>
+      <span class="router-card__firmware">{{ device.firmware or 'Прошивка не определена' }}</span>
+      <span class="router-card__seen">Последняя связь<br><strong>{{ device.last_seen_at|timestamp }}</strong></span>
+      <span class="status status--{{ device.status|lower }}">{{ device.status }}</span>
+      <span class="router-card__arrow">&rarr;</span>
+    </a>
+    {% if device.status == 'disabled' %}
+    <form class="router-card__action" method="post" action="/devices/{{ device.id }}/archive" onsubmit="return confirm('Удалить отключённый роутер из списка? Для повторного подключения потребуется заново зарегистрировать агент.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button--danger button--small" type="submit">Удалить из списка</button>
+    </form>
+    {% endif %}
+  </article>
+  {% else %}
+  <div class="empty-state card"><h2>Роутеров пока нет</h2><p>Установите агент на OpenWrt и подключите его к этому серверу.</p></div>
+  {% endfor %}
 </div>
 {% endblock %}

@@ -44,7 +44,7 @@
 
 ```json
 {
-  "version": "0.2.0-rc1",
+  "version": "0.2.0-rc2",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -110,7 +110,7 @@ Body:
 - `level_3_reversible_config`
 - `level_4_disruptive`
 
-### Управляющие команды v0.2.0-rc1
+### Управляющие команды v0.2.0-rc2
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`

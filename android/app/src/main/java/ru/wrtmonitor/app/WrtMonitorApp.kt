@@ -174,7 +174,7 @@ fun WrtMonitorApp() {
             },
             bottomBar = {
                 NavigationBar {
-                    AppNavigationItem(Tab.Routers, tab, { tab = it }, Icons.Default.Router, R.string.nav_routers, Color(0xFF6D4BC3))
+                    AppNavigationItem(Tab.Routers, tab, { tab = it }, Icons.Default.Router, if (selectedDevice == null) R.string.nav_routers else R.string.nav_overview, Color(0xFF6D4BC3))
                     AppNavigationItem(Tab.Clients, tab, { tab = it }, Icons.Default.People, R.string.clients, Color(0xFF2FAE79))
                     AppNavigationItem(Tab.Wifi, tab, { tab = it }, Icons.Default.Wifi, R.string.wifi, Color(0xFF008577))
                     AppNavigationItem(Tab.Network, tab, { tab = it }, Icons.Default.Router, R.string.network, Color(0xFF1565C0))
@@ -205,11 +205,7 @@ fun WrtMonitorApp() {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     when (tab) {
-                        Tab.Routers -> DeviceDetailScreen(serverUrl, accessToken, device!!, expireSession) {
-                            selectedDevice = null
-                            tab = Tab.Routers
-                            deviceListRefreshNonce += 1
-                        }
+                        Tab.Routers -> DeviceDetailScreen(serverUrl, accessToken, device!!, expireSession)
 
                         Tab.Clients -> DeviceTabRequired(device) { ClientsControlScreen(serverUrl, accessToken, it, expireSession) }
                         Tab.Wifi -> DeviceTabRequired(device) { WifiControlScreen(serverUrl, accessToken, it, expireSession) }

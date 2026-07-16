@@ -33,7 +33,7 @@
   {% endif %}
   <div class="form-stack">
     {% if supports.agent_update %}
-    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.update">
       <input type="hidden" name="confirmed" value="true">
@@ -44,7 +44,7 @@
     </form>
     {% endif %}
     {% if supports.agent_update %}
-    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.set_auto_update">
       <input type="hidden" name="enabled" value="{{ 'false' if agent.get('auto_update_enabled') else 'true' }}">
@@ -53,7 +53,7 @@
     </form>
     {% endif %}
     {% if supports.agent_set_interval %}
-    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.set_interval">
       <input type="hidden" name="confirmed" value="true">
@@ -66,7 +66,7 @@
     </form>
     {% endif %}
     {% if supports.agent_rollback %}
-    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Выполнить rollback агента к предыдущей версии?');">
+    <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Выполнить rollback агента к предыдущей версии?');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="command_type" value="agent.rollback">
       <input type="hidden" name="confirmed" value="true">
@@ -79,7 +79,7 @@
     {% if supports.diagnostics %}
     <div class="control-subsection">
       <p class="control-subsection__title">Диагностика</p>
-      <form class="control-form control-form--diagnostics" method="post" action="/devices/{{ device.id }}/web-command">
+      <form class="control-form control-form--diagnostics" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="command_type" value="diagnostics.run">
         <input type="hidden" name="confirmed" value="true">

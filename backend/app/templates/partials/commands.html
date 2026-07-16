@@ -1,49 +1,27 @@
 <div>
-  <h2>Последние команды</h2>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Команда</th>
-          <th>Статус</th>
-          <th>Risk</th>
-          <th>Capability</th>
-          <th>Source</th>
-          <th>Payload</th>
-          <th>Результат</th>
-          <th>Создано</th>
-          <th>Взято</th>
-          <th>Завершено</th>
-          <th>TTL</th>
-          <th>Ошибка</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for command in commands %}
-        <tr>
-          <td><code>{{ command.command_type }}</code></td>
-          <td><span class="status status--{{ command.status|lower }}">{{ command.status }}</span></td>
-          <td>{{ command.risk_level or '-' }}</td>
-          <td><code>{{ command.capability or '-' }}</code></td>
-          <td>{{ command.source }}</td>
-          <td><code>{{ command.payload or {} }}</code></td>
-          <td><code>{{ command.result or {} }}</code></td>
-          <td>{{ command.created_at or '-' }}</td>
-          <td>{{ command.picked_at or '-' }}</td>
-          <td>{{ command.completed_at or '-' }}</td>
-          <td>{{ command.expires_at or '-' }}</td>
-          <td>{{ command.last_error or '-' }}</td>
-        </tr>
-        {% else %}
-        <tr><td class="empty-state" colspan="12">Команд пока нет</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="section-heading section-heading--compact"><p class="eyebrow">История</p><h2>Последние команды</h2></div>
+  <div class="command-list">
+    {% for command in commands %}
+    <article class="command-item">
+      <div class="command-item__main">
+        <code>{{ command.command_type }}</code>
+        <span class="status status--{{ command.status|lower }}">{{ command.status }}</span>
+      </div>
+      <div class="command-item__meta">
+        <span>Источник: {{ command.source }}</span>
+        <span>Создано: {{ command.created_at|timestamp if command.created_at else '—' }}</span>
+        {% if command.completed_at %}<span>Завершено: {{ command.completed_at|timestamp }}</span>{% endif %}
+      </div>
+      {% if command.last_error %}<p class="error">{{ command.last_error }}</p>{% endif %}
+      {% if command.payload or command.result %}
+      <details><summary>Технические данные</summary><pre>{{ {'payload': command.payload or {}, 'result': command.result or {}} }}</pre></details>
+      {% endif %}
+    </article>
+    {% else %}
+    <div class="empty-state card">Команд пока нет</div>
+    {% endfor %}
   </div>
   {% if latest_diagnostics %}
-  <div class="section">
-    <h3>Последняя диагностика</h3>
-    <pre class="raw-telemetry">{{ latest_diagnostics.result or {} }}</pre>
-  </div>
+  <details class="debug-panel section"><summary>Последняя диагностика</summary><pre class="raw-telemetry">{{ latest_diagnostics.result or {} }}</pre></details>
   {% endif %}
 </div>

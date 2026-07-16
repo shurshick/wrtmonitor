@@ -196,4 +196,17 @@
     <string name="service_restart_queued">Service restart command queued.</string>
     <string name="confirm_action">Confirm action</string>
     <string name="config_backup_notice">The agent will create a configuration backup before applying this change.</string>
+    <string name="nav_overview">Overview</string>
+    <string name="router_healthy">Network is working normally</string>
+    <string name="router_attention">Network needs attention</string>
+    <string name="last_contact_value">Last contact: %1$s</string>
+    <string name="internet">Internet</string>
+    <string name="home_network">Home network</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="no_ip_address">No IP address</string>
+    <string name="connected_devices">Connected devices</string>
+    <string name="radio_count_value">Radios: %1$d</string>
+    <string name="memory_value_mb">Memory: %1$d / %2$d MB free</string>
+    <string name="overview_navigation_hint">Use the tabs below for details and management.</string>
 </resources>

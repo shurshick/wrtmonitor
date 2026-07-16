@@ -305,7 +305,7 @@ def test_device_page_renders_agent_update_status(monkeypatch):
     client = TestClient(app)
     client.cookies.set("wrtmonitor_session", "token")
     try:
-        response = client.get(f"/devices/{device.id}")
+        response = client.get(f"/devices/{device.id}?section=management")
     finally:
         app.dependency_overrides.clear()
 
@@ -381,7 +381,7 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
     client = TestClient(app)
     client.cookies.set("wrtmonitor_session", "token")
     try:
-        response = client.get(f"/devices/{device.id}")
+        response = client.get(f"/devices/{device.id}?section=management")
     finally:
         app.dependency_overrides.clear()
 

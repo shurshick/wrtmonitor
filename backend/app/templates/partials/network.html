@@ -29,7 +29,7 @@
   </ul>
   {% endif %}
   {% if supports.network_read %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="network.interfaces">
     <input type="hidden" name="confirmed" value="true">
@@ -40,7 +40,7 @@
   </form>
   {% endif %}
   {% if supports.network_interface_restart %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Переподключить выбранный интерфейс? Связь может кратковременно пропасть.');">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Переподключить выбранный интерфейс? Связь может кратковременно пропасть.');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="network.interface_restart">
     <input type="hidden" name="confirmed" value="true">
@@ -49,7 +49,7 @@
   </form>
   {% endif %}
   {% if supports.network_restart %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Перезапустить всю сеть? Роутер временно потеряет подключение к серверу.');">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Перезапустить всю сеть? Роутер временно потеряет подключение к серверу.');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="network.restart">
     <input type="hidden" name="confirmed" value="true">

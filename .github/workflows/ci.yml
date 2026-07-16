@@ -149,4 +149,4 @@ jobs:
             "openwrt-agent/agent-version.txt" \
             --title "$RELEASE_TAG" \
             --notes-file RELEASE_NOTES.md \
-            --prerelease
+            --latest

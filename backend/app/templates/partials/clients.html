@@ -18,7 +18,7 @@
         <span class="status status--{{ 'online' if client.state and client.state|lower not in ['failed', 'incomplete'] else 'offline' }}">{{ client.state or 'lease' }}</span>
       </div>
       {% if supports.dhcp_delete_lease and client.is_static %}
-      <form method="post" action="/devices/{{ device.id }}/web-command" onsubmit="return confirm('Удалить статическую DHCP-выдачу для {{ client.mac }}?');">
+      <form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить статическую DHCP-выдачу для {{ client.mac }}?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="command_type" value="dhcp.delete_lease">
         <input type="hidden" name="confirmed" value="true">
@@ -32,7 +32,7 @@
     {% endfor %}
   </div>
   {% if supports.dhcp_set_lease %}
-  <form class="control-form control-form--columns" method="post" action="/devices/{{ device.id }}/web-command">
+  <form class="control-form control-form--columns" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="dhcp.set_lease">
     <input type="hidden" name="confirmed" value="true">

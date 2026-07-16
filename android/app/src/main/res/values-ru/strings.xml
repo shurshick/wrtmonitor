@@ -196,4 +196,17 @@
     <string name="service_restart_queued">Команда перезапуска сервиса добавлена.</string>
     <string name="confirm_action">Подтвердите действие</string>
     <string name="config_backup_notice">Перед изменением агент создаст резервную копию конфигурации.</string>
+    <string name="nav_overview">Обзор</string>
+    <string name="router_healthy">Сеть работает нормально</string>
+    <string name="router_attention">Сеть требует внимания</string>
+    <string name="last_contact_value">Последняя связь: %1$s</string>
+    <string name="internet">Интернет</string>
+    <string name="home_network">Домашняя сеть</string>
+    <string name="connected">Подключено</string>
+    <string name="disconnected">Нет связи</string>
+    <string name="no_ip_address">IP-адрес не получен</string>
+    <string name="connected_devices">Подключённых устройств</string>
+    <string name="radio_count_value">Радиомодулей: %1$d</string>
+    <string name="memory_value_mb">Память: %1$d / %2$d МБ свободно</string>
+    <string name="overview_navigation_hint">Подробности и управление доступны во вкладках внизу.</string>
 </resources>

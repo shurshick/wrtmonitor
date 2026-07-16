@@ -1,0 +1,47 @@
+{% set ns = namespace(wan=None) %}
+{% for item in interfaces %}{% if item.interface == 'wan' %}{% set ns.wan = item %}{% endif %}{% endfor %}
+<div class="overview-hero">
+  <div>
+    <span class="overview-hero__label">Состояние роутера</span>
+    <strong>{{ 'Работает нормально' if device.status == 'online' else 'Требует внимания' }}</strong>
+    <p>{{ device.model or 'OpenWrt-устройство' }} · работает {{ system.get('uptime')|duration if system.get('uptime') is not none else 'нет данных' }}</p>
+  </div>
+  <div class="overview-hero__pulse {{ 'is-online' if device.status == 'online' else '' }}"><span></span>{{ 'В сети' if device.status == 'online' else device.status }}</div>
+</div>
+
+<div class="overview-grid">
+  <a class="summary-card summary-card--internet" href="/devices/{{ device.id }}?section=internet">
+    <div class="summary-card__top"><span class="summary-card__icon">WAN</span><span class="status status--{{ 'online' if ns.wan and ns.wan.up else 'offline' }}">{{ 'Подключено' if ns.wan and ns.wan.up else 'Нет связи' }}</span></div>
+    <h2>Интернет</h2>
+    <strong>{{ ns.wan.ipv4|join(', ') if ns.wan and ns.wan.ipv4 else 'IP-адрес не получен' }}</strong>
+    <p>{{ ns.wan.device if ns.wan and ns.wan.device else 'WAN-интерфейс' }}{% if ns.wan and ns.wan.gateway %} · шлюз {{ ns.wan.gateway }}{% endif %}</p>
+    <span class="summary-card__link">Открыть подключение &rarr;</span>
+  </a>
+  <a class="summary-card summary-card--clients" href="/devices/{{ device.id }}?section=clients">
+    <div class="summary-card__top"><span class="summary-card__icon">LAN</span><span class="summary-card__count">{{ client_count }}</span></div>
+    <h2>Домашняя сеть</h2>
+    <strong>{{ client_count }} {{ 'устройство' if client_count == 1 else 'устройств' }}</strong>
+    <p>Клиенты Ethernet и Wi-Fi, постоянные адреса DHCP.</p>
+    <span class="summary-card__link">Показать устройства &rarr;</span>
+  </a>
+  <a class="summary-card summary-card--wifi" href="/devices/{{ device.id }}?section=wifi">
+    <div class="summary-card__top"><span class="summary-card__icon">Wi-Fi</span><span class="status status--{{ 'online' if radios else 'offline' }}">{{ 'Активно' if radios else 'Нет радио' }}</span></div>
+    <h2>Wi-Fi</h2>
+    {% if radios %}{% set radio = radios[0] %}<strong>{{ radio.band or radio.name or 'Беспроводная сеть' }}{% if radio.channel %} · канал {{ radio.channel }}{% endif %}</strong><p>{% if radio.interfaces %}{{ radio.interfaces|map(attribute='ssid')|select|join(', ') }}{% else %}SSID не получен{% endif %}</p>{% else %}<strong>Радиомодуль не обнаружен</strong><p>Проверьте оборудование и конфигурацию wireless.</p>{% endif %}
+    <span class="summary-card__link">Настроить Wi-Fi &rarr;</span>
+  </a>
+  <a class="summary-card summary-card--system" href="/devices/{{ device.id }}?section=system">
+    <div class="summary-card__top"><span class="summary-card__icon">SYS</span><span class="summary-card__count">{{ system.get('load') or '—' }}</span></div>
+    <h2>Система</h2>
+    <strong>{{ memory.get('available_kb') or '—' }} / {{ memory.get('total_kb') or '—' }} KB</strong>
+    <p>Свободная память · {{ processes.get('count') or '—' }} процессов{% if thermal.get('available') %} · {{ thermal.get('milli_celsius', 0) / 1000 }} °C{% endif %}</p>
+    <span class="summary-card__link">Состояние системы &rarr;</span>
+  </a>
+</div>
+
+<section class="overview-strip">
+  <div><span>Прошивка</span><strong>{{ device.firmware or 'нет данных' }}</strong></div>
+  <div><span>Агент</span><strong>{{ agent.get('version') or 'нет данных' }}</strong></div>
+  <div><span>Телеметрия</span><strong>{{ age ~ ' сек назад' if age is not none else 'нет данных' }}</strong></div>
+  <a href="/devices/{{ device.id }}?section=management">Обслуживание &rarr;</a>
+</section>

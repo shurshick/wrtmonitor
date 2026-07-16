@@ -412,6 +412,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     var commands by remember { mutableStateOf<List<CommandDto>>(emptyList()) }
     var message by remember { mutableStateOf("") }
     var confirmReboot by remember { mutableStateOf(false) }
+    var confirmAgentRollback by remember { mutableStateOf(false) }
     var hostnameValue by remember { mutableStateOf("") }
     var pendingSystemCommand by remember { mutableStateOf<Pair<String, JSONObject>?>(null) }
     val refresh: () -> Unit = {
@@ -442,6 +443,11 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     val rebootQueued = stringResource(R.string.reboot_queued)
     val hostnameQueued = stringResource(R.string.hostname_queued)
     val serviceQueued = stringResource(R.string.service_restart_queued)
+    val updateCheckQueued = stringResource(R.string.update_check_queued)
+    val intervalChangeQueued = stringResource(R.string.interval_change_queued)
+    val autoUpdateEnableQueued = stringResource(R.string.auto_update_enable_queued)
+    val autoUpdateDisableQueued = stringResource(R.string.auto_update_disable_queued)
+    val rollbackQueued = stringResource(R.string.rollback_queued)
 
     fun queueSystem(type: String, payload: JSONObject, success: String) {
         scope.launch {
@@ -521,6 +527,24 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             TextButton(onClick = refresh, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.refresh)) }
         }
     }
+    AgentSection(
+        agent = telemetry?.agent,
+        actionMessage = message,
+        actionError = "",
+        canArchive = false,
+        onCheckUpdate = { queueSystem("agent.update", JSONObject(), updateCheckQueued) },
+        onSetInterval = { seconds ->
+            queueSystem("agent.set_interval", JSONObject().put("interval_seconds", seconds), intervalChangeQueued)
+        },
+        onEnableAutoUpdate = {
+            queueSystem("agent.set_auto_update", JSONObject().put("enabled", true), autoUpdateEnableQueued)
+        },
+        onDisableAutoUpdate = {
+            queueSystem("agent.set_auto_update", JSONObject().put("enabled", false), autoUpdateDisableQueued)
+        },
+        onRollback = { confirmAgentRollback = true },
+        onArchive = {},
+    )
     if (confirmReboot) AlertDialog(
         onDismissRequest = { confirmReboot = false },
         title = { Text(stringResource(R.string.reboot_confirm_title)) },
@@ -541,6 +565,18 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             ) { Text(stringResource(R.string.reboot)) }
         },
         dismissButton = { TextButton(onClick = { confirmReboot = false }) { Text(stringResource(R.string.cancel)) } },
+    )
+    if (confirmAgentRollback) AlertDialog(
+        onDismissRequest = { confirmAgentRollback = false },
+        title = { Text(stringResource(R.string.rollback_confirm_title)) },
+        text = { Text(stringResource(R.string.rollback_confirm_message)) },
+        confirmButton = {
+            TextButton(onClick = {
+                confirmAgentRollback = false
+                queueSystem("agent.rollback", JSONObject(), rollbackQueued)
+            }) { Text(stringResource(R.string.rollback_action)) }
+        },
+        dismissButton = { TextButton(onClick = { confirmAgentRollback = false }) { Text(stringResource(R.string.cancel)) } },
     )
     pendingSystemCommand?.let { command ->
         AlertDialog(

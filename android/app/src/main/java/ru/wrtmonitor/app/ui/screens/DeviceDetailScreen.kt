@@ -25,7 +25,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -52,99 +54,42 @@ fun DeviceDetailScreen(
     accessToken: String,
     device: DeviceDto,
     onSessionExpired: () -> Unit,
-    onArchived: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var state by remember(device.id) {
         mutableStateOf(DeviceDetailUiState(loading = true, device = device))
     }
-    var actionMessage by remember(device.id) { mutableStateOf("") }
-    var actionError by remember(device.id) { mutableStateOf("") }
-    var confirmRollback by remember(device.id) { mutableStateOf(false) }
-    var confirmArchive by remember(device.id) { mutableStateOf(false) }
-    val updateCheckQueued = stringResource(R.string.update_check_queued)
-    val intervalChangeQueued = stringResource(R.string.interval_change_queued)
-    val autoUpdateEnableQueued = stringResource(R.string.auto_update_enable_queued)
-    val autoUpdateDisableQueued = stringResource(R.string.auto_update_disable_queued)
-    val rollbackQueued = stringResource(R.string.rollback_queued)
-
     fun refresh() {
         state = state.copy(loading = true, error = null)
-        actionError = ""
         scope.launch {
-            val api = WrtMonitorApi(serverUrl, accessToken)
-            val telemetryResult = withContext(Dispatchers.IO) { api.getLatestTelemetry(device.id) }
+            val telemetryResult = withContext(Dispatchers.IO) {
+                WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id)
+            }
             if (telemetryResult is ApiResult.Error && telemetryResult.isUnauthorized()) {
                 onSessionExpired()
                 return@launch
             }
-            val agentResult = withContext(Dispatchers.IO) { api.getDeviceAgent(device.id) }
-            if (agentResult is ApiResult.Error && agentResult.isUnauthorized()) {
-                onSessionExpired()
-                return@launch
-            }
             val telemetry = (telemetryResult as? ApiResult.Success)?.data
-            val agent = (agentResult as? ApiResult.Success)?.data ?: telemetry?.agent
-            val error = (telemetryResult as? ApiResult.Error)?.message ?: (agentResult as? ApiResult.Error)?.message
             state = state.copy(
                 loading = false,
-                telemetry = telemetry?.copy(agent = agent ?: telemetry.agent),
-                error = error,
+                telemetry = telemetry,
+                error = (telemetryResult as? ApiResult.Error)?.message,
             )
-        }
-    }
-
-    fun queueCommand(type: String, payload: JSONObject = JSONObject(), success: String) {
-        actionMessage = ""
-        actionError = ""
-        scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload, confirmed = true)
-            }) {
-                is ApiResult.Success -> {
-                    actionMessage = success
-                    refresh()
-                }
-                is ApiResult.Error -> {
-                    if (result.isUnauthorized()) onSessionExpired() else actionError = result.message
-                }
-            }
-        }
-    }
-
-    fun archiveDevice() {
-        actionMessage = ""
-        actionError = ""
-        scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).archiveDevice(device.id)
-            }) {
-                is ApiResult.Success -> onArchived()
-                is ApiResult.Error -> {
-                    if (result.isUnauthorized()) onSessionExpired() else actionError = result.message
-                }
-            }
         }
     }
 
     LaunchedEffect(serverUrl, accessToken, device.id) { refresh() }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(device.name.ifBlank { device.hostname }, style = MaterialTheme.typography.titleLarge)
-                InfoRow(stringResource(R.string.model), device.model, stringResource(R.string.no_data))
-                InfoRow(stringResource(R.string.firmware), device.firmware, stringResource(R.string.no_data))
-                InfoRow(stringResource(R.string.status), device.status, stringResource(R.string.no_data))
-                InfoRow(stringResource(R.string.last_seen), formatTimestamp(device.lastSeenAt), stringResource(R.string.no_data))
-            }
-        }
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(R.string.telemetry), style = MaterialTheme.typography.titleLarge)
+            Column {
+                Text(device.name.ifBlank { device.hostname }, style = MaterialTheme.typography.headlineSmall)
+                Text(device.model, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Button({ refresh() }, enabled = !state.loading) { Text(stringResource(R.string.refresh)) }
         }
         when {
@@ -153,64 +98,101 @@ fun DeviceDetailScreen(
             }
             state.error != null && state.telemetry == null -> Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
             state.telemetry == null -> Text(stringResource(R.string.no_data))
-            else -> TelemetrySummary(state.telemetry!!)
+            else -> RouterOverview(device, state.telemetry!!)
         }
-        AgentSection(
-            agent = state.telemetry?.agent,
-            actionMessage = actionMessage,
-            actionError = actionError,
-            canArchive = device.status == "disabled",
-            onCheckUpdate = { queueCommand("agent.update", success = updateCheckQueued) },
-            onSetInterval = { seconds ->
-                queueCommand(
-                    "agent.set_interval",
-                    JSONObject().put("interval_seconds", seconds),
-                    intervalChangeQueued,
-                )
-            },
-            onEnableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", true), autoUpdateEnableQueued) },
-            onDisableAutoUpdate = { queueCommand("agent.set_auto_update", JSONObject().put("enabled", false), autoUpdateDisableQueued) },
-            onRollback = { confirmRollback = true },
-            onArchive = { confirmArchive = true },
-        )
     }
 
-    if (confirmRollback) {
-        AlertDialog(
-            onDismissRequest = { confirmRollback = false },
-            title = { Text(stringResource(R.string.rollback_confirm_title)) },
-            text = { Text(stringResource(R.string.rollback_confirm_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmRollback = false
-                    queueCommand("agent.rollback", success = rollbackQueued)
-                }) { Text(stringResource(R.string.rollback_action)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmRollback = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
+}
+
+@Composable
+private fun RouterOverview(device: DeviceDto, telemetry: TelemetryDto) {
+    val payload = telemetry.payload
+    val system = payload?.optJSONObject("system")
+    val memory = system?.optJSONObject("memory")
+    val network = telemetry.network ?: payload?.optJSONObject("network")
+    val interfaces = network?.optJSONArray("interfaces") ?: network?.optJSONArray("interface")
+    var wan: JSONObject? = null
+    if (interfaces != null) {
+        for (index in 0 until interfaces.length()) {
+            interfaces.optJSONObject(index)?.takeIf { it.optString("interface") == "wan" }?.let { wan = it }
+        }
+    }
+    val wanUp = wan?.optBoolean("up", false) == true
+    val wanAddress = wan?.optJSONArray("ipv4")?.optString(0).orEmpty().ifBlank { stringResource(R.string.no_ip_address) }
+    val clients = telemetry.clients ?: payload?.optJSONObject("clients")
+    val clientCount = clients?.optInt("count", 0) ?: 0
+    val wifi = telemetry.wifi ?: payload?.optJSONObject("wifi")
+    val radios = wifi?.optJSONArray("radios")
+    val firstRadio = radios?.optJSONObject(0)
+    val firstWifi = firstRadio?.optJSONArray("interfaces")?.optJSONObject(0)
+    val wifiLabel = firstWifi?.optString("ssid").orEmpty().ifBlank { stringResource(R.string.wifi_unavailable) }
+    val uptime = system?.optLong("uptime", 0) ?: 0
+    val availableMb = memory?.optLong("available_kb", 0)?.div(1024) ?: 0
+    val totalMb = memory?.optLong("total_kb", 0)?.div(1024) ?: 0
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(
+                if (device.status == "online" && !telemetry.isStale) stringResource(R.string.router_healthy) else stringResource(R.string.router_attention),
+                style = MaterialTheme.typography.titleLarge,
+                color = if (device.status == "online" && !telemetry.isStale) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary,
+            )
+            Text(device.firmware.ifBlank { stringResource(R.string.no_data) }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.last_contact_value, formatTimestamp(telemetry.createdAt) ?: stringResource(R.string.no_data)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OverviewTile(
+            title = stringResource(R.string.internet),
+            value = if (wanUp) stringResource(R.string.connected) else stringResource(R.string.disconnected),
+            detail = wanAddress,
+            accent = if (wanUp) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+            modifier = Modifier.weight(1f),
+        )
+        OverviewTile(
+            title = stringResource(R.string.home_network),
+            value = clientCount.toString(),
+            detail = stringResource(R.string.connected_devices),
+            accent = Color(0xFF73D596),
+            modifier = Modifier.weight(1f),
         )
     }
-
-    if (confirmArchive) {
-        AlertDialog(
-            onDismissRequest = { confirmArchive = false },
-            title = { Text(stringResource(R.string.archive_router_title)) },
-            text = { Text(stringResource(R.string.archive_router_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmArchive = false
-                    archiveDevice()
-                }) { Text(stringResource(R.string.archive_router_action)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmArchive = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OverviewTile(
+            title = stringResource(R.string.wifi),
+            value = wifiLabel,
+            detail = stringResource(R.string.radio_count_value, radios?.length() ?: 0),
+            accent = Color(0xFF6FA8FF),
+            modifier = Modifier.weight(1f),
         )
+        OverviewTile(
+            title = stringResource(R.string.system),
+            value = formatDuration(uptime),
+            detail = stringResource(R.string.memory_value_mb, availableMb, totalMb),
+            accent = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    Text(
+        stringResource(R.string.overview_navigation_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+    )
+}
+
+@Composable
+private fun OverviewTile(title: String, value: String, detail: String, accent: Color, modifier: Modifier = Modifier) {
+    Card(modifier) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(title, style = MaterialTheme.typography.labelLarge, color = accent)
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+        }
     }
 }
 
@@ -270,7 +252,7 @@ private fun TelemetrySummary(telemetry: TelemetryDto) {
 }
 
 @Composable
-private fun AgentSection(
+internal fun AgentSection(
     agent: AgentStatusDto?,
     actionMessage: String,
     actionError: String,

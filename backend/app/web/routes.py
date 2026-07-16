@@ -24,7 +24,6 @@ from ..services.commands import (
 from ..services.devices import (
     archive_device_or_409,
     device_supports,
-    get_latest_agent_status,
     get_user_device_or_404,
     latest_device_telemetry,
 )
@@ -44,6 +43,8 @@ from .csrf import generate_csrf_token, verify_csrf_token
 
 templates = Jinja2Templates(directory="backend/app/templates")
 router = APIRouter()
+
+DEVICE_SECTIONS = {"overview", "internet", "clients", "wifi", "system", "management"}
 
 
 CAPABILITY_GROUPS = {
@@ -254,6 +255,7 @@ def devices_page(
 def device_page(
     request: Request,
     device_id: UUID,
+    section: str = "overview",
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
     wrtmonitor_session: str | None = Cookie(default=None),
@@ -264,6 +266,7 @@ def device_page(
     if not user:
         return RedirectResponse("/login", status_code=303)
     device = get_user_device_or_404(db, user, device_id)
+    section = section if section in DEVICE_SECTIONS else "overview"
     csrf_token = generate_csrf_token(wrtmonitor_session or "", config.jwt_secret)
     telemetry = latest_device_telemetry(db, device_id)
     payload = telemetry.payload if telemetry else {}
@@ -276,7 +279,7 @@ def device_page(
     processes = system.get("processes") or {}
     board = payload.get("board") or {}
     wifi = normalize_wifi_summary(payload)
-    agent = get_latest_agent_status(db, device_id)
+    agent = dict(payload.get("agent") or {})
     network = normalize_network_summary(payload)
     clients = normalize_clients_summary(payload)
     system_summary = normalize_system_summary(payload)
@@ -288,30 +291,29 @@ def device_page(
     capabilities_summary = capability_summary(capabilities)
     capabilities_groups = grouped_capabilities(capabilities)
     capabilities_message = capabilities_hint(capabilities)
+
+    def has(name: str) -> bool:
+        return bool(capabilities.get(name, False))
+
     supports = {
-        "agent_update": device_supports(db, device_id, "agent.update"),
-        "agent_set_interval": device_supports(db, device_id, "agent.set_interval"),
-        "agent_rollback": device_supports(db, device_id, "agent.rollback"),
-        "diagnostics": device_supports(db, device_id, "diagnostics.check_server"),
-        "network_read": device_supports(db, device_id, "network.read"),
-        "network_interface_restart": device_supports(
-            db, device_id, "network.interface_restart"
-        ),
-        "network_restart": device_supports(db, device_id, "network.restart"),
-        "clients_read": device_supports(db, device_id, "clients.read"),
-        "dhcp_set_lease": device_supports(db, device_id, "dhcp.set_lease"),
-        "dhcp_delete_lease": device_supports(db, device_id, "dhcp.delete_lease"),
-        "system_reboot": device_supports(db, device_id, "system.reboot"),
-        "system_set_hostname": device_supports(db, device_id, "system.set_hostname"),
-        "system_restart_service": device_supports(
-            db, device_id, "system.restart_service"
-        ),
-        "wifi_toggle": device_supports(db, device_id, "wifi.enable")
-        or device_supports(db, device_id, "wifi.disable"),
-        "wifi_ssid": device_supports(db, device_id, "wifi.set_ssid"),
-        "wifi_password": device_supports(db, device_id, "wifi.set_password"),
-        "wifi_channel": device_supports(db, device_id, "wifi.set_channel"),
-        "wifi_country": device_supports(db, device_id, "wifi.set_country"),
+        "agent_update": has("agent.update"),
+        "agent_set_interval": has("agent.set_interval"),
+        "agent_rollback": has("agent.rollback"),
+        "diagnostics": has("diagnostics.check_server"),
+        "network_read": has("network.read"),
+        "network_interface_restart": has("network.interface_restart"),
+        "network_restart": has("network.restart"),
+        "clients_read": has("clients.read"),
+        "dhcp_set_lease": has("dhcp.set_lease"),
+        "dhcp_delete_lease": has("dhcp.delete_lease"),
+        "system_reboot": has("system.reboot"),
+        "system_set_hostname": has("system.set_hostname"),
+        "system_restart_service": has("system.restart_service"),
+        "wifi_toggle": has("wifi.enable") or has("wifi.disable"),
+        "wifi_ssid": has("wifi.set_ssid"),
+        "wifi_password": has("wifi.set_password"),
+        "wifi_channel": has("wifi.set_channel"),
+        "wifi_country": has("wifi.set_country"),
     }
     commands = db.scalars(
         select(DeviceCommand)
@@ -340,6 +342,7 @@ def device_page(
         "device_detail.html",
         {
             "device": device,
+            "section": section,
             "csrf_token": csrf_token,
             "latest": latest,
             "age": age,
@@ -374,6 +377,7 @@ def device_page(
 @router.post("/devices/{device_id}/web-command")
 def web_device_command(
     device_id: UUID,
+    section: str = "overview",
     command_type: str = Form(...),
     ssid: str = Form(default=""),
     enabled: str = Form(default="true"),
@@ -450,7 +454,8 @@ def web_device_command(
         {"command_type": command_type, "source": "web", "confirmed": confirmed},
     )
     db.commit()
-    return RedirectResponse(f"/devices/{device_id}", status_code=303)
+    section = section if section in DEVICE_SECTIONS else "overview"
+    return RedirectResponse(f"/devices/{device_id}?section={section}", status_code=303)
 
 
 @router.post("/devices/{device_id}/disconnect")

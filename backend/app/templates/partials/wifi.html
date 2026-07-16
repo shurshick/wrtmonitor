@@ -31,7 +31,7 @@
   </ul>
 
   {% if supports.wifi_toggle %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_enabled">
     <input type="hidden" name="confirmed" value="true">
@@ -50,7 +50,7 @@
   {% endif %}
 
   {% if supports.wifi_ssid %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_ssid">
     <input type="hidden" name="confirmed" value="true">
@@ -66,7 +66,7 @@
   {% endif %}
 
   {% if supports.wifi_password %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_password">
     <input type="hidden" name="confirmed" value="true">
@@ -82,7 +82,7 @@
   {% endif %}
 
   {% if supports.wifi_channel and radios %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_channel">
     <input type="hidden" name="confirmed" value="true">
@@ -93,7 +93,7 @@
   {% endif %}
 
   {% if supports.wifi_country and radios %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command">
+  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="command_type" value="wifi.set_country">
     <input type="hidden" name="confirmed" value="true">
