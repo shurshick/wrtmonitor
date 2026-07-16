@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY backend /app/backend
 COPY openwrt-agent /app/openwrt-agent
+COPY VERSION /app/VERSION
 
 EXPOSE 8080
 

@@ -57,17 +57,25 @@ jobs:
       - uses: actions/checkout@v4
       - name: Read release metadata
         run: echo "RELEASE_VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
-      - run: docker build .
+      - name: Build release image
+        run: |
+          docker build \
+            -t "$IMAGE_NAME:$RELEASE_VERSION" \
+            -t "$IMAGE_NAME:latest" \
+            .
+      - name: Smoke-test release image
+        run: |
+          docker run --rm \
+            -e WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS=true \
+            -e WRTMONITOR_JWT_SECRET=ci-test-secret-value-with-more-than-32-characters \
+            "$IMAGE_NAME:$RELEASE_VERSION" \
+            python -c "from pathlib import Path; from backend.app.main import app; from backend.app.config import APP_VERSION; expected = Path('/app/VERSION').read_text().strip(); assert APP_VERSION == expected == '$RELEASE_VERSION'; assert app.version == expected; print(expected)"
       - name: Login to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
       - name: Publish image tags
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker build \
-            -t "$IMAGE_NAME:$RELEASE_VERSION" \
-            -t "$IMAGE_NAME:latest" \
-            .
           docker push "$IMAGE_NAME:$RELEASE_VERSION"
           docker push "$IMAGE_NAME:latest"
 

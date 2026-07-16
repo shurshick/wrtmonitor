@@ -9,9 +9,13 @@ APP_NAME = "WrtMonitor"
 ACCESS_MODEL = "single-owner"
 
 
-def read_repo_version() -> str:
-    version_file = Path(__file__).resolve().parents[2] / "VERSION"
-    return version_file.read_text(encoding="utf-8").strip()
+def read_repo_version(version_file: Path | None = None) -> str:
+    source = version_file or Path(__file__).resolve().parents[2] / "VERSION"
+    if source.is_file():
+        version = source.read_text(encoding="utf-8").strip()
+        if version:
+            return version
+    return os.getenv("WRTMONITOR_VERSION", "0.0.0+unknown").strip() or "0.0.0+unknown"
 
 
 APP_VERSION = read_repo_version()
