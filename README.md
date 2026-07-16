@@ -4,7 +4,7 @@
 
 ## Текущая версия
 
-Текущий prerelease: `v0.2.0-rc1-full-router-foundation`.
+Текущий prerelease: `v0.2.0-rc1`.
 
 Главное в `0.2.0-rc1`:
 

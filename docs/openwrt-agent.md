@@ -70,7 +70,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.2.0-rc1-full-router-foundation/wrtmonitor-openwrt-agent-v0.2.0-rc1.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.2.0-rc1/wrtmonitor-openwrt-agent-v0.2.0-rc1.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \

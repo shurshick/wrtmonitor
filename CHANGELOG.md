@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.0-rc1-full-router-foundation
+## v0.2.0-rc1
 
 - Введена telemetry schema v2 с нормализованными блоками системы, сервисов, Wi-Fi, сети и клиентов.
 - Добавлены DHCP leases, neighbour table, conntrack, kernel, hostname, load 1/5/15 и состояние ключевых OpenWrt-сервисов.

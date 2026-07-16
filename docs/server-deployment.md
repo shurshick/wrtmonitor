@@ -36,7 +36,7 @@ WRTMONITOR_ENABLE_API_DOCS=false
 
 ## TrueNAS Custom App
 
-1. Откройте релиз `v0.2.0-rc1-full-router-foundation`.
+1. Откройте релиз `v0.2.0-rc1`.
 2. Скачайте файл:
 
    ```text

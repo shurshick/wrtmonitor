@@ -1,6 +1,6 @@
 # Router Management Core
 
-Документ фиксирует фундамент `v0.2.0-rc1-full-router-foundation`.
+Документ фиксирует фундамент `v0.2.0-rc1`.
 
 ## Что закреплено
 
