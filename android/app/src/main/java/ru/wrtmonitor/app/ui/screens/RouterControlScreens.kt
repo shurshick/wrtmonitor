@@ -6,12 +6,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,10 +41,13 @@ import ru.wrtmonitor.app.ui.components.ActionRow
 import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
 import ru.wrtmonitor.app.ui.components.MessageBanner
 import ru.wrtmonitor.app.ui.components.MetricTile
+import ru.wrtmonitor.app.ui.components.PrimaryActionButton
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
+import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
+import ru.wrtmonitor.app.ui.components.TonalActionButton
 
 @Composable
 fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
@@ -158,11 +158,12 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(hostname, { hostname = it }, label = { Text(stringResource(R.string.device_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(mac, { mac = it }, label = { Text(stringResource(R.string.mac_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(ip, { ip = it }, label = { Text(stringResource(R.string.ip_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.save_lease),
                 onClick = { pendingCommand = "dhcp.set_lease" to JSONObject().put("hostname", hostname).put("mac", mac).put("ip", ip) },
                 enabled = hostname.isNotBlank() && mac.length >= 17 && ip.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.save_lease)) }
+            )
         }
     }
     if (capabilities["dhcp.configure"] == true) {
@@ -173,10 +174,11 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(poolStart, { poolStart = it }, label = { Text(stringResource(R.string.pool_start)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(poolLimit, { poolLimit = it }, label = { Text(stringResource(R.string.pool_size)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(leaseTime, { leaseTime = it }, label = { Text(stringResource(R.string.lease_time)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.save_dhcp),
                 onClick = { pendingCommand = "dhcp.set_pool" to JSONObject().put("interface", "lan").put("start", poolStart).put("limit", poolLimit).put("leasetime", leaseTime) },
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.save_dhcp)) }
+            )
         }
     }
     MessageBanner(message, error = messageIsError)
@@ -309,28 +311,31 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                     checked = enabled,
                     onCheckedChange = { enabled = it },
                 )
-                OutlinedButton(
+                SecondaryActionButton(
+                    label = stringResource(R.string.wifi_state_apply),
                     onClick = { pendingAction = { queue("wifi.set_enabled", JSONObject().put("enabled", enabled).put("radio", radioId), wifiToggleQueued) } },
                     modifier = Modifier.align(Alignment.End),
-                ) { Text(stringResource(R.string.wifi_state_apply)) }
+                )
             }
             if (capabilities["wifi.set_ssid"] == true) {
                 HorizontalDivider()
                 OutlinedTextField(ssid, { ssid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.apply_ssid),
                     onClick = { pendingAction = { queue("wifi.set_ssid", JSONObject().put("ssid", ssid).put("iface", ifaceId), wifiSsidQueued) } },
                     modifier = Modifier.align(Alignment.End),
                     enabled = ssid.isNotBlank(),
-                ) { Text(stringResource(R.string.apply_ssid)) }
+                )
             }
             if (capabilities["wifi.set_password"] == true) {
                 HorizontalDivider()
                 OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.new_wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.change_password),
                     onClick = { pendingAction = { queue("wifi.set_password", JSONObject().put("password", password).put("iface", ifaceId), wifiPasswordQueued) } },
                     modifier = Modifier.align(Alignment.End),
                     enabled = password.length >= 8,
-                ) { Text(stringResource(R.string.change_password)) }
+                )
             }
         }
     }
@@ -342,19 +347,21 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         ) {
             if (capabilities["wifi.set_channel"] == true) {
                 OutlinedTextField(channel, { channel = it }, label = { Text(stringResource(R.string.wifi_channel)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.change_channel),
                     onClick = { pendingAction = { queue("wifi.set_channel", JSONObject().put("channel", channel).put("radio", radioId), wifiChannelQueued) } },
                     enabled = channel.isNotBlank(),
                     modifier = Modifier.align(Alignment.End),
-                ) { Text(stringResource(R.string.change_channel)) }
+                )
             }
             if (capabilities["wifi.set_country"] == true) {
                 OutlinedTextField(country, { country = it.uppercase().take(2) }, label = { Text(stringResource(R.string.wifi_country)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.change_country),
                     onClick = { pendingAction = { queue("wifi.set_country", JSONObject().put("country", country).put("radio", radioId), wifiCountryQueued) } },
                     enabled = country.length == 2,
                     modifier = Modifier.align(Alignment.End),
-                ) { Text(stringResource(R.string.change_country)) }
+                )
             }
         }
     }
@@ -366,11 +373,12 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             SwitchSettingRow(stringResource(R.string.wifi_state), checked = guestEnabled, onCheckedChange = { guestEnabled = it })
             OutlinedTextField(guestSsid, { guestSsid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(guestPassword, { guestPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.apply_guest_wifi),
                 onClick = { pendingAction = { queue("wifi.set_guest", JSONObject().put("enabled", guestEnabled).put("ssid", guestSsid).put("password", guestPassword).put("radio", radioId), wifiToggleQueued) } },
                 enabled = !guestEnabled || (guestSsid.isNotBlank() && guestPassword.length >= 8),
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.apply_guest_wifi)) }
+            )
         }
     }
 
@@ -483,7 +491,8 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             }
         }
         if (capabilities["network.read"] == true) {
-            OutlinedButton(
+            SecondaryActionButton(
+                label = stringResource(R.string.request_interfaces),
                 onClick = {
                     scope.launch {
                         when (val result = withContext(Dispatchers.IO) {
@@ -498,7 +507,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                     }
                 },
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.request_interfaces)) }
+            )
         }
     }
 
@@ -515,29 +524,32 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                 OutlinedTextField(wanPassword, { wanPassword = it }, label = { Text(stringResource(R.string.password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
             }
             OutlinedTextField(wanDns, { wanDns = it }, label = { Text(stringResource(R.string.dns_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.save_wan),
                 onClick = { pendingCommand = "network.set_wan" to JSONObject().put("interface", "wan").put("protocol", wanProtocol).put("ip_address", wanIp).put("netmask", wanNetmask).put("gateway", wanGateway).put("dns", wanDns).put("username", wanUsername).put("password", wanPassword) },
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.save_wan)) }
+            )
         }
     }
     if (capabilities["network.lan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.lan_settings), "$lanIp · $lanNetmask") {
             OutlinedTextField(lanIp, { lanIp = it }, label = { Text(stringResource(R.string.router_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(lanNetmask, { lanNetmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.save_lan),
                 onClick = { pendingCommand = "network.set_lan" to JSONObject().put("interface", "lan").put("ip_address", lanIp).put("netmask", lanNetmask) },
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.save_lan)) }
+            )
         }
     }
     if (capabilities["dns.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.dns_servers), dnsServers) {
             OutlinedTextField(dnsServers, { dnsServers = it }, label = { Text(stringResource(R.string.dns_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.apply_dns),
                 onClick = { pendingCommand = "dns.set_servers" to JSONObject().put("servers", dnsServers) },
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.apply_dns)) }
+            )
         }
     }
     if (capabilities["firewall.port_forward"] == true) {
@@ -547,10 +559,11 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(forwardInternalIp, { forwardInternalIp = it }, label = { Text(stringResource(R.string.internal_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(forwardInternalPort, { forwardInternalPort = it }, label = { Text(stringResource(R.string.internal_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             ActionRow {
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.add_port_forward),
                     onClick = { pendingCommand = "firewall.set_port_forward" to JSONObject().put("name", forwardName).put("protocol", "tcp").put("external_port", forwardExternalPort).put("internal_ip", forwardInternalIp).put("internal_port", forwardInternalPort) },
                     enabled = forwardName.isNotBlank() && forwardExternalPort.isNotBlank() && forwardInternalIp.isNotBlank() && forwardInternalPort.isNotBlank(),
-                ) { Text(stringResource(R.string.add_port_forward)) }
+                )
                 TextButton(onClick = { pendingCommand = "firewall.delete_port_forward" to JSONObject().put("name", forwardName) }, enabled = forwardName.isNotBlank()) {
                     Text(stringResource(R.string.delete_port_forward))
                 }
@@ -561,16 +574,19 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
         ExpandableSettingsCard(stringResource(R.string.network_maintenance), stringResource(R.string.network_maintenance_summary)) {
             if (capabilities["network.interface_restart"] == true) {
                 OutlinedTextField(interfaceName, { interfaceName = it }, label = { Text(stringResource(R.string.network_interfaces)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedButton(
+                SecondaryActionButton(
+                    label = stringResource(R.string.restart_interface),
                     onClick = { pendingCommand = "network.interface_restart" to JSONObject().put("interface", interfaceName) },
                     enabled = interfaceName.isNotBlank(),
                     modifier = Modifier.align(Alignment.End),
-                ) { Text(stringResource(R.string.restart_interface)) }
+                )
             }
             if (capabilities["network.restart"] == true) {
-                OutlinedButton(onClick = { pendingCommand = "network.restart" to JSONObject() }, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.restart_network))
-                }
+                SecondaryActionButton(
+                    stringResource(R.string.restart_network),
+                    { pendingCommand = "network.restart" to JSONObject() },
+                    Modifier.align(Alignment.End),
+                )
             }
         }
     }
@@ -709,11 +725,12 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     if (capabilities["system.set_hostname"] == true) {
         ExpandableSettingsCard(stringResource(R.string.device_name), hostnameValue) {
             OutlinedTextField(hostnameValue, { hostnameValue = it }, label = { Text(stringResource(R.string.new_hostname)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.change_hostname),
                 onClick = { pendingSystemCommand = "system.set_hostname" to JSONObject().put("hostname", hostnameValue) },
                 enabled = hostnameValue.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.change_hostname)) }
+            )
         }
     }
     if (capabilities["system.set_timezone"] == true || capabilities["system.set_ntp"] == true) {
@@ -721,18 +738,20 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             if (capabilities["system.set_timezone"] == true) {
                 OutlinedTextField(zoneName, { zoneName = it }, label = { Text(stringResource(R.string.timezone_region)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(timezoneValue, { timezoneValue = it }, label = { Text("POSIX timezone") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.save_time_settings),
                     onClick = { pendingSystemCommand = "system.set_timezone" to JSONObject().put("zonename", zoneName).put("timezone", timezoneValue) },
                     modifier = Modifier.align(Alignment.End),
-                ) { Text(stringResource(R.string.save_time_settings)) }
+                )
             }
             if (capabilities["system.set_ntp"] == true) {
                 HorizontalDivider()
                 OutlinedTextField(ntpServers, { ntpServers = it }, label = { Text(stringResource(R.string.ntp_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.apply_ntp),
                     onClick = { pendingSystemCommand = "system.set_ntp" to JSONObject().put("enabled", true).put("servers", ntpServers) },
                     modifier = Modifier.align(Alignment.End),
-                ) { Text(stringResource(R.string.apply_ntp)) }
+                )
             }
         }
     }
@@ -751,7 +770,8 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     SectionCard(stringResource(R.string.system_actions), subtitle = stringResource(R.string.system_actions_summary)) {
         ActionRow {
             if (capabilities["diagnostics.check_server"] == true) {
-                FilledTonalButton(
+                TonalActionButton(
+                    label = stringResource(R.string.diagnostics),
                     onClick = {
                         scope.launch {
                             when (val result = withContext(Dispatchers.IO) {
@@ -765,10 +785,10 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
                             }
                         }
                     },
-                ) { Text(stringResource(R.string.diagnostics)) }
+                )
             }
             if (capabilities["system.reboot"] == true) {
-                OutlinedButton(onClick = { confirmReboot = true }) { Text(stringResource(R.string.reboot)) }
+                SecondaryActionButton(stringResource(R.string.reboot), { confirmReboot = true })
             }
         }
         latestDiagnostics?.let {

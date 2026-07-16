@@ -8,12 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
@@ -51,10 +48,13 @@ import ru.wrtmonitor.app.ui.components.ActionRow
 import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
 import ru.wrtmonitor.app.ui.components.MessageBanner
 import ru.wrtmonitor.app.ui.components.MetricTile
+import ru.wrtmonitor.app.ui.components.PrimaryActionButton
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
+import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
+import ru.wrtmonitor.app.ui.components.TonalActionButton
 import ru.wrtmonitor.app.viewmodel.DeviceDetailUiState
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -263,9 +263,7 @@ internal fun AgentSection(
                     checked = autoUpdateEnabled,
                     onCheckedChange = { value -> if (value) onEnableAutoUpdate() else onDisableAutoUpdate() },
                 )
-                FilledTonalButton(onClick = onCheckUpdate, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.check_update))
-                }
+                TonalActionButton(stringResource(R.string.check_update), onCheckUpdate, Modifier.align(Alignment.End))
             }
             if (capabilities["agent.set_interval"] == true) {
                 OutlinedTextField(
@@ -278,16 +276,15 @@ internal fun AgentSection(
                     isError = intervalError,
                     supportingText = { Text(stringResource(R.string.min_five_seconds)) },
                 )
-                Button(
+                PrimaryActionButton(
+                    label = stringResource(R.string.change_interval),
                     onClick = { intervalValue?.let(onSetInterval) },
                     modifier = Modifier.align(Alignment.End),
                     enabled = intervalValue != null && intervalValue >= 5,
-                ) { Text(stringResource(R.string.change_interval)) }
+                )
             }
             if (capabilities["agent.rollback"] == true) {
-                OutlinedButton(onClick = onRollback, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.rollback_action))
-                }
+                SecondaryActionButton(stringResource(R.string.rollback_action), onRollback, Modifier.align(Alignment.End))
             }
         }
     }

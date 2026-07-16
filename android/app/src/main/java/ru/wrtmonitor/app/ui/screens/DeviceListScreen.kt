@@ -17,7 +17,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +45,7 @@ import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
+import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.viewmodel.DevicesUiState
 import java.time.OffsetDateTime
@@ -126,7 +126,7 @@ fun DeviceListScreen(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.load_error))
                     Text(state.error.orEmpty())
-                    OutlinedButton({ refresh() }) { Text(stringResource(R.string.refresh)) }
+                    SecondaryActionButton(stringResource(R.string.refresh), ::refresh)
                 }
             }
             state.devices.isEmpty() -> Card(Modifier.fillMaxWidth()) {

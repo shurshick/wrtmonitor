@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -22,10 +24,14 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -41,6 +47,98 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+
+private val CompactActionPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp)
+
+@Composable
+fun PrimaryActionButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(34.dp),
+        enabled = enabled && !loading,
+        contentPadding = CompactActionPadding,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        CompactActionContent(label, loading)
+    }
+}
+
+@Composable
+fun SecondaryActionButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(34.dp),
+        enabled = enabled,
+        contentPadding = CompactActionPadding,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        CompactActionContent(label)
+    }
+}
+
+@Composable
+fun TonalActionButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier.height(34.dp),
+        enabled = enabled,
+        contentPadding = CompactActionPadding,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        CompactActionContent(label)
+    }
+}
+
+@Composable
+fun DangerActionButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(34.dp),
+        enabled = enabled,
+        contentPadding = CompactActionPadding,
+        shape = MaterialTheme.shapes.small,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.65f)),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+    ) {
+        CompactActionContent(label)
+    }
+}
+
+@Composable
+private fun CompactActionContent(label: String, loading: Boolean = false) {
+    if (loading) {
+        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+    } else {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
 
 @Composable
 fun RouterPageHeader(

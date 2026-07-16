@@ -7,10 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.Image
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +29,8 @@ import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.ui.components.MessageBanner
+import ru.wrtmonitor.app.ui.components.PrimaryActionButton
+import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.SectionCard
 
 @Composable
@@ -44,9 +43,12 @@ fun ServerSetupScreen(onSave: (String) -> Unit) {
             subtitle = stringResource(R.string.first_run_server_prompt),
         ) {
             OutlinedTextField(serverUrl, { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(onClick = { onSave(serverUrl) }, enabled = serverUrl.isNotBlank(), modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(R.string.save))
-            }
+            PrimaryActionButton(
+                label = stringResource(R.string.save),
+                onClick = { onSave(serverUrl) },
+                enabled = serverUrl.isNotBlank(),
+                modifier = Modifier.align(Alignment.End),
+            )
         }
     }
 }
@@ -62,16 +64,19 @@ fun AdminLoginScreen(serverUrl: String, onLogin: (String) -> Unit, onChangeServe
             OutlinedTextField(username, { username = it }, label = { Text(stringResource(R.string.admin_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.password_label)) }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), singleLine = true)
             MessageBanner(error, error = true)
-            Button(
+            PrimaryActionButton(
+                label = stringResource(R.string.login),
                 onClick = { loading = true; scope.launch { when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl).login(username, password) }) { is ApiResult.Success -> onLogin(result.data); is ApiResult.Error -> { error = result.message; loading = false } } } },
                 enabled = !loading && username.isNotBlank() && password.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
-            ) {
-                if (loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.login))
-            }
-            OutlinedButton(onClick = onChangeServer, enabled = !loading, modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(R.string.change_server))
-            }
+                loading = loading,
+            )
+            SecondaryActionButton(
+                label = stringResource(R.string.change_server),
+                onClick = onChangeServer,
+                enabled = !loading,
+                modifier = Modifier.align(Alignment.End),
+            )
         }
     }
 }
