@@ -44,8 +44,8 @@ jobs:
       - run: sh -n openwrt-agent/wrtmonitor-agent
       - run: sh -n openwrt-agent/install-openwrt.sh
       - run: for f in openwrt-agent/lib/*.sh; do sh -n "$f"; done
-      - run: shellcheck openwrt-agent/wrtmonitor-agent
-      - run: shellcheck openwrt-agent/install-openwrt.sh openwrt-agent/lib/*.sh
+      - run: shellcheck --shell=sh openwrt-agent/wrtmonitor-agent
+      - run: shellcheck --shell=sh openwrt-agent/install-openwrt.sh openwrt-agent/lib/*.sh
       - run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
       - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
 
