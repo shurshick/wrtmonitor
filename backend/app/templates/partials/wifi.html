@@ -1,111 +1,53 @@
-<section class="card">
-  <h2>Wi-Fi</h2>
-  {% if capabilities %}
-  <p class="notice">Перед изменением SSID, пароля или состояния агент создаст backup <code>/etc/config/wireless</code>.</p>
-  {% elif capabilities_message %}
-  <p class="notice">{{ capabilities_message }}</p>
-  {% endif %}
-  <ul class="panel-list">
-    {% for radio in radios %}
-    <li>
-      <strong>{{ radio.name or radio.id or 'radio' }}</strong><br>
-      {{ 'включён' if radio.up else 'выключен' }}
-      {% if radio.band %} · {{ radio.band }}{% endif %}
-      {% if radio.channel %} · канал {{ radio.channel }}{% endif %}
-      {% if radio.country %} · {{ radio.country }}{% endif %}
-      {% if radio.htmode %} · {{ radio.htmode }}{% endif %}
-      {% if radio.interfaces %}
-      <div class="sub-list">
-        {% for iface in radio.interfaces %}
-        <div class="sub-list__item">
-          <strong>{{ iface.ssid or 'SSID не задан' }}</strong>
-          <span>{{ 'активен' if iface.enabled else 'выключен' }}{% if iface.encryption %} · {{ iface.encryption }}{% endif %}</span>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-    </li>
-    {% else %}
-    <li>Wi-Fi радио не обнаружено</li>
-    {% endfor %}
-  </ul>
+{% if capabilities %}<p class="notice notice--compact">Перед изменением беспроводной сети агент автоматически сохранит текущую конфигурацию.</p>{% elif capabilities_message %}<p class="notice">{{ capabilities_message }}</p>{% endif %}
 
+<div class="radio-grid section">
+  {% for radio in radios %}
+  <article class="radio-card">
+    <div class="radio-card__heading"><div><span class="radio-card__band">{{ radio.band or 'Wi-Fi' }}</span><strong>{{ radio.name or radio.id or 'Радиомодуль' }}</strong></div><span class="status status--{{ 'online' if radio.up else 'offline' }}">{{ 'Включён' if radio.up else 'Выключен' }}</span></div>
+    <div class="radio-card__facts"><span><small>Канал</small><strong>{{ radio.channel or 'авто' }}</strong></span><span><small>Режим</small><strong>{{ radio.htmode or 'авто' }}</strong></span><span><small>Регион</small><strong>{{ radio.country or 'не задан' }}</strong></span></div>
+    <div class="ssid-list">
+      {% for iface in radio.interfaces %}<div><span><strong>{{ iface.ssid or 'SSID не задан' }}</strong><small>{{ iface.encryption or 'без защиты' }}</small></span><span class="state-text {{ 'is-online' if iface.enabled else 'is-offline' }}">{{ 'Активна' if iface.enabled else 'Выключена' }}</span></div>{% else %}<p class="muted">Сети на этом радиомодуле не найдены.</p>{% endfor %}
+    </div>
+  </article>
+  {% else %}<div class="empty-state card"><h2>Wi-Fi не обнаружен</h2><p>Роутер не передал сведения о беспроводных модулях. Проверьте драйверы и конфигурацию wireless.</p></div>{% endfor %}
+</div>
+
+{% if radios %}
+<div class="settings-workspace section">
   {% if supports.wifi_toggle %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="command_type" value="wifi.set_enabled">
-    <input type="hidden" name="confirmed" value="true">
-    <input type="hidden" name="radio" value="{{ radios[0].id if radios else '' }}">
-    <label>Состояние
-      <select name="enabled">
-        <option value="true">Включить</option>
-        <option value="false">Выключить</option>
-      </select>
-    </label>
-    <div class="button-row">
-      <button type="submit">Применить</button>
-      <span class="risk-badge">risk: level 3</span>
+  <section class="card control-card">
+    <div><p class="eyebrow">Радиомодуль</p><h2>Включение Wi-Fi</h2><p class="muted">Управляет выбранным диапазоном целиком.</p></div>
+    <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Изменить состояние выбранного радиомодуля?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_enabled"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>Диапазон<select name="radio">{% for radio in radios %}<option value="{{ radio.id }}">{{ radio.band or radio.name or radio.id }}</option>{% endfor %}</select></label><label>Состояние<select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select></label></div><div class="form-actions"><button type="submit">Применить</button><span class="action-note">Клиенты временно отключатся</span></div></form>
+  </section>
+  {% endif %}
+
+  {% if supports.wifi_ssid or supports.wifi_password %}
+  <section class="card control-card">
+    <div><p class="eyebrow">Основная сеть</p><h2>Имя и безопасность</h2><p class="muted">Выберите сеть, затем измените только нужный параметр.</p></div>
+    {% if supports.wifi_ssid %}<form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_ssid"><input type="hidden" name="confirmed" value="true"><label>Беспроводная сеть<select name="iface">{% for radio in radios %}{% for iface in radio.interfaces %}<option value="{{ iface.id }}">{{ iface.ssid or iface.id }} · {{ radio.band or radio.name }}</option>{% endfor %}{% endfor %}</select></label><label>Новое имя сети<input name="ssid" required maxlength="32" placeholder="Домашний Wi-Fi"></label><div class="form-actions"><button type="submit">Сохранить имя</button></div></form>{% endif %}
+    {% if supports.wifi_password %}<form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_password"><input type="hidden" name="confirmed" value="true"><label>Беспроводная сеть<select name="iface">{% for radio in radios %}{% for iface in radio.interfaces %}<option value="{{ iface.id }}">{{ iface.ssid or iface.id }} · {{ radio.band or radio.name }}</option>{% endfor %}{% endfor %}</select></label><label>Новый пароль<input name="wifi_password" type="password" required minlength="8" maxlength="63" autocomplete="new-password" placeholder="Не менее 8 символов"></label><div class="form-actions"><button type="submit">Сохранить пароль</button><span class="action-note">Потребуется подключить устройства заново</span></div></form>{% endif %}
+  </section>
+  {% endif %}
+</div>
+
+{% if supports.wifi_channel or supports.wifi_country or supports.wifi_guest %}
+<div class="settings-workspace section">
+  {% if supports.wifi_channel or supports.wifi_country %}
+  <details class="settings-panel card">
+    <summary><span><strong>Параметры радиомодуля</strong><small>Канал и регион использования</small></span><span>Настроить</span></summary>
+    <div class="settings-panel__body">
+      {% if supports.wifi_channel %}<form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_channel"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>Радиомодуль<select name="radio">{% for radio in radios %}<option value="{{ radio.id }}">{{ radio.band or radio.name or radio.id }}</option>{% endfor %}</select></label><label>Канал<input name="channel" required maxlength="4" value="auto"></label></div><div class="form-actions"><button type="submit">Сохранить канал</button></div></form>{% endif %}
+      {% if supports.wifi_country %}<form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_country"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>Радиомодуль<select name="radio">{% for radio in radios %}<option value="{{ radio.id }}">{{ radio.band or radio.name or radio.id }}</option>{% endfor %}</select></label><label>Код страны<input name="country" required minlength="2" maxlength="2" value="{{ radios[0].country or '' }}" placeholder="RU"></label></div><div class="form-actions"><button type="submit">Сохранить регион</button></div></form>{% endif %}
     </div>
-  </form>
+  </details>
   {% endif %}
 
-  {% if supports.wifi_ssid %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="command_type" value="wifi.set_ssid">
-    <input type="hidden" name="confirmed" value="true">
-    <input type="hidden" name="iface" value="{{ radios[0].interfaces[0].id if radios and radios[0].interfaces else '' }}">
-    <label>Новый SSID
-      <input name="ssid" required maxlength="32">
-    </label>
-    <div class="button-row">
-      <button type="submit">Изменить SSID</button>
-      <span class="risk-badge">risk: level 3</span>
-    </div>
-  </form>
-  {% endif %}
-
-  {% if supports.wifi_password %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="command_type" value="wifi.set_password">
-    <input type="hidden" name="confirmed" value="true">
-    <input type="hidden" name="iface" value="{{ radios[0].interfaces[0].id if radios and radios[0].interfaces else '' }}">
-    <label>Новый пароль Wi-Fi
-      <input name="wifi_password" type="password" required minlength="8" maxlength="63" autocomplete="new-password">
-    </label>
-    <div class="button-row">
-      <button type="submit">Изменить пароль</button>
-      <span class="risk-badge">risk: level 3</span>
-    </div>
-  </form>
-  {% endif %}
-
-  {% if supports.wifi_channel and radios %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="command_type" value="wifi.set_channel">
-    <input type="hidden" name="confirmed" value="true">
-    <input type="hidden" name="radio" value="{{ radios[0].id }}">
-    <label>Канал<input name="channel" required maxlength="4" value="{{ radios[0].channel or 'auto' }}"></label>
-    <div class="button-row"><button type="submit">Изменить канал</button><span class="risk-badge">risk: level 3</span></div>
-  </form>
-  {% endif %}
-
-  {% if supports.wifi_country and radios %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="command_type" value="wifi.set_country">
-    <input type="hidden" name="confirmed" value="true">
-    <input type="hidden" name="radio" value="{{ radios[0].id }}">
-    <label>Регион (ISO 3166-1 alpha-2)<input name="country" required minlength="2" maxlength="2" value="{{ radios[0].country or '' }}" placeholder="RU"></label>
-    <div class="button-row"><button type="submit">Изменить регион</button><span class="risk-badge">risk: level 3</span></div>
-  </form>
-  {% endif %}
   {% if supports.wifi_guest %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Применить настройки гостевой сети?');">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_guest"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="radio" value="{{ radios[0].id if radios else '' }}">
-    <h3>Гостевая сеть</h3><label>Состояние<select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select></label><label>SSID<input name="ssid" maxlength="32" value="Guest Wi-Fi"></label><label>Пароль<input name="wifi_password" type="password" minlength="8" maxlength="63" autocomplete="new-password"></label><div class="button-row"><button type="submit">Применить гостевую сеть</button><span class="risk-badge risk-badge--danger">risk: level 4</span></div>
-  </form>
+  <details class="settings-panel card">
+    <summary><span><strong>Гостевая сеть</strong><small>Отдельный Wi-Fi для гостей</small></span><span>Настроить</span></summary>
+    <form class="compact-form settings-panel__body" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Применить настройки гостевой сети?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_guest"><input type="hidden" name="confirmed" value="true"><label>Радиомодуль<select name="radio">{% for radio in radios %}<option value="{{ radio.id }}">{{ radio.band or radio.name or radio.id }}</option>{% endfor %}</select></label><div class="form-grid"><label>Состояние<select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select></label><label>Имя сети<input name="ssid" maxlength="32" value="Guest Wi-Fi"></label></div><label>Пароль<input name="wifi_password" type="password" minlength="8" maxlength="63" autocomplete="new-password"></label><div class="form-actions"><button type="submit">Сохранить гостевую сеть</button><span class="action-note action-note--warning">Сеть будет изолирована от основной</span></div></form>
+  </details>
   {% endif %}
-</section>
+</div>
+{% endif %}
+{% endif %}

@@ -74,10 +74,10 @@
     <string name="disconnect_router_title">Disconnect router?</string>
     <string name="disconnect_router_message">The agent will stop on the router. Reconnection will require running the agent installer again.</string>
     <string name="disconnect_router_action">Disconnect</string>
-    <string name="archive_router_title">Remove from list?</string>
-    <string name="archive_router_message">This router is already disconnected. Telemetry and command history will remain on the server, but reconnecting will require provisioning the agent again.</string>
-    <string name="archive_router_action">Remove</string>
-    <string name="remove_from_list">Remove from list</string>
+    <string name="delete_router_title">Delete router permanently?</string>
+    <string name="delete_router_message">The router, all telemetry, commands, and related history will be permanently deleted from the server. The agent must be registered again.</string>
+    <string name="delete_router_action">Delete permanently</string>
+    <string name="remove_from_list">Delete router</string>
     <string name="telemetry_state_title">State</string>
     <string name="telemetry_system_title">System</string>
     <string name="telemetry_hardware_title">Hardware</string>

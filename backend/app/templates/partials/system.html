@@ -1,44 +1,100 @@
-<section class="card">
-  <h2>Система</h2>
-  {% if capabilities_message and not supports.system_reboot %}
-  <p class="notice">{{ capabilities_message }}</p>
-  {% endif %}
-  <p>Команда перезагрузки будет выполнена при следующем опросе агента.</p>
-  <div class="metric"><span class="metric__label">Hostname</span><span class="metric__value">{{ system_summary.hostname or device.hostname or 'нет данных' }}</span></div>
-  <div class="metric"><span class="metric__label">Kernel</span><span class="metric__value metric__value--small">{{ system_summary.kernel or 'нет данных' }}</span></div>
-  <div class="metric"><span class="metric__label">Conntrack</span><span class="metric__value">{{ system_summary.conntrack_count or 0 }} / {{ system_summary.conntrack_max or 0 }}</span></div>
-  {% if services %}<div class="service-grid">{% for name, state in services.items() %}<span class="service-pill service-pill--{{ state }}">{{ name }}: {{ state }}</span>{% endfor %}</div>{% endif %}
-  {% if supports.system_set_hostname %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_hostname"><input type="hidden" name="confirmed" value="true">
-    <label>Новый hostname<input name="hostname" required maxlength="63" value="{{ system_summary.hostname or device.hostname or '' }}"></label>
-    <div class="button-row"><button type="submit">Изменить hostname</button><span class="risk-badge">risk: level 3</span></div>
-  </form>
-  {% endif %}
-  {% if supports.system_restart_service %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.restart_service"><input type="hidden" name="confirmed" value="true">
-    <label>Сервис<select name="service"><option value="dnsmasq">dnsmasq</option><option value="firewall">firewall</option><option value="odhcpd">odhcpd</option><option value="network">network</option></select></label>
-    <div class="button-row"><button type="submit">Перезапустить сервис</button><span class="risk-badge">risk: level 3</span></div>
-  </form>
-  {% endif %}
-  {% if supports.system_reboot %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="command_type" value="router.reboot">
-    <input type="hidden" name="confirmed" value="true">
-    <div class="button-row">
-      <button type="submit">Перезагрузить</button>
-      <span class="risk-badge">risk: level 3</span>
+<div class="system-stat-grid">
+  <article class="stat-card {{ 'stat-card--healthy' if age is not none and age <= 120 else 'stat-card--warning' }}">
+    <span class="stat-card__label">Мониторинг</span>
+    <strong>{{ system_view.telemetry_state }}</strong>
+    <small>{{ age ~ ' сек назад' if age is not none else 'данные не получены' }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-card__label">Время работы</span>
+    <strong>{{ system.get('uptime')|duration if system.get('uptime') is not none else 'нет данных' }}</strong>
+    <small>без перезагрузки</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-card__label">Память</span>
+    <strong>{{ system_view.memory_used|size_kb }} из {{ system_view.memory_total|size_kb }}</strong>
+    <div class="progress" title="Использовано {{ system_view.memory_percent }}%"><span style="width: {{ system_view.memory_percent }}%"></span></div>
+    <small>использовано {{ system_view.memory_percent }}%</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-card__label">Нагрузка</span>
+    <strong>{{ system.get('load') or 'нет данных' }}</strong>
+    <small>за 1 минуту{% if cpu.get('cores') %} · {{ cpu.get('cores') }} ядер{% endif %}</small>
+  </article>
+</div>
+
+<div class="workspace-grid section">
+  <section class="card workspace-card">
+    <div class="card__heading"><div><p class="eyebrow">Устройство</p><h2>О роутере</h2></div></div>
+    <dl class="friendly-list">
+      <dt>Имя в сети</dt><dd>{{ system_summary.hostname or device.hostname or 'нет данных' }}</dd>
+      <dt>Модель</dt><dd>{{ device.model or board.get('model') or 'нет данных' }}</dd>
+      <dt>Прошивка</dt><dd>{{ device.firmware or 'нет данных' }}</dd>
+      <dt>Ядро Linux</dt><dd>{{ system_summary.kernel or 'нет данных' }}</dd>
+      <dt>Процессор</dt><dd>{{ cpu.get('model') or 'нет данных' }}{% if cpu.get('cores') %} · {{ cpu.get('cores') }} ядер{% endif %}</dd>
+      <dt>Локальное время</dt><dd>{{ system_summary.local_time or 'нет данных' }}</dd>
+    </dl>
+  </section>
+
+  <section class="card workspace-card">
+    <div class="card__heading"><div><p class="eyebrow">Ресурсы</p><h2>Использование</h2></div></div>
+    <div class="resource-list">
+      <div class="resource-item"><div><span>Встроенная память</span><strong>{{ system_view.storage_used|size_kb }} из {{ system_view.storage_total|size_kb }}</strong></div><div class="progress"><span style="width: {{ system_view.storage_percent }}%"></span></div></div>
+      <div class="resource-item"><div><span>Сетевые соединения</span><strong>{{ system_summary.conntrack_count or 0 }} из {{ system_summary.conntrack_max or 0 }}</strong></div><div class="progress"><span style="width: {{ system_view.conntrack_percent }}%"></span></div></div>
+      <div class="resource-item"><div><span>Температура</span><strong>{% if thermal.get('available') %}{{ thermal.get('milli_celsius', 0) / 1000 }} °C{% else %}Датчик не найден{% endif %}</strong></div></div>
+      <div class="resource-item"><div><span>Процессы</span><strong>{{ processes.get('count') or 'нет данных' }}</strong></div></div>
+      <div class="resource-item"><div><span>Подключённые устройства</span><strong>{{ client_count }}</strong></div></div>
     </div>
-  </form>
-  {% else %}
-  <p class="muted">Команда скрыта: агент ещё не подтвердил поддержку перезагрузки.</p>
-  {% endif %}
-  {% if supports.system_timezone %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_timezone"><input type="hidden" name="confirmed" value="true"><h3>Часовой пояс</h3><label>Регион<input name="zonename" required value="Europe/Moscow"></label><label>POSIX timezone<input name="timezone" required value="MSK-3"></label><div class="button-row"><button type="submit">Сохранить время</button><span class="risk-badge">risk: level 3</span></div></form>
-  {% endif %}
-  {% if supports.system_ntp %}
-  <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_ntp"><input type="hidden" name="confirmed" value="true"><h3>Синхронизация времени</h3><label>Состояние<select name="enabled"><option value="true">Включена</option><option value="false">Выключена</option></select></label><label>NTP-серверы<input name="servers" value="0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org"></label><div class="button-row"><button type="submit">Сохранить NTP</button><span class="risk-badge">risk: level 3</span></div></form>
-  {% endif %}
+  </section>
+</div>
+
+{% if services %}
+<section class="card section workspace-card">
+  <div class="card__heading"><div><p class="eyebrow">Службы</p><h2>Ключевые компоненты</h2><p class="muted">Текущее состояние системных служб OpenWrt.</p></div></div>
+  <div class="service-grid service-grid--friendly">{% for name, state in services.items() %}<span class="service-pill service-pill--{{ state }}"><i></i>{{ name }}<small>{{ 'работает' if state == 'running' else state }}</small></span>{% endfor %}</div>
 </section>
+{% endif %}
+
+<div class="settings-workspace section">
+  {% if supports.system_set_hostname %}
+  <section class="card control-card">
+    <div><p class="eyebrow">Идентификация</p><h2>Имя роутера</h2><p class="muted">Используется в локальной сети и списке устройств.</p></div>
+    <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_hostname"><input type="hidden" name="confirmed" value="true">
+      <label>Имя в сети<input name="hostname" required maxlength="63" value="{{ system_summary.hostname or device.hostname or '' }}"></label>
+      <div class="form-actions"><button type="submit">Сохранить</button><span class="action-note">Роутер применит новое имя</span></div>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if supports.system_timezone or supports.system_ntp %}
+  <section class="card control-card">
+    <div><p class="eyebrow">Дата и время</p><h2>Синхронизация</h2><p class="muted">Часовой пояс и серверы точного времени.</p></div>
+    {% if supports.system_timezone %}
+    <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_timezone"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>Регион<input name="zonename" required value="Europe/Moscow"></label><label>Системная зона<input name="timezone" required value="MSK-3"></label></div><div class="form-actions"><button type="submit">Сохранить пояс</button></div></form>
+    {% endif %}
+    {% if supports.system_ntp %}
+    <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_ntp"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>Синхронизация<select name="enabled"><option value="true">Включена</option><option value="false">Выключена</option></select></label><label>NTP-серверы<input name="servers" value="0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org"></label></div><div class="form-actions"><button type="submit">Сохранить NTP</button></div></form>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if supports.system_restart_service %}
+  <section class="card control-card">
+    <div><p class="eyebrow">Службы</p><h2>Перезапуск компонента</h2><p class="muted">Используйте, если отдельная функция роутера перестала отвечать.</p></div>
+    <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Перезапустить выбранную службу?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.restart_service"><input type="hidden" name="confirmed" value="true">
+      <label>Компонент<select name="service"><option value="dnsmasq">DHCP и DNS</option><option value="firewall">Сетевой экран</option><option value="odhcpd">IPv6 и DHCPv6</option><option value="network">Сетевые подключения</option></select></label>
+      <div class="form-actions"><button class="button--secondary" type="submit">Перезапустить службу</button></div>
+    </form>
+  </section>
+  {% endif %}
+</div>
+
+{% if supports.system_reboot %}
+<section class="system-reboot section">
+  <div><h2>Перезагрузка роутера</h2><p>Соединение пропадёт на несколько минут и восстановится автоматически.</p></div>
+  <form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Перезагрузить роутер сейчас?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="router.reboot"><input type="hidden" name="confirmed" value="true"><button class="button--danger" type="submit">Перезагрузить</button></form>
+</section>
+{% elif capabilities_message %}
+<p class="notice section">{{ capabilities_message }}</p>
+{% endif %}

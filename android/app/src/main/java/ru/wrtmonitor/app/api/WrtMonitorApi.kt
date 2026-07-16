@@ -114,10 +114,10 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         JSONObject(response).optString("status", "disconnecting")
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
-    fun archiveDevice(deviceId: String): ApiResult<String> = runCatching {
-        val (status, response) = request("/api/v1/devices/$deviceId/archive", "POST", JSONObject())
+    fun deleteDevice(deviceId: String): ApiResult<String> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId", "DELETE")
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
-        JSONObject(response).optString("status", "archived")
+        JSONObject(response).optString("status", "deleted")
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
     private fun parseAgentStatus(json: JSONObject): AgentStatusDto = AgentStatusDto(

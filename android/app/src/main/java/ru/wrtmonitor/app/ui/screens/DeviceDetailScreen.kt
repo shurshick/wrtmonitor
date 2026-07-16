@@ -256,13 +256,11 @@ internal fun AgentSection(
     agent: AgentStatusDto?,
     actionMessage: String,
     actionError: String,
-    canArchive: Boolean,
     onCheckUpdate: () -> Unit,
     onSetInterval: (Int) -> Unit,
     onEnableAutoUpdate: () -> Unit,
     onDisableAutoUpdate: () -> Unit,
     onRollback: () -> Unit,
-    onArchive: () -> Unit,
 ) {
     val capabilities = agent?.capabilities ?: emptyMap()
     val autoUpdateEnabled = agent?.autoUpdateEnabled == true
@@ -333,11 +331,6 @@ internal fun AgentSection(
                 stringResource(R.string.capabilities_missing_reinstall),
                 color = MaterialTheme.colorScheme.secondary,
             )
-        }
-        if (canArchive) {
-            TextButton(onClick = onArchive, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.archive_router_action), color = MaterialTheme.colorScheme.error)
-            }
         }
     }
 }

@@ -51,7 +51,7 @@
     <form class="control-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="agent.set_interval"><input type="hidden" name="confirmed" value="true">
       <label for="interval-seconds">Интервал, секунд<input id="interval-seconds" type="number" name="interval_seconds" min="5" step="1" value="{{ agent.get('telemetry_interval_seconds') or 60 }}"></label>
-      <div class="button-row"><button type="submit">Сохранить интервал</button><span class="risk-badge risk-badge--safe">min 5 sec</span></div>
+      <div class="button-row"><button type="submit">Сохранить интервал</button><span class="risk-badge risk-badge--safe">Минимум 5 секунд</span></div>
     </form>
     {% else %}<p class="notice">Обновите агент, чтобы управлять интервалом.</p>{% endif %}
   </section>

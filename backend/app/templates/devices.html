@@ -23,15 +23,13 @@
       </span>
       <span class="router-card__firmware">{{ device.firmware or 'Прошивка не определена' }}</span>
       <span class="router-card__seen">Последняя связь<br><strong>{{ device.last_seen_at|timestamp }}</strong></span>
-      <span class="status status--{{ device.status|lower }}">{{ device.status }}</span>
+      <span class="status status--{{ device.status|lower }}">{{ device.status|status_label }}</span>
       <span class="router-card__arrow">&rarr;</span>
     </a>
-    {% if device.status == 'disabled' %}
-    <form class="router-card__action" method="post" action="/devices/{{ device.id }}/archive" onsubmit="return confirm('Удалить отключённый роутер из списка? Для повторного подключения потребуется заново зарегистрировать агент.');">
+    <form class="router-card__action" method="post" action="/devices/{{ device.id }}/delete" onsubmit="return confirm('Удалить роутер безвозвратно? Будут удалены устройство, telemetry, команды и связанная история. Агент потеряет доступ к серверу.');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button--danger button--small" type="submit">Удалить из списка</button>
+      <button class="icon-button icon-button--danger" type="submit" title="Удалить роутер и все его данные" aria-label="Удалить роутер">&#128465;</button>
     </form>
-    {% endif %}
   </article>
   {% else %}
   <div class="empty-state card"><h2>Роутеров пока нет</h2><p>Установите агент на OpenWrt и подключите его к этому серверу.</p></div>

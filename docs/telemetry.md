@@ -32,6 +32,6 @@ OpenWrt agent собирает:
 - `dhcp`: динамические и статические leases;
 - `agent`: версия, update status, interval и capabilities.
 
-`schema_version=2` используется в ветке `v0.3.0-rc2`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
+`schema_version=2` используется в ветке `v0.3.0-rc3`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
 
 Retention: сервер хранит последние 100 telemetry snapshots на устройство. Старые snapshots удаляются после успешного ingest.

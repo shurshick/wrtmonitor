@@ -631,7 +631,6 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
         agent = telemetry?.agent,
         actionMessage = message,
         actionError = "",
-        canArchive = false,
         onCheckUpdate = { queueSystem("agent.update", JSONObject(), updateCheckQueued) },
         onSetInterval = { seconds ->
             queueSystem("agent.set_interval", JSONObject().put("interval_seconds", seconds), intervalChangeQueued)
@@ -643,7 +642,6 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             queueSystem("agent.set_auto_update", JSONObject().put("enabled", false), autoUpdateDisableQueued)
         },
         onRollback = { confirmAgentRollback = true },
-        onArchive = {},
     )
     if (confirmReboot) AlertDialog(
         onDismissRequest = { confirmReboot = false },

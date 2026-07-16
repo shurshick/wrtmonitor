@@ -74,10 +74,10 @@
     <string name="disconnect_router_title">Отключить роутер?</string>
     <string name="disconnect_router_message">Агент завершит работу на роутере. Для повторного подключения потребуется заново запустить установку агента.</string>
     <string name="disconnect_router_action">Отключить</string>
-    <string name="archive_router_title">Удалить из списка?</string>
-    <string name="archive_router_message">Этот роутер уже отключён. История telemetry и команд останется на сервере, но для повторного подключения агент нужно будет зарегистрировать заново.</string>
-    <string name="archive_router_action">Удалить</string>
-    <string name="remove_from_list">Удалить из списка</string>
+    <string name="delete_router_title">Удалить роутер навсегда?</string>
+    <string name="delete_router_message">Роутер, вся телеметрия, команды и связанная история будут безвозвратно удалены с сервера. Агент потребуется зарегистрировать заново.</string>
+    <string name="delete_router_action">Удалить навсегда</string>
+    <string name="remove_from_list">Удалить роутер</string>
     <string name="telemetry_state_title">Состояние</string>
     <string name="telemetry_system_title">Система</string>
     <string name="telemetry_hardware_title">Оборудование</string>

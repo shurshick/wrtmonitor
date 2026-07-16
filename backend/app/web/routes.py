@@ -22,12 +22,11 @@ from ..services.commands import (
     validate_command_request,
 )
 from ..services.devices import (
-    archive_device_or_409,
+    delete_device_permanently,
     device_supports,
     get_user_device_or_404,
     latest_device_telemetry,
 )
-from ..security import hash_token
 from ..services.audit import audit
 from ..services.auth import settings, web_user_from_session
 from ..services.setup import complete_setup, is_setup_required
@@ -89,8 +88,51 @@ def format_duration(value: int | None) -> str:
     return " ".join(parts)
 
 
+def format_size_kb(value: int | float | None) -> str:
+    if value is None:
+        return "нет данных"
+    size = float(value)
+    if size >= 1024 * 1024:
+        return f"{size / 1024 / 1024:.1f} ГБ"
+    if size >= 1024:
+        return f"{size / 1024:.0f} МБ"
+    return f"{size:.0f} КБ"
+
+
+def format_bytes(value: int | float | None) -> str:
+    if value is None:
+        return "нет данных"
+    size = float(value)
+    units = ("Б", "КБ", "МБ", "ГБ", "ТБ")
+    unit = units[0]
+    for unit in units:
+        if abs(size) < 1024 or unit == units[-1]:
+            break
+        size /= 1024
+    return f"{size:.1f} {unit}" if unit != "Б" else f"{size:.0f} {unit}"
+
+
+def percent(used: int | float | None, total: int | float | None) -> int:
+    if not total:
+        return 0
+    return max(0, min(100, round(float(used or 0) / float(total) * 100)))
+
+
+def format_device_status(value: str | None) -> str:
+    return {
+        "online": "В сети",
+        "offline": "Нет связи",
+        "provisioned": "Ожидает подключения",
+        "disconnecting": "Отключается",
+        "disabled": "Отключён",
+    }.get(str(value or "").lower(), value or "Неизвестно")
+
+
 templates.env.filters["timestamp"] = format_timestamp
 templates.env.filters["duration"] = format_duration
+templates.env.filters["size_kb"] = format_size_kb
+templates.env.filters["bytes"] = format_bytes
+templates.env.filters["status_label"] = format_device_status
 
 
 def capability_summary(capabilities: dict[str, bool]) -> str:
@@ -353,6 +395,26 @@ def device_page(
         if telemetry
         else None
     )
+    memory_total = int(memory.get("total_kb", 0) or 0)
+    memory_available = int(memory.get("available_kb", memory.get("free_kb", 0)) or 0)
+    memory_used = max(0, memory_total - memory_available)
+    storage_total = int(storage.get("total_kb", 0) or 0)
+    storage_used = int(storage.get("used_kb", 0) or 0)
+    conntrack_count = int(system_summary.get("conntrack_count", 0) or 0)
+    conntrack_max = int(system_summary.get("conntrack_max", 0) or 0)
+    system_view = {
+        "memory_total": memory_total,
+        "memory_available": memory_available,
+        "memory_used": memory_used,
+        "memory_percent": percent(memory_used, memory_total),
+        "storage_total": storage_total,
+        "storage_used": storage_used,
+        "storage_percent": percent(storage_used, storage_total),
+        "conntrack_percent": percent(conntrack_count, conntrack_max),
+        "telemetry_state": "Актуальные данные"
+        if age is not None and age <= 120
+        else "Данные устарели",
+    }
     return templates.TemplateResponse(
         request,
         "device_detail.html",
@@ -383,6 +445,7 @@ def device_page(
             "clients": clients.get("items") or [],
             "client_count": clients.get("count", 0),
             "system_summary": system_summary,
+            "system_view": system_view,
             "services": services,
             "commands": command_entries,
             "latest_diagnostics": latest_diagnostics,
@@ -550,9 +613,9 @@ def disconnect_device_page(
     return RedirectResponse(f"/devices/{device_id}", status_code=303)
 
 
-@router.post("/devices/{device_id}/archive")
-def archive_device_page(
-    request: Request,
+@router.post("/devices/{device_id}/delete")
+@router.post("/devices/{device_id}/archive", deprecated=True)
+def delete_device_page(
     device_id: UUID,
     csrf_token: str = Form(...),
     config: Settings = Depends(settings),
@@ -566,28 +629,13 @@ def archive_device_page(
         return RedirectResponse("/login", status_code=303)
     require_web_csrf(wrtmonitor_session, csrf_token, config)
     device = get_user_device_or_404(db, user, device_id)
-    try:
-        archive_device_or_409(device)
-    except HTTPException as exc:
-        return templates.TemplateResponse(
-            request,
-            "message.html",
-            {
-                "title": "Удаление недоступно",
-                "message": exc.detail,
-                "link": f"/devices/{device_id}",
-            },
-            status_code=exc.status_code,
-        )
-    device.archived_at = datetime.now(UTC)
-    device.updated_at = datetime.now(UTC)
-    device.token_hash = hash_token(secrets.token_urlsafe(48))
+    delete_device_permanently(db, device)
     audit(
         db,
         user.id,
-        "device.archive",
-        "device",
-        str(device.id),
+        "device.delete",
+        None,
+        None,
         {"source": "web"},
     )
     db.commit()

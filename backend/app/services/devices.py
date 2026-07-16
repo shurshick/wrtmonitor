@@ -1,10 +1,10 @@
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from ..models import Device, DeviceTelemetry, User
+from ..models import AuditLog, Device, DeviceCommand, DeviceTelemetry, User
 from .auth import ensure_single_owner_access
 
 
@@ -22,12 +22,29 @@ def get_user_device_or_404(db: Session, user: User, device_id: UUID) -> Device:
     return get_device_or_404(db, device_id)
 
 
-def archive_device_or_409(device: Device) -> None:
-    if device.status != "disabled":
-        raise HTTPException(
-            status_code=409,
-            detail="Only disabled devices can be removed from the active list",
+def delete_device_permanently(db: Session, device: Device) -> None:
+    """Delete a router and every database record owned by it."""
+    device_id = device.id
+    command_ids = list(
+        db.scalars(
+            select(DeviceCommand.id).where(DeviceCommand.device_id == device_id)
+        ).all()
+    )
+    db.execute(
+        delete(AuditLog).where(
+            AuditLog.object_type == "device", AuditLog.object_id == str(device_id)
         )
+    )
+    if command_ids:
+        db.execute(
+            delete(AuditLog).where(
+                AuditLog.object_type == "device_command",
+                AuditLog.object_id.in_([str(command_id) for command_id in command_ids]),
+            )
+        )
+    db.execute(delete(DeviceTelemetry).where(DeviceTelemetry.device_id == device_id))
+    db.execute(delete(DeviceCommand).where(DeviceCommand.device_id == device_id))
+    db.delete(device)
 
 
 def latest_device_telemetry(db: Session, device_id: UUID) -> DeviceTelemetry | None:

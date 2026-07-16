@@ -12,7 +12,7 @@ from ..models import Device, User
 from ..services.audit import audit
 from ..services.auth import current_user
 from ..services.devices import (
-    archive_device_or_409,
+    delete_device_permanently,
     get_latest_agent_status,
     get_user_device_or_404,
 )
@@ -99,28 +99,41 @@ def provision_device(
     return {"device_id": str(device.id), "device_token": device_token}
 
 
-@router.post("/{device_id}/archive")
-def archive_device(
+def _delete_device(
+    device_id: UUID,
+    user: User,
+    db: Session,
+) -> dict[str, str]:
+    device = get_user_device_or_404(db, user, device_id)
+    delete_device_permanently(db, device)
+    audit(
+        db,
+        user.id,
+        "device.delete",
+        None,
+        None,
+        {"source": "api"},
+    )
+    db.commit()
+    return {"status": "deleted"}
+
+
+@router.delete("/{device_id}")
+def delete_device(
     device_id: UUID,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    device = get_user_device_or_404(db, user, device_id)
-    archive_device_or_409(device)
-    now = datetime.now(UTC)
-    device.archived_at = now
-    device.updated_at = now
-    device.token_hash = hash_token(secrets.token_urlsafe(48))
-    audit(
-        db,
-        user.id,
-        "device.archive",
-        "device",
-        str(device.id),
-        {"status": device.status},
-    )
-    db.commit()
-    return {"status": "archived"}
+    return _delete_device(device_id, user, db)
+
+
+@router.post("/{device_id}/archive", deprecated=True)
+def delete_device_legacy(
+    device_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    return _delete_device(device_id, user, db)
 
 
 @router.get("/{device_id}/agent")

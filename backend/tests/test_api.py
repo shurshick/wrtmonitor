@@ -196,7 +196,7 @@ def test_devices_page_lists_devices(monkeypatch):
     assert "online" in response.text
 
 
-def test_devices_page_shows_archive_button_only_for_disabled_devices(monkeypatch):
+def test_devices_page_allows_permanent_delete_for_every_device(monkeypatch):
     class FakeScalars:
         def all(self):
             return [
@@ -246,9 +246,9 @@ def test_devices_page_shows_archive_button_only_for_disabled_devices(monkeypatch
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert response.text.count("Удалить из списка") == 1
-    assert "/devices/a0f55bcd-3a85-4d94-8a50-f62e463682b8/archive" in response.text
-    assert "/devices/b0f55bcd-3a85-4d94-8a50-f62e463682b8/archive" not in response.text
+    assert response.text.count('aria-label="Удалить роутер"') == 2
+    assert "/devices/a0f55bcd-3a85-4d94-8a50-f62e463682b8/delete" in response.text
+    assert "/devices/b0f55bcd-3a85-4d94-8a50-f62e463682b8/delete" in response.text
 
 
 def test_device_page_renders_agent_update_status(monkeypatch):
@@ -560,7 +560,7 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert count == 100
 
 
-def test_disabled_device_can_be_archived_but_online_device_cannot():
+def test_device_delete_removes_router_and_all_related_data():
     if not postgres_e2e_enabled():
         pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
     clear_database()
@@ -591,7 +591,7 @@ def test_disabled_device_can_be_archived_but_online_device_cannot():
         "/api/v1/devices/provision",
         headers=admin_headers,
         json={
-            "name": "ArchiveRouter",
+            "name": "DeleteRouter",
             "hostname": "OpenWrt",
             "model": "VirtualBox",
             "firmware": "OpenWrt 22.03.5",
@@ -607,12 +607,6 @@ def test_disabled_device_can_be_archived_but_online_device_cannot():
         json={"device_id": device_id, "telemetry": {"system": {"uptime": 1}}},
     )
     assert online_response.status_code == 200
-    conflict_response = client.post(
-        f"/api/v1/devices/{device_id}/archive",
-        headers=admin_headers,
-    )
-    assert conflict_response.status_code == 409
-
     disconnect_response = client.post(
         f"/api/v1/devices/{device_id}/disconnect",
         headers=admin_headers,
@@ -620,26 +614,19 @@ def test_disabled_device_can_be_archived_but_online_device_cannot():
     assert disconnect_response.status_code == 200
     command_id = disconnect_response.json()["command_id"]
 
-    result_response = client.post(
-        f"/api/v1/agent/commands/{command_id}/result",
-        headers=agent_headers,
-        json={"status": "done", "result": {"message": "agent disabled"}},
-    )
-    assert result_response.status_code == 200
-
-    archive_response = client.post(
-        f"/api/v1/devices/{device_id}/archive",
+    delete_response = client.delete(
+        f"/api/v1/devices/{device_id}",
         headers=admin_headers,
     )
-    assert archive_response.status_code == 200
-    assert archive_response.json()["status"] == "archived"
+    assert delete_response.status_code == 200
+    assert delete_response.json()["status"] == "deleted"
 
-    archived_telemetry_response = client.post(
+    deleted_telemetry_response = client.post(
         "/api/v1/agent/telemetry",
         headers=agent_headers,
         json={"device_id": device_id, "telemetry": {"system": {"uptime": 2}}},
     )
-    assert archived_telemetry_response.status_code in {401, 403}
+    assert deleted_telemetry_response.status_code in {401, 403}
 
     list_response = client.get("/api/v1/devices", headers=admin_headers)
     assert list_response.status_code == 200
@@ -649,9 +636,27 @@ def test_disabled_device_can_be_archived_but_online_device_cannot():
         bind=get_engine(), autoflush=False, expire_on_commit=False
     )
     with session_factory() as session:
+        device_count = (
+            session.query(Device).filter(Device.id == UUID(device_id)).count()
+        )
         telemetry_count = (
             session.query(DeviceTelemetry)
             .filter(DeviceTelemetry.device_id == UUID(device_id))
             .count()
         )
-    assert telemetry_count == 1
+        command_count = (
+            session.query(DeviceCommand)
+            .filter(DeviceCommand.device_id == UUID(device_id))
+            .count()
+        )
+        command_audit_count = (
+            session.query(AuditLog).filter(AuditLog.object_id == command_id).count()
+        )
+        device_audit_count = (
+            session.query(AuditLog).filter(AuditLog.object_id == device_id).count()
+        )
+    assert device_count == 0
+    assert telemetry_count == 0
+    assert command_count == 0
+    assert command_audit_count == 0
+    assert device_audit_count == 0

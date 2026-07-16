@@ -9,7 +9,7 @@
 - `GET /api/v1/devices/{device_id}/commands`
 - `POST /api/v1/devices/{device_id}/commands`
 - `POST /api/v1/devices/{device_id}/disconnect`
-- `POST /api/v1/devices/{device_id}/archive`
+- `DELETE /api/v1/devices/{device_id}` — безвозвратно удалить роутер и связанные данные
 - `GET /api/v1/devices/{device_id}/telemetry/latest`
 - `GET /api/v1/devices/{device_id}/agent`
 - `POST /api/v1/agent/register`
@@ -44,7 +44,7 @@
 
 ```json
 {
-  "version": "0.3.0-rc2",
+  "version": "0.3.0-rc3",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -110,7 +110,7 @@ Body:
 - `level_3_reversible_config`
 - `level_4_disruptive`
 
-### Управляющие команды v0.3.0-rc2
+### Управляющие команды v0.3.0-rc3
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`

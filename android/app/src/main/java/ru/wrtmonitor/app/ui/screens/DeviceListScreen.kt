@@ -50,7 +50,7 @@ fun DeviceListScreen(
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf(DevicesUiState(loading = true)) }
     var disconnectTarget by remember { mutableStateOf<DeviceDto?>(null) }
-    var archiveTarget by remember { mutableStateOf<DeviceDto?>(null) }
+    var deleteTarget by remember { mutableStateOf<DeviceDto?>(null) }
     var actionError by remember { mutableStateOf("") }
 
     fun refresh() {
@@ -80,10 +80,10 @@ fun DeviceListScreen(
         }
     }
 
-    fun archive(device: DeviceDto) {
+    fun deleteDevice(device: DeviceDto) {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).archiveDevice(device.id)
+                WrtMonitorApi(serverUrl, accessToken).deleteDevice(device.id)
             }) {
                 is ApiResult.Success -> refresh()
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else actionError = result.message
@@ -129,7 +129,7 @@ fun DeviceListScreen(
                         device = device,
                         onOpenDevice = onOpenDevice,
                         onDisconnect = { disconnectTarget = device },
-                        onArchive = { archiveTarget = device },
+                        onDelete = { deleteTarget = device },
                     )
                 }
             }
@@ -155,19 +155,19 @@ fun DeviceListScreen(
         )
     }
 
-    archiveTarget?.let { device ->
+    deleteTarget?.let { device ->
         AlertDialog(
-            onDismissRequest = { archiveTarget = null },
-            title = { Text(stringResource(R.string.archive_router_title)) },
-            text = { Text(stringResource(R.string.archive_router_message)) },
+            onDismissRequest = { deleteTarget = null },
+            title = { Text(stringResource(R.string.delete_router_title)) },
+            text = { Text(stringResource(R.string.delete_router_message)) },
             confirmButton = {
                 TextButton(onClick = {
-                    archiveTarget = null
-                    archive(device)
-                }) { Text(stringResource(R.string.archive_router_action)) }
+                    deleteTarget = null
+                    deleteDevice(device)
+                }) { Text(stringResource(R.string.delete_router_action)) }
             },
             dismissButton = {
-                TextButton(onClick = { archiveTarget = null }) {
+                TextButton(onClick = { deleteTarget = null }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
@@ -180,7 +180,7 @@ private fun DeviceListCard(
     device: DeviceDto,
     onOpenDevice: (DeviceDto) -> Unit,
     onDisconnect: () -> Unit,
-    onArchive: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -199,10 +199,8 @@ private fun DeviceListCard(
                     Text(stringResource(R.string.disconnect_router_action), color = MaterialTheme.colorScheme.error)
                 }
             }
-            if (device.status == "disabled") {
-                TextButton(onClick = onArchive, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.remove_from_list), color = MaterialTheme.colorScheme.error)
-                }
+            TextButton(onClick = onDelete, modifier = Modifier.align(Alignment.End)) {
+                Text(stringResource(R.string.remove_from_list), color = MaterialTheme.colorScheme.error)
             }
         }
     }
