@@ -1,29 +1,26 @@
-# v0.3.0-rc6
+# v0.3.0
 
-Релиз закрывает основные долги стабилизации перед `v0.3.0`.
+Первый стабильный выпуск линии `0.3` для сервера, OpenWrt-агента и Android.
 
-## Что изменилось
+## Что изменилось относительно rc6
 
-- Capabilities агента определяются по реальным утилитам, UCI-конфигурациям, сервисам и Wi-Fi-радио.
-- Capability report v4 содержит причину недоступности каждой функции.
-- Реализован полный цикл команды `queued -> sent -> running -> success/failed`.
-- Зависшие при доставке команды повторно ставятся в очередь после истечения lease.
-- Повторный финальный результат обрабатывается идемпотентно и не портит сохранённый статус.
-- PostgreSQL E2E больше не пропускаются в CI и проверяют success, failure, retry и expiry.
-- Chromium smoke-test проверяет все разделы Web UI на desktop и mobile viewport и сохраняет скриншоты.
-- Android получает refresh token и автоматически восстанавливает сессию после истечения access token.
-- Web UI и Android показывают причины отключённых capabilities.
-- Android `versionCode` увеличен до `33`.
+- Зафиксирована совместимость сервера, агента и Android на capability report schema v4.
+- Подтверждены PostgreSQL E2E, полный lifecycle команд и адаптивный Chromium smoke-test.
+- GitHub Actions переведены на актуальный Node 24 runtime.
+- Android `versionCode` увеличен до `34`, APK устанавливается поверх предыдущих RC.
+- Документация и инструкции синхронизированы со стабильным тегом.
 
 ## Обновление
 
-Агент `0.1.1-rc9` и последующие версии обновляются штатной командой обновления. После установки `rc6` убедитесь, что capability report имеет версию `4`.
+- Сервер: выполните redeploy `ghcr.io/shurshick/wrtmonitor:latest`.
+- Агент: используйте кнопку проверки обновления или штатную команду agent update.
+- Android: установите новый APK поверх предыдущей версии.
 
-Для сервера выполните redeploy образа `ghcr.io/shurshick/wrtmonitor:latest`. PostgreSQL volume сохраняется.
+PostgreSQL volume при обновлении контейнера сохраняется.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.3.0-rc6-debug.apk`
-- `wrtmonitor-openwrt-agent-v0.3.0-rc6.tar.gz`
-- `wrtmonitor-truenas-v0.3.0-rc6.yaml`
+- `wrtmonitor-android-v0.3.0-debug.apk`
+- `wrtmonitor-openwrt-agent-v0.3.0.tar.gz`
+- `wrtmonitor-truenas-v0.3.0.yaml`
 - `SHA256SUMS.txt`

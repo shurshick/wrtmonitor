@@ -26,8 +26,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
@@ -65,7 +65,7 @@ jobs:
           trap 'kill $SERVER_PID' EXIT
           for attempt in $(seq 1 30); do curl -fsS http://127.0.0.1:8090/health && break; sleep 1; done
           python backend/tests/browser_smoke.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: web-responsive-smoke
@@ -76,7 +76,7 @@ jobs:
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wrtmonitor
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Read release metadata
         run: echo "RELEASE_VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
       - name: Build release image
@@ -104,7 +104,7 @@ jobs:
   android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -115,7 +115,7 @@ jobs:
       - run: chmod +x ./gradlew
       - run: ./gradlew :android:app:assembleDebug
       - run: ./gradlew :android:app:testDebugUnitTest
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wrtmonitor-android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -123,7 +123,7 @@ jobs:
   release-artifacts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Read release metadata
         run: |
           echo "RELEASE_VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
@@ -131,7 +131,7 @@ jobs:
       - name: Validate release tag
         if: startsWith(github.ref, 'refs/tags/')
         run: test "$GITHUB_REF_NAME" = "$(cat RELEASE_TAG)"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - uses: actions/setup-java@v4
@@ -149,7 +149,7 @@ jobs:
       - run: cp android/app/build/outputs/apk/debug/app-debug.apk "wrtmonitor-android-v$RELEASE_VERSION-debug.apk"
       - run: cp deploy/truenas/wrtmonitor-truenas.yaml "wrtmonitor-truenas-v$RELEASE_VERSION.yaml"
       - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wrtmonitor-release-artifacts
           path: |

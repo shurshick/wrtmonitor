@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.0
+
+- Зафиксирован первый стабильный контракт сервера, агента и Android линии 0.3.
+- CI actions переведены на Node 24 runtime без deprecated runtime warnings.
+- Android versionCode увеличен до 34.
+- Документация и release artifacts переведены со статуса RC на stable.
+
 ## v0.3.0-rc6
 
 - Capabilities агента переведены со статических флагов на реальные проверки OpenWrt с диагностикой причин.

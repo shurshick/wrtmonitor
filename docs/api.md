@@ -51,7 +51,7 @@ Access token используется клиентами владельца. Dev
 
 ```json
 {
-  "version": "0.3.0-rc6",
+  "version": "0.3.0",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -117,7 +117,7 @@ Body:
 - `level_3_reversible_config`
 - `level_4_disruptive`
 
-### Управляющие команды v0.3.0-rc6
+### Управляющие команды v0.3.0
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`

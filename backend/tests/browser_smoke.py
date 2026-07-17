@@ -84,7 +84,7 @@ def prepare_router() -> str:
                 "device_id": device_id,
                 "telemetry": {
                     "agent": {
-                        "version": "0.3.0-rc6",
+                        "version": "0.3.0",
                         "status": "running",
                         "capabilities_version": 4,
                         "capabilities": capabilities,
