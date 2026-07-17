@@ -36,6 +36,13 @@ CONFIG_TRANSACTION_SCOPES: dict[str, tuple[str, ...]] = {
     "network.delete_route": ("network",),
     "network.set_ddns": ("ddns",),
     "network.set_upnp": ("upnpd", "firewall"),
+    "vpn.wireguard.set_interface": ("network",),
+    "vpn.wireguard.set_peer": ("network",),
+    "vpn.wireguard.delete_peer": ("network",),
+    "vpn.openvpn.set_client": ("openvpn",),
+    "vpn.openvpn.delete_client": ("openvpn",),
+    "vpn.policy.set": ("pbr",),
+    "vpn.policy.delete": ("pbr",),
     "dhcp.set_lease": ("dhcp",),
     "dhcp.delete_lease": ("dhcp",),
     "dhcp.set_pool": ("dhcp",),
@@ -60,7 +67,14 @@ CONNECTIVITY_SENSITIVE_COMMANDS = {
     if not command_type.startswith("system.")
 }
 
-SECRET_FIELDS = {"password", "key", "wifi_password"}
+SECRET_FIELDS = {
+    "password",
+    "key",
+    "wifi_password",
+    "private_key",
+    "preshared_key",
+    "config",
+}
 SELECTOR_FIELDS = {"iface", "radio", "interface"}
 
 

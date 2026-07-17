@@ -4,15 +4,15 @@
 
 ## Текущая версия
 
-Текущая стабильная версия: `v0.7.0`.
+Текущая стабильная версия: `v0.8.0`.
 
-Главное в `0.7.0`:
+Главное в `0.8.0`:
 
-- IPv6, RA и DHCPv6 для локальных сетей;
-- Multi-WAN с приоритетом и failover через `mwan3`;
-- статические IPv4/IPv6-маршруты, DDNS и UPnP;
-- зоны, транзит и расширенные правила firewall;
-- одинаковое управление периметром в Web UI и Android, capability report schema v8.
+- WireGuard server/client и управление peer;
+- импорт OpenVPN client profiles;
+- policy routing через `pbr` по клиентам, подсетям и назначениям;
+- статусы туннелей, handshake и VPN-трафик;
+- одинаковое управление VPN в Web UI и Android, capability report schema v9.
 
 В предыдущих релизах:
 
@@ -72,7 +72,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 В релизе он публикуется как:
 
 ```text
-wrtmonitor-truenas-v0.7.0.yaml
+wrtmonitor-truenas-v0.8.0.yaml
 ```
 
 Контейнер использует:

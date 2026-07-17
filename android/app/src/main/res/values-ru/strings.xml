@@ -333,4 +333,27 @@
     <string name="source_zone">Исходная зона</string>
     <string name="destination_zone">Зона назначения</string>
     <string name="action">Действие</string>
+    <string name="vpn_title">VPN</string>
+    <string name="vpn_summary">Защищённые туннели и выбор маршрута</string>
+    <string name="wireguard">Туннели WireGuard</string>
+    <string name="openvpn">Служба OpenVPN</string>
+    <string name="policy_routing">Маршрутизация по правилам</string>
+    <string name="wireguard_interface">Интерфейс WireGuard</string>
+    <string name="interface_name">Имя интерфейса</string>
+    <string name="tunnel_address">Адрес туннеля (CIDR)</string>
+    <string name="listen_port">Порт прослушивания</string>
+    <string name="private_key_optional">Приватный ключ (пусто — сгенерировать)</string>
+    <string name="wireguard_peer">Peer WireGuard</string>
+    <string name="peer_name">Имя peer</string>
+    <string name="public_key">Публичный ключ</string>
+    <string name="preshared_key_optional">Preshared key (необязательно)</string>
+    <string name="allowed_ips">Разрешённые сети</string>
+    <string name="endpoint_optional">Endpoint (необязательно)</string>
+    <string name="export">Экспорт</string>
+    <string name="openvpn_client">Клиент OpenVPN</string>
+    <string name="openvpn_config">Конфигурация OpenVPN</string>
+    <string name="import_profile">Импортировать профиль</string>
+    <string name="vpn_interface">VPN-интерфейс</string>
+    <string name="policy_source">Клиент или подсеть-источник</string>
+    <string name="policy_destination">Подсеть или узел назначения</string>
 </resources>

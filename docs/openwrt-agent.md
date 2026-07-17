@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.7.0` добавляет IPv6, Multi-WAN, маршруты, DDNS, UPnP и управление firewall. Она обновляется поверх `0.6.x` штатным update-механизмом.
+Версия `0.8.0` добавляет WireGuard, OpenVPN client, policy routing и VPN-телеметрию. Она обновляется поверх `0.7.x` штатным update-механизмом.
 
 ## Требования
 
@@ -34,8 +34,9 @@ Installer сам подтягивает зависимости через `opkg 
 - `ubus`
 - `ca-bundle`
 - `coreutils-sha256sum`
+- `coreutils-base64`
 
-Для истории трафика по клиентам installer пытается установить `nlbwmon`. Это опциональная зависимость: если пакета нет в feed конкретной сборки OpenWrt, агент продолжит работу без RX/TX по MAC.
+Для расширенных функций installer пытается установить `nlbwmon`, `wireguard-tools`, `openvpn-openssl` и `pbr`. Это опциональные зависимости: если пакета нет в feed конкретной сборки OpenWrt, агент продолжит работу, а соответствующая capability будет выключена с указанием причины.
 
 По умолчанию агент отправляет telemetry и опрашивает команды раз в `60` секунд. Интервал можно менять из Web UI и Android, минимальное значение `5` секунд.
 
@@ -77,7 +78,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.7.0/wrtmonitor-openwrt-agent-v0.7.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.8.0/wrtmonitor-openwrt-agent-v0.8.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \

@@ -16,7 +16,7 @@ telemetry_payload() {
         ""|*[!0-9]*) uptime_value="0" ;;
     esac
     load_value="$(json_escape "$load_value")"
-    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"agent":%s}}' \
+    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"vpn":%s,"agent":%s}}' \
         "$(device_id)" \
         "$uptime_value" \
         "$load_value" \
@@ -42,7 +42,46 @@ telemetry_payload() {
         "$(clients_json)" \
         "$(dhcp_json)" \
         "$(perimeter_json)" \
+        "$(vpn_json)" \
         "$(agent_status_json)"
+}
+
+vpn_json() {
+    wg_interfaces=""
+    if command -v wg >/dev/null 2>&1; then
+        for wg_iface in $(wg show interfaces 2>/dev/null || true); do
+            wg_public="$(wg show "$wg_iface" public-key 2>/dev/null || true)"
+            wg_port="$(wg show "$wg_iface" listen-port 2>/dev/null || echo 0)"
+            wg_peers=""
+            wg_dump="$(wg show "$wg_iface" dump 2>/dev/null | sed '1d' || true)"
+            while IFS="$(printf '\t')" read -r peer_public _ peer_endpoint peer_allowed peer_handshake peer_rx peer_tx peer_keepalive; do
+                [ -n "$peer_public" ] || continue
+                [ -n "$wg_peers" ] && wg_peers="$wg_peers,"
+                wg_peers="$wg_peers{\"public_key\":\"$(json_escape "$peer_public")\",\"endpoint\":\"$(json_escape "$peer_endpoint")\",\"allowed_ips\":\"$(json_escape "$peer_allowed")\",\"latest_handshake\":${peer_handshake:-0},\"rx_bytes\":${peer_rx:-0},\"tx_bytes\":${peer_tx:-0},\"persistent_keepalive\":${peer_keepalive:-0}}"
+            done <<EOF
+$wg_dump
+EOF
+            [ -n "$wg_interfaces" ] && wg_interfaces="$wg_interfaces,"
+            wg_interfaces="$wg_interfaces{\"name\":\"$(json_escape "$wg_iface")\",\"public_key\":\"$(json_escape "$wg_public")\",\"listen_port\":${wg_port:-0},\"peers\":[${wg_peers}]}"
+        done
+    fi
+    openvpn_clients=""
+    if uci -q show openvpn >/dev/null 2>&1; then
+        for ovpn_ref in $(uci -q show openvpn 2>/dev/null | sed -n 's/^openvpn\.\([^.=]*\)=openvpn$/\1/p'); do
+            ovpn_name="$(uci -q get "openvpn.$ovpn_ref.wrtmonitor_name" 2>/dev/null || echo "$ovpn_ref")"
+            ovpn_enabled="$(uci -q get "openvpn.$ovpn_ref.enabled" 2>/dev/null || echo 0)"
+            [ -n "$openvpn_clients" ] && openvpn_clients="$openvpn_clients,"
+            openvpn_clients="$openvpn_clients{\"name\":\"$(json_escape "$ovpn_name")\",\"enabled\":$( [ "$ovpn_enabled" = 1 ] && printf true || printf false )}"
+        done
+    fi
+    policies=""
+    if uci -q show pbr >/dev/null 2>&1; then
+        for policy_ref in $(uci -q show pbr 2>/dev/null | sed -n 's/^pbr\.\(wrtmonitor_[^.=]*\)=policy$/\1/p'); do
+            [ -n "$policies" ] && policies="$policies,"
+            policies="$policies{\"name\":\"$(json_escape "${policy_ref#wrtmonitor_}")\",\"enabled\":$( [ "$(uci -q get "pbr.$policy_ref.enabled" 2>/dev/null || echo 0)" = 1 ] && printf true || printf false ),\"interface\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.interface" 2>/dev/null || true)")\",\"source\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.src_addr" 2>/dev/null || true)")\",\"destination\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.dest_addr" 2>/dev/null || true)")\"}"
+        done
+    fi
+    printf '{"wireguard":{"interfaces":[%s]},"openvpn":{"service":"%s","clients":[%s]},"policy":{"service":"%s","policies":[%s]}}' "$wg_interfaces" "$(service_state openvpn)" "$openvpn_clients" "$(service_state pbr)" "$policies"
 }
 
 perimeter_json() {

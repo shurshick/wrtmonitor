@@ -20,7 +20,7 @@ GET /api/v1/devices/{device_id}/telemetry/latest
 - `is_stale` — `true`, если snapshot старше 5 минут;
 - `source` — сейчас всегда `agent`;
 - `telemetry` — последний payload или `null`, если данных ещё нет.
-- `system`, `services`, `clients`, `wifi`, `network` — нормализованные блоки для интерфейсов.
+- `system`, `services`, `clients`, `wifi`, `network`, `vpn` — нормализованные блоки для интерфейсов.
 
 OpenWrt agent собирает:
 
@@ -31,8 +31,9 @@ OpenWrt agent собирает:
 - `clients`: DHCP leases, neighbour table и, при наличии `nlbwmon`, RX/TX по MAC;
 - `dhcp`: динамические и статические leases;
 - `agent`: версия, update status, interval и capabilities.
+- `vpn`: WireGuard-интерфейсы и peer, handshake/RX/TX, OpenVPN profiles и правила PBR без приватных ключей.
 
-`schema_version=2` остаётся форматом telemetry; capability report в `v0.6.0` имеет версию 7. Wi-Fi содержит radio, интерфейсы, расписания и станции с signal/noise/bitrate/airtime. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
+`schema_version=2` остаётся форматом telemetry; capability report в `v0.8.0` имеет версию 9. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
 
 Retention: сервер хранит последние 100 telemetry snapshots на устройство. Старые snapshots удаляются после успешного ingest.
 

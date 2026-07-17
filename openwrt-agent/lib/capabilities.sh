@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="8"
+CAPABILITIES_VERSION="9"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -13,6 +13,7 @@ capability_keys() {
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
         network.ipv6.configure network.multiwan.configure network.routes.configure network.ddns.configure \
         firewall.zones.configure firewall.rules.configure firewall.upnp.configure telemetry.perimeter \
+        vpn.wireguard.read vpn.wireguard.configure vpn.openvpn.read vpn.openvpn.configure vpn.policy.read vpn.policy.configure telemetry.vpn \
         clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
         system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
         diagnostics.check_server diagnostics.check_dependencies diagnostics.check_dns diagnostics.check_route diagnostics.check_wifi
@@ -109,6 +110,12 @@ capability_supported() {
         firewall.zones.configure|firewall.rules.configure) has_firewall_write ;;
         firewall.upnp.configure) has_uci_config upnpd && [ -x "$(capability_path /etc/init.d/miniupnpd)" ] ;;
         telemetry.perimeter) has_uci_config firewall && has_network_runtime ;;
+        vpn.wireguard.read) has_commands wg ubus jsonfilter ;;
+        vpn.wireguard.configure) has_network_write && has_commands wg ifup ifdown ;;
+        vpn.openvpn.read) has_uci_config openvpn && [ -x "$(capability_path /etc/init.d/openvpn)" ] ;;
+        vpn.openvpn.configure) has_uci_config openvpn && [ -x "$(capability_path /etc/init.d/openvpn)" ] && has_commands openvpn base64 ;;
+        vpn.policy.read|vpn.policy.configure) has_uci_config pbr && [ -x "$(capability_path /etc/init.d/pbr)" ] ;;
+        telemetry.vpn) capability_supported vpn.wireguard.read || capability_supported vpn.openvpn.read || capability_supported vpn.policy.read ;;
         clients.block|clients.policy|firewall.port_forward) has_firewall_write ;;
         qos.sqm) has_uci_config sqm && [ -x "$(capability_path /etc/init.d/sqm)" ] ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.configure|dns.configure) has_dhcp_write ;;
@@ -141,6 +148,9 @@ capability_unavailable_reason() {
         telemetry.services|system.restart_service) printf 'OpenWrt init services are unavailable' ;;
         network.interface_restart) printf 'ubus network runtime, ifup or ifdown is unavailable' ;;
         network.*) printf 'network UCI configuration or init service is unavailable' ;;
+        vpn.wireguard.*|telemetry.vpn) printf 'wireguard-tools or network support is unavailable' ;;
+        vpn.openvpn.*) printf 'openvpn-openssl package or OpenVPN service is unavailable' ;;
+        vpn.policy.*) printf 'pbr package or service is unavailable' ;;
         clients.block|clients.policy|firewall.port_forward) printf 'firewall UCI configuration or service is unavailable' ;;
         qos.sqm) printf 'sqm-scripts package or SQM init service is unavailable' ;;
         dhcp.*|dns.configure) printf 'DHCP configuration or dnsmasq service is unavailable' ;;

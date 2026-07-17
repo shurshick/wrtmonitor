@@ -1,28 +1,28 @@
-# v0.7.0
+# v0.8.0
 
-Релиз маршрутизации и сетевого периметра.
+Релиз VPN и policy routing.
 
 ## Изменения
 
-- IPv6, RA и DHCPv6, статические IPv4/IPv6-маршруты.
-- Multi-WAN с приоритетом и failover через `mwan3`.
-- DDNS и UPnP с отображением активных динамических пробросов.
-- Управление зонами, транзитом и правилами firewall.
-- Расширенная perimeter-телеметрия и полный паритет Web UI/Android.
-- Capability report обновлён до schema v8; Android `versionCode` увеличен до `38`.
-- Все изменения конфигурации защищены транзакционным backup и rollback.
+- WireGuard server/client: интерфейсы, peer, ключи, AllowedIPs, endpoint и keepalive.
+- Безопасный экспорт peer-конфигурации без передачи приватного ключа сервера.
+- Импорт и удаление OpenVPN client profiles.
+- Policy-based routing по адресу клиента, подсети и назначению через `pbr`.
+- Статусы туннелей, handshake и счётчики RX/TX в Web UI и Android.
+- Capability report обновлён до schema v9; Android `versionCode` увеличен до `39`.
+- VPN-конфигурации защищены transaction backup/rollback, секреты скрыты в preview и журнале.
 
 ## Обновление
 
 - Сервер: выполните redeploy `ghcr.io/shurshick/wrtmonitor:latest`.
-- Агент: автообновление установит `0.7.0`; после обновления проверьте `wrtmonitor-agent capabilities --json`.
-- Android: установите `wrtmonitor-android-v0.7.0-debug.apk` поверх предыдущей версии.
+- Агент: автообновление установит `0.8.0`; для WireGuard/OpenVPN/PBR установите соответствующие пакеты OpenWrt.
+- Android: установите `wrtmonitor-android-v0.8.0-debug.apk` поверх предыдущей версии.
 
 PostgreSQL volume при обновлении контейнера сохраняется. Новая миграция БД этому релизу не требуется.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.7.0-debug.apk`
-- `wrtmonitor-openwrt-agent-v0.7.0.tar.gz`
-- `wrtmonitor-truenas-v0.7.0.yaml`
+- `wrtmonitor-android-v0.8.0-debug.apk`
+- `wrtmonitor-openwrt-agent-v0.8.0.tar.gz`
+- `wrtmonitor-truenas-v0.8.0.yaml`
 - `SHA256SUMS.txt`

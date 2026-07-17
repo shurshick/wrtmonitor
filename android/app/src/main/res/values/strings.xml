@@ -252,7 +252,6 @@
     <string name="selected">selected</string>
     <string name="access_profiles">Access profiles</string>
     <string name="profiles_count">Profiles: %1$d</string>
-    <string name="profile_name">Profile name</string>
     <string name="create_profile">Create profile</string>
     <string name="delete">Delete</string>
     <string name="dhcp_pool">DHCP pool</string>
@@ -333,4 +332,28 @@
     <string name="source_zone">Source zone</string>
     <string name="destination_zone">Destination zone</string>
     <string name="action">Action</string>
+    <string name="vpn_title">VPN</string>
+    <string name="vpn_summary">Secure tunnels and policy routing</string>
+    <string name="wireguard">WireGuard tunnels</string>
+    <string name="openvpn">OpenVPN service</string>
+    <string name="policy_routing">Policy-based routing</string>
+    <string name="wireguard_interface">WireGuard interface</string>
+    <string name="interface_name">Interface name</string>
+    <string name="tunnel_address">Tunnel address (CIDR)</string>
+    <string name="listen_port">Listen port</string>
+    <string name="private_key_optional">Private key (blank to generate)</string>
+    <string name="wireguard_peer">WireGuard peer</string>
+    <string name="peer_name">Peer name</string>
+    <string name="public_key">Public key</string>
+    <string name="preshared_key_optional">Preshared key (optional)</string>
+    <string name="allowed_ips">Allowed IPs</string>
+    <string name="endpoint_optional">Endpoint (optional)</string>
+    <string name="export">Export</string>
+    <string name="openvpn_client">OpenVPN client</string>
+    <string name="profile_name">Profile name</string>
+    <string name="openvpn_config">OpenVPN config</string>
+    <string name="import_profile">Import profile</string>
+    <string name="vpn_interface">VPN interface</string>
+    <string name="policy_source">Source client or subnet</string>
+    <string name="policy_destination">Destination subnet or host</string>
 </resources>

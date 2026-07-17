@@ -35,6 +35,7 @@ ensure_dependencies() {
     add_missing_package uci uci
     add_missing_package ubus ubus
     add_missing_package sha256sum coreutils-sha256sum
+    add_missing_package base64 coreutils-base64
     if ! has_ca_bundle; then
         missing_packages="$missing_packages ca-bundle"
     fi
@@ -48,7 +49,7 @@ ensure_dependencies() {
         # shellcheck disable=SC2086
         opkg install $missing_packages
     fi
-    for command_name in curl jsonfilter uci ubus sha256sum; do
+    for command_name in curl jsonfilter uci ubus sha256sum base64; do
         if ! command -v "$command_name" >/dev/null 2>&1; then
             echo "Required dependency is unavailable after installation: $command_name" >&2
             exit 1
@@ -61,10 +62,24 @@ ensure_dependencies() {
 }
 
 ensure_optional_dependencies() {
-    command -v nlbw >/dev/null 2>&1 && return 0
     command -v opkg >/dev/null 2>&1 || return 0
-    echo "Installing optional per-client traffic dependency: nlbwmon"
-    opkg install nlbwmon >/dev/null 2>&1 || echo "Optional package nlbwmon is unavailable; per-client traffic counters are disabled" >&2
+    opkg update >/dev/null 2>&1 || true
+    if ! command -v nlbw >/dev/null 2>&1; then
+        echo "Installing optional per-client traffic dependency: nlbwmon"
+        opkg install nlbwmon >/dev/null 2>&1 || echo "Optional package nlbwmon is unavailable; per-client traffic counters are disabled" >&2
+    fi
+    if ! command -v wg >/dev/null 2>&1; then
+        echo "Installing optional VPN dependency: wireguard-tools"
+        opkg install wireguard-tools >/dev/null 2>&1 || echo "Optional package wireguard-tools is unavailable; WireGuard management is disabled" >&2
+    fi
+    if [ ! -x /etc/init.d/openvpn ]; then
+        echo "Installing optional VPN dependency: openvpn-openssl"
+        opkg install openvpn-openssl >/dev/null 2>&1 || echo "Optional package openvpn-openssl is unavailable; OpenVPN management is disabled" >&2
+    fi
+    if [ ! -x /etc/init.d/pbr ]; then
+        echo "Installing optional VPN dependency: pbr"
+        opkg install pbr >/dev/null 2>&1 || echo "Optional package pbr is unavailable; policy routing is disabled" >&2
+    fi
 }
 
 json_escape() {

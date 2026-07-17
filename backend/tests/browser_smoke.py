@@ -93,6 +93,13 @@ def prepare_router() -> str:
             "firewall.rules.configure": True,
             "firewall.upnp.configure": True,
             "telemetry.perimeter": True,
+            "vpn.wireguard.read": True,
+            "vpn.wireguard.configure": True,
+            "vpn.openvpn.read": True,
+            "vpn.openvpn.configure": True,
+            "vpn.policy.read": True,
+            "vpn.policy.configure": True,
+            "telemetry.vpn": True,
         }
         telemetry = client.post(
             "/api/v1/agent/telemetry",
@@ -103,7 +110,7 @@ def prepare_router() -> str:
                     "agent": {
                         "version": "0.5.0",
                         "status": "running",
-                        "capabilities_version": 8,
+                        "capabilities_version": 9,
                         "capabilities": capabilities,
                     },
                     "system": {
@@ -163,6 +170,41 @@ def prepare_router() -> str:
                             },
                         ]
                     },
+                    "vpn": {
+                        "wireguard": {
+                            "interfaces": [
+                                {
+                                    "name": "wg0",
+                                    "public_key": "browser-public-key",
+                                    "listen_port": 51820,
+                                    "peers": [
+                                        {
+                                            "public_key": "phone-public-key",
+                                            "endpoint": "198.51.100.10:51820",
+                                            "latest_handshake": 1710000000,
+                                            "rx_bytes": 1048576,
+                                            "tx_bytes": 2097152,
+                                        }
+                                    ],
+                                }
+                            ]
+                        },
+                        "openvpn": {
+                            "service": "running",
+                            "clients": [{"name": "office", "enabled": True}],
+                        },
+                        "policy": {
+                            "service": "running",
+                            "policies": [
+                                {
+                                    "name": "tv-via-vpn",
+                                    "interface": "wg0",
+                                    "source": "192.168.1.50",
+                                    "destination": "0.0.0.0/0",
+                                }
+                            ],
+                        },
+                    },
                     "clients": {
                         "dhcp": {
                             "leases": [
@@ -214,9 +256,10 @@ def run() -> None:
             assert_page(page, "/devices", f"{name}-devices.png")
             for section in (
                 "overview",
-                "network",
+                "internet",
                 "clients",
                 "wifi",
+                "vpn",
                 "system",
                 "management",
             ):

@@ -9,6 +9,10 @@ transaction_configs_for_command() {
         network.set_route|network.delete_route) printf 'network' ;;
         network.set_ddns) printf 'ddns' ;;
         network.set_upnp) printf 'upnpd firewall' ;;
+        vpn.wireguard.set_interface) printf 'network' ;;
+        vpn.wireguard.set_peer|vpn.wireguard.delete_peer) printf 'network' ;;
+        vpn.openvpn.set_client|vpn.openvpn.delete_client) printf 'openvpn' ;;
+        vpn.policy.set|vpn.policy.delete) printf 'pbr' ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.set_pool|dns.set_servers) printf 'dhcp' ;;
         firewall.set_port_forward|firewall.delete_port_forward|client.set_blocked|client.set_policy) printf 'firewall' ;;
         firewall.set_zone|firewall.set_forwarding|firewall.set_rule|firewall.delete_rule) printf 'firewall' ;;
@@ -114,6 +118,11 @@ transaction_restore() {
     if printf '%s' "$configs" | grep -qw mwan3; then "$(transaction_service mwan3)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw ddns; then "$(transaction_service ddns)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw upnpd; then "$(transaction_service miniupnpd)" restart >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw openvpn; then
+        command -v openvpn_render_configs >/dev/null 2>&1 && openvpn_render_configs
+        "$(transaction_service openvpn)" restart >/dev/null 2>&1 || restore_status=1
+    fi
+    if printf '%s' "$configs" | grep -qw pbr; then "$(transaction_service pbr)" restart >/dev/null 2>&1 || restore_status=1; fi
     transaction_set_state "$command_id" "rolled_back"
     return "$restore_status"
 }

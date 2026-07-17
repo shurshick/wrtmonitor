@@ -61,6 +61,8 @@
 
 ## v0.8.0 - VPN и policy routing
 
+Статус: реализовано.
+
 - WireGuard server/client;
 - импорт и экспорт peer-конфигураций;
 - OpenVPN client;

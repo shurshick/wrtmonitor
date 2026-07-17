@@ -53,7 +53,7 @@ def test_agent_entrypoint_exists_and_is_thin():
     assert f'AGENT_VERSION="{expected_version}"' in source
     for name in REQUIRED_LIBS:
         assert f"load_lib {name}" in source
-    assert "main \"$@\"" in source
+    assert 'main "$@"' in source
 
 
 def test_lib_directory_contains_required_modules():
@@ -68,7 +68,13 @@ def test_manifest_lists_required_files():
         for line in read_text(MANIFEST).splitlines()
         if line.strip() and not line.startswith("#")
     ]
-    for name in ("wrtmonitor-agent", "wrtmonitor.init", "install-openwrt.sh", "agent-version.txt", "openwrt-agent-files.txt"):
+    for name in (
+        "wrtmonitor-agent",
+        "wrtmonitor.init",
+        "install-openwrt.sh",
+        "agent-version.txt",
+        "openwrt-agent-files.txt",
+    ):
         assert name in entries
     for name in REQUIRED_LIBS:
         assert f"lib/{name}" in entries
@@ -76,8 +82,14 @@ def test_manifest_lists_required_files():
 
 def test_sha256sums_lists_payload_files():
     sums_text = read_text(SUMS)
-    for name in ("wrtmonitor-agent", "wrtmonitor.init", "install-openwrt.sh", "agent-version.txt", "openwrt-agent-files.txt"):
-        assert f"  {name}" in sums_text
+    for name in (
+        "wrtmonitor-agent",
+        "wrtmonitor.init",
+        "install-openwrt.sh",
+        "agent-version.txt",
+        "openwrt-agent-files.txt",
+    ):
+        assert f"  {name}" in sums_text or f" *{name}" in sums_text
     for name in REQUIRED_LIBS:
         assert f"  lib/{name}" in sums_text
 
@@ -98,7 +110,7 @@ def test_agent_uses_explicit_load_order():
 
 
 def test_no_basic_bashisms_in_agent_libs():
-    forbidden = ("[[ ", "[[\"", "\nsource ", "mapfile", "pipefail")
+    forbidden = ("[[ ", '[["', "\nsource ", "mapfile", "pipefail")
     for path in [AGENT, INSTALLER, *sorted(LIB_DIR.glob("*.sh"))]:
         source = read_text(path)
         for item in forbidden:
@@ -131,7 +143,7 @@ def test_smoke_cli_capabilities_json():
         env=shell_env(),
     )
     payload = json.loads(completed.stdout)
-    assert payload["agent"]["capabilities_version"] == 8
+    assert payload["agent"]["capabilities_version"] == 9
     assert payload["capabilities"]["agent.status"] is True
     assert isinstance(payload["capabilities"]["agent.update"], bool)
     assert payload["capability_details"]["agent.status"]["reason"] == "available"
@@ -216,13 +228,13 @@ def test_config_transaction_restores_saved_uci_file(tmp_path: Path):
     env["WRTMONITOR_STATUS_DIR"] = status_dir.as_posix()
     script = f"""
         set -eu
-        . '{(LIB_DIR / 'common.sh').as_posix()}'
-        . '{(LIB_DIR / 'transactions.sh').as_posix()}'
+        . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "transactions.sh").as_posix()}'
         transaction_begin test-transaction network.set_lan 90
         printf 'changed\\n' >'{network_config.as_posix()}'
         transaction_restore test-transaction
         grep -q '^original$' '{network_config.as_posix()}'
-        grep -q '^state=rolled_back$' '{(status_dir / 'config-transactions' / 'test-transaction' / 'meta').as_posix()}'
+        grep -q '^state=rolled_back$' '{(status_dir / "config-transactions" / "test-transaction" / "meta").as_posix()}'
     """
     subprocess.run([shell, "-c", script], check=True, env=env)
 
@@ -249,10 +261,19 @@ def test_installer_bootstraps_runtime_dependencies():
     assert "opkg install $missing_packages" in source
     assert "--clean" in source
     assert "--remove-config" in source
-    for dependency in ("curl", "jsonfilter", "ca-bundle", "uci", "ubus", "coreutils-sha256sum"):
+    for dependency in (
+        "curl",
+        "jsonfilter",
+        "ca-bundle",
+        "uci",
+        "ubus",
+        "coreutils-sha256sum",
+        "coreutils-base64",
+    ):
         assert dependency in source
     assert "ensure_optional_dependencies()" in source
-    assert "nlbwmon" in source
+    for package in ("nlbwmon", "wireguard-tools", "openvpn-openssl", "pbr"):
+        assert package in source
 
 
 def test_agent_version_file_matches_entrypoint():
@@ -299,6 +320,13 @@ def test_management_capabilities_cover_full_router_foundation():
         "firewall.rules.configure",
         "firewall.upnp.configure",
         "telemetry.perimeter",
+        "vpn.wireguard.read",
+        "vpn.wireguard.configure",
+        "vpn.openvpn.read",
+        "vpn.openvpn.configure",
+        "vpn.policy.read",
+        "vpn.policy.configure",
+        "telemetry.vpn",
     ):
         assert capability in source
     assert '"wifi.set_password":true' not in source
@@ -337,6 +365,14 @@ def test_management_commands_have_openwrt_handlers():
         "firewall.set_forwarding",
         "firewall.set_rule",
         "firewall.delete_rule",
+        "vpn.wireguard.set_interface",
+        "vpn.wireguard.set_peer",
+        "vpn.wireguard.delete_peer",
+        "vpn.wireguard.export_peer",
+        "vpn.openvpn.set_client",
+        "vpn.openvpn.delete_client",
+        "vpn.policy.set",
+        "vpn.policy.delete",
     ):
         assert f"{command})" in source
     assert 'backup_config sqm "$command_id" "$command_type"' in source

@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from ipaddress import IPv4Address, AddressValueError, ip_address, ip_network
+from ipaddress import (
+    IPv4Address,
+    AddressValueError,
+    ip_address,
+    ip_interface,
+    ip_network,
+)
 import re
 from typing import Any, Callable
 from uuid import UUID, uuid4
@@ -166,6 +172,54 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
     "network.set_upnp": {
         "risk_level": "level_3_reversible_config",
         "capability": "firewall.upnp.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "vpn.wireguard.set_interface": {
+        "risk_level": "level_4_disruptive",
+        "capability": "vpn.wireguard.configure",
+        "requires_confirmation": True,
+        "secret_fields": ["private_key"],
+    },
+    "vpn.wireguard.set_peer": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "vpn.wireguard.configure",
+        "requires_confirmation": True,
+        "secret_fields": ["preshared_key"],
+    },
+    "vpn.wireguard.delete_peer": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "vpn.wireguard.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "vpn.wireguard.export_peer": {
+        "risk_level": "level_1_readonly",
+        "capability": "vpn.wireguard.read",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "vpn.openvpn.set_client": {
+        "risk_level": "level_4_disruptive",
+        "capability": "vpn.openvpn.configure",
+        "requires_confirmation": True,
+        "secret_fields": ["config"],
+    },
+    "vpn.openvpn.delete_client": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "vpn.openvpn.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "vpn.policy.set": {
+        "risk_level": "level_4_disruptive",
+        "capability": "vpn.policy.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "vpn.policy.delete": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "vpn.policy.configure",
         "requires_confirmation": True,
         "secret_fields": [],
     },
@@ -1057,6 +1111,134 @@ def _normalize_firewall_rule_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _wireguard_key(payload: dict[str, Any], field: str, *, required: bool) -> str:
+    value = _optional_string(payload, field) or ""
+    if not value and not required:
+        return ""
+    if not re.fullmatch(r"[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=", value):
+        raise HTTPException(status_code=400, detail=f"Invalid WireGuard {field}")
+    return value
+
+
+def _normalize_wireguard_interface_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    addresses = _string_list(payload, "addresses", required=True)
+    try:
+        addresses = [str(ip_interface(value)) for value in addresses]
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400, detail="Invalid WireGuard address"
+        ) from exc
+    return {
+        "name": _name(payload),
+        "enabled": _boolean(payload, "enabled"),
+        "mode": _safe_identifier(
+            str(payload.get("mode") or "server"), "mode", r"(?:server|client)"
+        ),
+        "addresses": addresses,
+        "listen_port": _integer(payload, "listen_port", 1, 65535),
+        "private_key": _wireguard_key(payload, "private_key", required=False),
+        "mtu": _integer(payload, "mtu", 1280, 9200, required=False) or 1420,
+    }
+
+
+def _normalize_wireguard_peer_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    allowed_ips = _string_list(payload, "allowed_ips", required=True)
+    try:
+        allowed_ips = [str(ip_network(value, strict=False)) for value in allowed_ips]
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400, detail="Invalid WireGuard allowed IP"
+        ) from exc
+    endpoint = _optional_string(payload, "endpoint") or ""
+    if endpoint and not re.fullmatch(
+        r"(?:\[[0-9A-Fa-f:]+\]|[A-Za-z0-9_.-]+):[0-9]{1,5}", endpoint
+    ):
+        raise HTTPException(status_code=400, detail="Invalid WireGuard endpoint")
+    if endpoint and int(endpoint.rsplit(":", 1)[1]) > 65535:
+        raise HTTPException(status_code=400, detail="Invalid WireGuard endpoint port")
+    return {
+        "interface": _safe_identifier(
+            str(payload.get("interface") or "wg0"), "interface", r"[A-Za-z0-9_.-]+"
+        ),
+        "name": _name(payload),
+        "public_key": _wireguard_key(payload, "public_key", required=True),
+        "preshared_key": _wireguard_key(payload, "preshared_key", required=False),
+        "allowed_ips": allowed_ips,
+        "endpoint": endpoint,
+        "persistent_keepalive": _integer(
+            payload, "persistent_keepalive", 0, 65535, required=False
+        )
+        or 0,
+        "route_allowed_ips": _boolean(payload, "route_allowed_ips", default=True),
+    }
+
+
+def _normalize_openvpn_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    config = str(payload.get("config") or "").strip()
+    if not config or len(config) > 65535:
+        raise HTTPException(status_code=400, detail="Invalid OpenVPN config size")
+    if any(ord(char) < 32 and char not in "\r\n\t" for char in config):
+        raise HTTPException(
+            status_code=400, detail="OpenVPN config contains invalid characters"
+        )
+    lowered_lines = [line.strip().lower() for line in config.splitlines()]
+    forbidden = (
+        "up ",
+        "down ",
+        "plugin ",
+        "management ",
+        "client-connect ",
+        "client-disconnect ",
+        "learn-address ",
+        "route-up ",
+    )
+    if any(line.startswith(forbidden) for line in lowered_lines):
+        raise HTTPException(
+            status_code=400, detail="OpenVPN config contains unsafe directives"
+        )
+    if not any(line == "client" for line in lowered_lines):
+        raise HTTPException(
+            status_code=400, detail="OpenVPN client directive is required"
+        )
+    if not any(line.startswith("remote ") for line in lowered_lines):
+        raise HTTPException(
+            status_code=400, detail="OpenVPN remote directive is required"
+        )
+    return {
+        "name": _name(payload),
+        "enabled": _boolean(payload, "enabled"),
+        "config": config,
+    }
+
+
+def _normalize_vpn_policy_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    source = _optional_string(payload, "source") or ""
+    destination = _optional_string(payload, "destination") or ""
+    if not source and not destination:
+        raise HTTPException(
+            status_code=400, detail="VPN policy requires source or destination"
+        )
+    for field, value in (("source", source), ("destination", destination)):
+        if value and not re.fullmatch(r"[A-Za-z0-9_.:/,-]+", value):
+            raise HTTPException(status_code=400, detail=f"Invalid VPN policy {field}")
+    return {
+        "name": _name(payload),
+        "enabled": _boolean(payload, "enabled"),
+        "interface": _safe_identifier(
+            _require_string(payload, "interface", max_length=32),
+            "interface",
+            r"[A-Za-z0-9_.-]+",
+        ),
+        "source": source,
+        "destination": destination,
+        "protocol": _safe_identifier(
+            str(payload.get("protocol") or "all"),
+            "protocol",
+            r"(?:all|tcp|udp|icmp)",
+        ),
+    }
+
+
 def _normalize_diagnostics_payload(payload: dict[str, Any]) -> dict[str, Any]:
     checks = payload.get("checks")
     if checks in (None, [], ()):
@@ -1156,6 +1338,27 @@ def validate_command_payload(
             "enabled": _boolean(normalized_payload, "enabled"),
             "secure_mode": _boolean(normalized_payload, "secure_mode", default=True),
         }
+    if command_type == "vpn.wireguard.set_interface":
+        return _normalize_wireguard_interface_payload(normalized_payload)
+    if command_type == "vpn.wireguard.set_peer":
+        return _normalize_wireguard_peer_payload(normalized_payload)
+    if command_type in {"vpn.wireguard.delete_peer", "vpn.wireguard.export_peer"}:
+        return {
+            "interface": _safe_identifier(
+                str(normalized_payload.get("interface") or "wg0"),
+                "interface",
+                r"[A-Za-z0-9_.-]+",
+            ),
+            "name": _name(normalized_payload),
+        }
+    if command_type == "vpn.openvpn.set_client":
+        return _normalize_openvpn_payload(normalized_payload)
+    if command_type == "vpn.openvpn.delete_client":
+        return {"name": _name(normalized_payload)}
+    if command_type == "vpn.policy.set":
+        return _normalize_vpn_policy_payload(normalized_payload)
+    if command_type == "vpn.policy.delete":
+        return {"name": _name(normalized_payload)}
     if command_type == "firewall.set_zone":
         return _normalize_zone_payload(normalized_payload)
     if command_type == "firewall.set_forwarding":
@@ -1252,6 +1455,13 @@ def build_command_payload_from_web_form(
     weekdays: list[str] | None = None,
     stop: str = "",
     mesh_id: str = "",
+    public_key: str = "",
+    preshared_key: str = "",
+    allowed_ips: str = "",
+    endpoint: str = "",
+    config_text: str = "",
+    source: str = "",
+    destination: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -1390,7 +1600,11 @@ def build_command_payload_from_web_form(
             "masquerade": enabled.lower() == "true",
         }
     elif command_type == "firewall.set_forwarding":
-        payload = {"src": name, "dest": interface, "enabled": enabled.lower() == "true"}
+        payload = {
+            "src": interface or name,
+            "dest": network,
+            "enabled": enabled.lower() == "true",
+        }
     elif command_type == "firewall.set_rule":
         payload = {
             "name": name,
@@ -1404,6 +1618,48 @@ def build_command_payload_from_web_form(
             "target": hostname,
         }
     elif command_type == "firewall.delete_rule":
+        payload = {"name": name}
+    elif command_type == "vpn.wireguard.set_interface":
+        payload = {
+            "name": name or interface or "wg0",
+            "enabled": enabled.lower() == "true",
+            "mode": protocol or "server",
+            "addresses": ip_address,
+            "listen_port": external_port or "51820",
+            "private_key": password,
+            "mtu": mtu or "1420",
+        }
+    elif command_type == "vpn.wireguard.set_peer":
+        payload = {
+            "interface": interface or "wg0",
+            "name": name,
+            "public_key": public_key or username,
+            "preshared_key": preshared_key or password,
+            "allowed_ips": allowed_ips or ip_address,
+            "endpoint": endpoint or hostname,
+            "persistent_keepalive": internal_port or "0",
+            "route_allowed_ips": enabled.lower() == "true",
+        }
+    elif command_type in {"vpn.wireguard.delete_peer", "vpn.wireguard.export_peer"}:
+        payload = {"interface": interface or "wg0", "name": name}
+    elif command_type == "vpn.openvpn.set_client":
+        payload = {
+            "name": name,
+            "enabled": enabled.lower() == "true",
+            "config": config_text or protocol,
+        }
+    elif command_type == "vpn.openvpn.delete_client":
+        payload = {"name": name}
+    elif command_type == "vpn.policy.set":
+        payload = {
+            "name": name,
+            "enabled": enabled.lower() == "true",
+            "interface": interface,
+            "source": source or ip_address or mac,
+            "destination": destination or network,
+            "protocol": protocol or "all",
+        }
+    elif command_type == "vpn.policy.delete":
         payload = {"name": name}
     elif command_type == "system.set_hostname":
         payload = {"hostname": hostname}

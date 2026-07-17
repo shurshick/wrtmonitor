@@ -41,6 +41,7 @@ from ..services.telemetry import (
     normalize_network_summary,
     normalize_services_summary,
     normalize_system_summary,
+    normalize_vpn_summary,
     normalize_wifi_summary,
 )
 from .csrf import generate_csrf_token, verify_csrf_token
@@ -49,7 +50,15 @@ from .csrf import generate_csrf_token, verify_csrf_token
 templates = Jinja2Templates(directory="backend/app/templates")
 router = APIRouter()
 
-DEVICE_SECTIONS = {"overview", "internet", "clients", "wifi", "system", "management"}
+DEVICE_SECTIONS = {
+    "overview",
+    "internet",
+    "clients",
+    "wifi",
+    "vpn",
+    "system",
+    "management",
+}
 
 
 CAPABILITY_GROUPS = {
@@ -57,6 +66,7 @@ CAPABILITY_GROUPS = {
     "Telemetry": ("telemetry.",),
     "Wi-Fi": ("wifi.",),
     "Network": ("network.",),
+    "VPN": ("vpn.",),
     "Clients & DHCP": ("clients.", "dhcp."),
     "Diagnostics": ("diagnostics.",),
     "System": ("system.",),
@@ -354,6 +364,7 @@ def device_page(
     wifi = normalize_wifi_summary(payload)
     agent = dict(payload.get("agent") or {})
     network = normalize_network_summary(payload)
+    vpn = normalize_vpn_summary(payload)
     telemetry_clients = normalize_clients_summary(payload)
     registry_clients = db.scalars(
         select(NetworkClient)
@@ -397,6 +408,12 @@ def device_page(
         "firewall_zones": has("firewall.zones.configure"),
         "firewall_rules": has("firewall.rules.configure"),
         "firewall_upnp": has("firewall.upnp.configure"),
+        "vpn_wireguard_read": has("vpn.wireguard.read"),
+        "vpn_wireguard_configure": has("vpn.wireguard.configure"),
+        "vpn_openvpn_read": has("vpn.openvpn.read"),
+        "vpn_openvpn_configure": has("vpn.openvpn.configure"),
+        "vpn_policy_read": has("vpn.policy.read"),
+        "vpn_policy_configure": has("vpn.policy.configure"),
         "clients_read": has("clients.read"),
         "clients_block": has("clients.block"),
         "clients_policy": has("clients.policy"),
@@ -494,6 +511,7 @@ def device_page(
             "radios": radios,
             "interfaces": interfaces,
             "network": network,
+            "vpn": vpn,
             "network_devices": network_devices,
             "clients": clients,
             "client_profiles": client_profiles,
@@ -727,6 +745,13 @@ def web_device_command(
     weekdays: list[str] = Form(default=[]),
     stop: str = Form(default=""),
     mesh_id: str = Form(default=""),
+    public_key: str = Form(default=""),
+    preshared_key: str = Form(default=""),
+    allowed_ips: str = Form(default=""),
+    endpoint: str = Form(default=""),
+    config_text: str = Form(default=""),
+    source: str = Form(default=""),
+    destination: str = Form(default=""),
     confirmed: bool = Form(default=False),
     diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
@@ -793,6 +818,13 @@ def web_device_command(
             weekdays=weekdays,
             stop=stop,
             mesh_id=mesh_id,
+            public_key=public_key,
+            preshared_key=preshared_key,
+            allowed_ips=allowed_ips,
+            endpoint=endpoint,
+            config_text=config_text,
+            source=source,
+            destination=destination,
             diagnostics_checks=diagnostics_checks,
         )
         payload = validate_command_request(
@@ -906,6 +938,13 @@ async def web_device_command_preview(
             weekdays=[str(item) for item in form.getlist("weekdays")],
             stop=value("stop"),
             mesh_id=value("mesh_id"),
+            public_key=value("public_key"),
+            preshared_key=value("preshared_key"),
+            allowed_ips=value("allowed_ips"),
+            endpoint=value("endpoint"),
+            config_text=value("config_text"),
+            source=value("source"),
+            destination=value("destination"),
             diagnostics_checks=[
                 str(item) for item in form.getlist("diagnostics_checks")
             ],

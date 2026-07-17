@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8.0
+
+- Добавлено управление WireGuard-интерфейсами и peer: адреса, ключи, endpoint, AllowedIPs, keepalive, импорт и безопасный экспорт конфигурации.
+- Добавлены OpenVPN client profiles и policy-based routing по клиентам, подсетям и назначениям.
+- VPN-телеметрия показывает туннели, handshake, RX/TX, состояние OpenVPN и политики PBR.
+- VPN-команды включены в config transaction, backup и rollback; секреты скрыты в API, preview и журнале команд.
+- Web UI и Android получили capability-aware VPN-раздел; capability schema повышена до 9.
+- Android `versionCode` увеличен до 39.
+
 ## v0.7.0
 
 - Добавлены IPv6, RA и DHCPv6 для локальных интерфейсов.

@@ -226,6 +226,20 @@ set_auto_update_config() {
     write_status "$LAST_UPDATE_STATUS" "$LAST_UPDATE_ERROR" "$AVAILABLE_VERSION" "$LAST_UPDATE_CHECK" "$LAST_SUCCESSFUL_UPDATE"
 }
 
+openvpn_render_configs() {
+    openvpn_dir="${WRTMONITOR_SYSTEM_ROOT:-}/etc/openvpn"
+    mkdir -p "$openvpn_dir"
+    for openvpn_ref in $(uci -q show openvpn 2>/dev/null | sed -n 's/^openvpn\.\([^.=]*\)=openvpn$/\1/p'); do
+        config_b64="$(uci -q get "openvpn.$openvpn_ref.wrtmonitor_config_b64" 2>/dev/null || true)"
+        [ -n "$config_b64" ] || continue
+        config_path="$openvpn_dir/wrtmonitor-$openvpn_ref.conf"
+        printf '%s' "$config_b64" | base64 -d >"$config_path" || return 1
+        chmod 0600 "$config_path"
+        uci set "openvpn.$openvpn_ref.config=/etc/openvpn/wrtmonitor-$openvpn_ref.conf"
+    done
+    uci commit openvpn
+}
+
 execute_command() {
     command_id="$1"
     command_type="$2"
@@ -537,6 +551,39 @@ execute_command() {
         network.set_upnp)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; upnp_enabled="$(json_get_bool "$payload_file" '@.enabled')"; secure_mode="$(json_get_bool "$payload_file" '@.secure_mode')"; rm -f "$payload_file"; uci set "upnpd.config.enabled=$( [ "$upnp_enabled" = true ] && echo 1 || echo 0 )"; uci set "upnpd.config.secure_mode=$( [ "$secure_mode" = true ] && echo 1 || echo 0 )"
             if uci commit upnpd && /etc/init.d/miniupnpd restart >/dev/null 2>&1; then result="$(command_success_result "UPnP configuration updated")"; else status=failed; result="$(command_failed_result "failed to update UPnP")"; fi
+            ;;
+        vpn.wireguard.set_interface)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; wg_name="$(json_get_string "$payload_file" '@.name')"; wg_enabled="$(json_get_bool "$payload_file" '@.enabled')"; wg_mode="$(json_get_string "$payload_file" '@.mode')"; wg_addresses="$(jsonfilter -i "$payload_file" -e '@.addresses[*]' 2>/dev/null || true)"; wg_port="$(json_get_number "$payload_file" '@.listen_port')"; wg_private="$(json_get_string "$payload_file" '@.private_key')"; wg_mtu="$(json_get_number "$payload_file" '@.mtu')"; rm -f "$payload_file"
+            if [ -z "$wg_private" ]; then wg_private="$(wg genkey 2>/dev/null || true)"; fi
+            uci set "network.$wg_name=interface"; uci set "network.$wg_name.proto=wireguard"; uci set "network.$wg_name.private_key=$wg_private"; uci set "network.$wg_name.listen_port=$wg_port"; uci set "network.$wg_name.mtu=$wg_mtu"; uci set "network.$wg_name.wrtmonitor_mode=$wg_mode"; uci set "network.$wg_name.disabled=$( [ "$wg_enabled" = true ] && printf 0 || printf 1 )"; uci -q delete "network.$wg_name.addresses" || true
+            for wg_address in $wg_addresses; do uci add_list "network.$wg_name.addresses=$wg_address"; done
+            if [ -n "$wg_private" ] && uci commit network; then result="$(command_success_result "WireGuard interface updated" "\"interface\":\"$(json_escape "$wg_name")\"")"; (sleep 2; ifdown "$wg_name" >/dev/null 2>&1 || true; [ "$wg_enabled" = true ] && ifup "$wg_name" >/dev/null 2>&1 || true) & else status=failed; result="$(command_failed_result "failed to update WireGuard interface")"; fi
+            ;;
+        vpn.wireguard.set_peer)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; wg_iface="$(json_get_string "$payload_file" '@.interface')"; peer_name="$(json_get_string "$payload_file" '@.name')"; peer_public="$(json_get_string "$payload_file" '@.public_key')"; peer_psk="$(json_get_string "$payload_file" '@.preshared_key')"; peer_allowed="$(jsonfilter -i "$payload_file" -e '@.allowed_ips[*]' 2>/dev/null || true)"; peer_endpoint="$(json_get_string "$payload_file" '@.endpoint')"; peer_keepalive="$(json_get_number "$payload_file" '@.persistent_keepalive')"; peer_route="$(json_get_bool "$payload_file" '@.route_allowed_ips')"; rm -f "$payload_file"; peer_ref="wrtmonitor_wgpeer_${wg_iface}_${peer_name}"
+            uci set "network.$peer_ref=wireguard_$wg_iface"; uci set "network.$peer_ref.wrtmonitor_name=$peer_name"; uci set "network.$peer_ref.public_key=$peer_public"; uci set "network.$peer_ref.route_allowed_ips=$( [ "$peer_route" = true ] && printf 1 || printf 0 )"; uci set "network.$peer_ref.persistent_keepalive=$peer_keepalive"; uci -q delete "network.$peer_ref.preshared_key" || true; [ -z "$peer_psk" ] || uci set "network.$peer_ref.preshared_key=$peer_psk"; uci -q delete "network.$peer_ref.allowed_ips" || true; for allowed in $peer_allowed; do uci add_list "network.$peer_ref.allowed_ips=$allowed"; done; uci -q delete "network.$peer_ref.endpoint_host" || true; uci -q delete "network.$peer_ref.endpoint_port" || true
+            if [ -n "$peer_endpoint" ]; then peer_port="${peer_endpoint##*:}"; peer_host="${peer_endpoint%:*}"; peer_host="$(printf '%s' "$peer_host" | sed 's/^\[//; s/\]$//')"; uci set "network.$peer_ref.endpoint_host=$peer_host"; uci set "network.$peer_ref.endpoint_port=$peer_port"; fi
+            if uci commit network && ifup "$wg_iface" >/dev/null 2>&1; then result="$(command_success_result "WireGuard peer updated")"; else status=failed; result="$(command_failed_result "failed to update WireGuard peer")"; fi
+            ;;
+        vpn.wireguard.delete_peer)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; wg_iface="$(json_get_string "$payload_file" '@.interface')"; peer_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; if uci -q delete "network.wrtmonitor_wgpeer_${wg_iface}_${peer_name}" && uci commit network; then ifup "$wg_iface" >/dev/null 2>&1 || true; result="$(command_success_result "WireGuard peer deleted")"; else status=failed; result="$(command_failed_result "WireGuard peer not found")"; fi
+            ;;
+        vpn.wireguard.export_peer)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; wg_iface="$(json_get_string "$payload_file" '@.interface')"; peer_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; peer_ref="wrtmonitor_wgpeer_${wg_iface}_${peer_name}"; server_private="$(uci -q get "network.$wg_iface.private_key" 2>/dev/null || true)"; server_public="$(printf '%s' "$server_private" | wg pubkey 2>/dev/null || true)"; peer_allowed="$(uci -q get "network.$peer_ref.allowed_ips" 2>/dev/null || true)"; server_port="$(uci -q get "network.$wg_iface.listen_port" 2>/dev/null || echo 51820)"; if [ -n "$server_public" ] && [ -n "$peer_allowed" ]; then export_config="[Interface]\nPrivateKey = <PRIVATE_KEY>\nAddress = $peer_allowed\n\n[Peer]\nPublicKey = $server_public\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = <SERVER_HOST>:$server_port\nPersistentKeepalive = 25"; result="$(command_success_result "WireGuard peer profile exported" "\"config\":\"$(json_escape "$export_config")\"")"; else status=failed; result="$(command_failed_result "WireGuard peer or interface not found")"; fi
+            ;;
+        vpn.openvpn.set_client)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ovpn_name="$(json_get_string "$payload_file" '@.name')"; ovpn_enabled="$(json_get_bool "$payload_file" '@.enabled')"; ovpn_config="$(json_get_string "$payload_file" '@.config')"; rm -f "$payload_file"; ovpn_ref="wrtmonitor_$ovpn_name"; ovpn_b64="$(printf '%s\n' "$ovpn_config" | base64 | tr -d '\n')"; uci set "openvpn.$ovpn_ref=openvpn"; uci set "openvpn.$ovpn_ref.enabled=$( [ "$ovpn_enabled" = true ] && printf 1 || printf 0 )"; uci set "openvpn.$ovpn_ref.wrtmonitor_name=$ovpn_name"; uci set "openvpn.$ovpn_ref.wrtmonitor_config_b64=$ovpn_b64"
+            if openvpn_render_configs && /etc/init.d/openvpn restart >/dev/null 2>&1; then result="$(command_success_result "OpenVPN client imported")"; else status=failed; result="$(command_failed_result "failed to import OpenVPN client")"; fi
+            ;;
+        vpn.openvpn.delete_client)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ovpn_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; ovpn_ref="wrtmonitor_$ovpn_name"; if uci -q delete "openvpn.$ovpn_ref" && uci commit openvpn; then rm -f "${WRTMONITOR_SYSTEM_ROOT:-}/etc/openvpn/wrtmonitor-$ovpn_ref.conf"; /etc/init.d/openvpn restart >/dev/null 2>&1 || true; result="$(command_success_result "OpenVPN client deleted")"; else status=failed; result="$(command_failed_result "OpenVPN client not found")"; fi
+            ;;
+        vpn.policy.set)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; policy_name="$(json_get_string "$payload_file" '@.name')"; policy_enabled="$(json_get_bool "$payload_file" '@.enabled')"; policy_iface="$(json_get_string "$payload_file" '@.interface')"; policy_source="$(json_get_string "$payload_file" '@.source')"; policy_destination="$(json_get_string "$payload_file" '@.destination')"; policy_protocol="$(json_get_string "$payload_file" '@.protocol')"; rm -f "$payload_file"; policy_ref="wrtmonitor_$policy_name"; uci set "pbr.$policy_ref=policy"; uci set "pbr.$policy_ref.name=WrtMonitor-$policy_name"; uci set "pbr.$policy_ref.enabled=$( [ "$policy_enabled" = true ] && printf 1 || printf 0 )"; uci set "pbr.$policy_ref.interface=$policy_iface"; uci -q delete "pbr.$policy_ref.src_addr" || true; uci -q delete "pbr.$policy_ref.dest_addr" || true; [ -z "$policy_source" ] || uci set "pbr.$policy_ref.src_addr=$policy_source"; [ -z "$policy_destination" ] || uci set "pbr.$policy_ref.dest_addr=$policy_destination"; uci set "pbr.$policy_ref.proto=$policy_protocol"
+            if uci commit pbr && /etc/init.d/pbr restart >/dev/null 2>&1; then result="$(command_success_result "VPN policy updated")"; else status=failed; result="$(command_failed_result "failed to update VPN policy")"; fi
+            ;;
+        vpn.policy.delete)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; policy_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; if uci -q delete "pbr.wrtmonitor_$policy_name" && uci commit pbr; then /etc/init.d/pbr restart >/dev/null 2>&1 || true; result="$(command_success_result "VPN policy deleted")"; else status=failed; result="$(command_failed_result "VPN policy not found")"; fi
             ;;
         firewall.set_zone)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; zone_name="$(json_get_string "$payload_file" '@.name')"; zone_networks="$(jsonfilter -i "$payload_file" -e '@.networks[*]' 2>/dev/null)"; zone_input="$(json_get_string "$payload_file" '@.input')"; zone_output="$(json_get_string "$payload_file" '@.output')"; zone_forward="$(json_get_string "$payload_file" '@.forward')"; masquerade="$(json_get_bool "$payload_file" '@.masquerade')"; rm -f "$payload_file"; zone_ref="wrtmonitor_zone_$zone_name"; uci set "firewall.$zone_ref=zone"; uci set "firewall.$zone_ref.name=$zone_name"; uci set "firewall.$zone_ref.input=$zone_input"; uci set "firewall.$zone_ref.output=$zone_output"; uci set "firewall.$zone_ref.forward=$zone_forward"; uci set "firewall.$zone_ref.masq=$( [ "$masquerade" = true ] && echo 1 || echo 0 )"; uci -q delete "firewall.$zone_ref.network" || true; for item in $zone_networks; do uci add_list "firewall.$zone_ref.network=$item"; done

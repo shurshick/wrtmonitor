@@ -14,6 +14,7 @@
       <a class="device-nav__item {{ 'is-active' if section == 'internet' else '' }}" href="/devices/{{ device.id }}?section=internet"><span>Интернет</span><small>WAN и интерфейсы</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'clients' else '' }}" href="/devices/{{ device.id }}?section=clients"><span>Домашняя сеть</span><small>Клиенты и DHCP</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'wifi' else '' }}" href="/devices/{{ device.id }}?section=wifi"><span>Wi-Fi</span><small>Сети и радиомодули</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'vpn' else '' }}" href="/devices/{{ device.id }}?section=vpn"><span>VPN</span><small>Туннели и маршрутизация</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'system' else '' }}" href="/devices/{{ device.id }}?section=system"><span>Система</span><small>Ресурсы и службы</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'management' else '' }}" href="/devices/{{ device.id }}?section=management"><span>Обслуживание</span><small>Агент и диагностика</small></a>
     </nav>
@@ -38,6 +39,9 @@
     {% elif section == 'wifi' %}
       <div class="section-heading"><p class="eyebrow">Беспроводная сеть</p><h2>Wi-Fi</h2><p>Радиомодули, имена сетей, безопасность и каналы.</p></div>
       {% include "partials/wifi.html" %}
+    {% elif section == 'vpn' %}
+      <div class="section-heading"><p class="eyebrow">Защищённые соединения</p><h2>VPN</h2><p>WireGuard, OpenVPN и правила выбора туннеля.</p></div>
+      {% include "partials/vpn.html" %}
     {% elif section == 'system' %}
       <div class="section-heading"><p class="eyebrow">Роутер</p><h2>Система</h2><p>Ресурсы устройства, службы и системные действия.</p></div>
       {% include "partials/system.html" %}

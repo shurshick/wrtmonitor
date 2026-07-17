@@ -221,6 +221,42 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def normalize_vpn_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    vpn = payload.get("vpn") or {}
+    wireguard = vpn.get("wireguard") or {}
+    interfaces: list[dict[str, Any]] = []
+    for interface in wireguard.get("interfaces") or []:
+        if not isinstance(interface, dict):
+            continue
+        peers = [
+            peer for peer in interface.get("peers") or [] if isinstance(peer, dict)
+        ]
+        interfaces.append(
+            {
+                "name": interface.get("name"),
+                "public_key": interface.get("public_key"),
+                "listen_port": interface.get("listen_port"),
+                "peers": peers,
+                "peer_count": len(peers),
+                "rx_bytes": sum(int(peer.get("rx_bytes") or 0) for peer in peers),
+                "tx_bytes": sum(int(peer.get("tx_bytes") or 0) for peer in peers),
+            }
+        )
+    openvpn = vpn.get("openvpn") or {}
+    policy = vpn.get("policy") or {}
+    return {
+        "wireguard": {"interfaces": interfaces},
+        "openvpn": {
+            "service": openvpn.get("service") or "unavailable",
+            "clients": openvpn.get("clients") or [],
+        },
+        "policy": {
+            "service": policy.get("service") or "unavailable",
+            "policies": policy.get("policies") or [],
+        },
+    }
+
+
 def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
     clients = payload.get("clients") or {}
     dhcp = clients.get("dhcp") or payload.get("dhcp") or {}
