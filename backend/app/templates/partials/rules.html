@@ -1,0 +1,111 @@
+<div class="network-summary">
+  <div><span>Зоны firewall</span><strong>{{ network.firewall_zones|length }}</strong></div>
+  <div><span>Правила доступа</span><strong>{{ network.firewall_rules|length }}</strong></div>
+  <div><span>Маршруты</span><strong>{{ network.routes|length }}</strong></div>
+  <div><span>Проброс портов</span><strong>{{ 'Доступен' if supports.firewall_port_forward else 'Недоступен' }}</strong></div>
+</div>
+
+{% if not supports.network_routes and not supports.firewall_upnp and not supports.firewall_zones and not supports.firewall_rules and not supports.firewall_port_forward %}
+<div class="empty-state card section">
+  <h2>Сетевые правила недоступны</h2>
+  <p>Обновите агент и его capabilities. На поддерживаемом OpenWrt здесь появятся firewall, NAT и статические маршруты.</p>
+</div>
+{% endif %}
+
+<div class="settings-workspace section">
+  {% if supports.firewall_port_forward %}
+  <details class="settings-panel card">
+    <summary><span><strong>Доступ из интернета</strong><small>Проброс портов на устройство домашней сети</small></span><span>Управлять</span></summary>
+    <div class="settings-panel__body">
+      <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section=rules" onsubmit="return confirm('Открыть указанный порт из интернета?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.set_port_forward"><input type="hidden" name="confirmed" value="true">
+        <div class="form-grid">
+          <label>Название правила<input name="name" required placeholder="Например: home-server"></label>
+          <label>Протокол<select name="protocol"><option value="tcp">TCP</option><option value="udp">UDP</option><option value="tcpudp">TCP + UDP</option></select></label>
+          <label>Внешний порт<input name="external_port" required type="number" min="1" max="65535"></label>
+          <label>Устройство<select name="internal_ip" required><option value="" selected disabled>Выберите устройство</option>{% for client in clients if client.ip_address %}<option value="{{ client.ip_address }}">{{ client.display_name or client.hostname or client.mac }} · {{ client.ip_address }}</option>{% endfor %}</select></label>
+          <label>Внутренний порт<input name="internal_port" required type="number" min="1" max="65535"></label>
+        </div>
+        <div class="form-actions"><button type="submit">Добавить правило</button><span class="action-note action-note--warning">Открывает доступ извне</span></div>
+      </form>
+      <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section=rules" onsubmit="return confirm('Удалить правило проброса портов?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.delete_port_forward"><input type="hidden" name="confirmed" value="true">
+        <label>Название удаляемого правила<input name="name" required></label>
+        <div class="form-actions"><button class="button--secondary" type="submit">Удалить правило</button></div>
+      </form>
+    </div>
+  </details>
+  {% endif %}
+
+  {% if supports.firewall_rules %}
+  <details class="settings-panel card">
+    <summary><span><strong>Межсетевой экран</strong><small>{{ network.firewall_rules|length }} правил</small></span><span>Управлять</span></summary>
+    <div class="settings-panel__body">
+      {% if network.firewall_rules %}<div class="device-port-list">{% for rule in network.firewall_rules %}<span><strong>{{ rule.name }}</strong>{{ rule.src }} → {{ rule.dest or 'роутер' }} · {{ rule.protocol }}{% if rule.dest_port %}:{{ rule.dest_port }}{% endif %} · {{ rule.target }}</span>{% endfor %}</div>{% endif %}
+      <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section=rules">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.set_rule"><input type="hidden" name="confirmed" value="true">
+        <div class="form-grid">
+          <label>Имя<input name="name" required></label>
+          <label>Из зоны<select name="interface"><option value="">Любая</option>{% for value in firewall_zone_options %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></label>
+          <label>В зону<select name="network"><option value="">Сам роутер</option>{% for value in firewall_zone_options %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></label>
+          <label>Протокол<select name="protocol"><option>tcp</option><option>udp</option><option>tcpudp</option><option>icmp</option><option>all</option></select></label>
+          <label>IP источника<input name="ip_address"></label><label>IP назначения<input name="internal_ip"></label>
+          <label>Порт источника<input name="external_port"></label><label>Порт назначения<input name="internal_port"></label>
+          <label>Действие<select name="hostname"><option>ACCEPT</option><option>REJECT</option><option>DROP</option></select></label>
+        </div>
+        <button type="submit">Сохранить правило</button>
+      </form>
+      <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section=rules" onsubmit="return confirm('Удалить правило firewall?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.delete_rule"><input type="hidden" name="confirmed" value="true">
+        <label>Имя правила<input name="name" required></label><button class="button--secondary" type="submit">Удалить правило</button>
+      </form>
+    </div>
+  </details>
+  {% endif %}
+
+  {% if supports.firewall_zones %}
+  <details class="settings-panel card">
+    <summary><span><strong>Зоны и транзит</strong><small>{{ network.firewall_zones|length }} зон</small></span><span>Управлять</span></summary>
+    <div class="settings-panel__body">
+      {% if network.firewall_zones %}<div class="device-port-list">{% for zone in network.firewall_zones %}<span><strong>{{ zone.name }}</strong>вход {{ zone.input }} · выход {{ zone.output }} · транзит {{ zone.forward }}</span>{% endfor %}</div>{% endif %}
+      <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section=rules">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.set_zone"><input type="hidden" name="confirmed" value="true">
+        <div class="form-grid"><label>Зона<input name="name" required></label><label>Сети<input name="network" required placeholder="Имена сетей через пробел"></label><label>Вход<select name="protocol"><option>REJECT</option><option>ACCEPT</option><option>DROP</option></select></label><label>Выход<select name="username"><option>ACCEPT</option><option>REJECT</option></select></label><label>Транзит<select name="password"><option>REJECT</option><option>ACCEPT</option><option>DROP</option></select></label><label>Masquerade<select name="enabled"><option value="false">Нет</option><option value="true">Да</option></select></label></div>
+        <button type="submit">Сохранить зону</button>
+      </form>
+      <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section=rules">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.set_forwarding"><input type="hidden" name="confirmed" value="true">
+        <div class="form-grid"><label>Из зоны<select name="interface" required>{% for value in firewall_zone_options %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></label><label>В зону<select name="network" required>{% for value in firewall_zone_options %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></label><label>Транзит<select name="enabled"><option value="true">Разрешить</option><option value="false">Запретить</option></select></label></div>
+        <button type="submit">Сохранить транзит</button>
+      </form>
+    </div>
+  </details>
+  {% endif %}
+
+  {% if supports.network_routes %}
+  <details class="settings-panel card">
+    <summary><span><strong>Статические маршруты</strong><small>{{ network.routes|length }} настроено</small></span><span>Управлять</span></summary>
+    <div class="settings-panel__body">
+      {% if network.routes %}<div class="device-port-list">{% for route in network.routes %}<span><strong>{{ route.name }}</strong>{{ route.target }}{% if route.gateway %} через {{ route.gateway }}{% endif %} · {{ route.family }}</span>{% endfor %}</div>{% endif %}
+      <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section=rules">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.set_route"><input type="hidden" name="confirmed" value="true">
+        <div class="form-grid"><label>Имя<input name="name" required></label><label>Интерфейс<select name="interface" required>{% for value in network_options %}<option value="{{ value }}" {% if value == 'wan' %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></label><label>Сеть CIDR<input name="ip_address" required placeholder="Например: 10.0.0.0/24"></label><label>Шлюз<input name="gateway"></label><label>Метрика<input name="mtu" type="number" value="0"></label></div>
+        <button type="submit">Сохранить маршрут</button>
+      </form>
+      <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section=rules" onsubmit="return confirm('Удалить статический маршрут?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.delete_route"><input type="hidden" name="confirmed" value="true"><label>Имя маршрута<input name="name" required></label><button class="button--secondary" type="submit">Удалить маршрут</button>
+      </form>
+    </div>
+  </details>
+  {% endif %}
+
+  {% if supports.firewall_upnp %}
+  <details class="settings-panel card">
+    <summary><span><strong>UPnP</strong><small>Автоматические пробросы портов</small></span><span>Настроить</span></summary>
+    <form class="compact-form settings-panel__body" method="post" action="/devices/{{ device.id }}/web-command?section=rules">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.set_upnp"><input type="hidden" name="confirmed" value="true">
+      <label>Состояние<select name="enabled"><option value="true">Включено</option><option value="false">Выключено</option></select></label><label>Безопасный режим<select name="blocked"><option value="true">Да</option><option value="false">Нет</option></select></label><button type="submit">Сохранить UPnP</button>
+    </form>
+  </details>
+  {% endif %}
+</div>

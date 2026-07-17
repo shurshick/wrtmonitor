@@ -10,11 +10,17 @@
       <div><strong>{{ device.name or device.hostname or 'Роутер' }}</strong><span>{{ device.model or 'OpenWrt' }}</span></div>
     </div>
     <nav class="device-nav" aria-label="Разделы роутера">
+      <span class="device-nav__group">Состояние</span>
       <a class="device-nav__item {{ 'is-active' if section == 'overview' else '' }}" href="/devices/{{ device.id }}?section=overview"><span>Обзор</span><small>Состояние сети</small></a>
+      <span class="device-nav__group">Подключения</span>
       <a class="device-nav__item {{ 'is-active' if section == 'internet' else '' }}" href="/devices/{{ device.id }}?section=internet"><span>Интернет</span><small>WAN и интерфейсы</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'vpn' else '' }}" href="/devices/{{ device.id }}?section=vpn"><span>VPN</span><small>Туннели и политики</small></a>
+      <span class="device-nav__group">Мои сети</span>
       <a class="device-nav__item {{ 'is-active' if section == 'clients' else '' }}" href="/devices/{{ device.id }}?section=clients"><span>Домашняя сеть</span><small>Клиенты и DHCP</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'wifi' else '' }}" href="/devices/{{ device.id }}?section=wifi"><span>Wi-Fi</span><small>Сети и радиомодули</small></a>
-      <a class="device-nav__item {{ 'is-active' if section == 'vpn' else '' }}" href="/devices/{{ device.id }}?section=vpn"><span>VPN</span><small>Туннели и маршрутизация</small></a>
+      <span class="device-nav__group">Безопасность</span>
+      <a class="device-nav__item {{ 'is-active' if section == 'rules' else '' }}" href="/devices/{{ device.id }}?section=rules"><span>Сетевые правила</span><small>Firewall, NAT и маршруты</small></a>
+      <span class="device-nav__group">Управление</span>
       <a class="device-nav__item {{ 'is-active' if section == 'system' else '' }}" href="/devices/{{ device.id }}?section=system"><span>Система</span><small>Ресурсы и службы</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'management' else '' }}" href="/devices/{{ device.id }}?section=management"><span>Обслуживание</span><small>Агент и диагностика</small></a>
     </nav>
@@ -39,6 +45,9 @@
     {% elif section == 'wifi' %}
       <div class="section-heading"><p class="eyebrow">Беспроводная сеть</p><h2>Wi-Fi</h2><p>Радиомодули, имена сетей, безопасность и каналы.</p></div>
       {% include "partials/wifi.html" %}
+    {% elif section == 'rules' %}
+      <div class="section-heading"><p class="eyebrow">Безопасность и маршрутизация</p><h2>Сетевые правила</h2><p>Межсетевой экран, доступ из интернета, статические маршруты и UPnP.</p></div>
+      {% include "partials/rules.html" %}
     {% elif section == 'vpn' %}
       <div class="section-heading"><p class="eyebrow">Защищённые соединения</p><h2>VPN</h2><p>WireGuard, OpenVPN и правила выбора туннеля.</p></div>
       {% include "partials/vpn.html" %}

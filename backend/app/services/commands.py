@@ -19,7 +19,6 @@ from fastapi import HTTPException
 from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.orm import Session
 
-from ..config import APP_VERSION
 from ..management_options import TIMEZONE_BY_NAME
 from ..models import DeviceCommand, DeviceTelemetry
 from .config_transactions import (
@@ -2022,7 +2021,7 @@ def create_device_command(
 ) -> DeviceCommand:
     now = now_utc()
     command_id = uuid4()
-    if command_type == "agent.update" and APP_VERSION.startswith("0.10."):
+    if command_type == "agent.update":
         latest = db.scalars(
             select(DeviceTelemetry)
             .where(DeviceTelemetry.device_id == device_id)

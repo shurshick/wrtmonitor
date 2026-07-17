@@ -1,6 +1,6 @@
 # Развёртывание серверной части
 
-Документ актуален для `WrtMonitor v0.10.4`.
+Документ актуален для `WrtMonitor v0.11.0`.
 
 ## Перед первым запуском
 
@@ -41,11 +41,11 @@ WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE=500
 
 ## TrueNAS Custom App
 
-1. Откройте релиз `v0.10.4`.
+1. Откройте релиз `v0.11.0`.
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-v0.10.4.yaml
+   wrtmonitor-truenas-v0.11.0.yaml
    ```
 
 3. При необходимости скачайте и проверьте `SHA256SUMS.txt`.

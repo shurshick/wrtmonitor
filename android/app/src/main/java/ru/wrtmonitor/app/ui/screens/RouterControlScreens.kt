@@ -763,8 +763,20 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     ) }
 }
 
+enum class NetworkScreenMode {
+    Internet,
+    Rules,
+    Vpn,
+}
+
 @Composable
-fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
+fun NetworkControlScreen(
+    serverUrl: String,
+    accessToken: String,
+    device: DeviceDto,
+    onSessionExpired: () -> Unit,
+    mode: NetworkScreenMode = NetworkScreenMode.Internet,
+) {
     val scope = rememberCoroutineScope()
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var message by remember { mutableStateOf("") }
@@ -899,11 +911,40 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
         }
     }
     RouterPageHeader(
-        title = stringResource(R.string.internet),
-        subtitle = stringResource(R.string.internet_screen_summary),
+        title = stringResource(
+            when (mode) {
+                NetworkScreenMode.Internet -> R.string.internet
+                NetworkScreenMode.Rules -> R.string.network_rules
+                NetworkScreenMode.Vpn -> R.string.vpn_title
+            },
+        ),
+        subtitle = stringResource(
+            when (mode) {
+                NetworkScreenMode.Internet -> R.string.internet_screen_summary
+                NetworkScreenMode.Rules -> R.string.network_rules_summary
+                NetworkScreenMode.Vpn -> R.string.vpn_summary
+            },
+        ),
         onRefresh = refresh,
     )
-    if (capabilities["telemetry.vpn"] == true || vpn != null) {
+    val sectionAvailable = when (mode) {
+        NetworkScreenMode.Internet -> capabilities.keys.any {
+            it.startsWith("network.") || it == "dns.configure" || it == "qos.sqm"
+        }
+        NetworkScreenMode.Rules -> capabilities.keys.any {
+            it.startsWith("firewall.") || it == "network.routes.configure"
+        }
+        NetworkScreenMode.Vpn -> capabilities.keys.any { it.startsWith("vpn.") }
+    }
+    if (!sectionAvailable) {
+        SectionCard(stringResource(R.string.status)) {
+            Text(
+                stringResource(R.string.capabilities_missing_reinstall),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    if (mode == NetworkScreenMode.Vpn && (capabilities["telemetry.vpn"] == true || vpn != null)) {
         val wireguardCount = vpn?.optJSONObject("wireguard")?.optJSONArray("interfaces")?.length() ?: 0
         val openVpnService = vpn?.optJSONObject("openvpn")?.optString("service") ?: stringResource(R.string.no_data)
         val policyService = vpn?.optJSONObject("policy")?.optString("service") ?: stringResource(R.string.no_data)
@@ -913,7 +954,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             InfoRow(stringResource(R.string.policy_routing), policyService)
         }
     }
-    SectionCard(
+    if (mode == NetworkScreenMode.Internet) SectionCard(
         title = stringResource(R.string.network_interfaces),
         subtitle = stringResource(R.string.interfaces_count, interfaces?.length() ?: 0),
     ) {
@@ -960,7 +1001,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
         }
     }
 
-    if (capabilities["network.wan.configure"] == true) {
+    if (mode == NetworkScreenMode.Internet && capabilities["network.wan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.wan_settings), wanProtocol.uppercase()) {
             OptionSelector(stringResource(R.string.connection_type), wanProtocol, wanProtocolOptions, { wanProtocol = it })
             if (wanProtocol == "static") {
@@ -980,7 +1021,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             )
         }
     }
-    if (capabilities["network.lan.configure"] == true) {
+    if (mode == NetworkScreenMode.Internet && capabilities["network.lan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.lan_settings), "$lanIp · $lanNetmask") {
             OutlinedTextField(lanIp, { lanIp = it }, label = { Text(stringResource(R.string.router_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OptionSelector(stringResource(R.string.netmask), lanNetmask, netmaskOptions, { lanNetmask = it })
@@ -991,7 +1032,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             )
         }
     }
-    if (capabilities["dns.configure"] == true) {
+    if (mode == NetworkScreenMode.Internet && capabilities["dns.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.dns_servers), dnsServers) {
             OutlinedTextField(dnsServers, { dnsServers = it }, label = { Text(stringResource(R.string.dns_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
@@ -1001,7 +1042,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             )
         }
     }
-    if (capabilities["qos.sqm"] == true) {
+    if (mode == NetworkScreenMode.Internet && capabilities["qos.sqm"] == true) {
         ExpandableSettingsCard(stringResource(R.string.sqm_title), stringResource(R.string.sqm_summary)) {
             SwitchSettingRow(stringResource(R.string.sqm_enabled), checked = sqmEnabled, onCheckedChange = { sqmEnabled = it })
             OptionSelector(stringResource(R.string.sqm_interface), sqmInterface, interfaceOptions, { sqmInterface = it })
@@ -1017,7 +1058,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             )
         }
     }
-    if (capabilities["firewall.port_forward"] == true) {
+    if (mode == NetworkScreenMode.Rules && capabilities["firewall.port_forward"] == true) {
         ExpandableSettingsCard(stringResource(R.string.port_forwarding), stringResource(R.string.port_forward_summary)) {
             OutlinedTextField(forwardName, { forwardName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(forwardExternalPort, { forwardExternalPort = it }, label = { Text(stringResource(R.string.external_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1035,14 +1076,14 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             }
         }
     }
-    if (capabilities["network.ipv6.configure"] == true) {
+    if (mode == NetworkScreenMode.Internet && capabilities["network.ipv6.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.ipv6_settings), "/$ipv6Prefix") {
             SwitchSettingRow(stringResource(R.string.ipv6_settings), checked = ipv6Enabled, onCheckedChange = { ipv6Enabled = it })
             OptionSelector(stringResource(R.string.prefix_length), ipv6Prefix, ipv6PrefixOptions, { ipv6Prefix = it })
             PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_ipv6", JSONObject().put("interface", "lan").put("enabled", ipv6Enabled).put("assignment_length", ipv6Prefix.toIntOrNull() ?: 64).put("ra", "server").put("dhcpv6", "server").put("ndp", "server"), genericCommandQueued) }, Modifier.align(Alignment.End))
         }
     }
-    if (capabilities["network.multiwan.configure"] == true) {
+    if (mode == NetworkScreenMode.Internet && capabilities["network.multiwan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.multiwan_settings), "$primaryWan → $secondaryWan") {
             SwitchSettingRow(stringResource(R.string.multiwan_settings), checked = multiWanEnabled, onCheckedChange = { multiWanEnabled = it })
             OptionSelector(stringResource(R.string.primary_wan), primaryWan, interfaceOptions, { primaryWan = it })
@@ -1050,7 +1091,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_multiwan", JSONObject().put("enabled", multiWanEnabled).put("primary_interface", primaryWan).put("secondary_interface", secondaryWan).put("primary_metric", 10).put("secondary_metric", 20), genericCommandQueued) }, Modifier.align(Alignment.End))
         }
     }
-    if (capabilities["network.routes.configure"] == true) {
+    if (mode == NetworkScreenMode.Rules && capabilities["network.routes.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.static_routes), routeTarget) {
             OutlinedTextField(routeName, { routeName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(routeTarget, { routeTarget = it }, label = { Text(stringResource(R.string.route_target)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1059,7 +1100,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_route", JSONObject().put("name", routeName).put("interface", "wan").put("target", routeTarget).put("gateway", routeGateway).put("metric", routeMetric.toIntOrNull() ?: 0), genericCommandQueued) }, enabled = routeName.isNotBlank() && routeTarget.isNotBlank()); TextButton({ pendingCommand = PendingSafeCommand("network.delete_route", JSONObject().put("name", routeName), genericCommandQueued) }, enabled = routeName.isNotBlank()) { Text(stringResource(R.string.delete)) } }
         }
     }
-    if (capabilities["network.ddns.configure"] == true) {
+    if (mode == NetworkScreenMode.Internet && capabilities["network.ddns.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.ddns_settings), ddnsDomain) {
             OutlinedTextField(ddnsName, { ddnsName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(ddnsProvider, { ddnsProvider = it }, label = { Text(stringResource(R.string.provider)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1069,21 +1110,21 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_ddns", JSONObject().put("name", ddnsName).put("enabled", true).put("provider", ddnsProvider).put("domain", ddnsDomain).put("username", ddnsUser).put("password", ddnsPassword).put("interface", "wan"), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = ddnsDomain.isNotBlank())
         }
     }
-    if (capabilities["firewall.upnp.configure"] == true) {
+    if (mode == NetworkScreenMode.Rules && capabilities["firewall.upnp.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.upnp_settings), if (upnpEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value)) {
             SwitchSettingRow(stringResource(R.string.upnp_settings), checked = upnpEnabled, onCheckedChange = { upnpEnabled = it })
             SwitchSettingRow(stringResource(R.string.secure_mode), checked = upnpSecure, onCheckedChange = { upnpSecure = it })
             PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_upnp", JSONObject().put("enabled", upnpEnabled).put("secure_mode", upnpSecure), genericCommandQueued) }, Modifier.align(Alignment.End))
         }
     }
-    if (capabilities["firewall.zones.configure"] == true) {
+    if (mode == NetworkScreenMode.Rules && capabilities["firewall.zones.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.firewall_zone), zoneNameValue) {
             OutlinedTextField(zoneNameValue, { zoneNameValue = it }, label = { Text(stringResource(R.string.firewall_zone)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(zoneNetworks, { zoneNetworks = it }, label = { Text(stringResource(R.string.zone_networks)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_zone", JSONObject().put("name", zoneNameValue).put("networks", JSONArray(zoneNetworks.split(' ').filter(String::isNotBlank))).put("input", "REJECT").put("output", "ACCEPT").put("forward", "REJECT").put("masquerade", false), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = zoneNameValue.isNotBlank() && zoneNetworks.isNotBlank())
         }
     }
-    if (capabilities["firewall.rules.configure"] == true) {
+    if (mode == NetworkScreenMode.Rules && capabilities["firewall.rules.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.firewall_rule), ruleNameValue) {
             OutlinedTextField(ruleNameValue, { ruleNameValue = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OptionSelector(stringResource(R.string.source_zone), ruleSource, firewallZoneOptions, { ruleSource = it })
@@ -1092,7 +1133,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_rule", JSONObject().put("name", ruleNameValue).put("src", ruleSource).put("dest", ruleDestination).put("protocol", "tcpudp").put("dest_port", rulePort).put("target", "ACCEPT"), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()); TextButton({ pendingCommand = PendingSafeCommand("firewall.delete_rule", JSONObject().put("name", ruleNameValue), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()) { Text(stringResource(R.string.delete)) } }
         }
     }
-    if (capabilities["vpn.wireguard.configure"] == true) {
+    if (mode == NetworkScreenMode.Vpn && capabilities["vpn.wireguard.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.wireguard_interface), wgName) {
             OutlinedTextField(wgName, { wgName = it }, label = { Text(stringResource(R.string.interface_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(wgAddress, { wgAddress = it }, label = { Text(stringResource(R.string.tunnel_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1114,7 +1155,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             }
         }
     }
-    if (capabilities["vpn.openvpn.configure"] == true) {
+    if (mode == NetworkScreenMode.Vpn && capabilities["vpn.openvpn.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.openvpn_client), openVpnName) {
             OutlinedTextField(openVpnName, { openVpnName = it }, label = { Text(stringResource(R.string.profile_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(openVpnConfig, { openVpnConfig = it }, label = { Text(stringResource(R.string.openvpn_config)) }, modifier = Modifier.fillMaxWidth(), minLines = 6)
@@ -1124,7 +1165,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             }
         }
     }
-    if (capabilities["vpn.policy.configure"] == true) {
+    if (mode == NetworkScreenMode.Vpn && capabilities["vpn.policy.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.policy_routing), vpnPolicyName) {
             OutlinedTextField(vpnPolicyName, { vpnPolicyName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(vpnPolicyInterface, { vpnPolicyInterface = it }, label = { Text(stringResource(R.string.vpn_interface)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1136,7 +1177,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             }
         }
     }
-    if (capabilities["network.interface_restart"] == true || capabilities["network.restart"] == true) {
+    if (mode == NetworkScreenMode.Internet && (capabilities["network.interface_restart"] == true || capabilities["network.restart"] == true)) {
         ExpandableSettingsCard(stringResource(R.string.network_maintenance), stringResource(R.string.network_maintenance_summary)) {
             if (capabilities["network.interface_restart"] == true) {
                 OptionSelector(stringResource(R.string.network_interfaces), interfaceName, interfaceOptions, { interfaceName = it })

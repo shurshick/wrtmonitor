@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Settings
@@ -59,6 +60,8 @@ import ru.wrtmonitor.app.ui.screens.DeviceDetailScreen
 import ru.wrtmonitor.app.ui.screens.DeviceListScreen
 import ru.wrtmonitor.app.ui.screens.ClientsControlScreen
 import ru.wrtmonitor.app.ui.screens.NetworkControlScreen
+import ru.wrtmonitor.app.ui.screens.NetworkScreenMode
+import ru.wrtmonitor.app.ui.screens.RouterSectionsScreen
 import ru.wrtmonitor.app.ui.screens.ServerSetupScreen
 import ru.wrtmonitor.app.ui.screens.SystemControlScreen
 import ru.wrtmonitor.app.ui.screens.WifiControlScreen
@@ -68,6 +71,9 @@ private enum class Tab {
     Clients,
     Wifi,
     Network,
+    More,
+    Rules,
+    Vpn,
     System,
     Settings,
 }
@@ -165,14 +171,18 @@ fun WrtMonitorApp() {
             }
         }
 
-        BackHandler(enabled = selectedDevice != null || tab == Tab.Settings) {
-            if (tab == Tab.Settings) {
-                tab = Tab.Routers
-            } else {
-                selectedDevice = null
-                tab = Tab.Routers
+        val navigateBack: () -> Unit = {
+            when {
+                tab == Tab.Settings && selectedDevice != null -> tab = Tab.More
+                tab == Tab.Settings -> tab = Tab.Routers
+                tab in setOf(Tab.Rules, Tab.Vpn, Tab.System) -> tab = Tab.More
+                else -> {
+                    selectedDevice = null
+                    tab = Tab.Routers
+                }
             }
         }
+        BackHandler(enabled = selectedDevice != null || tab == Tab.Settings, onBack = navigateBack)
 
         Scaffold(
             topBar = {
@@ -210,14 +220,7 @@ fun WrtMonitorApp() {
                     },
                     navigationIcon = {
                         if (selectedDevice != null || tab == Tab.Settings) {
-                            IconButton(onClick = {
-                                if (tab == Tab.Settings) {
-                                    tab = Tab.Routers
-                                } else {
-                                    selectedDevice = null
-                                    tab = Tab.Routers
-                                }
-                            }) {
+                            IconButton(onClick = navigateBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                             }
                         }
@@ -239,7 +242,7 @@ fun WrtMonitorApp() {
                         AppNavigationItem(Tab.Clients, tab, { tab = it }, Icons.Default.People, R.string.clients)
                         AppNavigationItem(Tab.Wifi, tab, { tab = it }, Icons.Default.Wifi, R.string.wifi)
                         AppNavigationItem(Tab.Network, tab, { tab = it }, Icons.Default.Public, R.string.internet)
-                        AppNavigationItem(Tab.System, tab, { tab = it }, Icons.Default.Settings, R.string.system)
+                        AppNavigationItem(Tab.More, tab, { tab = it }, Icons.Default.MoreHoriz, R.string.more)
                     }
                 }
             },
@@ -283,7 +286,15 @@ fun WrtMonitorApp() {
 
                         Tab.Clients -> DeviceTabRequired(device) { ClientsControlScreen(serverUrl, accessToken, it, expireSession) }
                         Tab.Wifi -> DeviceTabRequired(device) { WifiControlScreen(serverUrl, accessToken, it, expireSession) }
-                        Tab.Network -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession) }
+                        Tab.Network -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession, NetworkScreenMode.Internet) }
+                        Tab.More -> RouterSectionsScreen(
+                            onOpenRules = { tab = Tab.Rules },
+                            onOpenVpn = { tab = Tab.Vpn },
+                            onOpenSystem = { tab = Tab.System },
+                            onOpenSettings = { tab = Tab.Settings },
+                        )
+                        Tab.Rules -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession, NetworkScreenMode.Rules) }
+                        Tab.Vpn -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession, NetworkScreenMode.Vpn) }
                         Tab.System -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession) }
                         Tab.Settings -> AppSettingsScreen(
                             currentServerUrl = serverUrl,
@@ -325,7 +336,9 @@ private fun RowScope.AppNavigationItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: Int,
 ) {
-    val selected = tab == currentTab
+    val selected = tab == currentTab || (
+        tab == Tab.More && currentTab in setOf(Tab.Rules, Tab.Vpn, Tab.System)
+    )
     NavigationBarItem(
         selected = selected,
         onClick = { onSelect(tab) },

@@ -277,6 +277,7 @@ def run() -> None:
                 "internet",
                 "clients",
                 "wifi",
+                "rules",
                 "vpn",
                 "system",
                 "management",

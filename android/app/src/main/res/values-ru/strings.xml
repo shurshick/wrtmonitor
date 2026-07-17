@@ -8,6 +8,16 @@
     <string name="clients">Клиенты</string>
     <string name="settings">Настройки</string>
     <string name="nav_settings">Ещё</string>
+    <string name="more">Ещё</string>
+    <string name="more_summary">Безопасность, VPN, система и служебные инструменты</string>
+    <string name="security_and_connections">Безопасность и подключения</string>
+    <string name="network_rules">Сетевые правила</string>
+    <string name="network_rules_summary">Межсетевой экран, проброс портов, маршруты и UPnP</string>
+    <string name="management">Управление</string>
+    <string name="system_and_maintenance">Система и обслуживание</string>
+    <string name="system_and_maintenance_summary">Ресурсы, службы, агент и диагностика</string>
+    <string name="app_and_server">Приложение и сервер</string>
+    <string name="app_and_server_summary">Подключение, аккаунт, версия и обновления</string>
     <string name="server_url">Адрес сервера</string>
     <string name="first_run_server_prompt">Введите адрес сервера wrtmonitor, чтобы подключить приложение.</string>
     <string name="admin_username">Имя администратора</string>

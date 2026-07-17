@@ -374,7 +374,13 @@ def test_web_ui_templates_expose_v2_management_controls():
     )
     content = "\n".join(
         (templates_dir / filename).read_text(encoding="utf-8")
-        for filename in ("clients.html", "wifi.html", "network.html", "system.html")
+        for filename in (
+            "clients.html",
+            "wifi.html",
+            "network.html",
+            "rules.html",
+            "system.html",
+        )
     )
     for command_type in (
         "dhcp.set_lease",
@@ -387,3 +393,22 @@ def test_web_ui_templates_expose_v2_management_controls():
         "system.restart_service",
     ):
         assert f'value="{command_type}"' in content
+
+
+def test_web_ui_separates_internet_rules_and_vpn_workspaces():
+    templates_dir = Path(__file__).resolve().parents[1] / "app" / "templates"
+    device_detail = (templates_dir / "device_detail.html").read_text(encoding="utf-8")
+    internet = (templates_dir / "partials" / "network.html").read_text(encoding="utf-8")
+    rules = (templates_dir / "partials" / "rules.html").read_text(encoding="utf-8")
+
+    assert "section=rules" in device_detail
+    assert "section=vpn" in device_detail
+    for command_type in (
+        "firewall.set_port_forward",
+        "firewall.set_rule",
+        "firewall.set_zone",
+        "network.set_route",
+        "network.set_upnp",
+    ):
+        assert f'value="{command_type}"' in rules
+        assert f'value="{command_type}"' not in internet

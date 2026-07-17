@@ -39,6 +39,11 @@
   </a>
 </div>
 
+<div class="overview-actions">
+  <a href="/devices/{{ device.id }}?section=rules"><span><strong>Сетевые правила</strong><small>Firewall: {{ network.firewall_rules|length }} · маршруты: {{ network.routes|length }}</small></span><b>&rarr;</b></a>
+  <a href="/devices/{{ device.id }}?section=vpn"><span><strong>VPN и туннели</strong><small>WireGuard: {{ vpn.wireguard.interfaces|length if vpn.wireguard else 0 }} · OpenVPN: {{ vpn.openvpn.clients|length if vpn.openvpn else 0 }}</small></span><b>&rarr;</b></a>
+</div>
+
 <section class="overview-strip">
   <div><span>Прошивка</span><strong>{{ device.firmware or 'нет данных' }}</strong></div>
   <div><span>Агент</span><strong>{{ agent.get('version') or 'нет данных' }}</strong></div>

@@ -84,6 +84,7 @@ DEVICE_SECTIONS = {
     "internet",
     "clients",
     "wifi",
+    "rules",
     "vpn",
     "system",
     "management",
