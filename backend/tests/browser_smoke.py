@@ -79,6 +79,12 @@ def prepare_router() -> str:
             "wifi.set_channel": True,
             "wifi.set_country": True,
             "wifi.guest": True,
+            "telemetry.wifi.stations": True,
+            "wifi.radio.configure": True,
+            "wifi.manage_ssid": True,
+            "wifi.schedule": True,
+            "wifi.roaming": True,
+            "wifi.mesh": True,
         }
         telemetry = client.post(
             "/api/v1/agent/telemetry",
@@ -89,7 +95,7 @@ def prepare_router() -> str:
                     "agent": {
                         "version": "0.5.0",
                         "status": "running",
-                        "capabilities_version": 6,
+                        "capabilities_version": 7,
                         "capabilities": capabilities,
                     },
                     "system": {
@@ -116,6 +122,19 @@ def prepare_router() -> str:
                                         "encryption": "sae-mixed",
                                     }
                                 ],
+                            }
+                        ],
+                        "stations": [
+                            {
+                                "interface": "wlan0",
+                                "clients": {
+                                    "00:11:22:33:44:55": {
+                                        "signal": -52,
+                                        "noise": -95,
+                                        "tx_rate": "866 Mbit/s",
+                                        "rx_rate": "650 Mbit/s",
+                                    }
+                                },
                             }
                         ],
                     },

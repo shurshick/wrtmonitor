@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.5.0` добавляет реестр клиентов, политики доступа, SQM и счётчики `nlbwmon`. Она обновляется поверх `0.4.x` штатным update-механизмом.
+Версия `0.6.0` добавляет расширенное управление Wi-Fi, расписания, roaming, Mesh и telemetry станций. Она обновляется поверх `0.5.x` штатным update-механизмом.
 
 ## Требования
 
@@ -77,7 +77,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.5.0/wrtmonitor-openwrt-agent-v0.5.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.6.0/wrtmonitor-openwrt-agent-v0.6.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -181,6 +181,10 @@ wrtmonitor-agent diagnostics --json
 ```
 
 ## Wi-Fi и backup
+
+Агент поддерживает несколько `wifi-iface` на каждом `wifi-device`, настройку radio, расписание, 802.11r/k/v и Mesh 802.11s. Возможности публикуются динамически: `wifi.mesh` и `wifi.roaming` включаются только при наличии подходящего `wpad`/`hostapd` и режима mesh в `iw list`.
+
+Расписание хранится в UCI `wrtmonitor` и проверяется в каждом цикле агента. Минимальная точность равна настроенному интервалу telemetry (не менее 5 секунд); отдельные записи cron не создаются.
 
 Перед командами:
 

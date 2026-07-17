@@ -32,7 +32,7 @@ OpenWrt agent собирает:
 - `dhcp`: динамические и статические leases;
 - `agent`: версия, update status, interval и capabilities.
 
-`schema_version=2` остаётся форматом telemetry; capability report в `v0.5.0` имеет версию 6. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
+`schema_version=2` остаётся форматом telemetry; capability report в `v0.6.0` имеет версию 7. Wi-Fi содержит radio, интерфейсы, расписания и станции с signal/noise/bitrate/airtime. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
 
 Retention: сервер хранит последние 100 telemetry snapshots на устройство. Старые snapshots удаляются после успешного ingest.
 

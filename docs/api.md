@@ -57,7 +57,7 @@ Access token используется клиентами владельца. Dev
 
 ```json
 {
-  "version": "0.5.0",
+  "version": "0.6.0",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -133,7 +133,9 @@ Content-Type: application/json
 
 Тело совпадает с созданием команды. Ответ содержит `changes`, `warnings`, `errors`, `can_apply`, список UCI-конфигураций и timeout автоматического rollback.
 
-### Управляющие команды v0.5.0
+### Управляющие команды v0.6.0
+
+Расширенный Wi-Fi: `wifi.set_radio`, `wifi.add_ssid`, `wifi.update_ssid`, `wifi.delete_ssid`, `wifi.set_schedule`, `wifi.set_mesh`. Сервер валидирует radio/iface, режим защиты, длину ключа, channel/htmode/txpower, дни и время расписания до постановки команды в очередь.
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`

@@ -39,6 +39,8 @@
 
 ## v0.6.0 - расширенный Wi-Fi
 
+Статус: реализовано.
+
 - несколько SSID на каждом radio;
 - guest network и client isolation;
 - канал, ширина, мощность и режим radio;

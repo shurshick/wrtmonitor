@@ -1,6 +1,7 @@
 transaction_configs_for_command() {
     case "$1" in
-        wifi.set_enabled|wifi.set_ssid|wifi.set_password|wifi.set_channel|wifi.set_country) printf 'wireless' ;;
+        wifi.set_enabled|wifi.set_ssid|wifi.set_password|wifi.set_channel|wifi.set_country|wifi.set_radio|wifi.add_ssid|wifi.update_ssid|wifi.delete_ssid|wifi.set_mesh) printf 'wireless' ;;
+        wifi.set_schedule) printf 'wireless wrtmonitor' ;;
         wifi.set_guest) printf 'wireless network dhcp firewall' ;;
         network.set_wan|network.set_lan) printf 'network' ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.set_pool|dns.set_servers) printf 'dhcp' ;;

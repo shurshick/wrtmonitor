@@ -13,7 +13,6 @@
     <string name="admin_username">Administrator username</string>
     <string name="admin_password">Administrator password</string>
     <string name="change_server">Change server</string>
-    <string name="save">Save</string>
     <string name="login">Sign in</string>
     <string name="reboot">Reboot</string>
     <string name="apply">Apply</string>
@@ -298,4 +297,21 @@
     <string name="app_tagline">Manage your OpenWrt routers</string>
     <string name="safe_apply_title">Review changes</string>
     <string name="rollback_timeout">The agent will verify connectivity for %1$d seconds and automatically restore the previous configuration if the server becomes unavailable.</string>
+    <string name="wifi_networks">Wireless networks</string>
+    <string name="wifi_add_network">Add network</string>
+    <string name="wifi_delete_network">Delete network</string>
+    <string name="wifi_radio_advanced">Radio configuration</string>
+    <string name="wifi_width_mode">Width / mode</string>
+    <string name="wifi_txpower">Transmit power, dBm</string>
+    <string name="wifi_network_name">Network</string>
+    <string name="wifi_encryption">Security</string>
+    <string name="wifi_schedule">Wi-Fi schedule</string>
+    <string name="wifi_weekdays_hint">mon,tue,wed,thu,fri,sat,sun</string>
+    <string name="wifi_start_time">Start (HH:MM)</string>
+    <string name="wifi_stop_time">Stop (HH:MM)</string>
+    <string name="wifi_mesh">Mesh 802.11s</string>
+    <string name="wifi_mesh_id">Mesh ID</string>
+    <string name="wifi_stations">Connected Wi-Fi clients</string>
+    <string name="wifi_command_queued">Wi-Fi configuration queued</string>
+    <string name="save">Save</string>
 </resources>

@@ -67,6 +67,42 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "wifi.set_radio": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.radio.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "wifi.add_ssid": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.manage_ssid",
+        "requires_confirmation": True,
+        "secret_fields": ["password", "key"],
+    },
+    "wifi.update_ssid": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.manage_ssid",
+        "requires_confirmation": True,
+        "secret_fields": ["password", "key"],
+    },
+    "wifi.delete_ssid": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.manage_ssid",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "wifi.set_schedule": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.schedule",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "wifi.set_mesh": {
+        "risk_level": "level_4_disruptive",
+        "capability": "wifi.mesh",
+        "requires_confirmation": True,
+        "secret_fields": ["password", "key"],
+    },
     "network.interfaces": {
         "risk_level": "level_1_readonly",
         "capability": "network.read",
@@ -338,6 +374,176 @@ def _normalize_wifi_country_payload(payload: dict[str, Any]) -> dict[str, Any]:
     country = _require_string(payload, "country", min_length=2, max_length=2).upper()
     _safe_identifier(country, "country", r"[A-Z]{2}")
     return {"radio": radio, "country": country}
+
+
+def _wifi_selector(payload: dict[str, Any], key: str) -> str:
+    return _safe_identifier(
+        _require_string(payload, key, max_length=64),
+        key,
+        r"[A-Za-z0-9_@.\[\]-]+",
+    )
+
+
+def _boolean(payload: dict[str, Any], key: str, *, default: bool | None = None) -> bool:
+    value = payload.get(key, default)
+    if not isinstance(value, bool):
+        raise HTTPException(status_code=400, detail=f"Field '{key}' must be boolean")
+    return value
+
+
+def _wifi_encryption(payload: dict[str, Any], *, required: bool = True) -> str | None:
+    encryption = _optional_string(payload, "encryption")
+    if not encryption and not required:
+        return None
+    encryption = (encryption or "sae-mixed").lower()
+    if encryption not in {"none", "psk2", "sae", "sae-mixed"}:
+        raise HTTPException(status_code=400, detail="Unsupported Wi-Fi encryption")
+    return encryption
+
+
+def _wifi_key(payload: dict[str, Any], encryption: str, *, required: bool) -> str:
+    if encryption == "none":
+        return ""
+    key = _optional_string(payload, "password") or _optional_string(payload, "key")
+    if not key and not required:
+        return ""
+    if not key or len(key) < 8 or len(key) > 63:
+        raise HTTPException(
+            status_code=400, detail="Wi-Fi password must contain 8..63 characters"
+        )
+    if any(ord(char) < 32 for char in key):
+        raise HTTPException(
+            status_code=400, detail="Wi-Fi password contains control characters"
+        )
+    return key
+
+
+def _normalize_wifi_radio_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = {"radio": _wifi_selector(payload, "radio")}
+    channel = _optional_string(payload, "channel")
+    if channel:
+        result.update(
+            _normalize_wifi_channel_payload(
+                {"radio": result["radio"], "channel": channel}
+            )
+        )
+    country = _optional_string(payload, "country")
+    if country:
+        result["country"] = _normalize_wifi_country_payload(
+            {"radio": result["radio"], "country": country}
+        )["country"]
+    htmode = _optional_string(payload, "htmode")
+    if htmode:
+        result["htmode"] = _safe_identifier(
+            htmode.upper(),
+            "htmode",
+            r"(?:NOHT|HT(?:20|40[+-]?)|VHT(?:20|40|80|160)|HE(?:20|40|80|160))",
+        )
+    txpower = _integer(payload, "txpower", 1, 40, required=False)
+    if txpower is not None:
+        result["txpower"] = txpower
+    if len(result) == 1:
+        raise HTTPException(
+            status_code=400, detail="At least one radio setting is required"
+        )
+    return result
+
+
+def _normalize_wifi_add_ssid_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    encryption = _wifi_encryption(payload) or "sae-mixed"
+    return {
+        "radio": _wifi_selector(payload, "radio"),
+        "ssid": _require_string(payload, "ssid", max_length=32),
+        "network": _safe_identifier(
+            str(payload.get("network") or "lan"), "network", r"[A-Za-z0-9_.-]+"
+        ),
+        "encryption": encryption,
+        "key": _wifi_key(payload, encryption, required=encryption != "none"),
+        "hidden": _boolean(payload, "hidden", default=False),
+        "isolate": _boolean(payload, "isolate", default=False),
+    }
+
+
+def _normalize_wifi_update_ssid_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    encryption = _wifi_encryption(payload) or "sae-mixed"
+    result = {
+        "iface": _wifi_selector(payload, "iface"),
+        "ssid": _require_string(payload, "ssid", max_length=32),
+        "network": _safe_identifier(
+            str(payload.get("network") or "lan"), "network", r"[A-Za-z0-9_.-]+"
+        ),
+        "encryption": encryption,
+        "enabled": _boolean(payload, "enabled", default=True),
+        "hidden": _boolean(payload, "hidden", default=False),
+        "isolate": _boolean(payload, "isolate", default=False),
+        "ieee80211r": _boolean(payload, "ieee80211r", default=False),
+        "ieee80211k": _boolean(payload, "ieee80211k", default=False),
+        "bss_transition": _boolean(payload, "bss_transition", default=False),
+    }
+    key = _wifi_key(payload, encryption, required=False)
+    if key or encryption == "none":
+        result["key"] = key
+    mobility_domain = _optional_string(payload, "mobility_domain")
+    if result["ieee80211r"]:
+        result["mobility_domain"] = _safe_identifier(
+            mobility_domain or "4f57", "mobility_domain", r"[0-9A-Fa-f]{4}"
+        ).lower()
+    return result
+
+
+def _normalize_wifi_schedule_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    enabled = _boolean(payload, "enabled")
+    weekdays = _string_list(payload, "weekdays")
+    allowed = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+    weekdays = [day.lower() for day in weekdays]
+    if any(day not in allowed for day in weekdays):
+        raise HTTPException(status_code=400, detail="Invalid Wi-Fi schedule weekday")
+    start = str(payload.get("start") or "")
+    stop = str(payload.get("stop") or "")
+    if enabled:
+        if not weekdays:
+            raise HTTPException(
+                status_code=400, detail="Wi-Fi schedule weekdays are required"
+            )
+        for field, value in (("start", start), ("stop", stop)):
+            if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value):
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid Wi-Fi schedule {field}"
+                )
+        if start == stop:
+            raise HTTPException(
+                status_code=400, detail="Wi-Fi schedule start and stop must differ"
+            )
+    return {
+        "radio": _wifi_selector(payload, "radio"),
+        "enabled": enabled,
+        "weekdays": weekdays,
+        "start": start,
+        "stop": stop,
+    }
+
+
+def _normalize_wifi_mesh_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    enabled = _boolean(payload, "enabled")
+    result: dict[str, Any] = {
+        "radio": _wifi_selector(payload, "radio"),
+        "enabled": enabled,
+    }
+    if enabled:
+        encryption = str(payload.get("encryption") or "sae").lower()
+        if encryption not in {"none", "sae"}:
+            raise HTTPException(
+                status_code=400, detail="Mesh encryption must be none or sae"
+            )
+        result.update(
+            mesh_id=_require_string(payload, "mesh_id", max_length=32),
+            network=_safe_identifier(
+                str(payload.get("network") or "lan"), "network", r"[A-Za-z0-9_.-]+"
+            ),
+            encryption=encryption,
+            key=_wifi_key(payload, encryption, required=encryption != "none"),
+        )
+    return result
 
 
 def _normalize_interface_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -722,6 +928,18 @@ def validate_command_payload(
         return _normalize_wifi_channel_payload(normalized_payload)
     if command_type == "wifi.set_country":
         return _normalize_wifi_country_payload(normalized_payload)
+    if command_type == "wifi.set_radio":
+        return _normalize_wifi_radio_payload(normalized_payload)
+    if command_type == "wifi.add_ssid":
+        return _normalize_wifi_add_ssid_payload(normalized_payload)
+    if command_type == "wifi.update_ssid":
+        return _normalize_wifi_update_ssid_payload(normalized_payload)
+    if command_type == "wifi.delete_ssid":
+        return {"iface": _wifi_selector(normalized_payload, "iface")}
+    if command_type == "wifi.set_schedule":
+        return _normalize_wifi_schedule_payload(normalized_payload)
+    if command_type == "wifi.set_mesh":
+        return _normalize_wifi_mesh_payload(normalized_payload)
     if command_type == "network.interface_restart":
         return _normalize_interface_payload(normalized_payload)
     if command_type == "network.set_wan":
@@ -803,6 +1021,19 @@ def build_command_payload_from_web_form(
     timezone: str = "",
     download_kbps: str = "",
     upload_kbps: str = "",
+    htmode: str = "",
+    txpower: str = "",
+    network: str = "",
+    encryption: str = "",
+    hidden: str = "false",
+    isolate: str = "false",
+    ieee80211r: str = "false",
+    ieee80211k: str = "false",
+    bss_transition: str = "false",
+    mobility_domain: str = "",
+    weekdays: list[str] | None = None,
+    stop: str = "",
+    mesh_id: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -817,6 +1048,58 @@ def build_command_payload_from_web_form(
         payload = {"channel": channel, "radio": radio}
     elif command_type == "wifi.set_country":
         payload = {"country": country, "radio": radio}
+    elif command_type == "wifi.set_radio":
+        payload = {
+            "radio": radio,
+            "channel": channel,
+            "country": country,
+            "htmode": htmode,
+            "txpower": txpower,
+        }
+    elif command_type == "wifi.add_ssid":
+        payload = {
+            "radio": radio,
+            "ssid": ssid,
+            "network": network or "lan",
+            "encryption": encryption or "sae-mixed",
+            "key": wifi_password,
+            "hidden": hidden.lower() == "true",
+            "isolate": isolate.lower() == "true",
+        }
+    elif command_type == "wifi.update_ssid":
+        payload = {
+            "iface": iface,
+            "ssid": ssid,
+            "network": network or "lan",
+            "encryption": encryption or "sae-mixed",
+            "key": wifi_password,
+            "enabled": enabled.lower() == "true",
+            "hidden": hidden.lower() == "true",
+            "isolate": isolate.lower() == "true",
+            "ieee80211r": ieee80211r.lower() == "true",
+            "ieee80211k": ieee80211k.lower() == "true",
+            "bss_transition": bss_transition.lower() == "true",
+            "mobility_domain": mobility_domain,
+        }
+    elif command_type == "wifi.delete_ssid":
+        payload = {"iface": iface}
+    elif command_type == "wifi.set_schedule":
+        payload = {
+            "radio": radio,
+            "enabled": enabled.lower() == "true",
+            "weekdays": weekdays or [],
+            "start": start,
+            "stop": stop,
+        }
+    elif command_type == "wifi.set_mesh":
+        payload = {
+            "radio": radio,
+            "enabled": enabled.lower() == "true",
+            "mesh_id": mesh_id,
+            "network": network or "lan",
+            "encryption": encryption or "sae",
+            "key": wifi_password,
+        }
     elif command_type == "network.interface_restart":
         payload = {"interface": interface}
     elif command_type == "network.set_wan":

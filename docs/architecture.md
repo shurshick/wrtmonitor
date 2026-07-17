@@ -49,7 +49,7 @@ flowchart LR
 
 ## Capabilities
 
-Начиная с `v0.5.0`, agent публикует capability report schema v6:
+Начиная с `v0.6.0`, agent публикует capability report schema v7:
 
 - версию;
 - платформу;
@@ -59,7 +59,7 @@ flowchart LR
 - `config.transaction` для безопасного изменения UCI-настроек.
 - `telemetry.clients.traffic`, `clients.policy` и `qos.sqm` для клиентских политик и SQM.
 
-Поддержка определяется по фактическому окружению: UCI-конфигурациям, ubus, init-сервисам, установленным утилитам и наличию Wi-Fi radio/iface.
+Поддержка определяется по фактическому окружению: UCI-конфигурациям, ubus, init-сервисам, установленным утилитам, hostapd station API, сборке wpad и режимам из `iw list`.
 
 Capabilities передаются в latest telemetry и через `GET /api/v1/devices/{device_id}/agent`.
 

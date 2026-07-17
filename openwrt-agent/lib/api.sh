@@ -64,6 +64,7 @@ daemon() {
             fi
             next_update_check=$((now + $(update_interval_seconds)))
         fi
+        apply_wifi_schedules || log_notice "wifi schedule check failed"
         telemetry || log_notice "telemetry failed"
         poll_commands || log_notice "command polling failed"
         sleep "$(telemetry_interval_seconds)"
@@ -154,7 +155,8 @@ main() {
                 update_status_text
             fi
             ;;
-        send-now) acquire_lock || exit 0; telemetry; poll_commands ;;
+        send-now) acquire_lock || exit 0; apply_wifi_schedules || true; telemetry; poll_commands ;;
+        apply-wifi-schedules) apply_wifi_schedules ;;
         daemon) acquire_lock || exit 0; daemon ;;
         debug) debug ;;
         debug-telemetry) debug_telemetry ;;
@@ -162,7 +164,7 @@ main() {
         version) printf '%s\n' "$AGENT_VERSION" ;;
         support-bundle) support_bundle "${2:-}" ;;
         *)
-            echo "Usage: wrtmonitor-agent capabilities [--json]|check-server|check-dns|check-route|check-wifi|check-dependencies|diagnostics [--json]|list-config-backups|register|send-now|daemon|update [--force] [--allow-downgrade]|rollback|update-status [--json]|debug|debug-telemetry|debug-api|version|support-bundle [--public]" >&2
+            echo "Usage: wrtmonitor-agent capabilities [--json]|check-server|check-dns|check-route|check-wifi|check-dependencies|diagnostics [--json]|list-config-backups|register|send-now|daemon|apply-wifi-schedules|update [--force] [--allow-downgrade]|rollback|update-status [--json]|debug|debug-telemetry|debug-api|version|support-bundle [--public]" >&2
             exit 1
             ;;
     esac

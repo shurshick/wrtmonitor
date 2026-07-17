@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="6"
+CAPABILITIES_VERSION="7"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -7,8 +7,9 @@ capability_path() {
 capability_keys() {
     printf '%s\n' \
         agent.status agent.update agent.set_interval agent.rollback agent.disable config.transaction \
-        telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.clients telemetry.clients.traffic telemetry.services \
+        telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.wifi.stations telemetry.clients telemetry.clients.traffic telemetry.services \
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
+        wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
         clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
         system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
@@ -34,6 +35,20 @@ has_wifi_radio() {
 has_wifi_iface() {
     has_wifi_radio || return 1
     uci -q get 'wireless.@wifi-iface[0]' >/dev/null 2>&1
+}
+
+has_wifi_stations() {
+    has_commands ubus jsonfilter || return 1
+    [ -n "$(ubus list 'hostapd.*' 2>/dev/null | head -n 1)" ]
+}
+
+has_wifi_roaming() {
+    has_wifi_iface || return 1
+    opkg list-installed 2>/dev/null | grep -Eq '^(wpad|hostapd)-(basic-)?(mbedtls|openssl|wolfssl)|^wpad '
+}
+
+has_wifi_mesh() {
+    has_wifi_iface && has_commands iw && iw list 2>/dev/null | grep -qi 'mesh point'
 }
 
 has_network_runtime() {
@@ -73,12 +88,16 @@ capability_supported() {
         telemetry.hardware) [ -r "$(capability_path /proc/cpuinfo)" ] && has_commands df ;;
         telemetry.network|network.read) has_network_runtime ;;
         telemetry.wifi|wifi.read) has_wifi_radio ;;
+        telemetry.wifi.stations) has_wifi_stations ;;
         telemetry.clients|clients.read) has_commands ip || [ -r "$(capability_path /tmp/dhcp.leases)" ] ;;
         telemetry.clients.traffic) has_commands nlbw ;;
         telemetry.services) [ -d "$(capability_path /etc/init.d)" ] ;;
         wifi.enable|wifi.disable|wifi.set_channel|wifi.set_country) has_wifi_radio && has_commands wifi ;;
         wifi.set_ssid|wifi.set_password) has_wifi_iface && has_commands wifi ;;
         wifi.guest) has_wifi_iface && has_network_write && has_dhcp_write && has_firewall_write && has_commands wifi ;;
+        wifi.radio.configure|wifi.manage_ssid|wifi.schedule) has_wifi_radio && has_commands wifi uci ;;
+        wifi.roaming) has_wifi_roaming && has_commands wifi ;;
+        wifi.mesh) has_wifi_mesh && has_commands wifi ;;
         network.interface_restart) has_network_runtime && has_commands ifup ifdown ;;
         network.restart) [ -x "$(capability_path /etc/init.d/network)" ] ;;
         network.write|network.wan.configure|network.lan.configure) has_network_write && has_commands ifup ifdown ;;
@@ -107,7 +126,8 @@ capability_unavailable_reason() {
         telemetry.system) printf 'required procfs metrics are unavailable' ;;
         telemetry.hardware) printf 'hardware metrics or df are unavailable' ;;
         telemetry.network|network.read) printf 'ubus network runtime or jsonfilter is unavailable' ;;
-        telemetry.wifi|wifi.*|diagnostics.check_wifi) printf 'wireless configuration, radio or wifi utility is unavailable' ;;
+        telemetry.wifi|wifi.*|diagnostics.check_wifi) printf 'wireless configuration, required radio features or wifi utility is unavailable' ;;
+        telemetry.wifi.stations) printf 'hostapd ubus client telemetry is unavailable' ;;
         telemetry.clients|clients.read) printf 'neighbour and DHCP lease sources are unavailable' ;;
         telemetry.clients.traffic) printf 'nlbwmon is not installed or its client is unavailable' ;;
         telemetry.services|system.restart_service) printf 'OpenWrt init services are unavailable' ;;

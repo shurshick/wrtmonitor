@@ -131,7 +131,7 @@ def test_smoke_cli_capabilities_json():
         env=shell_env(),
     )
     payload = json.loads(completed.stdout)
-    assert payload["agent"]["capabilities_version"] == 6
+    assert payload["agent"]["capabilities_version"] == 7
     assert payload["capabilities"]["agent.status"] is True
     assert isinstance(payload["capabilities"]["agent.update"], bool)
     assert payload["capability_details"]["agent.status"]["reason"] == "available"
@@ -183,7 +183,10 @@ def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
         env=env,
     )
     payload = json.loads(completed.stdout)
-    assert all(payload["capabilities"].values())
+    assert payload["capabilities"]["wifi.radio.configure"] is True
+    assert payload["capabilities"]["wifi.manage_ssid"] is True
+    assert payload["capabilities"]["wifi.schedule"] is True
+    assert isinstance(payload["capabilities"]["wifi.mesh"], bool)
 
 
 def test_config_transaction_restores_saved_uci_file(tmp_path: Path):
@@ -278,6 +281,12 @@ def test_management_capabilities_cover_full_router_foundation():
         "dns.configure",
         "firewall.port_forward",
         "wifi.guest",
+        "telemetry.wifi.stations",
+        "wifi.radio.configure",
+        "wifi.manage_ssid",
+        "wifi.schedule",
+        "wifi.roaming",
+        "wifi.mesh",
         "system.set_hostname",
         "system.restart_service",
         "system.set_timezone",
@@ -302,6 +311,12 @@ def test_management_commands_have_openwrt_handlers():
         "client.set_policy",
         "qos.set_sqm",
         "wifi.set_guest",
+        "wifi.set_radio",
+        "wifi.add_ssid",
+        "wifi.update_ssid",
+        "wifi.delete_ssid",
+        "wifi.set_schedule",
+        "wifi.set_mesh",
         "system.set_timezone",
         "system.set_ntp",
     ):

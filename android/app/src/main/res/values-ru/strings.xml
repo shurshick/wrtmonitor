@@ -13,7 +13,6 @@
     <string name="admin_username">Имя администратора</string>
     <string name="admin_password">Пароль администратора</string>
     <string name="change_server">Изменить сервер</string>
-    <string name="save">Сохранить</string>
     <string name="login">Войти</string>
     <string name="reboot">Перезагрузить</string>
     <string name="apply">Применить</string>
@@ -298,4 +297,21 @@
     <string name="app_tagline">Управление вашими OpenWrt-роутерами</string>
     <string name="safe_apply_title">Проверьте изменения</string>
     <string name="rollback_timeout">Агент проверит связь в течение %1$d сек. и автоматически вернёт прежнюю конфигурацию, если сервер станет недоступен.</string>
+    <string name="wifi_networks">Беспроводные сети</string>
+    <string name="wifi_add_network">Добавить сеть</string>
+    <string name="wifi_delete_network">Удалить сеть</string>
+    <string name="wifi_radio_advanced">Настройка радиомодуля</string>
+    <string name="wifi_width_mode">Ширина / режим</string>
+    <string name="wifi_txpower">Мощность, dBm</string>
+    <string name="wifi_network_name">Сеть</string>
+    <string name="wifi_encryption">Защита</string>
+    <string name="wifi_schedule">Расписание Wi-Fi</string>
+    <string name="wifi_weekdays_hint">mon,tue,wed,thu,fri,sat,sun</string>
+    <string name="wifi_start_time">Начало (ЧЧ:ММ)</string>
+    <string name="wifi_stop_time">Окончание (ЧЧ:ММ)</string>
+    <string name="wifi_mesh">Mesh 802.11s</string>
+    <string name="wifi_mesh_id">Mesh ID</string>
+    <string name="wifi_stations">Подключённые Wi-Fi-клиенты</string>
+    <string name="wifi_command_queued">Настройки Wi-Fi поставлены в очередь</string>
+    <string name="save">Сохранить</string>
 </resources>
