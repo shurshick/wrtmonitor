@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.10.0` сохраняет capability schema 10 и весь набор обслуживания `0.9.0`. Она обновляется поверх `0.9.0` штатным update-механизмом.
+Версия `0.10.1` сохраняет capability schema 10 и весь набор обслуживания `0.9.0`. В ней исправлено числовое сравнение версий. После обновления сервера переход с агента `0.9.0` запускается обычной кнопкой обновления; переустановка не нужна.
 
 ## Требования
 
@@ -78,7 +78,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.10.0/wrtmonitor-openwrt-agent-v0.10.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.10.1/wrtmonitor-openwrt-agent-v0.10.1.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -183,7 +183,7 @@ wrtmonitor-agent diagnostics --json
 
 ## Обслуживание роутера
 
-Команды `v0.10.0` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
+Команды `v0.10.1` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
 
 - обновление каталога, установка и удаление `opkg`-пакетов;
 - создание и восстановление штатного backup OpenWrt;

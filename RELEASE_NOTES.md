@@ -1,29 +1,25 @@
-# v0.10.0
+# v0.10.1
 
-Релиз эксплуатации и безопасности сервера WrtMonitor.
+Исправление обновления OpenWrt-агента со стабильных версий.
 
 ## Изменения
 
-- Access-token сокращён до 15 минут; refresh-сессии хранятся в PostgreSQL, ротируются при каждом обновлении и могут быть отозваны.
-- Добавлены смена пароля владельца, список активных сессий и журнал аудита в Web UI и Android.
-- Добавлены уведомления о недоступных роутерах, устаревших агентах и ошибках команд.
-- Добавлены создание, проверка, контрольное восстановление и восстановление PostgreSQL backup.
-- В TrueNAS YAML добавлен постоянный volume `/backups`.
-- GitHub Release теперь содержит production-signed Android APK вместо debug APK.
-- CI проверяет миграции, refresh rotation, PostgreSQL disaster-recovery drill, Web UI на desktop/mobile и подпись APK.
-- Android `versionCode` увеличен до `41`.
+- Версии агента теперь сравниваются численно: `0.10.1` корректно считается новее `0.9.0`.
+- Добавлено корректное сравнение stable и `-rcN`, включая `rc9 -> rc10` и `rc -> stable`.
+- Сервер автоматически включает узкий compatibility-режим для перехода агента `0.9.0 -> 0.10.x`; общая защита от downgrade остаётся включённой.
+- Добавлены регрессионные тесты границы `0.9 -> 0.10`.
+- Android `versionCode` увеличен до `42`.
 
 ## Обновление
 
-- TrueNAS: выполните **Apps -> WrtMonitor -> Edit -> Save**, чтобы заново скачать `ghcr.io/shurshick/wrtmonitor:latest`.
-- База обновится миграцией `0005_user_sessions`; существующие устройства и telemetry сохраняются.
-- Агент: автообновление установит `0.10.0` поверх `0.9.0`.
-- Android: из-за перехода с тестового debug-ключа на production-подпись удалите старый debug APK и один раз установите `wrtmonitor-android-v0.10.0.apk` начисто. Дальнейшие версии будут обновляться поверх `v0.10.0`.
+1. Обновите сервер через TrueNAS redeploy: **Apps -> WrtMonitor -> Edit -> Save**.
+2. После появления версии сервера `0.10.1` снова нажмите **Обновить агент**. Переустановка агента не требуется.
+3. Если команда с сервера недоступна, выполните на роутере один раз: `wrtmonitor-agent update --allow-downgrade`.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.10.0.apk`
-- `wrtmonitor-openwrt-agent-v0.10.0.tar.gz`
-- `wrtmonitor-truenas-v0.10.0.yaml`
+- `wrtmonitor-android-v0.10.1.apk`
+- `wrtmonitor-openwrt-agent-v0.10.1.tar.gz`
+- `wrtmonitor-truenas-v0.10.1.yaml`
 - `SHA256SUMS.txt`
 - `agent-version.txt`

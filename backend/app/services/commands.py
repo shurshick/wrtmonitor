@@ -16,10 +16,11 @@ from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from ..models import DeviceCommand
+from ..config import APP_VERSION
+from ..models import DeviceCommand, DeviceTelemetry
 from .config_transactions import (
     attach_transaction_metadata,
     ensure_preflight_valid,
@@ -2018,6 +2019,20 @@ def create_device_command(
 ) -> DeviceCommand:
     now = now_utc()
     command_id = uuid4()
+    if command_type == "agent.update" and APP_VERSION.startswith("0.10."):
+        latest = db.scalars(
+            select(DeviceTelemetry)
+            .where(DeviceTelemetry.device_id == device_id)
+            .order_by(DeviceTelemetry.created_at.desc())
+            .limit(1)
+        ).first()
+        installed = (
+            str(((latest.payload.get("agent") or {}).get("version") or ""))
+            if latest
+            else ""
+        )
+        if installed == "0.9.0":
+            payload = {**payload, "allow_downgrade": True}
     command = DeviceCommand(
         id=command_id,
         device_id=device_id,

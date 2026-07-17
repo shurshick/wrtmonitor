@@ -303,6 +303,32 @@ def test_agent_version_file_matches_entrypoint():
     assert f'AGENT_VERSION="{expected_version}"' in read_text(AGENT)
 
 
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    (
+        ("0.9.0", "0.10.0", "-1"),
+        ("0.10.0", "0.9.0", "1"),
+        ("v0.10.1", "0.10.1", "0"),
+        ("0.10.0-rc9", "0.10.0-rc10", "-1"),
+        ("0.10.0-rc10", "0.10.0", "-1"),
+        ("0.10.0", "0.10.0-rc10", "1"),
+    ),
+)
+def test_agent_version_comparison_is_numeric(left, right, expected):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    script = f'. "{(LIB_DIR / "update.sh").as_posix()}"; compare_versions "{left}" "{right}"'
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=shell_env(),
+    )
+    assert completed.stdout == expected
+
+
 def test_management_capabilities_cover_full_router_foundation():
     source = read_text(ROOT / "lib" / "capabilities.sh")
     for capability in (

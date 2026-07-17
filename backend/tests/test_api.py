@@ -1,6 +1,6 @@
 import os
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,7 +24,11 @@ from backend.app.models import (
 from backend.app.main import app
 from backend.app.config import APP_VERSION
 from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata
-from backend.app.services.commands import ALLOWED_COMMANDS, public_command_payload
+from backend.app.services.commands import (
+    ALLOWED_COMMANDS,
+    create_device_command,
+    public_command_payload,
+)
 from backend.app.schemas import SetupRequest
 
 
@@ -56,6 +60,37 @@ def test_password_command_payload_is_redacted_for_clients():
     assert public_command_payload("wifi.set_password", {"key": "secret-pass"}) == {
         "key": "********"
     }
+
+
+def test_agent_update_bridges_only_the_090_version_boundary():
+    class FakeScalars:
+        def first(self):
+            return DeviceTelemetry(
+                payload={"agent": {"version": "0.9.0"}},
+                device_id=uuid4(),
+                created_at=datetime.now(UTC),
+            )
+
+    class FakeSession:
+        def __init__(self):
+            self.command = None
+
+        def scalars(self, statement):
+            return FakeScalars()
+
+        def add(self, command):
+            self.command = command
+
+    db = FakeSession()
+    command = create_device_command(
+        db,
+        device_id=uuid4(),
+        command_type="agent.update",
+        payload={},
+        created_by=uuid4(),
+        source="test",
+    )
+    assert command.payload == {"allow_downgrade": True}
 
 
 def test_setup_status_endpoint_shape(monkeypatch):

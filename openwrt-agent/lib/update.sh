@@ -1,7 +1,32 @@
 DEFAULT_UPDATE_INTERVAL_HOURS="6"
 
 parse_version_parts() {
-    printf '%s' "$1" | sed -n 's/^v\{0,1\}\([0-9][0-9]*\)\.\([0-9][0-9]*\)\.\([0-9][0-9]*\)-rc\([0-9][0-9]*\).*$/\1 \2 \3 \4/p'
+    normalized="$(printf '%s' "$1" | sed 's/^v//; s/+.*$//')"
+    base="${normalized%%-*}"
+    prerelease=""
+    [ "$base" = "$normalized" ] || prerelease="${normalized#*-}"
+    old_ifs="$IFS"
+    IFS=.
+    # shellcheck disable=SC2086
+    set -- $base
+    IFS="$old_ifs"
+    [ "$#" -eq 3 ] || return 1
+    major="$1"
+    minor="$2"
+    patch="$3"
+    for part in "$major" "$minor" "$patch"; do
+        case "$part" in ""|*[!0-9]*) return 1 ;; esac
+    done
+    case "$prerelease" in
+        "") stable_rank=1; rc_number=0 ;;
+        rc[0-9]*)
+            rc_number="${prerelease#rc}"
+            case "$rc_number" in ""|*[!0-9]*) return 1 ;; esac
+            stable_rank=0
+            ;;
+        *) return 1 ;;
+    esac
+    printf '%s %s %s %s %s' "$major" "$minor" "$patch" "$stable_rank" "$rc_number"
 }
 
 compare_versions() {
@@ -24,19 +49,23 @@ compare_versions() {
     left_major="$1"
     left_minor="$2"
     left_patch="$3"
-    left_rc="$4"
+    left_stable="$4"
+    left_rc="$5"
     # shellcheck disable=SC2086
     set -- $right
     right_major="$1"
     right_minor="$2"
     right_patch="$3"
-    right_rc="$4"
+    right_stable="$4"
+    right_rc="$5"
     if [ "$left_major" -gt "$right_major" ]; then printf '1'; return; fi
     if [ "$left_major" -lt "$right_major" ]; then printf '%s' '-1'; return; fi
     if [ "$left_minor" -gt "$right_minor" ]; then printf '1'; return; fi
     if [ "$left_minor" -lt "$right_minor" ]; then printf '%s' '-1'; return; fi
     if [ "$left_patch" -gt "$right_patch" ]; then printf '1'; return; fi
     if [ "$left_patch" -lt "$right_patch" ]; then printf '%s' '-1'; return; fi
+    if [ "$left_stable" -gt "$right_stable" ]; then printf '1'; return; fi
+    if [ "$left_stable" -lt "$right_stable" ]; then printf '%s' '-1'; return; fi
     if [ "$left_rc" -gt "$right_rc" ]; then printf '1'; return; fi
     if [ "$left_rc" -lt "$right_rc" ]; then printf '%s' '-1'; return; fi
     printf '0'
