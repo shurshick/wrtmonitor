@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from ipaddress import IPv4Network
 from typing import Any
 from uuid import UUID
@@ -25,6 +26,75 @@ def cleanup_device_telemetry(db: Session, device_id: UUID, keep: int) -> None:
     ]
     if old_ids:
         db.execute(delete(DeviceTelemetry).where(DeviceTelemetry.id.in_(old_ids)))
+
+
+def device_telemetry_history(
+    db: Session, device_id: UUID, limit: int = 60
+) -> list[dict[str, Any]]:
+    rows = list(
+        db.scalars(
+            select(DeviceTelemetry)
+            .where(DeviceTelemetry.device_id == device_id)
+            .order_by(DeviceTelemetry.created_at.desc())
+            .limit(max(2, min(limit, 120)))
+        ).all()
+    )
+    return build_telemetry_history(reversed(rows))
+
+
+def build_telemetry_history(
+    rows: Any,
+) -> list[dict[str, Any]]:
+    points: list[dict[str, Any]] = []
+    previous: tuple[datetime, int, int] | None = None
+    for row in rows:
+        payload = row.payload if isinstance(row.payload, dict) else {}
+        summary = build_telemetry_summary(payload)
+        rx_bytes = _safe_int(summary.get("traffic_rx_bytes"))
+        tx_bytes = _safe_int(summary.get("traffic_tx_bytes"))
+        rx_bps = tx_bps = 0
+        if previous is not None:
+            previous_at, previous_rx, previous_tx = previous
+            elapsed = (row.created_at - previous_at).total_seconds()
+            if elapsed > 0:
+                if rx_bytes >= previous_rx:
+                    rx_bps = round((rx_bytes - previous_rx) * 8 / elapsed)
+                if tx_bytes >= previous_tx:
+                    tx_bps = round((tx_bytes - previous_tx) * 8 / elapsed)
+        memory_total = _safe_int(summary.get("memory_total_mb"))
+        memory_available = _safe_int(summary.get("memory_available_mb"))
+        points.append(
+            {
+                "created_at": row.created_at.isoformat(),
+                "rx_bps": rx_bps,
+                "tx_bps": tx_bps,
+                "rx_bytes": rx_bytes,
+                "tx_bytes": tx_bytes,
+                "load_1m": _safe_float(summary.get("load_1m")),
+                "memory_percent": round(
+                    100 * max(0, memory_total - memory_available) / memory_total, 1
+                )
+                if memory_total
+                else 0,
+                "client_count": _safe_int(summary.get("client_count")),
+            }
+        )
+        previous = (row.created_at, rx_bytes, tx_bytes)
+    return points
+
+
+def _safe_int(value: Any) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_float(value: Any) -> float:
+    try:
+        return round(max(0.0, float(value or 0)), 2)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def extract_agent_status(payload: dict[str, Any]) -> dict[str, Any]:

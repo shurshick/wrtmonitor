@@ -47,6 +47,17 @@ data class TelemetryDto(
     val services: JSONObject? = null,
 )
 
+data class TelemetryHistoryPointDto(
+    val createdAt: String,
+    val rxBps: Long,
+    val txBps: Long,
+    val rxBytes: Long,
+    val txBytes: Long,
+    val load1m: Double,
+    val memoryPercent: Double,
+    val clientCount: Int,
+)
+
 data class AgentStatusDto(
     val version: String?,
     val status: String?,

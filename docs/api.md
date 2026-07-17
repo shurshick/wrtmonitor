@@ -28,6 +28,7 @@ Access token используется клиентами владельца. Dev
 - `POST /api/v1/devices/{device_id}/disconnect`
 - `DELETE /api/v1/devices/{device_id}` — безвозвратно удалить роутер и связанные данные
 - `GET /api/v1/devices/{device_id}/telemetry/latest`
+- `GET /api/v1/devices/{device_id}/telemetry/history?limit=60`
 - `GET /api/v1/devices/{device_id}/agent`
 - `GET /api/v1/devices/{device_id}/clients`
 - `PUT|PATCH /api/v1/devices/{device_id}/clients/{client_id}`
@@ -58,6 +59,8 @@ Access token используется клиентами владельца. Dev
 - `services`
 
 Нормализованные блоки предназначены для Web UI и Android. Исходный `telemetry` JSON сохраняется для диагностики.
+
+`GET /api/v1/devices/{device_id}/telemetry/history?limit=60` возвращает от 2 до 120 последовательных точек для live dashboard: время, RX/TX bit/s, накопительные байты, load 1m, процент занятой памяти и число клиентов.
 
 ## Agent status
 

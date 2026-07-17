@@ -1,11 +1,15 @@
 package ru.wrtmonitor.app.ui.screens
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,10 +32,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -41,6 +50,7 @@ import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.AgentStatusDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
+import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.ui.components.DestinationRow
@@ -75,33 +85,45 @@ fun DeviceDetailScreen(
     var state by remember(device.id) {
         mutableStateOf(DeviceDetailUiState(loading = true, device = device))
     }
-    fun refresh() {
-        state = state.copy(loading = true, error = null)
+    fun refresh(showLoading: Boolean = true) {
+        state = state.copy(loading = showLoading && state.telemetry == null, error = null)
         scope.launch {
-            val telemetryResult = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id)
+            val (telemetryResult, historyResult) = withContext(Dispatchers.IO) {
+                WrtMonitorApi(serverUrl, accessToken).let { api ->
+                    api.getLatestTelemetry(device.id) to api.getTelemetryHistory(device.id, 120)
+                }
             }
-            if (telemetryResult is ApiResult.Error && telemetryResult.isUnauthorized()) {
+            if (
+                telemetryResult is ApiResult.Error && telemetryResult.isUnauthorized() ||
+                historyResult is ApiResult.Error && historyResult.isUnauthorized()
+            ) {
                 onSessionExpired()
                 return@launch
             }
             val telemetry = (telemetryResult as? ApiResult.Success)?.data
             state = state.copy(
                 loading = false,
-                telemetry = telemetry,
+                telemetry = telemetry ?: state.telemetry,
+                telemetryHistory = (historyResult as? ApiResult.Success)?.data ?: state.telemetryHistory,
                 error = (telemetryResult as? ApiResult.Error)?.message,
             )
         }
     }
 
-    LaunchedEffect(serverUrl, accessToken, device.id) { refresh() }
+    LaunchedEffect(serverUrl, accessToken, device.id) {
+        refresh()
+        while (true) {
+            delay(5_000)
+            refresh(showLoading = false)
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         RouterPageHeader(
             title = stringResource(R.string.nav_overview),
             subtitle = device.firmware.ifBlank { device.model },
             refreshing = state.loading,
-            onRefresh = ::refresh,
+            onRefresh = { refresh() },
         )
         when {
             state.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -112,6 +134,7 @@ fun DeviceDetailScreen(
             else -> RouterOverview(
                 device,
                 state.telemetry!!,
+                state.telemetryHistory,
                 onOpenClients,
                 onOpenWifi,
                 onOpenNetwork,
@@ -126,6 +149,7 @@ fun DeviceDetailScreen(
 private fun RouterOverview(
     device: DeviceDto,
     telemetry: TelemetryDto,
+    history: List<TelemetryHistoryPointDto>,
     onOpenClients: () -> Unit,
     onOpenWifi: () -> Unit,
     onOpenNetwork: () -> Unit,
@@ -154,6 +178,8 @@ private fun RouterOverview(
     val uptime = system?.optLong("uptime", 0) ?: 0
     val availableMb = memory?.optLong("available_kb", 0)?.div(1024) ?: 0
     val totalMb = memory?.optLong("total_kb", 0)?.div(1024) ?: 0
+    val memoryPercent = if (totalMb > 0) ((totalMb - availableMb).toDouble() / totalMb * 100).coerceIn(0.0, 100.0) else 0.0
+    val load = system?.optString("load")?.toDoubleOrNull() ?: history.lastOrNull()?.load1m ?: 0.0
 
     val healthy = device.status == "online" && !telemetry.isStale
     SectionCard(
@@ -164,14 +190,16 @@ private fun RouterOverview(
             Text(device.model, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             StatusPill(if (healthy) stringResource(R.string.online) else stringResource(R.string.offline), healthy)
         }
+    }
+    TrafficMonitorCard(history)
+    SectionCard(title = stringResource(R.string.live_resources)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricTile(stringResource(R.string.uptime), formatDuration(uptime), Modifier.weight(1f))
-            MetricTile(
-                stringResource(R.string.memory),
-                stringResource(R.string.memory_value_mb, availableMb, totalMb),
-                Modifier.weight(1f),
-                MaterialTheme.colorScheme.secondary,
-            )
+            MetricTile(stringResource(R.string.load_1m), String.format("%.2f", load), Modifier.weight(1f), MaterialTheme.colorScheme.tertiary)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MetricTile(stringResource(R.string.memory_used), "${memoryPercent.toInt()}%", Modifier.weight(1f), MaterialTheme.colorScheme.primary)
+            MetricTile(stringResource(R.string.clients_online), clientCount.toString(), Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
         }
     }
     SectionCard(title = stringResource(R.string.router_sections)) {
@@ -208,6 +236,82 @@ private fun RouterOverview(
             onOpenSystem,
         )
     }
+}
+
+@Composable
+private fun TrafficMonitorCard(points: List<TelemetryHistoryPointDto>) {
+    val latest = points.lastOrNull()
+    SectionCard(
+        title = stringResource(R.string.live_traffic),
+        subtitle = stringResource(R.string.live_update_interval),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MetricTile(
+                stringResource(R.string.receive_rate),
+                formatTrafficRate(latest?.rxBps ?: 0),
+                Modifier.weight(1f),
+                MaterialTheme.colorScheme.primary,
+            )
+            MetricTile(
+                stringResource(R.string.transmit_rate),
+                formatTrafficRate(latest?.txBps ?: 0),
+                Modifier.weight(1f),
+                MaterialTheme.colorScheme.secondary,
+            )
+        }
+        TrafficChart(points)
+        Text(
+            stringResource(R.string.telemetry_points, points.size),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.End),
+        )
+    }
+}
+
+@Composable
+private fun TrafficChart(points: List<TelemetryHistoryPointDto>) {
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val grid = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+    val visible = points.takeLast(60)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(156.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f), RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (visible.size < 2) {
+            Text(stringResource(R.string.collecting_data), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Canvas(Modifier.fillMaxWidth().height(156.dp).padding(10.dp)) {
+                repeat(4) { row ->
+                    val y = size.height * row / 3f
+                    drawLine(grid, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                }
+                val maximum = visible.maxOf { maxOf(it.rxBps, it.txBps) }.coerceAtLeast(1).toFloat()
+                fun buildPath(selector: (TelemetryHistoryPointDto) -> Long): Path {
+                    val path = Path()
+                    visible.forEachIndexed { index, point ->
+                        val x = size.width * index / (visible.size - 1).toFloat()
+                        val y = size.height - size.height * selector(point).toFloat() / maximum
+                        if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    return path
+                }
+                drawPath(buildPath { it.rxBps }, primary, style = Stroke(3f, cap = StrokeCap.Round))
+                drawPath(buildPath { it.txBps }, secondary, style = Stroke(3f, cap = StrokeCap.Round))
+            }
+        }
+    }
+}
+
+private fun formatTrafficRate(value: Long): String = when {
+    value >= 1_000_000_000 -> String.format("%.2f Gbit/s", value / 1_000_000_000.0)
+    value >= 1_000_000 -> String.format("%.2f Mbit/s", value / 1_000_000.0)
+    value >= 1_000 -> String.format("%.1f kbit/s", value / 1_000.0)
+    else -> "$value bit/s"
 }
 
 @Composable

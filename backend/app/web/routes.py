@@ -64,6 +64,7 @@ from ..services.operations import operational_notifications
 from ..services.sessions import revoke_all_user_sessions
 from ..services.setup import complete_setup, is_setup_required
 from ..services.telemetry import (
+    device_telemetry_history,
     normalize_clients_summary,
     normalize_maintenance_summary,
     normalize_network_summary,
@@ -764,6 +765,7 @@ def device_page(
         None,
     )
     latest = format_timestamp(telemetry.created_at) if telemetry else "нет данных"
+    dashboard_history = device_telemetry_history(db, device_id, 60)
     db.commit()
 
     age = (
@@ -800,6 +802,7 @@ def device_page(
             "section": section,
             "csrf_token": csrf_token,
             "latest": latest,
+            "dashboard_history": dashboard_history,
             "age": age,
             "system": system,
             "memory": memory,
@@ -858,6 +861,30 @@ def device_page(
             "latest_diagnostics": latest_diagnostics,
             "raw_telemetry": json.dumps(payload, ensure_ascii=False, indent=2),
         },
+    )
+
+
+@router.get("/devices/{device_id}/live", response_class=JSONResponse)
+def device_live_data(
+    device_id: UUID,
+    limit: int = 60,
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> JSONResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+    device = get_user_device_or_404(db, user, device_id)
+    return JSONResponse(
+        {
+            "device_id": str(device.id),
+            "status": device.status,
+            "last_seen_at": device.last_seen_at.isoformat()
+            if device.last_seen_at
+            else None,
+            "points": device_telemetry_history(db, device_id, limit),
+        }
     )
 
 

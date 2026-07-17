@@ -406,4 +406,14 @@
     <string name="current_password">Текущий пароль</string>
     <string name="new_password">Новый пароль</string>
     <string name="password_changed_login_again">Пароль изменён. Войдите снова.</string>
+    <string name="live_traffic">Трафик в реальном времени</string>
+    <string name="live_update_interval">Обновление каждые 5 секунд</string>
+    <string name="receive_rate">Приём</string>
+    <string name="transmit_rate">Передача</string>
+    <string name="telemetry_points">Точек telemetry: %1$d</string>
+    <string name="collecting_data">Накопление данных…</string>
+    <string name="live_resources">Ресурсы роутера</string>
+    <string name="load_1m">Нагрузка 1 мин</string>
+    <string name="memory_used">Память занята</string>
+    <string name="clients_online">Клиенты в сети</string>
 </resources>

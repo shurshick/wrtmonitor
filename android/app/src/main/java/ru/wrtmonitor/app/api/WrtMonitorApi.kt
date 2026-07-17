@@ -10,6 +10,7 @@ import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
+import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -172,6 +173,27 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 system = json.optJSONObject("system"),
                 services = json.optJSONObject("services"),
             )
+        }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getTelemetryHistory(deviceId: String, limit: Int = 60): ApiResult<List<TelemetryHistoryPointDto>> = runCatching {
+        val safeLimit = limit.coerceIn(2, 120)
+        val (status, response) = request("/api/v1/devices/$deviceId/telemetry/history?limit=$safeLimit")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val points = JSONObject(response).optJSONArray("points") ?: JSONArray()
+        (0 until points.length()).map { index ->
+            points.getJSONObject(index).let { point ->
+                TelemetryHistoryPointDto(
+                    createdAt = point.optString("created_at"),
+                    rxBps = point.optLong("rx_bps"),
+                    txBps = point.optLong("tx_bps"),
+                    rxBytes = point.optLong("rx_bytes"),
+                    txBytes = point.optLong("tx_bytes"),
+                    load1m = point.optDouble("load_1m"),
+                    memoryPercent = point.optDouble("memory_percent"),
+                    clientCount = point.optInt("client_count"),
+                )
+            }
         }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 

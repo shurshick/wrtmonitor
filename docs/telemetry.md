@@ -12,6 +12,14 @@ POST /api/v1/agent/telemetry
 GET /api/v1/devices/{device_id}/telemetry/latest
 ```
 
+История для живых графиков доступна через:
+
+```http
+GET /api/v1/devices/{device_id}/telemetry/history?limit=60
+```
+
+Сервер возвращает до 120 точек и вычисляет `rx_bps`, `tx_bps`, загрузку, использование памяти и число клиентов. Скорость считается по разнице накопительных RX/TX-счётчиков между snapshots; сброс счётчика не создаёт ложный всплеск.
+
 Ответ содержит:
 
 - `device_id`;
@@ -33,7 +41,7 @@ OpenWrt agent собирает:
 - `agent`: версия, update status, interval и capabilities.
 - `vpn`: WireGuard-интерфейсы и peer, handshake/RX/TX, OpenVPN profiles и правила PBR без приватных ключей.
 
-`schema_version=2` остаётся форматом telemetry; capability report в `v0.11.0` имеет версию 10. Сервер принимает как текущий компактный формат агента, так и прежний ответ `ubus`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество пакетов и обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки.
+`schema_version=2` остаётся форматом telemetry; capability report в `v0.12.0` имеет версию 10. Сервер принимает как текущий компактный формат агента, так и прежний ответ `ubus`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество пакетов и обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки.
 
 Retention: сервер хранит последние 100 telemetry snapshots на устройство. Старые snapshots удаляются после успешного ingest.
 

@@ -85,6 +85,7 @@
 </dialog>
 {% endblock %}
 {% block scripts %}
+{% if section == 'overview' %}<script src="/static/dashboard.js" defer></script>{% endif %}
 <script>
 (() => {
   const dialog = document.getElementById('config-preview');

@@ -406,4 +406,14 @@
     <string name="current_password">Current password</string>
     <string name="new_password">New password</string>
     <string name="password_changed_login_again">Password changed. Sign in again.</string>
+    <string name="live_traffic">Live traffic</string>
+    <string name="live_update_interval">Updated every 5 seconds</string>
+    <string name="receive_rate">Download</string>
+    <string name="transmit_rate">Upload</string>
+    <string name="telemetry_points">%1$d samples</string>
+    <string name="collecting_data">Collecting data…</string>
+    <string name="live_resources">Router resources</string>
+    <string name="load_1m">Load 1 min</string>
+    <string name="memory_used">Memory used</string>
+    <string name="clients_online">Online clients</string>
 </resources>

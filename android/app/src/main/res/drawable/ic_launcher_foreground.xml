@@ -8,11 +8,11 @@
             android:fillColor="#FFFFFF"
             android:pathData="M16,43h40c4.4,0 8,3.6 8,8v11c0,4.4 -3.6,8 -8,8h-40c-4.4,0 -8,-3.6 -8,-8v-11c0,-4.4 3.6,-8 8,-8z" />
         <path
-            android:fillColor="#2B2558"
+            android:fillColor="#123143"
             android:fillAlpha="0.18"
             android:pathData="M15,59h42v5h-42z" />
         <path
-            android:fillColor="#5D46B3"
+            android:fillColor="#1B92B1"
             android:pathData="M18,52h6v6h-6zM29,52h6v6h-6zM40,52h6v6h-6z" />
         <path
             android:strokeColor="#FFFFFF"

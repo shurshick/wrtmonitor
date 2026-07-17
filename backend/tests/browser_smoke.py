@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 import httpx
@@ -112,6 +113,31 @@ def prepare_router() -> str:
             "maintenance.recovery": True,
             "telemetry.maintenance": True,
         }
+        for sample in range(8):
+            history_sample = client.post(
+                "/api/v1/agent/telemetry",
+                headers=agent_headers,
+                json={
+                    "device_id": device_id,
+                    "telemetry": {
+                        "system": {
+                            "uptime": 86320 + sample * 10,
+                            "load": str(0.08 + sample * 0.02),
+                            "memory": {
+                                "total_kb": 262144,
+                                "available_kb": 150000 - sample * 1200,
+                            },
+                        },
+                        "traffic": {
+                            "rx_bytes": 5_000_000 + sample * sample * 190_000,
+                            "tx_bytes": 2_000_000 + sample * 135_000,
+                        },
+                        "clients": {"dhcp": {"leases": []}},
+                    },
+                },
+            )
+            history_sample.raise_for_status()
+            time.sleep(0.02)
         telemetry = client.post(
             "/api/v1/agent/telemetry",
             headers=agent_headers,
@@ -131,6 +157,7 @@ def prepare_router() -> str:
                         "memory": {"total_kb": 262144, "available_kb": 131072},
                         "services": {"network": "running", "dnsmasq": "running"},
                     },
+                    "traffic": {"rx_bytes": 16_000_000, "tx_bytes": 4_000_000},
                     "maintenance": {
                         "packages": {"installed": 143, "upgradable": 2},
                         "cron_entries": 1,
@@ -252,6 +279,14 @@ def assert_page(page: Page, path: str, screenshot_name: str) -> None:
         "document.documentElement.scrollWidth - document.documentElement.clientWidth"
     )
     assert overflow <= 1, f"{path}: horizontal overflow {overflow}px"
+    if page.locator("#traffic-chart").count():
+        page.wait_for_function(
+            "document.querySelector('#traffic-chart').width > 0 && document.querySelector('#traffic-chart').height > 0"
+        )
+        dimensions = page.locator("#traffic-chart").evaluate(
+            "canvas => ({width: canvas.width, height: canvas.height})"
+        )
+        assert dimensions["width"] >= 320 and dimensions["height"] >= 170
     page.screenshot(path=str(ARTIFACTS / screenshot_name), full_page=True)
 
 

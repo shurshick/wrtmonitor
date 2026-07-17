@@ -2,19 +2,21 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import DeviceTelemetry, User
-from ..services.auth import current_user, device_from_token, settings
-from ..services.devices import get_latest_agent_status, get_user_device_or_404
-from ..services.telemetry import TELEMETRY_STALE_SECONDS, cleanup_device_telemetry
-from ..services.client_registry import sync_client_inventory
 from ..schemas import TelemetryRequest
+from ..services.auth import current_user, device_from_token, settings
+from ..services.client_registry import sync_client_inventory
+from ..services.devices import get_latest_agent_status, get_user_device_or_404
 from ..services.telemetry import (
+    TELEMETRY_STALE_SECONDS,
     build_telemetry_summary,
+    cleanup_device_telemetry,
+    device_telemetry_history,
     normalize_clients_summary,
     normalize_network_summary,
     normalize_services_summary,
@@ -24,6 +26,20 @@ from ..services.telemetry import (
 
 
 router = APIRouter()
+
+
+@router.get("/api/v1/devices/{device_id}/telemetry/history")
+def telemetry_history(
+    device_id: UUID,
+    limit: int = Query(default=60, ge=2, le=120),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    get_user_device_or_404(db, user, device_id)
+    return {
+        "device_id": str(device_id),
+        "points": device_telemetry_history(db, device_id, limit),
+    }
 
 
 @router.get("/api/v1/devices/{device_id}/telemetry/latest")
