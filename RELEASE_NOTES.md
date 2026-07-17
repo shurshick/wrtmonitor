@@ -1,29 +1,29 @@
-# v0.9.0
+# v0.10.0
 
-Релиз обслуживания и восстановления OpenWrt.
+Релиз эксплуатации и безопасности сервера WrtMonitor.
 
 ## Изменения
 
-- Управление каталогом и пакетами `opkg` с запретом удаления критических системных пакетов.
-- Создание и восстановление конфигурационных backup OpenWrt.
-- Проверяемый `sysupgrade`: только HTTPS, SHA-256, модель, свободное место и `sysupgrade -T`.
-- Получение журналов, управление процессами и root cron.
-- Скачиваемый диагностический архив без конфигурационных секретов.
-- Ограниченный recovery mode, блокирующий изменяющие команды до ручного отключения.
-- Одинаковые capability-aware действия в Web UI и Android; capability schema v10.
-- Исправлено JSON-экранирование многострочного вывода агента; Android `versionCode` увеличен до `40`.
+- Access-token сокращён до 15 минут; refresh-сессии хранятся в PostgreSQL, ротируются при каждом обновлении и могут быть отозваны.
+- Добавлены смена пароля владельца, список активных сессий и журнал аудита в Web UI и Android.
+- Добавлены уведомления о недоступных роутерах, устаревших агентах и ошибках команд.
+- Добавлены создание, проверка, контрольное восстановление и восстановление PostgreSQL backup.
+- В TrueNAS YAML добавлен постоянный volume `/backups`.
+- GitHub Release теперь содержит production-signed Android APK вместо debug APK.
+- CI проверяет миграции, refresh rotation, PostgreSQL disaster-recovery drill, Web UI на desktop/mobile и подпись APK.
+- Android `versionCode` увеличен до `41`.
 
 ## Обновление
 
-- Сервер: выполните redeploy `ghcr.io/shurshick/wrtmonitor:latest`.
-- Агент: автообновление установит `0.9.0` поверх `0.8.0`.
-- Android: установите `wrtmonitor-android-v0.9.0-debug.apk` поверх предыдущей версии.
-
-PostgreSQL volume при обновлении контейнера сохраняется. Новая миграция БД этому релизу не требуется.
+- TrueNAS: выполните **Apps -> WrtMonitor -> Edit -> Save**, чтобы заново скачать `ghcr.io/shurshick/wrtmonitor:latest`.
+- База обновится миграцией `0005_user_sessions`; существующие устройства и telemetry сохраняются.
+- Агент: автообновление установит `0.10.0` поверх `0.9.0`.
+- Android: из-за перехода с тестового debug-ключа на production-подпись удалите старый debug APK и один раз установите `wrtmonitor-android-v0.10.0.apk` начисто. Дальнейшие версии будут обновляться поверх `v0.10.0`.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.9.0-debug.apk`
-- `wrtmonitor-openwrt-agent-v0.9.0.tar.gz`
-- `wrtmonitor-truenas-v0.9.0.yaml`
+- `wrtmonitor-android-v0.10.0.apk`
+- `wrtmonitor-openwrt-agent-v0.10.0.tar.gz`
+- `wrtmonitor-truenas-v0.10.0.yaml`
 - `SHA256SUMS.txt`
+- `agent-version.txt`

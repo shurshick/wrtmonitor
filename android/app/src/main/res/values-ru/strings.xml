@@ -384,4 +384,15 @@
     <string name="create_diagnostic_bundle">Создать диагностический архив</string>
     <string name="enable_recovery_mode">Включить recovery mode</string>
     <string name="disable_recovery_mode">Выключить</string>
+    <string name="server_notifications">События сервера</string>
+    <string name="server_notifications_summary">Нет связи, обновления агента и ошибки команд</string>
+    <string name="no_server_notifications">Все системы работают штатно.</string>
+    <string name="active_sessions">Активные сессии</string>
+    <string name="active_sessions_summary">Устройства, вошедшие в аккаунт владельца</string>
+    <string name="revoke_session">Отозвать</string>
+    <string name="change_owner_password">Пароль владельца</string>
+    <string name="change_owner_password_summary">После смены все мобильные сессии завершатся</string>
+    <string name="current_password">Текущий пароль</string>
+    <string name="new_password">Новый пароль</string>
+    <string name="password_changed_login_again">Пароль изменён. Войдите снова.</string>
 </resources>

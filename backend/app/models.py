@@ -44,6 +44,30 @@ class AppSetting(Base):
     )
 
 
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    refresh_token_hash: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    client_name: Mapped[str | None] = mapped_column(String(160))
+    ip_address: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    last_used_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Device(Base):
     __tablename__ = "devices"
 
@@ -199,6 +223,7 @@ class AuditLog(Base):
 
 
 Index("ix_devices_status", Device.status)
+Index("ix_user_sessions_user_revoked", UserSession.user_id, UserSession.revoked_at)
 Index(
     "ix_device_telemetry_device_created",
     DeviceTelemetry.device_id,

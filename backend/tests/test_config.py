@@ -84,7 +84,7 @@ def test_access_and_refresh_tokens_are_not_interchangeable():
     config = load_settings()
     user_id = uuid4()
     access = create_access_token(user_id, "owner", config)
-    refresh = create_refresh_token(user_id, "owner", config)
+    refresh = create_refresh_token(user_id, "owner", uuid4(), config)
     assert decode_access_token(access, config)["sub"] == str(user_id)
     assert decode_refresh_token(refresh, config)["sub"] == str(user_id)
     with pytest.raises(Exception):

@@ -5,6 +5,7 @@ plugins {
 
 val appVersionName = rootProject.file("VERSION").readText().trim()
 val appVersionCode = rootProject.file("VERSION_CODE").readText().trim().toInt()
+val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
 
 android {
     namespace = "ru.wrtmonitor.app"
@@ -24,6 +25,21 @@ android {
             storePassword = "wrtmonitor"
             keyAlias = "wrtmonitor-debug"
             keyPassword = "wrtmonitor"
+        }
+        if (!releaseKeystorePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.findByName("release")
+            isMinifyEnabled = false
         }
     }
 

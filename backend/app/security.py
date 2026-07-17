@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import jwt
 from argon2 import PasswordHasher
@@ -42,11 +42,27 @@ def _create_user_token(
 
 
 def create_access_token(user_id: UUID, role: str, config: Settings) -> str:
+    return _create_user_token(user_id, role, "access", timedelta(minutes=15), config)
+
+
+def create_web_session_token(user_id: UUID, role: str, config: Settings) -> str:
     return _create_user_token(user_id, role, "access", timedelta(hours=8), config)
 
 
-def create_refresh_token(user_id: UUID, role: str, config: Settings) -> str:
-    return _create_user_token(user_id, role, "refresh", timedelta(days=30), config)
+def create_refresh_token(
+    user_id: UUID, role: str, session_id: UUID, config: Settings
+) -> str:
+    now = datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": str(user_id),
+        "role": role,
+        "type": "refresh",
+        "jti": str(session_id),
+        "nonce": str(uuid4()),
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(days=30)).timestamp()),
+    }
+    return jwt.encode(payload, config.jwt_secret, algorithm="HS256")
 
 
 def decode_access_token(token: str, config: Settings) -> dict[str, Any]:

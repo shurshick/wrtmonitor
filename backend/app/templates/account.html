@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}WrtMonitor - Эксплуатация сервера{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow">Сервер WrtMonitor</p><h1>Эксплуатация и безопасность</h1><p class="page-heading__description">Состояние, сессии владельца и журнал действий.</p></div>
+  <a class="button button--secondary" href="/devices">К роутерам</a>
+</div>
+
+<section class="section"><div class="section-heading section-heading--compact"><h2>Уведомления</h2></div>
+  <div class="operations-list">
+  {% for item in notifications %}<a class="operations-item operations-item--{{ item.severity }}" href="/devices/{{ item.device_id }}"><span class="status status--{{ 'offline' if item.severity == 'critical' else 'warning' }}">{{ item.severity }}</span><div><strong>{{ item.title }}</strong><small>{{ item.message }}</small></div></a>
+  {% else %}<div class="empty-state card"><h3>Всё спокойно</h3><p>Нет недоступных роутеров, устаревших агентов и новых ошибок команд.</p></div>{% endfor %}
+  </div>
+</section>
+
+<div class="settings-grid section">
+  <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">Владелец</span><h2>Сменить пароль</h2></div></div><p class="muted">После смены пароля все мобильные refresh-сессии будут отозваны.</p>
+    <form class="compact-form" method="post" action="/account/password"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Текущий пароль<input type="password" name="current_password" required autocomplete="current-password"></label><label>Новый пароль<input type="password" name="new_password" minlength="12" required autocomplete="new-password"></label><label>Повторите новый пароль<input type="password" name="new_password_confirm" minlength="12" required autocomplete="new-password"></label><button type="submit">Изменить пароль</button></form>
+  </section>
+  <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">Android и API</span><h2>Активные сессии</h2></div></div>
+    <div class="operations-list">{% for session in sessions %}<div class="operations-item"><div><strong>{{ session.client_name or 'Неизвестный клиент' }}</strong><small>{{ session.ip_address or 'IP не определён' }} · Последнее использование {{ session.last_used_at|timestamp }} · Истекает {{ session.expires_at|timestamp }}</small></div>{% if not session.revoked_at %}<form method="post" action="/account/sessions/{{ session.id }}/revoke"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--danger button--small" type="submit">Отозвать</button></form>{% else %}<span class="status status--offline">отозвана</span>{% endif %}</div>{% else %}<p class="muted">Мобильных сессий пока нет.</p>{% endfor %}</div>
+  </section>
+  <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">PostgreSQL</span><h2>Резервные копии</h2></div></div><p class="muted">Архив проверяется через pg_restore до публикации. Для полного контроля восстановления используйте CLI-команду drill.</p>
+    <form method="post" action="/account/backups"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Создать копию</button></form>
+    <div class="operations-list">{% for backup in backups %}<a class="operations-item" href="/account/backups/{{ backup.name }}"><div><strong>{{ backup.name }}</strong><small>{{ (backup.stat().st_size / 1048576)|round(2) }} МБ</small></div><span>Скачать</span></a>{% else %}<p class="muted">Резервных копий пока нет.</p>{% endfor %}</div>
+  </section>
+</div>
+
+<section class="section"><div class="section-heading section-heading--compact"><h2>Журнал аудита</h2><p>Последние 100 действий сервера и владельца.</p></div><div class="table-wrap"><table><thead><tr><th>Время</th><th>Действие</th><th>Объект</th><th>Детали</th></tr></thead><tbody>{% for item in audit_entries %}<tr><td>{{ item.created_at|timestamp }}</td><td>{{ item.action }}</td><td>{{ item.object_type or '-' }} {{ item.object_id or '' }}</td><td><code>{{ item.details or {} }}</code></td></tr>{% else %}<tr><td colspan="4">Записей пока нет.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

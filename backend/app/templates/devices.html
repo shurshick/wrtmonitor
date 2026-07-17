@@ -7,10 +7,7 @@
     <h1>Мои сети</h1>
     <p class="page-heading__description">Роутеры и текущее состояние подключений.</p>
   </div>
-  <form method="post" action="/logout">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button class="button--secondary" type="submit">Выйти</button>
-  </form>
+  <div class="toolbar__actions"><a class="button button--secondary" href="/account">Сервер{% if notifications_count %} · {{ notifications_count }}{% endif %}</a><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--secondary" type="submit">Выйти</button></form></div>
 </div>
 <div class="router-list">
   {% for device in devices %}

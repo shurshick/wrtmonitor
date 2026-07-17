@@ -384,4 +384,15 @@
     <string name="create_diagnostic_bundle">Create diagnostic bundle</string>
     <string name="enable_recovery_mode">Enable recovery mode</string>
     <string name="disable_recovery_mode">Disable</string>
+    <string name="server_notifications">Server notifications</string>
+    <string name="server_notifications_summary">Offline routers, agent updates and command errors</string>
+    <string name="no_server_notifications">Everything is operating normally.</string>
+    <string name="active_sessions">Active sessions</string>
+    <string name="active_sessions_summary">Devices signed in to the owner account</string>
+    <string name="revoke_session">Revoke</string>
+    <string name="change_owner_password">Owner password</string>
+    <string name="change_owner_password_summary">Changing it signs out every mobile session</string>
+    <string name="current_password">Current password</string>
+    <string name="new_password">New password</string>
+    <string name="password_changed_login_again">Password changed. Sign in again.</string>
 </resources>

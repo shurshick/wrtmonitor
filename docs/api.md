@@ -2,6 +2,16 @@
 
 ## Авторизация
 
+Access-token владельца действует 15 минут. Refresh-token управляется серверной сессией и ротируется при каждом использовании.
+
+- `POST /api/v1/auth/login` — создать access/refresh пару;
+- `POST /api/v1/auth/refresh` — атомарно заменить refresh-token;
+- `POST /api/v1/auth/logout` — отозвать текущую refresh-сессию;
+- `GET /api/v1/auth/sessions` — список сессий владельца;
+- `DELETE /api/v1/auth/sessions/{id}` — отозвать сессию;
+- `POST /api/v1/auth/change-password` — сменить пароль и отозвать все refresh-сессии;
+- `GET /api/v1/operations/notifications` — эксплуатационные уведомления.
+
 - `POST /api/v1/auth/login` возвращает `access_token`, `refresh_token` и `expires_in`.
 - `POST /api/v1/auth/refresh` принимает `refresh_token` и выдаёт новую пару токенов.
 

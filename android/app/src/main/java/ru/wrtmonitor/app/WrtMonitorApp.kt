@@ -287,6 +287,7 @@ fun WrtMonitorApp() {
                         Tab.System -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession) }
                         Tab.Settings -> AppSettingsScreen(
                             currentServerUrl = serverUrl,
+                            accessToken = accessToken,
                             onSave = { value ->
                                 val normalized = value.trim().trimEnd('/')
                                 sessionStore.serverUrl = normalized
@@ -295,10 +296,18 @@ fun WrtMonitorApp() {
                                 accessToken = ""
                             },
                             onLogout = {
-                                sessionStore.clearSession()
-                                accessToken = ""
-                                selectedDevice = null
-                                tab = Tab.Routers
+                                val refreshToken = sessionStore.refreshToken
+                                scope.launch {
+                                    if (refreshToken.isNotBlank()) {
+                                        withContext(Dispatchers.IO) {
+                                            WrtMonitorApi(serverUrl).logout(refreshToken)
+                                        }
+                                    }
+                                    sessionStore.clearSession()
+                                    accessToken = ""
+                                    selectedDevice = null
+                                    tab = Tab.Routers
+                                }
                             },
                         )
                     }

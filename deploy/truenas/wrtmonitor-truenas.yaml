@@ -33,6 +33,8 @@ services:
       WRTMONITOR_ALLOW_INSECURE_LOCAL: "false"
       WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "false"
       WRTMONITOR_ENABLE_API_DOCS: "false"
+    volumes:
+      - wrtmonitor_backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5).read()\nPY"]
       interval: 30s
@@ -41,4 +43,5 @@ services:
 
 volumes:
   wrtmonitor_postgres:
+  wrtmonitor_backups:
 

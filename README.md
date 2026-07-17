@@ -4,15 +4,15 @@
 
 ## Текущая версия
 
-Текущая стабильная версия: `v0.9.0`.
+Текущая стабильная версия: `v0.10.0`.
 
-Главное в `0.9.0`:
+Главное в `0.10.0`:
 
-- пакеты `opkg`, backup/restore и безопасный `sysupgrade`;
-- системные журналы, процессы и root cron;
-- скачиваемый диагностический архив и recovery mode;
-- одинаковое обслуживание роутера в Web UI и Android;
-- capability report schema v10.
+- управляемые и отзываемые refresh-сессии владельца;
+- смена пароля, аудит и эксплуатационные уведомления в Web UI и Android;
+- PostgreSQL backup, проверка архива и контрольное восстановление;
+- отдельный постоянный backup-volume для TrueNAS;
+- production-signed Android APK.
 
 В предыдущих релизах:
 
@@ -72,7 +72,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 В релизе он публикуется как:
 
 ```text
-wrtmonitor-truenas-v0.9.0.yaml
+wrtmonitor-truenas-v0.10.0.yaml
 ```
 
 Контейнер использует:
@@ -104,6 +104,7 @@ OpenWrt-агент можно установить:
 
 - [OpenWrt agent](docs/openwrt-agent.md)
 - [Развёртывание сервера](docs/server-deployment.md)
+- [Эксплуатация и восстановление](docs/server-operations.md)
 - [Router management core](docs/router-management-core.md)
 
 ## Документация

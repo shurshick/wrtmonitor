@@ -2,19 +2,34 @@ import base64
 import binascii
 from datetime import UTC, datetime
 import json
+from pathlib import Path
 import secrets
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import APP_NAME, APP_VERSION, Settings
 from ..db import get_db
-from ..models import ClientProfile, Device, DeviceCommand, NetworkClient, User
-from ..security import create_access_token, verify_password
+from ..models import (
+    AuditLog,
+    ClientProfile,
+    Device,
+    DeviceCommand,
+    NetworkClient,
+    User,
+    UserSession,
+)
+from ..security import create_web_session_token, hash_password, verify_password
 from ..schemas import SetupRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
@@ -29,6 +44,7 @@ from ..services.client_registry import (
     effective_policy,
     validate_client_policy,
 )
+from ..services.database_backups import create_backup, default_backup_path
 from ..services.devices import (
     delete_device_permanently,
     device_supports,
@@ -37,6 +53,8 @@ from ..services.devices import (
 )
 from ..services.audit import audit
 from ..services.auth import settings, web_user_from_session
+from ..services.operations import operational_notifications
+from ..services.sessions import revoke_all_user_sessions
 from ..services.setup import complete_setup, is_setup_required
 from ..services.telemetry import (
     normalize_clients_summary,
@@ -52,6 +70,7 @@ from .csrf import generate_csrf_token, verify_csrf_token
 
 templates = Jinja2Templates(directory="backend/app/templates")
 router = APIRouter()
+BACKUP_DIRECTORY = Path("/backups")
 
 DEVICE_SECTIONS = {
     "overview",
@@ -294,11 +313,14 @@ def login_form(
     response = RedirectResponse("/devices", status_code=303)
     response.set_cookie(
         "wrtmonitor_session",
-        create_access_token(user.id, user.role, config),
+        create_web_session_token(user.id, user.role, config),
         httponly=True,
+        secure=not config.allow_insecure_local,
         samesite="lax",
         max_age=8 * 60 * 60,
     )
+    audit(db, user.id, "auth.web_login", "user", str(user.id))
+    db.commit()
     return response
 
 
@@ -306,9 +328,14 @@ def login_form(
 def logout_form(
     csrf_token: str = Form(...),
     config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
     wrtmonitor_session: str | None = Cookie(default=None),
 ) -> RedirectResponse:
     require_web_csrf(wrtmonitor_session, csrf_token, config)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if user:
+        audit(db, user.id, "auth.web_logout", "user", str(user.id))
+        db.commit()
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie("wrtmonitor_session")
     return response
@@ -333,8 +360,145 @@ def devices_page(
         .order_by(Device.created_at.desc())
     ).all()
     return templates.TemplateResponse(
-        request, "devices.html", {"devices": devices, "csrf_token": csrf_token}
+        request,
+        "devices.html",
+        {
+            "devices": devices,
+            "csrf_token": csrf_token,
+            "notifications_count": len(operational_notifications(db)),
+        },
     )
+
+
+@router.get("/account", response_class=HTMLResponse)
+def account_page(
+    request: Request,
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+):
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    sessions = db.scalars(
+        select(UserSession)
+        .where(UserSession.user_id == user.id)
+        .order_by(UserSession.last_used_at.desc())
+        .limit(100)
+    ).all()
+    audit_entries = db.scalars(
+        select(AuditLog).order_by(AuditLog.created_at.desc()).limit(100)
+    ).all()
+    backups = (
+        sorted(BACKUP_DIRECTORY.glob("wrtmonitor-*.dump"), reverse=True)
+        if BACKUP_DIRECTORY.is_dir()
+        else []
+    )
+    return templates.TemplateResponse(
+        request,
+        "account.html",
+        {
+            "user": user,
+            "sessions": sessions,
+            "audit_entries": audit_entries,
+            "notifications": operational_notifications(db),
+            "backups": backups,
+            "csrf_token": generate_csrf_token(
+                wrtmonitor_session or "", config.jwt_secret
+            ),
+        },
+    )
+
+
+@router.post("/account/backups")
+def web_create_database_backup(
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    backup = create_backup(config.database_url, default_backup_path(BACKUP_DIRECTORY))
+    audit(db, user.id, "database.backup.create", "backup", backup.name)
+    db.commit()
+    return RedirectResponse("/account", status_code=303)
+
+
+@router.get("/account/backups/{filename}")
+def web_download_database_backup(
+    filename: str,
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> FileResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется вход")
+    path = (BACKUP_DIRECTORY / Path(filename).name).resolve()
+    if (
+        path.parent != BACKUP_DIRECTORY.resolve()
+        or not path.is_file()
+        or path.suffix != ".dump"
+    ):
+        raise HTTPException(status_code=404, detail="Резервная копия не найдена")
+    return FileResponse(path, filename=path.name, media_type="application/octet-stream")
+
+
+@router.post("/account/password")
+def web_change_password(
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    new_password_confirm: str = Form(...),
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    if not verify_password(current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Текущий пароль указан неверно")
+    if len(new_password) < 12 or new_password != new_password_confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="Новый пароль должен содержать не менее 12 символов и совпадать с подтверждением",
+        )
+    if new_password == current_password:
+        raise HTTPException(status_code=400, detail="Новый пароль должен отличаться")
+    user.password_hash = hash_password(new_password)
+    user.updated_at = datetime.now(UTC)
+    revoke_all_user_sessions(db, user.id)
+    audit(db, user.id, "auth.password.change", "user", str(user.id))
+    db.commit()
+    response = RedirectResponse("/login", status_code=303)
+    response.delete_cookie("wrtmonitor_session")
+    return response
+
+
+@router.post("/account/sessions/{session_id}/revoke")
+def web_revoke_session(
+    session_id: UUID,
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    session = db.get(UserSession, session_id)
+    if not session or session.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Сессия не найдена")
+    session.revoked_at = datetime.now(UTC)
+    audit(db, user.id, "auth.session.revoke", "session", str(session.id))
+    db.commit()
+    return RedirectResponse("/account", status_code=303)
 
 
 @router.get("/devices/{device_id}", response_class=HTMLResponse)
@@ -1149,7 +1313,12 @@ def setup_page(
         request, "setup.html", {"csrf_token": csrf_token}
     )
     response.set_cookie(
-        "wrtmonitor_setup_nonce", nonce, httponly=True, samesite="lax", max_age=15 * 60
+        "wrtmonitor_setup_nonce",
+        nonce,
+        httponly=True,
+        secure=not config.allow_insecure_local,
+        samesite="lax",
+        max_age=15 * 60,
     )
     return response
 

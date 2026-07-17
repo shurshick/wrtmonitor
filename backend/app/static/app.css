@@ -270,6 +270,12 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .compact-form { display: grid; gap: 11px; margin-top: 0; }
 .card .compact-form { margin-top: 0; }
 .compact-form--separated { margin-top: 16px !important; padding-top: 16px; border-top: 1px solid var(--border); }
+.operations-list { display: grid; gap: 8px; }
+.operations-item { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); text-decoration: none; }
+.operations-item > div { min-width: 0; display: grid; gap: 3px; }
+.operations-item small { color: var(--muted); overflow-wrap: anywhere; }
+.operations-item--critical { border-color: #71343c; }
+.operations-item--warning { border-color: #6d5925; }
 .form-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 3px; }
 .action-note { color: var(--muted); font-size: 12px; }
 .action-note--warning { color: var(--warning); }

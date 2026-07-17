@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck postgresql-client
       - run: pip install -r backend/requirements.txt
       - run: pip install -r backend/requirements-browser.txt
       - run: python -m playwright install --with-deps chromium
@@ -44,6 +44,15 @@ jobs:
           WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "true"
           WRTMONITOR_JWT_SECRET: ci-test-secret-value-with-more-than-32-characters
           WRTMONITOR_SKIP_E2E: "0"
+      - name: Verify PostgreSQL disaster recovery
+        env:
+          WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:change-me-db-password@localhost:5432/wrtmonitor_test
+          WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "true"
+          WRTMONITOR_JWT_SECRET: ci-test-secret-value-with-more-than-32-characters
+        run: |
+          python -m backend.app.backup_cli create /tmp/wrtmonitor-ci.dump
+          python -m backend.app.backup_cli verify /tmp/wrtmonitor-ci.dump
+          python -m backend.app.backup_cli drill /tmp/wrtmonitor-ci.dump
       - run: sh -n openwrt-agent/wrtmonitor-agent
       - run: sh -n openwrt-agent/install-openwrt.sh
       - run: for f in openwrt-agent/lib/*.sh; do sh -n "$f"; done
@@ -121,6 +130,7 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
   release-artifacts:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -144,9 +154,23 @@ jobs:
       - run: chmod +x ./gradlew
       - run: pip install -r backend/requirements.txt
       - run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
-      - run: ./gradlew :android:app:assembleDebug
+      - name: Restore Android release signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/wrtmonitor-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/wrtmonitor-release.jks" >> "$GITHUB_ENV"
+      - name: Build signed Android release
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :android:app:assembleRelease
+      - name: Verify Android signature
+        run: "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android/app/build/outputs/apk/release/app-release.apk
       - run: tar -czf "wrtmonitor-openwrt-agent-v$RELEASE_VERSION.tar.gz" -C openwrt-agent .
-      - run: cp android/app/build/outputs/apk/debug/app-debug.apk "wrtmonitor-android-v$RELEASE_VERSION-debug.apk"
+      - run: cp android/app/build/outputs/apk/release/app-release.apk "wrtmonitor-android-v$RELEASE_VERSION.apk"
       - run: cp deploy/truenas/wrtmonitor-truenas.yaml "wrtmonitor-truenas-v$RELEASE_VERSION.yaml"
       - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
       - uses: actions/upload-artifact@v7
@@ -154,7 +178,7 @@ jobs:
           name: wrtmonitor-release-artifacts
           path: |
             wrtmonitor-openwrt-agent-v${{ env.RELEASE_VERSION }}.tar.gz
-            wrtmonitor-android-v${{ env.RELEASE_VERSION }}-debug.apk
+            wrtmonitor-android-v${{ env.RELEASE_VERSION }}.apk
             wrtmonitor-truenas-v${{ env.RELEASE_VERSION }}.yaml
             openwrt-agent/SHA256SUMS.txt
             openwrt-agent/agent-version.txt
@@ -165,7 +189,7 @@ jobs:
         run: |
           gh release create "$RELEASE_TAG" \
             "wrtmonitor-openwrt-agent-v$RELEASE_VERSION.tar.gz" \
-            "wrtmonitor-android-v$RELEASE_VERSION-debug.apk" \
+            "wrtmonitor-android-v$RELEASE_VERSION.apk" \
             "wrtmonitor-truenas-v$RELEASE_VERSION.yaml" \
             "openwrt-agent/SHA256SUMS.txt" \
             "openwrt-agent/agent-version.txt" \

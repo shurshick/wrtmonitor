@@ -17,6 +17,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,12 +27,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import ru.wrtmonitor.app.R
+import ru.wrtmonitor.app.api.ApiResult
+import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.domain.VersionComparator
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.ui.components.ActionRow
@@ -53,13 +57,39 @@ private sealed interface UpdateState {
 }
 
 @Composable
-fun AppSettingsScreen(currentServerUrl: String, onSave: (String) -> Unit, onLogout: () -> Unit) {
+fun AppSettingsScreen(
+    currentServerUrl: String,
+    accessToken: String,
+    onSave: (String) -> Unit,
+    onLogout: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var serverUrl by remember(currentServerUrl) { mutableStateOf(currentServerUrl) }
     var showAbout by remember { mutableStateOf(false) }
     var updateState by remember { mutableStateOf<UpdateState?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
+    var notifications by remember { mutableStateOf<List<WrtMonitorApi.OperationNotificationDto>>(emptyList()) }
+    var sessions by remember { mutableStateOf<List<WrtMonitorApi.UserSessionDto>>(emptyList()) }
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var accountMessage by remember { mutableStateOf("") }
+    val api = remember(currentServerUrl, accessToken) { WrtMonitorApi(currentServerUrl, accessToken) }
+
+    fun reloadAccount() {
+        scope.launch {
+            when (val result = withContext(Dispatchers.IO) { api.getOperationNotifications() }) {
+                is ApiResult.Success -> notifications = result.data
+                is ApiResult.Error -> accountMessage = result.message
+            }
+            when (val result = withContext(Dispatchers.IO) { api.getSessions() }) {
+                is ApiResult.Success -> sessions = result.data
+                is ApiResult.Error -> accountMessage = result.message
+            }
+        }
+    }
+
+    LaunchedEffect(api) { reloadAccount() }
     if (showAbout) {
         AboutScreen(
             updateState = updateState,
@@ -89,6 +119,67 @@ fun AppSettingsScreen(currentServerUrl: String, onSave: (String) -> Unit, onLogo
                 PrimaryActionButton(stringResource(R.string.save), { onSave(serverUrl) })
                 SecondaryActionButton(stringResource(R.string.logout), onLogout)
             }
+        }
+        SectionCard(
+            title = stringResource(R.string.server_notifications),
+            subtitle = stringResource(R.string.server_notifications_summary),
+        ) {
+            if (notifications.isEmpty()) {
+                Text(stringResource(R.string.no_server_notifications), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                notifications.forEach { item ->
+                    Text(item.title, style = MaterialTheme.typography.titleSmall)
+                    Text(item.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        SectionCard(
+            title = stringResource(R.string.active_sessions),
+            subtitle = stringResource(R.string.active_sessions_summary),
+        ) {
+            sessions.filterNot { it.revoked }.forEach { session ->
+                InfoRow(session.clientName, session.ipAddress.ifBlank { session.lastUsedAt })
+                SecondaryActionButton(stringResource(R.string.revoke_session), {
+                    scope.launch {
+                        withContext(Dispatchers.IO) { api.revokeSession(session.id) }
+                        reloadAccount()
+                    }
+                }, Modifier.align(Alignment.End))
+            }
+        }
+        SectionCard(
+            title = stringResource(R.string.change_owner_password),
+            subtitle = stringResource(R.string.change_owner_password_summary),
+        ) {
+            OutlinedTextField(
+                currentPassword,
+                { currentPassword = it },
+                label = { Text(stringResource(R.string.current_password)) },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+            OutlinedTextField(
+                newPassword,
+                { newPassword = it },
+                label = { Text(stringResource(R.string.new_password)) },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+            if (accountMessage.isNotBlank()) Text(accountMessage, style = MaterialTheme.typography.bodySmall)
+            PrimaryActionButton(stringResource(R.string.change_password), {
+                scope.launch {
+                    val successMessage = context.getString(R.string.password_changed_login_again)
+                    accountMessage = when (val result = withContext(Dispatchers.IO) {
+                        api.changePassword(currentPassword, newPassword)
+                    }) {
+                        is ApiResult.Success -> successMessage
+                        is ApiResult.Error -> result.message
+                    }
+                    if (accountMessage == successMessage) onLogout()
+                }
+            }, Modifier.align(Alignment.End))
         }
         SectionCard(
             title = stringResource(R.string.about_app),

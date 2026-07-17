@@ -156,6 +156,8 @@ def test_complete_setup_flushes_user_before_audit(monkeypatch):
 
 
 def test_devices_page_lists_devices(monkeypatch):
+    monkeypatch.setattr(main, "operational_notifications", lambda db: [])
+
     class FakeScalars:
         def all(self):
             return [
@@ -198,6 +200,8 @@ def test_devices_page_lists_devices(monkeypatch):
 
 
 def test_devices_page_allows_permanent_delete_for_every_device(monkeypatch):
+    monkeypatch.setattr(main, "operational_notifications", lambda db: [])
+
     class FakeScalars:
         def all(self):
             return [
@@ -635,6 +639,80 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert traffic_count == 96
 
 
+def test_managed_sessions_rotation_and_password_change_e2e():
+    if not postgres_e2e_enabled():
+        pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
+    clear_database()
+    config = load_settings()
+    client = TestClient(app)
+    setup = client.post(
+        "/api/v1/setup/complete",
+        json={
+            "username": "sessions@example.com",
+            "password": "initial-password",
+            "password_confirm": "initial-password",
+            "server_url": "http://127.0.0.1:8080"
+            if config.allow_insecure_local
+            else "https://monitor.example.ru",
+        },
+    )
+    assert setup.status_code == 200
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"username": "sessions@example.com", "password": "initial-password"},
+        headers={"User-Agent": "WrtMonitor E2E"},
+    )
+    assert login.status_code == 200
+    first_refresh = login.json()["refresh_token"]
+    rotated = client.post("/api/v1/auth/refresh", json={"refresh_token": first_refresh})
+    assert rotated.status_code == 200
+    assert rotated.json()["refresh_token"] != first_refresh
+    assert (
+        client.post(
+            "/api/v1/auth/refresh", json={"refresh_token": first_refresh}
+        ).status_code
+        == 401
+    )
+    headers = {"Authorization": f"Bearer {rotated.json()['access_token']}"}
+    sessions = client.get("/api/v1/auth/sessions", headers=headers)
+    assert sessions.status_code == 200
+    assert sessions.json()[0]["client_name"] == "WrtMonitor E2E"
+    changed = client.post(
+        "/api/v1/auth/change-password",
+        headers=headers,
+        json={
+            "current_password": "initial-password",
+            "new_password": "replacement-password",
+            "new_password_confirm": "replacement-password",
+        },
+    )
+    assert changed.status_code == 200
+    assert (
+        client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": rotated.json()["refresh_token"]},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/login",
+            json={"username": "sessions@example.com", "password": "initial-password"},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "sessions@example.com",
+                "password": "replacement-password",
+            },
+        ).status_code
+        == 200
+    )
+
+
 def test_device_delete_removes_router_and_all_related_data():
     if not postgres_e2e_enabled():
         pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
@@ -766,6 +844,11 @@ def test_command_lifecycle_retry_expiry_and_idempotent_result_e2e():
         json={"refresh_token": login.json()["refresh_token"]},
     )
     assert refresh.status_code == 200
+    replay = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": login.json()["refresh_token"]},
+    )
+    assert replay.status_code == 401
     owner_headers = {"Authorization": f"Bearer {refresh.json()['access_token']}"}
     provision = client.post(
         "/api/v1/devices/provision",

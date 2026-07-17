@@ -1,6 +1,6 @@
 # Развёртывание серверной части
 
-Документ актуален для `WrtMonitor v0.6.0`.
+Документ актуален для `WrtMonitor v0.10.0`.
 
 ## Перед первым запуском
 
@@ -36,11 +36,11 @@ WRTMONITOR_ENABLE_API_DOCS=false
 
 ## TrueNAS Custom App
 
-1. Откройте релиз `v0.6.0`.
+1. Откройте релиз `v0.10.0`.
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-v0.6.0.yaml
+   wrtmonitor-truenas-v0.10.0.yaml
    ```
 
 3. При необходимости скачайте и проверьте `SHA256SUMS.txt`.
@@ -77,3 +77,5 @@ YAML использует `ghcr.io/shurshick/wrtmonitor:latest` и `pull_policy:
 2. **Save**
 
 Это запускает redeploy и повторный pull образа. PostgreSQL volume удалять не нужно.
+
+Volume `wrtmonitor_backups` хранит проверенные резервные копии PostgreSQL. Создание, restore drill и аварийное восстановление описаны в [инструкции по эксплуатации](server-operations.md).

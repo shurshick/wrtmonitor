@@ -37,6 +37,21 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
 
     data class AuthTokens(val accessToken: String, val refreshToken: String)
 
+    data class UserSessionDto(
+        val id: String,
+        val clientName: String,
+        val ipAddress: String,
+        val lastUsedAt: String,
+        val expiresAt: String,
+        val revoked: Boolean,
+    )
+
+    data class OperationNotificationDto(
+        val severity: String,
+        val title: String,
+        val message: String,
+    )
+
     fun login(username: String, password: String): ApiResult<AuthTokens> = runCatching {
         val (status, response) = request(
             "/api/v1/auth/login",
@@ -55,6 +70,65 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         parseAuthTokens(JSONObject(response))
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun logout(refreshToken: String): ApiResult<Unit> = runCatching {
+        val (status, _) = request(
+            "/api/v1/auth/logout",
+            "POST",
+            JSONObject().put("refresh_token", refreshToken),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun getSessions(): ApiResult<List<UserSessionDto>> = runCatching {
+        val (status, response) = request("/api/v1/auth/sessions")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val array = JSONArray(response)
+        (0 until array.length()).map { index ->
+            array.getJSONObject(index).let { item ->
+                UserSessionDto(
+                    id = item.optString("id"),
+                    clientName = item.optString("client_name", "Unknown client"),
+                    ipAddress = item.optString("ip_address"),
+                    lastUsedAt = item.optString("last_used_at"),
+                    expiresAt = item.optString("expires_at"),
+                    revoked = !item.isNull("revoked_at"),
+                )
+            }
+        }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun revokeSession(sessionId: String): ApiResult<Unit> = runCatching {
+        val (status, _) = request("/api/v1/auth/sessions/$sessionId", "DELETE")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun changePassword(currentPassword: String, newPassword: String): ApiResult<Unit> = runCatching {
+        val (status, _) = request(
+            "/api/v1/auth/change-password",
+            "POST",
+            JSONObject()
+                .put("current_password", currentPassword)
+                .put("new_password", newPassword)
+                .put("new_password_confirm", newPassword),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun getOperationNotifications(): ApiResult<List<OperationNotificationDto>> = runCatching {
+        val (status, response) = request("/api/v1/operations/notifications")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val array = JSONArray(response)
+        (0 until array.length()).map { index ->
+            array.getJSONObject(index).let { item ->
+                OperationNotificationDto(
+                    severity = item.optString("severity"),
+                    title = item.optString("title"),
+                    message = item.optString("message"),
+                )
+            }
+        }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
     private fun parseAuthTokens(json: JSONObject) = AuthTokens(

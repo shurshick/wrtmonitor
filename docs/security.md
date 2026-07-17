@@ -4,11 +4,13 @@
 
 - Первый администратор создаётся через `/setup`.
 - Пароли хранятся как Argon2 hash.
-- Android получает JWT access token через `/api/v1/auth/login`.
-- Android хранит серверный URL, access token и базовую сессию в `EncryptedSharedPreferences`.
+- Android получает 15-минутный JWT access token и управляемый refresh-token через `/api/v1/auth/login`.
+- Refresh-token хранится на сервере только как hash, ротируется при каждом использовании и отзывается при выходе или смене пароля.
+- Android хранит server URL и tokens в `EncryptedSharedPreferences`.
 - OpenWrt agent использует отдельный device token.
 - Device token хранится на сервере только как hash.
 - Web UI `/devices` требует вход через `/login`.
+- Production cookies имеют `HttpOnly`, `Secure` и `SameSite=Lax`.
 - Все Web UI POST-формы защищены CSRF-токеном; детали описаны в [security-web-ui.md](security-web-ui.md).
 - API-документация `/docs`, `/redoc`, `/openapi.json` по умолчанию выключена.
 - Команды управления выполняются только через allowlist.

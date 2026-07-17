@@ -13,6 +13,12 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=20)
 
 
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(min_length=8, max_length=256)
+    new_password: str = Field(min_length=12, max_length=256)
+    new_password_confirm: str = Field(min_length=12, max_length=256)
+
+
 class SetupRequest(BaseModel):
     username: str = Field(min_length=3, max_length=120)
     password: str = Field(min_length=8, max_length=256)

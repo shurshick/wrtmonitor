@@ -271,6 +271,7 @@ def run() -> None:
             page.locator('button[type="submit"]').click()
             page.wait_for_url("**/devices")
             assert_page(page, "/devices", f"{name}-devices.png")
+            assert_page(page, "/account", f"{name}-account.png")
             for section in (
                 "overview",
                 "internet",
