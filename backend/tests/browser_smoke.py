@@ -85,6 +85,14 @@ def prepare_router() -> str:
             "wifi.schedule": True,
             "wifi.roaming": True,
             "wifi.mesh": True,
+            "network.ipv6.configure": True,
+            "network.multiwan.configure": True,
+            "network.routes.configure": True,
+            "network.ddns.configure": True,
+            "firewall.zones.configure": True,
+            "firewall.rules.configure": True,
+            "firewall.upnp.configure": True,
+            "telemetry.perimeter": True,
         }
         telemetry = client.post(
             "/api/v1/agent/telemetry",
@@ -95,7 +103,7 @@ def prepare_router() -> str:
                     "agent": {
                         "version": "0.5.0",
                         "status": "running",
-                        "capabilities_version": 7,
+                        "capabilities_version": 8,
                         "capabilities": capabilities,
                     },
                     "system": {

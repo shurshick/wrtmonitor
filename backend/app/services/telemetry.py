@@ -177,6 +177,7 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(item, dict):
             continue
         ipv4_addresses = item.get("ipv4-address") or []
+        ipv6_addresses = item.get("ipv6-address") or []
         route = item.get("route") or []
         dns_servers = item.get("dns-server") or []
         normalized_interfaces.append(
@@ -188,6 +189,11 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "ipv4": [
                     address.get("address")
                     for address in ipv4_addresses
+                    if isinstance(address, dict) and address.get("address")
+                ],
+                "ipv6": [
+                    address.get("address")
+                    for address in ipv6_addresses
                     if isinstance(address, dict) and address.get("address")
                 ],
                 "gateway": next(
@@ -202,7 +208,17 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "errors": item.get("errors") or [],
             }
         )
-    return {"interfaces": normalized_interfaces}
+    perimeter = payload.get("perimeter") or {}
+    return {
+        "interfaces": normalized_interfaces,
+        "routes": perimeter.get("routes") or [],
+        "firewall_zones": perimeter.get("firewall_zones") or [],
+        "firewall_forwardings": perimeter.get("firewall_forwardings") or [],
+        "firewall_rules": perimeter.get("firewall_rules") or [],
+        "mwan3": perimeter.get("mwan3") or {"service": "unavailable"},
+        "ddns": perimeter.get("ddns") or {"service": "unavailable", "services": []},
+        "upnp": perimeter.get("upnp") or {"service": "unavailable", "mappings": []},
+    }
 
 
 def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:

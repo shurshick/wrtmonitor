@@ -291,6 +291,14 @@ def test_management_capabilities_cover_full_router_foundation():
         "system.restart_service",
         "system.set_timezone",
         "system.set_ntp",
+        "network.ipv6.configure",
+        "network.multiwan.configure",
+        "network.routes.configure",
+        "network.ddns.configure",
+        "firewall.zones.configure",
+        "firewall.rules.configure",
+        "firewall.upnp.configure",
+        "telemetry.perimeter",
     ):
         assert capability in source
     assert '"wifi.set_password":true' not in source
@@ -319,6 +327,16 @@ def test_management_commands_have_openwrt_handlers():
         "wifi.set_mesh",
         "system.set_timezone",
         "system.set_ntp",
+        "network.set_ipv6",
+        "network.set_multiwan",
+        "network.set_route",
+        "network.delete_route",
+        "network.set_ddns",
+        "network.set_upnp",
+        "firewall.set_zone",
+        "firewall.set_forwarding",
+        "firewall.set_rule",
+        "firewall.delete_rule",
     ):
         assert f"{command})" in source
     assert 'backup_config sqm "$command_id" "$command_type"' in source

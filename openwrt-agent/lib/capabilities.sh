@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="7"
+CAPABILITIES_VERSION="8"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -11,6 +11,8 @@ capability_keys() {
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
+        network.ipv6.configure network.multiwan.configure network.routes.configure network.ddns.configure \
+        firewall.zones.configure firewall.rules.configure firewall.upnp.configure telemetry.perimeter \
         clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
         system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
         diagnostics.check_server diagnostics.check_dependencies diagnostics.check_dns diagnostics.check_route diagnostics.check_wifi
@@ -101,6 +103,12 @@ capability_supported() {
         network.interface_restart) has_network_runtime && has_commands ifup ifdown ;;
         network.restart) [ -x "$(capability_path /etc/init.d/network)" ] ;;
         network.write|network.wan.configure|network.lan.configure) has_network_write && has_commands ifup ifdown ;;
+        network.ipv6.configure|network.routes.configure) has_network_write && has_dhcp_write ;;
+        network.multiwan.configure) has_uci_config mwan3 && [ -x "$(capability_path /etc/init.d/mwan3)" ] ;;
+        network.ddns.configure) has_uci_config ddns && [ -x "$(capability_path /etc/init.d/ddns)" ] ;;
+        firewall.zones.configure|firewall.rules.configure) has_firewall_write ;;
+        firewall.upnp.configure) has_uci_config upnpd && [ -x "$(capability_path /etc/init.d/miniupnpd)" ] ;;
+        telemetry.perimeter) has_uci_config firewall && has_network_runtime ;;
         clients.block|clients.policy|firewall.port_forward) has_firewall_write ;;
         qos.sqm) has_uci_config sqm && [ -x "$(capability_path /etc/init.d/sqm)" ] ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.configure|dns.configure) has_dhcp_write ;;

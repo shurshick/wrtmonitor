@@ -697,6 +697,28 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var sqmInterface by remember { mutableStateOf("eth1") }
     var sqmDownload by remember { mutableStateOf("") }
     var sqmUpload by remember { mutableStateOf("") }
+    var ipv6Enabled by remember { mutableStateOf(true) }
+    var ipv6Prefix by remember { mutableStateOf("64") }
+    var multiWanEnabled by remember { mutableStateOf(true) }
+    var primaryWan by remember { mutableStateOf("wan") }
+    var secondaryWan by remember { mutableStateOf("wan2") }
+    var routeName by remember { mutableStateOf("") }
+    var routeTarget by remember { mutableStateOf("") }
+    var routeGateway by remember { mutableStateOf("") }
+    var routeMetric by remember { mutableStateOf("0") }
+    var ddnsName by remember { mutableStateOf("home") }
+    var ddnsProvider by remember { mutableStateOf("cloudflare.com-v4") }
+    var ddnsDomain by remember { mutableStateOf("") }
+    var ddnsUser by remember { mutableStateOf("") }
+    var ddnsPassword by remember { mutableStateOf("") }
+    var upnpEnabled by remember { mutableStateOf(false) }
+    var upnpSecure by remember { mutableStateOf(true) }
+    var zoneNameValue by remember { mutableStateOf("") }
+    var zoneNetworks by remember { mutableStateOf("") }
+    var ruleNameValue by remember { mutableStateOf("") }
+    var ruleSource by remember { mutableStateOf("wan") }
+    var ruleDestination by remember { mutableStateOf("lan") }
+    var rulePort by remember { mutableStateOf("") }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     val refresh: () -> Unit = {
         scope.launch {
@@ -857,6 +879,63 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                     Text(stringResource(R.string.delete_port_forward))
                 }
             }
+        }
+    }
+    if (capabilities["network.ipv6.configure"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.ipv6_settings), "/$ipv6Prefix") {
+            SwitchSettingRow(stringResource(R.string.ipv6_settings), checked = ipv6Enabled, onCheckedChange = { ipv6Enabled = it })
+            OutlinedTextField(ipv6Prefix, { ipv6Prefix = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.prefix_length)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_ipv6", JSONObject().put("interface", "lan").put("enabled", ipv6Enabled).put("assignment_length", ipv6Prefix.toIntOrNull() ?: 64).put("ra", "server").put("dhcpv6", "server").put("ndp", "server"), genericCommandQueued) }, Modifier.align(Alignment.End))
+        }
+    }
+    if (capabilities["network.multiwan.configure"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.multiwan_settings), "$primaryWan → $secondaryWan") {
+            SwitchSettingRow(stringResource(R.string.multiwan_settings), checked = multiWanEnabled, onCheckedChange = { multiWanEnabled = it })
+            OutlinedTextField(primaryWan, { primaryWan = it }, label = { Text(stringResource(R.string.primary_wan)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(secondaryWan, { secondaryWan = it }, label = { Text(stringResource(R.string.secondary_wan)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_multiwan", JSONObject().put("enabled", multiWanEnabled).put("primary_interface", primaryWan).put("secondary_interface", secondaryWan).put("primary_metric", 10).put("secondary_metric", 20), genericCommandQueued) }, Modifier.align(Alignment.End))
+        }
+    }
+    if (capabilities["network.routes.configure"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.static_routes), routeTarget) {
+            OutlinedTextField(routeName, { routeName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(routeTarget, { routeTarget = it }, label = { Text(stringResource(R.string.route_target)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(routeGateway, { routeGateway = it }, label = { Text(stringResource(R.string.gateway)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(routeMetric, { routeMetric = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.route_metric)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_route", JSONObject().put("name", routeName).put("interface", "wan").put("target", routeTarget).put("gateway", routeGateway).put("metric", routeMetric.toIntOrNull() ?: 0), genericCommandQueued) }, enabled = routeName.isNotBlank() && routeTarget.isNotBlank()); TextButton({ pendingCommand = PendingSafeCommand("network.delete_route", JSONObject().put("name", routeName), genericCommandQueued) }, enabled = routeName.isNotBlank()) { Text(stringResource(R.string.delete)) } }
+        }
+    }
+    if (capabilities["network.ddns.configure"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.ddns_settings), ddnsDomain) {
+            OutlinedTextField(ddnsName, { ddnsName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(ddnsProvider, { ddnsProvider = it }, label = { Text(stringResource(R.string.provider)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(ddnsDomain, { ddnsDomain = it }, label = { Text(stringResource(R.string.domain)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(ddnsUser, { ddnsUser = it }, label = { Text(stringResource(R.string.username)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(ddnsPassword, { ddnsPassword = it }, label = { Text(stringResource(R.string.password)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
+            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_ddns", JSONObject().put("name", ddnsName).put("enabled", true).put("provider", ddnsProvider).put("domain", ddnsDomain).put("username", ddnsUser).put("password", ddnsPassword).put("interface", "wan"), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = ddnsDomain.isNotBlank())
+        }
+    }
+    if (capabilities["firewall.upnp.configure"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.upnp_settings), if (upnpEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value)) {
+            SwitchSettingRow(stringResource(R.string.upnp_settings), checked = upnpEnabled, onCheckedChange = { upnpEnabled = it })
+            SwitchSettingRow(stringResource(R.string.secure_mode), checked = upnpSecure, onCheckedChange = { upnpSecure = it })
+            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_upnp", JSONObject().put("enabled", upnpEnabled).put("secure_mode", upnpSecure), genericCommandQueued) }, Modifier.align(Alignment.End))
+        }
+    }
+    if (capabilities["firewall.zones.configure"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.firewall_zone), zoneNameValue) {
+            OutlinedTextField(zoneNameValue, { zoneNameValue = it }, label = { Text(stringResource(R.string.firewall_zone)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(zoneNetworks, { zoneNetworks = it }, label = { Text(stringResource(R.string.zone_networks)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_zone", JSONObject().put("name", zoneNameValue).put("networks", JSONArray(zoneNetworks.split(' ').filter(String::isNotBlank))).put("input", "REJECT").put("output", "ACCEPT").put("forward", "REJECT").put("masquerade", false), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = zoneNameValue.isNotBlank() && zoneNetworks.isNotBlank())
+        }
+    }
+    if (capabilities["firewall.rules.configure"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.firewall_rule), ruleNameValue) {
+            OutlinedTextField(ruleNameValue, { ruleNameValue = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(ruleSource, { ruleSource = it }, label = { Text(stringResource(R.string.source_zone)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(ruleDestination, { ruleDestination = it }, label = { Text(stringResource(R.string.destination_zone)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(rulePort, { rulePort = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.internal_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_rule", JSONObject().put("name", ruleNameValue).put("src", ruleSource).put("dest", ruleDestination).put("protocol", "tcpudp").put("dest_port", rulePort).put("target", "ACCEPT"), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()); TextButton({ pendingCommand = PendingSafeCommand("firewall.delete_rule", JSONObject().put("name", ruleNameValue), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()) { Text(stringResource(R.string.delete)) } }
         }
     }
     if (capabilities["network.interface_restart"] == true || capabilities["network.restart"] == true) {

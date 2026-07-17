@@ -16,7 +16,7 @@ telemetry_payload() {
         ""|*[!0-9]*) uptime_value="0" ;;
     esac
     load_value="$(json_escape "$load_value")"
-    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"agent":%s}}' \
+    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"agent":%s}}' \
         "$(device_id)" \
         "$uptime_value" \
         "$load_value" \
@@ -41,7 +41,51 @@ telemetry_payload() {
         "$(ubus_json network.wireless status)" \
         "$(clients_json)" \
         "$(dhcp_json)" \
+        "$(perimeter_json)" \
         "$(agent_status_json)"
+}
+
+perimeter_json() {
+    routes=""
+    for route_type in route route6; do
+        index=0
+        while uci -q get "network.@${route_type}[$index]" >/dev/null 2>&1; do
+            ref="@${route_type}[$index]"; [ -n "$routes" ] && routes="$routes,"
+            routes="$routes{\"name\":\"$(json_escape "$(uci -q get "network.$ref.wrtmonitor_name" 2>/dev/null || echo $route_type$index)")\",\"family\":\"$( [ "$route_type" = route6 ] && printf ipv6 || printf ipv4 )\",\"interface\":\"$(json_escape "$(uci -q get "network.$ref.interface" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "network.$ref.target" 2>/dev/null || true)")\",\"gateway\":\"$(json_escape "$(uci -q get "network.$ref.gateway" 2>/dev/null || true)")\",\"metric\":\"$(json_escape "$(uci -q get "network.$ref.metric" 2>/dev/null || true)")\"}"
+            index=$((index + 1))
+        done
+    done
+    zones=""; index=0
+    while uci -q get "firewall.@zone[$index]" >/dev/null 2>&1; do
+        ref="@zone[$index]"; [ -n "$zones" ] && zones="$zones,"
+        zones="$zones{\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || true)")\",\"input\":\"$(json_escape "$(uci -q get "firewall.$ref.input" 2>/dev/null || true)")\",\"output\":\"$(json_escape "$(uci -q get "firewall.$ref.output" 2>/dev/null || true)")\",\"forward\":\"$(json_escape "$(uci -q get "firewall.$ref.forward" 2>/dev/null || true)")\"}"
+        index=$((index + 1))
+    done
+    forwardings=""; index=0
+    while uci -q get "firewall.@forwarding[$index]" >/dev/null 2>&1; do
+        ref="@forwarding[$index]"; [ -n "$forwardings" ] && forwardings="$forwardings,"
+        forwardings="$forwardings{\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\"}"
+        index=$((index + 1))
+    done
+    rules=""; index=0
+    while uci -q get "firewall.@rule[$index]" >/dev/null 2>&1; do
+        ref="@rule[$index]"; [ -n "$rules" ] && rules="$rules,"
+        rules="$rules{\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || echo rule$index)")\",\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\",\"protocol\":\"$(json_escape "$(uci -q get "firewall.$ref.proto" 2>/dev/null || true)")\",\"dest_port\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_port" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "firewall.$ref.target" 2>/dev/null || true)")\"}"
+        index=$((index + 1))
+    done
+    ddns_services=""; index=0
+    while uci -q get "ddns.@service[$index]" >/dev/null 2>&1; do
+        ref="@service[$index]"; [ -n "$ddns_services" ] && ddns_services="$ddns_services,"
+        ddns_services="$ddns_services{\"name\":\"$(json_escape "$(uci -q get "ddns.$ref.lookup_host" 2>/dev/null || uci -q get "ddns.$ref.domain" 2>/dev/null || echo service$index)")\",\"enabled\":$( [ "$(uci -q get "ddns.$ref.enabled" 2>/dev/null || echo 0)" = 1 ] && printf true || printf false ),\"provider\":\"$(json_escape "$(uci -q get "ddns.$ref.service_name" 2>/dev/null || true)")\",\"interface\":\"$(json_escape "$(uci -q get "ddns.$ref.interface" 2>/dev/null || true)")\"}"
+        index=$((index + 1))
+    done
+    upnp_mappings=""; leases_file=""
+    for candidate in /var/run/miniupnpd.leases /tmp/miniupnpd.leases /tmp/upnp.leases; do [ -r "$candidate" ] && leases_file="$candidate" && break; done
+    if [ -n "$leases_file" ]; then
+        while IFS= read -r mapping; do [ -n "$mapping" ] || continue; [ -n "$upnp_mappings" ] && upnp_mappings="$upnp_mappings,"; upnp_mappings="$upnp_mappings\"$(json_escape "$mapping")\""; done <"$leases_file"
+    fi
+    mwan_status="$(command -v mwan3 >/dev/null 2>&1 && mwan3 status 2>/dev/null | tr '\n' ' ' || true)"
+    printf '{"routes":[%s],"firewall_zones":[%s],"firewall_forwardings":[%s],"firewall_rules":[%s],"mwan3":{"service":"%s","status":"%s"},"ddns":{"service":"%s","services":[%s]},"upnp":{"service":"%s","mappings":[%s]}}' "$routes" "$zones" "$forwardings" "$rules" "$(service_state mwan3)" "$(json_escape "$mwan_status")" "$(service_state ddns)" "$ddns_services" "$(service_state miniupnpd)" "$upnp_mappings"
 }
 
 memory_json() {
@@ -209,8 +253,10 @@ network_summary_json() {
         device_name="$(json_get_string "$tmp" "@.interface[$index].l3_device")"
         gateway="$(jsonfilter -i "$tmp" -e "@.interface[$index].route[@.target='0.0.0.0'].nexthop" 2>/dev/null | head -n 1)"
         ip4="$(jsonfilter -i "$tmp" -e "@.interface[$index]['ipv4-address'][*].address" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
+        ip6="$(jsonfilter -i "$tmp" -e "@.interface[$index]['ipv6-address'][*].address" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
         dns="$(jsonfilter -i "$tmp" -e "@.interface[$index]['dns-server'][*]" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
         ipv4_json=""
+        ipv6_json=""
         dns_json=""
         old_ifs="$IFS"
         IFS=','
@@ -219,6 +265,11 @@ network_summary_json() {
             [ -n "$ipv4_json" ] && ipv4_json="$ipv4_json,"
             ipv4_json="$ipv4_json\"$(json_escape "$value")\""
         done
+        for value in $ip6; do
+            [ -n "$value" ] || continue
+            [ -n "$ipv6_json" ] && ipv6_json="$ipv6_json,"
+            ipv6_json="$ipv6_json\"$(json_escape "$value")\""
+        done
         for value in $dns; do
             [ -n "$value" ] || continue
             [ -n "$dns_json" ] && dns_json="$dns_json,"
@@ -226,7 +277,7 @@ network_summary_json() {
         done
         IFS="$old_ifs"
         [ -n "$items" ] && items="$items,"
-        items="$items{\"interface\":\"$(json_escape "$name")\",\"up\":$( [ "$up" = "true" ] && printf true || printf false ),\"proto\":\"$(json_escape "$proto")\",\"device\":\"$(json_escape "$device_name")\",\"ipv4\":[${ipv4_json}],\"gateway\":\"$(json_escape "$gateway")\",\"dns\":[${dns_json}],\"errors\":[]}"
+        items="$items{\"interface\":\"$(json_escape "$name")\",\"up\":$( [ "$up" = "true" ] && printf true || printf false ),\"proto\":\"$(json_escape "$proto")\",\"device\":\"$(json_escape "$device_name")\",\"ipv4\":[${ipv4_json}],\"ipv6\":[${ipv6_json}],\"gateway\":\"$(json_escape "$gateway")\",\"dns\":[${dns_json}],\"errors\":[]}"
         index=$((index + 1))
     done
     rm -f "$tmp"

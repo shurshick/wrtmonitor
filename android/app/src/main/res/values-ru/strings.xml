@@ -314,4 +314,23 @@
     <string name="wifi_stations">Подключённые Wi-Fi-клиенты</string>
     <string name="wifi_command_queued">Настройки Wi-Fi поставлены в очередь</string>
     <string name="save">Сохранить</string>
+    <string name="ipv6_settings">IPv6, RA и DHCPv6</string>
+    <string name="prefix_length">Длина префикса</string>
+    <string name="multiwan_settings">Multi-WAN и failover</string>
+    <string name="primary_wan">Основной WAN</string>
+    <string name="secondary_wan">Резервный WAN</string>
+    <string name="static_routes">Статические маршруты</string>
+    <string name="route_target">Сеть назначения CIDR</string>
+    <string name="route_metric">Метрика</string>
+    <string name="ddns_settings">Динамический DNS</string>
+    <string name="provider">Провайдер</string>
+    <string name="domain">Домен</string>
+    <string name="upnp_settings">UPnP</string>
+    <string name="secure_mode">Безопасный режим</string>
+    <string name="firewall_zone">Зона firewall</string>
+    <string name="zone_networks">Сети зоны</string>
+    <string name="firewall_rule">Правило firewall</string>
+    <string name="source_zone">Исходная зона</string>
+    <string name="destination_zone">Зона назначения</string>
+    <string name="action">Действие</string>
 </resources>

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from ipaddress import IPv4Address, AddressValueError
+from ipaddress import IPv4Address, AddressValueError, ip_address, ip_network
 import re
 from typing import Any, Callable
 from uuid import UUID, uuid4
@@ -133,6 +133,42 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "network.set_ipv6": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.ipv6.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.set_multiwan": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.multiwan.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.set_route": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "network.routes.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.delete_route": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "network.routes.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.set_ddns": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "network.ddns.configure",
+        "requires_confirmation": True,
+        "secret_fields": ["password"],
+    },
+    "network.set_upnp": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "firewall.upnp.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "system.set_hostname": {
         "risk_level": "level_3_reversible_config",
         "capability": "system.set_hostname",
@@ -178,6 +214,30 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
     "firewall.delete_port_forward": {
         "risk_level": "level_4_disruptive",
         "capability": "firewall.port_forward",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.set_zone": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.zones.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.set_forwarding": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.zones.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.set_rule": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.rules.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.delete_rule": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.rules.configure",
         "requires_confirmation": True,
         "secret_fields": [],
     },
@@ -862,6 +922,141 @@ def _normalize_ntp_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {"enabled": payload["enabled"], "servers": servers}
 
 
+def _name(payload: dict[str, Any], key: str = "name") -> str:
+    return _safe_identifier(
+        _require_string(payload, key, max_length=64), key, r"[A-Za-z0-9_.-]+"
+    )
+
+
+def _normalize_ipv6_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    result = {
+        "interface": _safe_identifier(
+            str(payload.get("interface") or "lan"), "interface", r"[A-Za-z0-9_.-]+"
+        ),
+        "enabled": _boolean(payload, "enabled"),
+    }
+    if result["enabled"]:
+        result["assignment_length"] = _integer(payload, "assignment_length", 48, 64)
+        for field in ("ra", "dhcpv6", "ndp"):
+            value = str(payload.get(field) or "server").lower()
+            if value not in {"disabled", "server", "relay", "hybrid"}:
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid IPv6 {field} mode"
+                )
+            result[field] = value
+    return result
+
+
+def _normalize_multiwan_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "enabled": _boolean(payload, "enabled"),
+        "primary_interface": _safe_identifier(
+            str(payload.get("primary_interface") or "wan"),
+            "primary_interface",
+            r"[A-Za-z0-9_.-]+",
+        ),
+        "secondary_interface": _safe_identifier(
+            str(payload.get("secondary_interface") or "wan2"),
+            "secondary_interface",
+            r"[A-Za-z0-9_.-]+",
+        ),
+        "primary_metric": _integer(payload, "primary_metric", 1, 255),
+        "secondary_metric": _integer(payload, "secondary_metric", 1, 255),
+    }
+
+
+def _normalize_route_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    target = _require_string(payload, "target", max_length=64)
+    try:
+        target = str(ip_network(target, strict=False))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid route target") from exc
+    gateway = _optional_string(payload, "gateway")
+    if gateway:
+        try:
+            gateway = str(ip_address(gateway))
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400, detail="Invalid route gateway"
+            ) from exc
+    return {
+        "name": _name(payload),
+        "interface": _safe_identifier(
+            str(payload.get("interface") or "wan"), "interface", r"[A-Za-z0-9_.-]+"
+        ),
+        "target": target,
+        "gateway": gateway or "",
+        "metric": _integer(payload, "metric", 0, 65535, required=False) or 0,
+    }
+
+
+def _normalize_ddns_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": _name(payload),
+        "enabled": _boolean(payload, "enabled"),
+        "provider": _safe_identifier(
+            str(payload.get("provider") or "cloudflare.com-v4"),
+            "provider",
+            r"[A-Za-z0-9_.-]+",
+        ),
+        "domain": _require_string(payload, "domain", max_length=253),
+        "username": _optional_string(payload, "username") or "",
+        "password": _optional_string(payload, "password") or "",
+        "interface": _safe_identifier(
+            str(payload.get("interface") or "wan"), "interface", r"[A-Za-z0-9_.-]+"
+        ),
+    }
+
+
+def _normalize_zone_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    def policy(key: str) -> str:
+        return _safe_identifier(
+            str(payload.get(key) or "REJECT").upper(),
+            key,
+            r"(?:ACCEPT|REJECT|DROP)",
+        )
+
+    return {
+        "name": _name(payload),
+        "networks": [
+            _safe_identifier(v, "networks", r"[A-Za-z0-9_.-]+")
+            for v in _string_list(payload, "networks", required=True)
+        ],
+        "input": policy("input"),
+        "output": policy("output"),
+        "forward": policy("forward"),
+        "masquerade": _boolean(payload, "masquerade", default=False),
+    }
+
+
+def _normalize_forwarding_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "src": _name(payload, "src"),
+        "dest": _name(payload, "dest"),
+        "enabled": _boolean(payload, "enabled"),
+    }
+
+
+def _normalize_firewall_rule_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    protocol = str(payload.get("protocol") or "tcpudp").lower()
+    if protocol not in {"tcp", "udp", "tcpudp", "icmp", "all"}:
+        raise HTTPException(status_code=400, detail="Invalid firewall protocol")
+    target = str(payload.get("target") or "ACCEPT").upper()
+    if target not in {"ACCEPT", "REJECT", "DROP"}:
+        raise HTTPException(status_code=400, detail="Invalid firewall target")
+    return {
+        "name": _name(payload),
+        "src": _name(payload, "src"),
+        "dest": _optional_string(payload, "dest") or "*",
+        "protocol": protocol,
+        "src_ip": _optional_string(payload, "src_ip") or "",
+        "dest_ip": _optional_string(payload, "dest_ip") or "",
+        "src_port": _optional_string(payload, "src_port") or "",
+        "dest_port": _optional_string(payload, "dest_port") or "",
+        "target": target,
+    }
+
+
 def _normalize_diagnostics_payload(payload: dict[str, Any]) -> dict[str, Any]:
     checks = payload.get("checks")
     if checks in (None, [], ()):
@@ -946,6 +1141,29 @@ def validate_command_payload(
         return _normalize_wan_payload(normalized_payload)
     if command_type == "network.set_lan":
         return _normalize_lan_payload(normalized_payload)
+    if command_type == "network.set_ipv6":
+        return _normalize_ipv6_payload(normalized_payload)
+    if command_type == "network.set_multiwan":
+        return _normalize_multiwan_payload(normalized_payload)
+    if command_type == "network.set_route":
+        return _normalize_route_payload(normalized_payload)
+    if command_type == "network.delete_route":
+        return {"name": _name(normalized_payload)}
+    if command_type == "network.set_ddns":
+        return _normalize_ddns_payload(normalized_payload)
+    if command_type == "network.set_upnp":
+        return {
+            "enabled": _boolean(normalized_payload, "enabled"),
+            "secure_mode": _boolean(normalized_payload, "secure_mode", default=True),
+        }
+    if command_type == "firewall.set_zone":
+        return _normalize_zone_payload(normalized_payload)
+    if command_type == "firewall.set_forwarding":
+        return _normalize_forwarding_payload(normalized_payload)
+    if command_type == "firewall.set_rule":
+        return _normalize_firewall_rule_payload(normalized_payload)
+    if command_type == "firewall.delete_rule":
+        return {"name": _name(normalized_payload)}
     if command_type == "system.set_hostname":
         return _normalize_hostname_payload(normalized_payload)
     if command_type == "system.restart_service":
@@ -1120,6 +1338,73 @@ def build_command_payload_from_web_form(
             "ip_address": ip_address,
             "netmask": netmask,
         }
+    elif command_type == "network.set_ipv6":
+        payload = {
+            "interface": interface or "lan",
+            "enabled": enabled.lower() == "true",
+            "assignment_length": limit,
+            "ra": protocol or "server",
+            "dhcpv6": gateway or "server",
+            "ndp": dns or "server",
+        }
+    elif command_type == "network.set_multiwan":
+        payload = {
+            "enabled": enabled.lower() == "true",
+            "primary_interface": interface or "wan",
+            "secondary_interface": name or "wan2",
+            "primary_metric": external_port or "10",
+            "secondary_metric": internal_port or "20",
+        }
+    elif command_type == "network.set_route":
+        payload = {
+            "name": name,
+            "interface": interface or "wan",
+            "target": ip_address,
+            "gateway": gateway,
+            "metric": mtu or "0",
+        }
+    elif command_type == "network.delete_route":
+        payload = {"name": name}
+    elif command_type == "network.set_ddns":
+        payload = {
+            "name": name,
+            "enabled": enabled.lower() == "true",
+            "provider": protocol,
+            "domain": hostname,
+            "username": username,
+            "password": password,
+            "interface": interface or "wan",
+        }
+    elif command_type == "network.set_upnp":
+        payload = {
+            "enabled": enabled.lower() == "true",
+            "secure_mode": blocked.lower() == "true",
+        }
+    elif command_type == "firewall.set_zone":
+        payload = {
+            "name": name,
+            "networks": network,
+            "input": protocol,
+            "output": username,
+            "forward": password,
+            "masquerade": enabled.lower() == "true",
+        }
+    elif command_type == "firewall.set_forwarding":
+        payload = {"src": name, "dest": interface, "enabled": enabled.lower() == "true"}
+    elif command_type == "firewall.set_rule":
+        payload = {
+            "name": name,
+            "src": interface,
+            "dest": network,
+            "protocol": protocol,
+            "src_ip": ip_address,
+            "dest_ip": internal_ip,
+            "src_port": external_port,
+            "dest_port": internal_port,
+            "target": hostname,
+        }
+    elif command_type == "firewall.delete_rule":
+        payload = {"name": name}
     elif command_type == "system.set_hostname":
         payload = {"hostname": hostname}
     elif command_type == "system.restart_service":

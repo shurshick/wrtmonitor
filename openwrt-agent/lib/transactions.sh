@@ -4,8 +4,14 @@ transaction_configs_for_command() {
         wifi.set_schedule) printf 'wireless wrtmonitor' ;;
         wifi.set_guest) printf 'wireless network dhcp firewall' ;;
         network.set_wan|network.set_lan) printf 'network' ;;
+        network.set_ipv6) printf 'network dhcp' ;;
+        network.set_multiwan) printf 'network mwan3' ;;
+        network.set_route|network.delete_route) printf 'network' ;;
+        network.set_ddns) printf 'ddns' ;;
+        network.set_upnp) printf 'upnpd firewall' ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.set_pool|dns.set_servers) printf 'dhcp' ;;
         firewall.set_port_forward|firewall.delete_port_forward|client.set_blocked|client.set_policy) printf 'firewall' ;;
+        firewall.set_zone|firewall.set_forwarding|firewall.set_rule|firewall.delete_rule) printf 'firewall' ;;
         qos.set_sqm) printf 'sqm' ;;
         system.set_hostname|system.set_timezone|system.set_ntp) printf 'system' ;;
         *) return 1 ;;
@@ -105,6 +111,9 @@ transaction_restore() {
     if printf '%s' "$configs" | grep -qw dhcp; then "$(transaction_service dnsmasq)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw firewall; then "$(transaction_service firewall)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw sqm; then "$(transaction_service sqm)" restart >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw mwan3; then "$(transaction_service mwan3)" restart >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw ddns; then "$(transaction_service ddns)" restart >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw upnpd; then "$(transaction_service miniupnpd)" restart >/dev/null 2>&1 || restore_status=1; fi
     transaction_set_state "$command_id" "rolled_back"
     return "$restore_status"
 }

@@ -314,4 +314,23 @@
     <string name="wifi_stations">Connected Wi-Fi clients</string>
     <string name="wifi_command_queued">Wi-Fi configuration queued</string>
     <string name="save">Save</string>
+    <string name="ipv6_settings">IPv6, RA and DHCPv6</string>
+    <string name="prefix_length">Prefix length</string>
+    <string name="multiwan_settings">Multi-WAN and failover</string>
+    <string name="primary_wan">Primary WAN</string>
+    <string name="secondary_wan">Backup WAN</string>
+    <string name="static_routes">Static routes</string>
+    <string name="route_target">Destination CIDR</string>
+    <string name="route_metric">Metric</string>
+    <string name="ddns_settings">Dynamic DNS</string>
+    <string name="provider">Provider</string>
+    <string name="domain">Domain</string>
+    <string name="upnp_settings">UPnP</string>
+    <string name="secure_mode">Secure mode</string>
+    <string name="firewall_zone">Firewall zone</string>
+    <string name="zone_networks">Zone networks</string>
+    <string name="firewall_rule">Firewall rule</string>
+    <string name="source_zone">Source zone</string>
+    <string name="destination_zone">Destination zone</string>
+    <string name="action">Action</string>
 </resources>

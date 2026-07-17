@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.6.0` добавляет расширенное управление Wi-Fi, расписания, roaming, Mesh и telemetry станций. Она обновляется поверх `0.5.x` штатным update-механизмом.
+Версия `0.7.0` добавляет IPv6, Multi-WAN, маршруты, DDNS, UPnP и управление firewall. Она обновляется поверх `0.6.x` штатным update-механизмом.
 
 ## Требования
 
@@ -77,7 +77,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.6.0/wrtmonitor-openwrt-agent-v0.6.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.7.0/wrtmonitor-openwrt-agent-v0.7.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
