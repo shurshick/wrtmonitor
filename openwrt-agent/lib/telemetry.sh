@@ -84,7 +84,10 @@ perimeter_json() {
     if [ -n "$leases_file" ]; then
         while IFS= read -r mapping; do [ -n "$mapping" ] || continue; [ -n "$upnp_mappings" ] && upnp_mappings="$upnp_mappings,"; upnp_mappings="$upnp_mappings\"$(json_escape "$mapping")\""; done <"$leases_file"
     fi
-    mwan_status="$(command -v mwan3 >/dev/null 2>&1 && mwan3 status 2>/dev/null | tr '\n' ' ' || true)"
+    mwan_status=""
+    if command -v mwan3 >/dev/null 2>&1; then
+        mwan_status="$(mwan3 status 2>/dev/null | tr '\n' ' ' || true)"
+    fi
     printf '{"routes":[%s],"firewall_zones":[%s],"firewall_forwardings":[%s],"firewall_rules":[%s],"mwan3":{"service":"%s","status":"%s"},"ddns":{"service":"%s","services":[%s]},"upnp":{"service":"%s","mappings":[%s]}}' "$routes" "$zones" "$forwardings" "$rules" "$(service_state mwan3)" "$(json_escape "$mwan_status")" "$(service_state ddns)" "$ddns_services" "$(service_state miniupnpd)" "$upnp_mappings"
 }
 
