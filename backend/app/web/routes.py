@@ -483,6 +483,7 @@ def device_page(
             "capabilities_groups": capabilities_groups,
             "capabilities_message": capabilities_message,
             "supports": supports,
+            "wifi": wifi,
             "radios": radios,
             "interfaces": interfaces,
             "network_devices": network_devices,
