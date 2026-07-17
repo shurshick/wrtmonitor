@@ -21,7 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.runtime.Composable
@@ -235,7 +235,7 @@ private fun DeviceListCard(
                     online,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.KeyboardArrowRight, null, Modifier.size(20.dp))
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(20.dp))
                     IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(36.dp)) {
                         Icon(Icons.Default.MoreVert, stringResource(R.string.router_actions))
                     }

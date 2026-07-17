@@ -117,6 +117,27 @@ def test_no_basic_bashisms_in_agent_libs():
             assert item not in source
 
 
+def test_management_telemetry_contains_real_router_configuration():
+    telemetry = read_text(LIB_DIR / "telemetry.sh")
+    for field in (
+        "ipv4_details",
+        "netmask",
+        "pools",
+        "zonename",
+        "timezone",
+        "ntp_servers",
+    ):
+        assert field in telemetry
+    assert 'uci -q get "network.$name.netmask"' in telemetry
+    assert 'uci -q get "dhcp.$pool_name.leasetime"' in telemetry
+
+
+def test_guest_network_does_not_use_a_fixed_demo_address():
+    commands = read_text(LIB_DIR / "commands.sh")
+    assert "network.wrtmonitor_guest.ipaddr=192.168.3.1" not in commands
+    assert 'guest_subnet="192.168.$guest_octet.0/24"' in commands
+
+
 def test_smoke_cli_version():
     shell = shell_path()
     if not shell:

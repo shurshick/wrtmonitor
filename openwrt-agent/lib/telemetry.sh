@@ -16,7 +16,7 @@ telemetry_payload() {
         ""|*[!0-9]*) uptime_value="0" ;;
     esac
     load_value="$(json_escape "$load_value")"
-    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"vpn":%s,"maintenance":%s,"agent":%s}}' \
+    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","time":%s,"memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"vpn":%s,"maintenance":%s,"agent":%s}}' \
         "$(device_id)" \
         "$uptime_value" \
         "$load_value" \
@@ -25,6 +25,7 @@ telemetry_payload() {
         "$(json_escape "$(uci -q get system.@system[0].hostname 2>/dev/null || hostname)")" \
         "$(json_escape "$(uname -r 2>/dev/null || true)")" \
         "$(json_escape "$(iso_now)")" \
+        "$(system_time_json)" \
         "$(memory_json)" \
         "$(processes_json)" \
         "$(conntrack_json)" \
@@ -45,6 +46,19 @@ telemetry_payload() {
         "$(vpn_json)" \
         "$(maintenance_json)" \
         "$(agent_status_json)"
+}
+
+system_time_json() {
+    ntp_servers=""
+    for server in $(uci -q get system.ntp.server 2>/dev/null || true); do
+        [ -n "$ntp_servers" ] && ntp_servers="$ntp_servers,"
+        ntp_servers="$ntp_servers\"$(json_escape "$server")\""
+    done
+    printf '{"zonename":"%s","timezone":"%s","ntp_enabled":%s,"ntp_servers":[%s]}' \
+        "$(json_escape "$(uci -q get system.@system[0].zonename 2>/dev/null || true)")" \
+        "$(json_escape "$(uci -q get system.@system[0].timezone 2>/dev/null || true)")" \
+        "$( [ "$(uci -q get system.ntp.enabled 2>/dev/null || echo 0)" = 1 ] && printf true || printf false )" \
+        "$ntp_servers"
 }
 
 maintenance_json() {
@@ -241,6 +255,7 @@ services_json() {
 dhcp_json() {
     leases=""
     static_leases=""
+    pools=""
     lease_file="/tmp/dhcp.leases"
     if [ -r "$lease_file" ]; then
         while IFS=' ' read -r expires mac ip hostname client_id; do
@@ -260,7 +275,17 @@ dhcp_json() {
         fi
         host_index=$((host_index + 1))
     done
-    printf '{"leases":[%s],"static_leases":[%s]}' "$leases" "$static_leases"
+    for pool_name in $(uci -q show dhcp 2>/dev/null | sed -n 's/^dhcp\.\([^.=]*\)=dhcp$/\1/p'); do
+        pool_start="$(uci -q get "dhcp.$pool_name.start" 2>/dev/null || true)"
+        pool_limit="$(uci -q get "dhcp.$pool_name.limit" 2>/dev/null || true)"
+        pool_leasetime="$(uci -q get "dhcp.$pool_name.leasetime" 2>/dev/null || true)"
+        [ -n "$pool_start$pool_limit$pool_leasetime" ] || continue
+        case "$pool_start" in ""|*[!0-9]*) pool_start=0 ;; esac
+        case "$pool_limit" in ""|*[!0-9]*) pool_limit=0 ;; esac
+        [ -n "$pools" ] && pools="$pools,"
+        pools="$pools{\"interface\":\"$(json_escape "$pool_name")\",\"start\":$pool_start,\"limit\":$pool_limit,\"leasetime\":\"$(json_escape "$pool_leasetime")\"}"
+    done
+    printf '{"leases":[%s],"static_leases":[%s],"pools":[%s]}' "$leases" "$static_leases" "$pools"
 }
 
 clients_json() {
@@ -318,6 +343,7 @@ network_summary_json() {
         ip6="$(jsonfilter -i "$tmp" -e "@.interface[$index]['ipv6-address'][*].address" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
         dns="$(jsonfilter -i "$tmp" -e "@.interface[$index]['dns-server'][*]" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
         ipv4_json=""
+        ipv4_details_json=""
         ipv6_json=""
         dns_json=""
         old_ifs="$IFS"
@@ -326,6 +352,16 @@ network_summary_json() {
             [ -n "$value" ] || continue
             [ -n "$ipv4_json" ] && ipv4_json="$ipv4_json,"
             ipv4_json="$ipv4_json\"$(json_escape "$value")\""
+        done
+        address_index=0
+        while true; do
+            address="$(json_get_string "$tmp" "@.interface[$index]['ipv4-address'][$address_index].address")"
+            [ -n "$address" ] || break
+            prefix_length="$(json_get_number "$tmp" "@.interface[$index]['ipv4-address'][$address_index].mask")"
+            case "$prefix_length" in ""|*[!0-9]*) prefix_length="" ;; esac
+            [ -n "$ipv4_details_json" ] && ipv4_details_json="$ipv4_details_json,"
+            ipv4_details_json="$ipv4_details_json{\"address\":\"$(json_escape "$address")\",\"prefix_length\":${prefix_length:-null}}"
+            address_index=$((address_index + 1))
         done
         for value in $ip6; do
             [ -n "$value" ] || continue
@@ -339,7 +375,8 @@ network_summary_json() {
         done
         IFS="$old_ifs"
         [ -n "$items" ] && items="$items,"
-        items="$items{\"interface\":\"$(json_escape "$name")\",\"up\":$( [ "$up" = "true" ] && printf true || printf false ),\"proto\":\"$(json_escape "$proto")\",\"device\":\"$(json_escape "$device_name")\",\"ipv4\":[${ipv4_json}],\"ipv6\":[${ipv6_json}],\"gateway\":\"$(json_escape "$gateway")\",\"dns\":[${dns_json}],\"errors\":[]}"
+        configured_netmask="$(uci -q get "network.$name.netmask" 2>/dev/null || true)"
+        items="$items{\"interface\":\"$(json_escape "$name")\",\"up\":$( [ "$up" = "true" ] && printf true || printf false ),\"proto\":\"$(json_escape "$proto")\",\"device\":\"$(json_escape "$device_name")\",\"ipv4\":[${ipv4_json}],\"ipv4_details\":[${ipv4_details_json}],\"netmask\":\"$(json_escape "$configured_netmask")\",\"ipv6\":[${ipv6_json}],\"gateway\":\"$(json_escape "$gateway")\",\"dns\":[${dns_json}],\"errors\":[]}"
         index=$((index + 1))
     done
     rm -f "$tmp"

@@ -228,6 +228,7 @@
     <string name="timezone_region">Часовой пояс</string>
     <string name="save_time_settings">Сохранить время</string>
     <string name="ntp_servers">NTP-серверы</string>
+    <string name="ntp_sync">Синхронизация NTP</string>
     <string name="apply_ntp">Применить NTP</string>
     <string name="unblock_client">Вернуть доступ в интернет</string>
     <string name="client_access_policy">Доступ и приоритет</string>

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ipaddress import IPv4Network
 from typing import Any
 from uuid import UUID
 
@@ -196,27 +197,70 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
     for item in interfaces:
         if not isinstance(item, dict):
             continue
-        ipv4_addresses = item.get("ipv4-address") or []
-        ipv6_addresses = item.get("ipv6-address") or []
+        ipv4_addresses = (
+            item.get("ipv4_details")
+            or item.get("ipv4-address")
+            or item.get("ipv4")
+            or []
+        )
+        ipv6_addresses = item.get("ipv6-address") or item.get("ipv6") or []
         route = item.get("route") or []
-        dns_servers = item.get("dns-server") or []
+        dns_servers = item.get("dns-server") or item.get("dns") or []
+        normalized_ipv4: list[str] = []
+        normalized_ipv4_details: list[dict[str, Any]] = []
+        for address in ipv4_addresses:
+            if isinstance(address, dict):
+                value = address.get("address")
+                prefix_length = address.get("prefix_length", address.get("mask"))
+                netmask = address.get("netmask")
+            else:
+                value = address
+                prefix_length = None
+                netmask = None
+            if not value:
+                continue
+            value = str(value)
+            try:
+                prefix = int(prefix_length) if prefix_length is not None else None
+            except (TypeError, ValueError):
+                prefix = None
+            if not netmask and prefix is not None and 0 <= prefix <= 32:
+                netmask = str(IPv4Network(f"0.0.0.0/{prefix}").netmask)
+            normalized_ipv4.append(value)
+            normalized_ipv4_details.append(
+                {
+                    "address": value,
+                    "prefix_length": prefix,
+                    "netmask": str(netmask) if netmask else None,
+                }
+            )
+        interface_netmask = item.get("netmask") or next(
+            (
+                address["netmask"]
+                for address in normalized_ipv4_details
+                if address.get("netmask")
+            ),
+            None,
+        )
         normalized_interfaces.append(
             {
                 "interface": item.get("interface") or item.get("name"),
                 "up": bool(item.get("up", False)),
                 "proto": item.get("proto"),
                 "device": item.get("l3_device") or item.get("device"),
-                "ipv4": [
-                    address.get("address")
-                    for address in ipv4_addresses
-                    if isinstance(address, dict) and address.get("address")
-                ],
+                "ipv4": normalized_ipv4,
+                "ipv4_details": normalized_ipv4_details,
+                "netmask": interface_netmask,
                 "ipv6": [
-                    address.get("address")
+                    str(
+                        address.get("address") if isinstance(address, dict) else address
+                    )
                     for address in ipv6_addresses
-                    if isinstance(address, dict) and address.get("address")
+                    if (isinstance(address, dict) and address.get("address"))
+                    or (not isinstance(address, dict) and address)
                 ],
-                "gateway": next(
+                "gateway": item.get("gateway")
+                or next(
                     (
                         entry.get("nexthop")
                         for entry in route
@@ -386,6 +430,7 @@ def normalize_services_summary(payload: dict[str, Any]) -> dict[str, str]:
 def normalize_system_summary(payload: dict[str, Any]) -> dict[str, Any]:
     system = payload.get("system") or {}
     conntrack = system.get("conntrack") or {}
+    time_config = system.get("time") or {}
     return {
         "hostname": system.get("hostname"),
         "kernel": system.get("kernel"),
@@ -396,6 +441,10 @@ def normalize_system_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "load_15m": system.get("load_15m"),
         "conntrack_count": conntrack.get("count"),
         "conntrack_max": conntrack.get("max"),
+        "zonename": time_config.get("zonename"),
+        "timezone": time_config.get("timezone"),
+        "ntp_enabled": bool(time_config.get("ntp_enabled", False)),
+        "ntp_servers": time_config.get("ntp_servers") or [],
         "services": normalize_services_summary(payload),
     }
 

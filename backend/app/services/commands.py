@@ -20,6 +20,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from ..config import APP_VERSION
+from ..management_options import TIMEZONE_BY_NAME
 from ..models import DeviceCommand, DeviceTelemetry
 from .config_transactions import (
     attach_transaction_metadata,
@@ -1040,7 +1041,7 @@ def _normalize_timezone_payload(payload: dict[str, Any]) -> dict[str, Any]:
         r"[A-Za-z0-9_+./-]+",
     )
     timezone = _safe_identifier(
-        _require_string(payload, "timezone", max_length=64),
+        _optional_string(payload, "timezone") or TIMEZONE_BY_NAME.get(zonename, ""),
         "timezone",
         r"[A-Za-z0-9_+,:./<>-]+",
     )
@@ -1092,7 +1093,7 @@ def _normalize_multiwan_payload(payload: dict[str, Any]) -> dict[str, Any]:
             r"[A-Za-z0-9_.-]+",
         ),
         "secondary_interface": _safe_identifier(
-            str(payload.get("secondary_interface") or "wan2"),
+            _require_string(payload, "secondary_interface", max_length=32),
             "secondary_interface",
             r"[A-Za-z0-9_.-]+",
         ),
@@ -1131,7 +1132,7 @@ def _normalize_ddns_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "name": _name(payload),
         "enabled": _boolean(payload, "enabled"),
         "provider": _safe_identifier(
-            str(payload.get("provider") or "cloudflare.com-v4"),
+            _require_string(payload, "provider", max_length=64),
             "provider",
             r"[A-Za-z0-9_.-]+",
         ),
@@ -1240,7 +1241,9 @@ def _normalize_wireguard_peer_payload(payload: dict[str, Any]) -> dict[str, Any]
         raise HTTPException(status_code=400, detail="Invalid WireGuard endpoint port")
     return {
         "interface": _safe_identifier(
-            str(payload.get("interface") or "wg0"), "interface", r"[A-Za-z0-9_.-]+"
+            _require_string(payload, "interface", max_length=32),
+            "interface",
+            r"[A-Za-z0-9_.-]+",
         ),
         "name": _name(payload),
         "public_key": _wireguard_key(payload, "public_key", required=True),
@@ -1502,7 +1505,7 @@ def validate_command_payload(
     if command_type in {"vpn.wireguard.delete_peer", "vpn.wireguard.export_peer"}:
         return {
             "interface": _safe_identifier(
-                str(normalized_payload.get("interface") or "wg0"),
+                _require_string(normalized_payload, "interface", max_length=32),
                 "interface",
                 r"[A-Za-z0-9_.-]+",
             ),
@@ -1755,7 +1758,7 @@ def build_command_payload_from_web_form(
         payload = {
             "enabled": enabled.lower() == "true",
             "primary_interface": interface or "wan",
-            "secondary_interface": name or "wan2",
+            "secondary_interface": name,
             "primary_metric": external_port or "10",
             "secondary_metric": internal_port or "20",
         }
@@ -1815,7 +1818,7 @@ def build_command_payload_from_web_form(
         payload = {"name": name}
     elif command_type == "vpn.wireguard.set_interface":
         payload = {
-            "name": name or interface or "wg0",
+            "name": name or interface,
             "enabled": enabled.lower() == "true",
             "mode": protocol or "server",
             "addresses": ip_address,
@@ -1825,7 +1828,7 @@ def build_command_payload_from_web_form(
         }
     elif command_type == "vpn.wireguard.set_peer":
         payload = {
-            "interface": interface or "wg0",
+            "interface": interface,
             "name": name,
             "public_key": public_key or username,
             "preshared_key": preshared_key or password,
@@ -1835,7 +1838,7 @@ def build_command_payload_from_web_form(
             "route_allowed_ips": enabled.lower() == "true",
         }
     elif command_type in {"vpn.wireguard.delete_peer", "vpn.wireguard.export_peer"}:
-        payload = {"interface": interface or "wg0", "name": name}
+        payload = {"interface": interface, "name": name}
     elif command_type == "vpn.openvpn.set_client":
         payload = {
             "name": name,

@@ -228,6 +228,7 @@
     <string name="timezone_region">Time zone region</string>
     <string name="save_time_settings">Save time settings</string>
     <string name="ntp_servers">NTP servers</string>
+    <string name="ntp_sync">NTP synchronization</string>
     <string name="apply_ntp">Apply NTP</string>
     <string name="unblock_client">Restore internet access</string>
     <string name="client_access_policy">Access and priority</string>

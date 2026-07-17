@@ -45,6 +45,8 @@ import ru.wrtmonitor.app.ui.components.ActionRow
 import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
 import ru.wrtmonitor.app.ui.components.MessageBanner
 import ru.wrtmonitor.app.ui.components.MetricTile
+import ru.wrtmonitor.app.ui.components.MultiOptionSelector
+import ru.wrtmonitor.app.ui.components.OptionSelector
 import ru.wrtmonitor.app.ui.components.PrimaryActionButton
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
@@ -52,12 +54,63 @@ import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.ui.components.TonalActionButton
+import ru.wrtmonitor.app.ui.components.SelectOption
 
 private data class PendingSafeCommand(
     val type: String,
     val payload: JSONObject,
     val successMessage: String = "",
 )
+
+private data class TimezoneOption(val zonename: String, val timezone: String, val label: String)
+
+private val timezoneOptions = listOf(
+    TimezoneOption("UTC", "UTC0", "UTC (UTC+0)"),
+    TimezoneOption("Europe/Kaliningrad", "EET-2", "Europe/Kaliningrad (UTC+2)"),
+    TimezoneOption("Europe/Moscow", "MSK-3", "Europe/Moscow (UTC+3)"),
+    TimezoneOption("Europe/Samara", "<+04>-4", "Europe/Samara (UTC+4)"),
+    TimezoneOption("Asia/Yekaterinburg", "<+05>-5", "Asia/Yekaterinburg (UTC+5)"),
+    TimezoneOption("Asia/Omsk", "<+06>-6", "Asia/Omsk (UTC+6)"),
+    TimezoneOption("Asia/Krasnoyarsk", "<+07>-7", "Asia/Krasnoyarsk (UTC+7)"),
+    TimezoneOption("Asia/Irkutsk", "<+08>-8", "Asia/Irkutsk (UTC+8)"),
+    TimezoneOption("Asia/Yakutsk", "<+09>-9", "Asia/Yakutsk (UTC+9)"),
+    TimezoneOption("Asia/Vladivostok", "<+10>-10", "Asia/Vladivostok (UTC+10)"),
+    TimezoneOption("Asia/Magadan", "<+11>-11", "Asia/Magadan (UTC+11)"),
+    TimezoneOption("Asia/Kamchatka", "<+12>-12", "Asia/Kamchatka (UTC+12)"),
+    TimezoneOption("Europe/London", "GMT0BST,M3.5.0/1,M10.5.0", "Europe/London"),
+    TimezoneOption("Europe/Berlin", "CET-1CEST,M3.5.0,M10.5.0/3", "Europe/Berlin"),
+    TimezoneOption("Europe/Kyiv", "EET-2EEST,M3.5.0/3,M10.5.0/4", "Europe/Kyiv"),
+    TimezoneOption("Asia/Dubai", "<+04>-4", "Asia/Dubai"),
+    TimezoneOption("Asia/Shanghai", "CST-8", "Asia/Shanghai"),
+    TimezoneOption("Asia/Tokyo", "JST-9", "Asia/Tokyo"),
+    TimezoneOption("America/New_York", "EST5EDT,M3.2.0,M11.1.0", "America/New_York"),
+    TimezoneOption("America/Chicago", "CST6CDT,M3.2.0,M11.1.0", "America/Chicago"),
+    TimezoneOption("America/Denver", "MST7MDT,M3.2.0,M11.1.0", "America/Denver"),
+    TimezoneOption("America/Los_Angeles", "PST8PDT,M3.2.0,M11.1.0", "America/Los_Angeles"),
+    TimezoneOption("Australia/Sydney", "AEST-10AEDT,M10.1.0,M4.1.0/3", "Australia/Sydney"),
+)
+
+private val netmaskOptions = (8..30).map { prefix ->
+    val mask = (0xffffffffL shl (32 - prefix) and 0xffffffffL)
+    SelectOption(
+        value = listOf(24, 16, 8, 0).joinToString(".") { shift -> ((mask shr shift) and 0xff).toString() },
+        label = "/$prefix · " + listOf(24, 16, 8, 0).joinToString(".") { shift -> ((mask shr shift) and 0xff).toString() },
+    )
+}
+
+private val weekdayOptions = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun").map { SelectOption(it, it.uppercase()) }
+private val priorityOptions = listOf("low", "normal", "high", "realtime").map { SelectOption(it, it) }
+private val leaseTimeOptions = listOf("30m", "1h", "6h", "12h", "24h", "72h", "168h").map { SelectOption(it, it) }
+private val wanProtocolOptions = listOf("dhcp", "static", "pppoe").map { SelectOption(it, it.uppercase()) }
+private val wifiCountryOptions = listOf("RU", "BY", "KZ", "AM", "AZ", "GE", "KG", "UZ", "DE", "FR", "GB", "IT", "ES", "PL", "NL", "FI", "SE", "NO", "US", "CA", "CN", "JP", "KR", "AU").map { SelectOption(it, it) }
+private val wifiChannelOptions = (
+    listOf("auto") + (1..14).map(Int::toString) +
+        listOf("36", "40", "44", "48", "52", "56", "60", "64", "100", "104", "108", "112", "116", "120", "124", "128", "132", "136", "140", "144", "149", "153", "157", "161", "165")
+    ).map { SelectOption(it, if (it == "auto") "AUTO" else it) }
+private val wifiModeOptions = listOf("HE80", "HE40", "HE20", "VHT160", "VHT80", "VHT40", "VHT20", "HT40", "HT20").map { SelectOption(it, it) }
+private val wifiEncryptionOptions = listOf("sae-mixed", "sae", "psk2", "none").map { SelectOption(it, it) }
+private val ipv6PrefixOptions = listOf("48", "52", "56", "60", "64").map { SelectOption(it, "/$it") }
+private val processSignalOptions = listOf("TERM", "HUP", "INT", "KILL").map { SelectOption(it, it) }
 
 @Composable
 private fun ClientPolicyCard(
@@ -76,8 +129,8 @@ private fun ClientPolicyCard(
     var scheduleEnabled by remember(client.id) { mutableStateOf(schedule.optBoolean("enabled")) }
     var weekdays by remember(client.id) {
         mutableStateOf(schedule.optJSONArray("weekdays")?.let { array ->
-            (0 until array.length()).joinToString(",") { array.optString(it) }
-        }.orEmpty())
+            (0 until array.length()).map { array.optString(it) }.filter(String::isNotBlank).toSet()
+        } ?: emptySet())
     }
     var start by remember(client.id) { mutableStateOf(schedule.optString("start")) }
     var stop by remember(client.id) { mutableStateOf(schedule.optString("stop")) }
@@ -118,13 +171,13 @@ private fun ClientPolicyCard(
                 SwitchSettingRow(stringResource(R.string.block_client), checked = blocked, onCheckedChange = { blocked = it })
                 SwitchSettingRow(stringResource(R.string.access_schedule), checked = scheduleEnabled, onCheckedChange = { scheduleEnabled = it })
                 if (scheduleEnabled) {
-                    OutlinedTextField(weekdays, { weekdays = it }, label = { Text(stringResource(R.string.schedule_weekdays)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    MultiOptionSelector(stringResource(R.string.schedule_weekdays), weekdays, weekdayOptions, { weekdays = it })
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(start, { start = it }, label = { Text(stringResource(R.string.schedule_start)) }, modifier = Modifier.weight(1f), singleLine = true)
                         OutlinedTextField(stop, { stop = it }, label = { Text(stringResource(R.string.schedule_stop)) }, modifier = Modifier.weight(1f), singleLine = true)
                     }
                 }
-                OutlinedTextField(priority, { priority = it }, label = { Text(stringResource(R.string.traffic_priority)) }, supportingText = { Text("low / normal / high / realtime") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OptionSelector(stringResource(R.string.traffic_priority), priority, priorityOptions, { priority = it })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(download, { download = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.download_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
                     OutlinedTextField(upload, { upload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.upload_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
@@ -133,7 +186,7 @@ private fun ClientPolicyCard(
                     label = stringResource(R.string.save_policy),
                     onClick = {
                         val days = JSONArray()
-                        weekdays.split(',').map(String::trim).filter(String::isNotBlank).forEach(days::put)
+                        weekdays.sorted().forEach(days::put)
                         onSave(
                             displayName,
                             profileId,
@@ -219,12 +272,13 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var hostname by remember { mutableStateOf("") }
     var mac by remember { mutableStateOf("") }
     var ip by remember { mutableStateOf("") }
-    var poolStart by remember { mutableStateOf("100") }
-    var poolLimit by remember { mutableStateOf("150") }
-    var leaseTime by remember { mutableStateOf("12h") }
+    var poolStart by remember { mutableStateOf("") }
+    var poolLimit by remember { mutableStateOf("") }
+    var leaseTime by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
+    var dhcpInitialized by remember(device.id) { mutableStateOf(false) }
     val leaseQueuedText = stringResource(R.string.lease_queued)
     val genericQueuedText = stringResource(R.string.command_queued)
 
@@ -232,7 +286,22 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
         scope.launch {
             val api = WrtMonitorApi(serverUrl, accessToken)
             when (val result = withContext(Dispatchers.IO) { api.getLatestTelemetry(device.id) }) {
-                is ApiResult.Success -> telemetry = result.data
+                is ApiResult.Success -> {
+                    telemetry = result.data
+                    if (!dhcpInitialized) {
+                        val pools = result.data.payload?.optJSONObject("dhcp")?.optJSONArray("pools")
+                        val lanPool = pools?.let { array ->
+                            (0 until array.length()).mapNotNull(array::optJSONObject)
+                                .firstOrNull { it.optString("interface") == "lan" }
+                        }
+                        if (lanPool != null) {
+                            poolStart = lanPool.optInt("start").takeIf { it > 0 }?.toString().orEmpty()
+                            poolLimit = lanPool.optInt("limit").takeIf { it > 0 }?.toString().orEmpty()
+                            leaseTime = lanPool.optString("leasetime")
+                        }
+                        dhcpInitialized = true
+                    }
+                }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
                     messageIsError = true
@@ -364,10 +433,11 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
         ) {
             OutlinedTextField(poolStart, { poolStart = it }, label = { Text(stringResource(R.string.pool_start)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(poolLimit, { poolLimit = it }, label = { Text(stringResource(R.string.pool_size)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(leaseTime, { leaseTime = it }, label = { Text(stringResource(R.string.lease_time)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.lease_time), leaseTime, leaseTimeOptions, { leaseTime = it })
             PrimaryActionButton(
                 label = stringResource(R.string.save_dhcp),
                 onClick = { pendingCommand = PendingSafeCommand("dhcp.set_pool", JSONObject().put("interface", "lan").put("start", poolStart).put("limit", poolLimit).put("leasetime", leaseTime), genericQueuedText) },
+                enabled = poolStart.isNotBlank() && poolLimit.isNotBlank() && leaseTime.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             )
         }
@@ -391,17 +461,17 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var enabled by remember { mutableStateOf(true) }
     var channel by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("") }
-    var guestSsid by remember { mutableStateOf("Guest Wi-Fi") }
+    var guestSsid by remember { mutableStateOf("") }
     var guestPassword by remember { mutableStateOf("") }
     var guestEnabled by remember { mutableStateOf(true) }
-    var htmode by remember { mutableStateOf("HE80") }
-    var txpower by remember { mutableStateOf("20") }
+    var htmode by remember { mutableStateOf("") }
+    var txpower by remember { mutableStateOf("") }
     var newSsid by remember { mutableStateOf("") }
-    var newNetwork by remember { mutableStateOf("lan") }
+    var newNetwork by remember { mutableStateOf("") }
     var newEncryption by remember { mutableStateOf("sae-mixed") }
     var newPassword by remember { mutableStateOf("") }
     var scheduleEnabled by remember { mutableStateOf(false) }
-    var scheduleDays by remember { mutableStateOf("mon,tue,wed,thu,fri,sat,sun") }
+    var scheduleDays by remember { mutableStateOf(weekdayOptions.map { it.value }.toSet()) }
     var scheduleStart by remember { mutableStateOf("07:00") }
     var scheduleStop by remember { mutableStateOf("23:00") }
     var meshEnabled by remember { mutableStateOf(false) }
@@ -410,20 +480,32 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
+    var formInitialized by remember(device.id) { mutableStateOf(false) }
 
     val refresh: () -> Unit = {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
                 is ApiResult.Success -> {
                     telemetry = result.data
-                    val radio = firstRadio(result.data)
-                    val iface = firstInterface(result.data)
-                    ssid = iface?.optString("ssid").orEmpty()
-                    enabled = radio?.optBoolean("up", true) ?: true
-                    channel = radio?.optString("channel").orEmpty()
-                    country = radio?.optString("country").orEmpty()
-                    htmode = radio?.optString("htmode").orEmpty().ifBlank { "HE80" }
-                    txpower = radio?.optString("txpower").orEmpty().ifBlank { "20" }
+                    if (!formInitialized) {
+                        val radio = firstRadio(result.data)
+                        val iface = firstInterface(result.data)
+                        ssid = iface?.optString("ssid").orEmpty()
+                        enabled = radio?.optBoolean("up", true) ?: true
+                        channel = radio?.optString("channel").orEmpty()
+                        country = radio?.optString("country").orEmpty()
+                        htmode = radio?.optString("htmode").orEmpty()
+                        txpower = radio?.optString("txpower").orEmpty()
+                        newNetwork = iface?.optString("network").orEmpty()
+                        val schedule = radio?.optJSONObject("schedule")
+                        scheduleEnabled = schedule?.optBoolean("enabled") ?: false
+                        scheduleDays = schedule?.optJSONArray("weekdays")?.let { array ->
+                            (0 until array.length()).map { array.optString(it) }.filter(String::isNotBlank).toSet()
+                        } ?: scheduleDays
+                        scheduleStart = schedule?.optString("start").orEmpty().ifBlank { scheduleStart }
+                        scheduleStop = schedule?.optString("stop").orEmpty().ifBlank { scheduleStop }
+                        formInitialized = true
+                    }
                 }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
@@ -468,6 +550,11 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
 
     val radios = wifi?.optJSONArray("radios") ?: JSONArray()
     val interfaces = radio?.optJSONArray("interfaces") ?: JSONArray()
+    val networkOptions = telemetry?.network?.optJSONArray("interfaces")?.let { array ->
+        (0 until array.length()).mapNotNull(array::optJSONObject)
+            .map { it.optString("interface") }.filter(String::isNotBlank).distinct()
+            .map { SelectOption(it, it) }
+    }.orEmpty()
     RouterPageHeader(
         title = stringResource(R.string.wifi),
         subtitle = stringResource(R.string.wifi_screen_summary),
@@ -523,13 +610,13 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         }
         ExpandableSettingsCard(title = stringResource(R.string.wifi_add_network), summary = newSsid) {
             OutlinedTextField(newSsid, { newSsid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(newNetwork, { newNetwork = it }, label = { Text(stringResource(R.string.wifi_network_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(newEncryption, { newEncryption = it }, label = { Text(stringResource(R.string.wifi_encryption)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.wifi_network_name), newNetwork, networkOptions, { newNetwork = it })
+            OptionSelector(stringResource(R.string.wifi_encryption), newEncryption, wifiEncryptionOptions, { newEncryption = it })
             OutlinedTextField(newPassword, { newPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
             PrimaryActionButton(
                 label = stringResource(R.string.wifi_add_network),
                 onClick = { pendingCommand = PendingSafeCommand("wifi.add_ssid", JSONObject().put("radio", radioId).put("ssid", newSsid).put("network", newNetwork).put("encryption", newEncryption).put("key", newPassword).put("hidden", false).put("isolate", false), wifiToggleQueued) },
-                enabled = newSsid.isNotBlank() && (newEncryption == "none" || newPassword.length >= 8),
+                enabled = newSsid.isNotBlank() && newNetwork.isNotBlank() && (newEncryption == "none" || newPassword.length >= 8),
                 modifier = Modifier.align(Alignment.End),
             )
         }
@@ -537,21 +624,25 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
 
     if (capabilities["wifi.radio.configure"] == true) {
         ExpandableSettingsCard(title = stringResource(R.string.wifi_radio_advanced), summary = listOf(channel, htmode, country).filter(String::isNotBlank).joinToString(" · ")) {
-            OutlinedTextField(channel, { channel = it }, label = { Text(stringResource(R.string.wifi_channel)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(htmode, { htmode = it.uppercase() }, label = { Text(stringResource(R.string.wifi_width_mode)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(country, { country = it.uppercase().take(2) }, label = { Text(stringResource(R.string.wifi_country)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptions, { channel = it })
+            OptionSelector(stringResource(R.string.wifi_width_mode), htmode, wifiModeOptions, { htmode = it })
+            OptionSelector(stringResource(R.string.wifi_country), country, wifiCountryOptions, { country = it })
             OutlinedTextField(txpower, { txpower = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.wifi_txpower)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            PrimaryActionButton(label = stringResource(R.string.save), onClick = { pendingCommand = PendingSafeCommand("wifi.set_radio", JSONObject().put("radio", radioId).put("channel", channel).put("htmode", htmode).put("country", country).put("txpower", txpower.toIntOrNull() ?: 20), wifiToggleQueued) }, modifier = Modifier.align(Alignment.End))
+            PrimaryActionButton(label = stringResource(R.string.save), onClick = {
+                val payload = JSONObject().put("radio", radioId).put("channel", channel).put("htmode", htmode).put("country", country)
+                txpower.toIntOrNull()?.let { payload.put("txpower", it) }
+                pendingCommand = PendingSafeCommand("wifi.set_radio", payload, wifiToggleQueued)
+            }, modifier = Modifier.align(Alignment.End))
         }
     }
 
     if (capabilities["wifi.schedule"] == true) {
         ExpandableSettingsCard(title = stringResource(R.string.wifi_schedule), summary = "$scheduleStart–$scheduleStop") {
             SwitchSettingRow(stringResource(R.string.wifi_schedule), checked = scheduleEnabled, onCheckedChange = { scheduleEnabled = it })
-            OutlinedTextField(scheduleDays, { scheduleDays = it.lowercase() }, label = { Text(stringResource(R.string.wifi_weekdays_hint)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            MultiOptionSelector(stringResource(R.string.wifi_weekdays_hint), scheduleDays, weekdayOptions, { scheduleDays = it })
             OutlinedTextField(scheduleStart, { scheduleStart = it }, label = { Text(stringResource(R.string.wifi_start_time)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(scheduleStop, { scheduleStop = it }, label = { Text(stringResource(R.string.wifi_stop_time)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            PrimaryActionButton(label = stringResource(R.string.save), onClick = { pendingCommand = PendingSafeCommand("wifi.set_schedule", JSONObject().put("radio", radioId).put("enabled", scheduleEnabled).put("weekdays", JSONArray(scheduleDays.split(',').map(String::trim).filter(String::isNotBlank))).put("start", scheduleStart).put("stop", scheduleStop), wifiToggleQueued) }, modifier = Modifier.align(Alignment.End))
+            PrimaryActionButton(label = stringResource(R.string.save), onClick = { pendingCommand = PendingSafeCommand("wifi.set_schedule", JSONObject().put("radio", radioId).put("enabled", scheduleEnabled).put("weekdays", JSONArray(scheduleDays.sorted())).put("start", scheduleStart).put("stop", scheduleStop), wifiToggleQueued) }, modifier = Modifier.align(Alignment.End))
         }
     }
 
@@ -622,7 +713,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             summary = listOf(channel, country).filter(String::isNotBlank).joinToString(" · "),
         ) {
             if (capabilities["wifi.set_channel"] == true) {
-                OutlinedTextField(channel, { channel = it }, label = { Text(stringResource(R.string.wifi_channel)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptions, { channel = it })
                 PrimaryActionButton(
                     label = stringResource(R.string.change_channel),
                     onClick = { pendingCommand = PendingSafeCommand("wifi.set_channel", JSONObject().put("channel", channel).put("radio", radioId), wifiChannelQueued) },
@@ -631,7 +722,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 )
             }
             if (capabilities["wifi.set_country"] == true) {
-                OutlinedTextField(country, { country = it.uppercase().take(2) }, label = { Text(stringResource(R.string.wifi_country)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OptionSelector(stringResource(R.string.wifi_country), country, wifiCountryOptions, { country = it })
                 PrimaryActionButton(
                     label = stringResource(R.string.change_country),
                     onClick = { pendingCommand = PendingSafeCommand("wifi.set_country", JSONObject().put("country", country).put("radio", radioId), wifiCountryQueued) },
@@ -678,36 +769,36 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
-    var interfaceName by remember { mutableStateOf("wan") }
-    var wanProtocol by remember { mutableStateOf("dhcp") }
+    var interfaceName by remember { mutableStateOf("") }
+    var wanProtocol by remember { mutableStateOf("") }
     var wanIp by remember { mutableStateOf("") }
     var wanNetmask by remember { mutableStateOf("") }
     var wanGateway by remember { mutableStateOf("") }
     var wanDns by remember { mutableStateOf("") }
     var wanUsername by remember { mutableStateOf("") }
     var wanPassword by remember { mutableStateOf("") }
-    var lanIp by remember { mutableStateOf("192.168.1.1") }
-    var lanNetmask by remember { mutableStateOf("255.255.255.0") }
-    var dnsServers by remember { mutableStateOf("1.1.1.1, 8.8.8.8") }
+    var lanIp by remember { mutableStateOf("") }
+    var lanNetmask by remember { mutableStateOf("") }
+    var dnsServers by remember { mutableStateOf("") }
     var forwardName by remember { mutableStateOf("") }
     var forwardExternalPort by remember { mutableStateOf("") }
     var forwardInternalIp by remember { mutableStateOf("") }
     var forwardInternalPort by remember { mutableStateOf("") }
     var sqmEnabled by remember { mutableStateOf(true) }
-    var sqmInterface by remember { mutableStateOf("eth1") }
+    var sqmInterface by remember { mutableStateOf("") }
     var sqmDownload by remember { mutableStateOf("") }
     var sqmUpload by remember { mutableStateOf("") }
     var ipv6Enabled by remember { mutableStateOf(true) }
     var ipv6Prefix by remember { mutableStateOf("64") }
     var multiWanEnabled by remember { mutableStateOf(true) }
-    var primaryWan by remember { mutableStateOf("wan") }
-    var secondaryWan by remember { mutableStateOf("wan2") }
+    var primaryWan by remember { mutableStateOf("") }
+    var secondaryWan by remember { mutableStateOf("") }
     var routeName by remember { mutableStateOf("") }
     var routeTarget by remember { mutableStateOf("") }
     var routeGateway by remember { mutableStateOf("") }
     var routeMetric by remember { mutableStateOf("0") }
-    var ddnsName by remember { mutableStateOf("home") }
-    var ddnsProvider by remember { mutableStateOf("cloudflare.com-v4") }
+    var ddnsName by remember { mutableStateOf("") }
+    var ddnsProvider by remember { mutableStateOf("") }
     var ddnsDomain by remember { mutableStateOf("") }
     var ddnsUser by remember { mutableStateOf("") }
     var ddnsPassword by remember { mutableStateOf("") }
@@ -716,29 +807,55 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var zoneNameValue by remember { mutableStateOf("") }
     var zoneNetworks by remember { mutableStateOf("") }
     var ruleNameValue by remember { mutableStateOf("") }
-    var ruleSource by remember { mutableStateOf("wan") }
-    var ruleDestination by remember { mutableStateOf("lan") }
+    var ruleSource by remember { mutableStateOf("") }
+    var ruleDestination by remember { mutableStateOf("") }
     var rulePort by remember { mutableStateOf("") }
-    var wgName by remember { mutableStateOf("wg0") }
-    var wgAddress by remember { mutableStateOf("10.7.0.1/24") }
+    var wgName by remember { mutableStateOf("") }
+    var wgAddress by remember { mutableStateOf("") }
     var wgPort by remember { mutableStateOf("51820") }
     var wgPrivateKey by remember { mutableStateOf("") }
     var wgPeerName by remember { mutableStateOf("") }
     var wgPeerPublicKey by remember { mutableStateOf("") }
     var wgPeerPresharedKey by remember { mutableStateOf("") }
-    var wgPeerAllowedIps by remember { mutableStateOf("10.7.0.2/32") }
+    var wgPeerAllowedIps by remember { mutableStateOf("") }
     var wgPeerEndpoint by remember { mutableStateOf("") }
     var openVpnName by remember { mutableStateOf("") }
     var openVpnConfig by remember { mutableStateOf("") }
     var vpnPolicyName by remember { mutableStateOf("") }
-    var vpnPolicyInterface by remember { mutableStateOf("wg0") }
+    var vpnPolicyInterface by remember { mutableStateOf("") }
     var vpnPolicySource by remember { mutableStateOf("") }
     var vpnPolicyDestination by remember { mutableStateOf("") }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
+    var formInitialized by remember(device.id) { mutableStateOf(false) }
     val refresh: () -> Unit = {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
-                is ApiResult.Success -> telemetry = result.data
+                is ApiResult.Success -> {
+                    telemetry = result.data
+                    if (!formInitialized) {
+                        val items = result.data.network?.optJSONArray("interfaces")
+                        fun findInterface(name: String): JSONObject? = items?.let { array ->
+                            (0 until array.length()).mapNotNull(array::optJSONObject)
+                                .firstOrNull { it.optString("interface") == name }
+                        }
+                        val lan = findInterface("lan")
+                        val wan = findInterface("wan")
+                        lanIp = lan?.optJSONArray("ipv4")?.optString(0).orEmpty()
+                        lanNetmask = lan?.optString("netmask").orEmpty()
+                        wanProtocol = wan?.optString("proto").orEmpty()
+                        wanIp = wan?.optJSONArray("ipv4")?.optString(0).orEmpty()
+                        wanNetmask = wan?.optString("netmask").orEmpty()
+                        wanGateway = wan?.optString("gateway").orEmpty()
+                        wanDns = wan?.optJSONArray("dns")?.let { array ->
+                            (0 until array.length()).joinToString(", ") { array.optString(it) }
+                        }.orEmpty()
+                        dnsServers = wanDns
+                        interfaceName = wan?.optString("interface").orEmpty()
+                        sqmInterface = wan?.optString("device").orEmpty()
+                        primaryWan = wan?.optString("interface").orEmpty()
+                        formInitialized = true
+                    }
+                }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
                     messageIsError = true
@@ -752,6 +869,18 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
         ?: telemetry?.payload?.optJSONObject("network")?.optJSONArray("interfaces")
         ?: telemetry?.payload?.optJSONObject("network")?.optJSONArray("interface")
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
+    val interfaceOptions = interfaces?.let { array ->
+        (0 until array.length()).mapNotNull(array::optJSONObject)
+            .flatMap { listOf(it.optString("interface"), it.optString("device")) }
+            .filter(String::isNotBlank).distinct().map { SelectOption(it, it) }
+    }.orEmpty()
+    val firewallZoneOptions = telemetry?.network?.optJSONArray("firewall_zones")?.let { array ->
+        (0 until array.length()).mapNotNull(array::optJSONObject)
+            .map { it.optString("name") }
+            .filter(String::isNotBlank)
+            .distinct()
+            .map { SelectOption(it, it) }
+    }.orEmpty()
     val vpn = telemetry?.payload?.optJSONObject("vpn")
     val interfacesRequestQueued = stringResource(R.string.interfaces_request_queued)
     val interfaceRestartQueued = stringResource(R.string.interface_restart_queued)
@@ -833,10 +962,10 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
 
     if (capabilities["network.wan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.wan_settings), wanProtocol.uppercase()) {
-            OutlinedTextField(wanProtocol, { wanProtocol = it.lowercase() }, label = { Text(stringResource(R.string.connection_type)) }, supportingText = { Text("dhcp / static / pppoe") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.connection_type), wanProtocol, wanProtocolOptions, { wanProtocol = it })
             if (wanProtocol == "static") {
                 OutlinedTextField(wanIp, { wanIp = it }, label = { Text(stringResource(R.string.ip_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(wanNetmask, { wanNetmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OptionSelector(stringResource(R.string.netmask), wanNetmask, netmaskOptions, { wanNetmask = it })
                 OutlinedTextField(wanGateway, { wanGateway = it }, label = { Text(stringResource(R.string.gateway)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             }
             if (wanProtocol == "pppoe") {
@@ -854,7 +983,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     if (capabilities["network.lan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.lan_settings), "$lanIp · $lanNetmask") {
             OutlinedTextField(lanIp, { lanIp = it }, label = { Text(stringResource(R.string.router_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(lanNetmask, { lanNetmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.netmask), lanNetmask, netmaskOptions, { lanNetmask = it })
             PrimaryActionButton(
                 label = stringResource(R.string.save_lan),
                 onClick = { pendingCommand = PendingSafeCommand("network.set_lan", JSONObject().put("interface", "lan").put("ip_address", lanIp).put("netmask", lanNetmask), genericCommandQueued) },
@@ -875,7 +1004,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     if (capabilities["qos.sqm"] == true) {
         ExpandableSettingsCard(stringResource(R.string.sqm_title), stringResource(R.string.sqm_summary)) {
             SwitchSettingRow(stringResource(R.string.sqm_enabled), checked = sqmEnabled, onCheckedChange = { sqmEnabled = it })
-            OutlinedTextField(sqmInterface, { sqmInterface = it }, label = { Text(stringResource(R.string.sqm_interface)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.sqm_interface), sqmInterface, interfaceOptions, { sqmInterface = it })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(sqmDownload, { sqmDownload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.download_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(sqmUpload, { sqmUpload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.upload_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
@@ -909,15 +1038,15 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     if (capabilities["network.ipv6.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.ipv6_settings), "/$ipv6Prefix") {
             SwitchSettingRow(stringResource(R.string.ipv6_settings), checked = ipv6Enabled, onCheckedChange = { ipv6Enabled = it })
-            OutlinedTextField(ipv6Prefix, { ipv6Prefix = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.prefix_length)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.prefix_length), ipv6Prefix, ipv6PrefixOptions, { ipv6Prefix = it })
             PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_ipv6", JSONObject().put("interface", "lan").put("enabled", ipv6Enabled).put("assignment_length", ipv6Prefix.toIntOrNull() ?: 64).put("ra", "server").put("dhcpv6", "server").put("ndp", "server"), genericCommandQueued) }, Modifier.align(Alignment.End))
         }
     }
     if (capabilities["network.multiwan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.multiwan_settings), "$primaryWan → $secondaryWan") {
             SwitchSettingRow(stringResource(R.string.multiwan_settings), checked = multiWanEnabled, onCheckedChange = { multiWanEnabled = it })
-            OutlinedTextField(primaryWan, { primaryWan = it }, label = { Text(stringResource(R.string.primary_wan)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(secondaryWan, { secondaryWan = it }, label = { Text(stringResource(R.string.secondary_wan)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.primary_wan), primaryWan, interfaceOptions, { primaryWan = it })
+            OptionSelector(stringResource(R.string.secondary_wan), secondaryWan, interfaceOptions, { secondaryWan = it })
             PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_multiwan", JSONObject().put("enabled", multiWanEnabled).put("primary_interface", primaryWan).put("secondary_interface", secondaryWan).put("primary_metric", 10).put("secondary_metric", 20), genericCommandQueued) }, Modifier.align(Alignment.End))
         }
     }
@@ -957,8 +1086,8 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     if (capabilities["firewall.rules.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.firewall_rule), ruleNameValue) {
             OutlinedTextField(ruleNameValue, { ruleNameValue = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(ruleSource, { ruleSource = it }, label = { Text(stringResource(R.string.source_zone)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(ruleDestination, { ruleDestination = it }, label = { Text(stringResource(R.string.destination_zone)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OptionSelector(stringResource(R.string.source_zone), ruleSource, firewallZoneOptions, { ruleSource = it })
+            OptionSelector(stringResource(R.string.destination_zone), ruleDestination, firewallZoneOptions, { ruleDestination = it })
             OutlinedTextField(rulePort, { rulePort = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.internal_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_rule", JSONObject().put("name", ruleNameValue).put("src", ruleSource).put("dest", ruleDestination).put("protocol", "tcpudp").put("dest_port", rulePort).put("target", "ACCEPT"), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()); TextButton({ pendingCommand = PendingSafeCommand("firewall.delete_rule", JSONObject().put("name", ruleNameValue), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()) { Text(stringResource(R.string.delete)) } }
         }
@@ -1010,7 +1139,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     if (capabilities["network.interface_restart"] == true || capabilities["network.restart"] == true) {
         ExpandableSettingsCard(stringResource(R.string.network_maintenance), stringResource(R.string.network_maintenance_summary)) {
             if (capabilities["network.interface_restart"] == true) {
-                OutlinedTextField(interfaceName, { interfaceName = it }, label = { Text(stringResource(R.string.network_interfaces)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OptionSelector(stringResource(R.string.network_interfaces), interfaceName, interfaceOptions, { interfaceName = it })
                 SecondaryActionButton(
                     label = stringResource(R.string.restart_interface),
                     onClick = { pendingCommand = PendingSafeCommand("network.interface_restart", JSONObject().put("interface", interfaceName), interfaceRestartQueued) },
@@ -1049,23 +1178,36 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     var confirmReboot by remember { mutableStateOf(false) }
     var confirmAgentRollback by remember { mutableStateOf(false) }
     var hostnameValue by remember { mutableStateOf("") }
-    var zoneName by remember { mutableStateOf("Europe/Moscow") }
-    var timezoneValue by remember { mutableStateOf("MSK-3") }
-    var ntpServers by remember { mutableStateOf("0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org") }
+    var zoneName by remember { mutableStateOf("") }
+    var timezoneValue by remember { mutableStateOf("") }
+    var ntpEnabled by remember { mutableStateOf(false) }
+    var ntpServers by remember { mutableStateOf("") }
     var packageName by remember { mutableStateOf("") }
     var backupArchive by remember { mutableStateOf("") }
     var firmwareUrl by remember { mutableStateOf("") }
     var firmwareSha256 by remember { mutableStateOf("") }
     var logLines by remember { mutableStateOf("100") }
     var processPid by remember { mutableStateOf("") }
+    var processSignal by remember { mutableStateOf("TERM") }
     var cronContent by remember { mutableStateOf("") }
     var pendingSystemCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
+    var formInitialized by remember(device.id) { mutableStateOf(false) }
     val refresh: () -> Unit = {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
                 is ApiResult.Success -> {
                     telemetry = result.data
                     hostnameValue = result.data.system?.optString("hostname").orEmpty().ifBlank { device.hostname }
+                    if (!formInitialized) {
+                        val time = result.data.system
+                        zoneName = time?.optString("zonename").orEmpty()
+                        timezoneValue = time?.optString("timezone").orEmpty()
+                        ntpEnabled = time?.optBoolean("ntp_enabled", false) ?: false
+                        ntpServers = time?.optJSONArray("ntp_servers")?.let { array ->
+                            (0 until array.length()).joinToString(", ") { array.optString(it) }
+                        }.orEmpty()
+                        formInitialized = true
+                    }
                 }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
@@ -1162,8 +1304,15 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     if (capabilities["system.set_timezone"] == true || capabilities["system.set_ntp"] == true) {
         ExpandableSettingsCard(stringResource(R.string.time_settings), zoneName) {
             if (capabilities["system.set_timezone"] == true) {
-                OutlinedTextField(zoneName, { zoneName = it }, label = { Text(stringResource(R.string.timezone_region)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(timezoneValue, { timezoneValue = it }, label = { Text("POSIX timezone") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OptionSelector(
+                    stringResource(R.string.timezone_region),
+                    zoneName,
+                    timezoneOptions.map { SelectOption(it.zonename, it.label) },
+                    {
+                        zoneName = it
+                        timezoneValue = timezoneOptions.firstOrNull { option -> option.zonename == it }?.timezone.orEmpty()
+                    },
+                )
                 PrimaryActionButton(
                     label = stringResource(R.string.save_time_settings),
                     onClick = { pendingSystemCommand = PendingSafeCommand("system.set_timezone", JSONObject().put("zonename", zoneName).put("timezone", timezoneValue), systemCommandQueued) },
@@ -1172,10 +1321,16 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
             if (capabilities["system.set_ntp"] == true) {
                 HorizontalDivider()
+                SwitchSettingRow(
+                    stringResource(R.string.ntp_sync),
+                    checked = ntpEnabled,
+                    onCheckedChange = { ntpEnabled = it },
+                )
                 OutlinedTextField(ntpServers, { ntpServers = it }, label = { Text(stringResource(R.string.ntp_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 PrimaryActionButton(
                     label = stringResource(R.string.apply_ntp),
-                    onClick = { pendingSystemCommand = PendingSafeCommand("system.set_ntp", JSONObject().put("enabled", true).put("servers", ntpServers), systemCommandQueued) },
+                    onClick = { pendingSystemCommand = PendingSafeCommand("system.set_ntp", JSONObject().put("enabled", ntpEnabled).put("servers", ntpServers), systemCommandQueued) },
+                    enabled = !ntpEnabled || ntpServers.isNotBlank(),
                     modifier = Modifier.align(Alignment.End),
                 )
             }
@@ -1232,7 +1387,8 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
             if (capabilities["maintenance.processes"] == true) {
                 OutlinedTextField(processPid, { processPid = it.filter(Char::isDigit) }, label = { Text("PID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                SecondaryActionButton(stringResource(R.string.terminate_process), { pendingSystemCommand = PendingSafeCommand("maintenance.process.signal", JSONObject().put("pid", processPid.toIntOrNull() ?: 0).put("signal", "TERM"), systemCommandQueued) }, enabled = (processPid.toIntOrNull() ?: 0) > 1)
+                OptionSelector("Signal", processSignal, processSignalOptions, { processSignal = it })
+                SecondaryActionButton(stringResource(R.string.terminate_process), { pendingSystemCommand = PendingSafeCommand("maintenance.process.signal", JSONObject().put("pid", processPid.toIntOrNull() ?: 0).put("signal", processSignal), systemCommandQueued) }, enabled = (processPid.toIntOrNull() ?: 0) > 1)
             }
             if (capabilities["maintenance.cron"] == true) {
                 OutlinedTextField(cronContent, { cronContent = it }, label = { Text(stringResource(R.string.root_crontab)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)

@@ -24,16 +24,16 @@ GET /api/v1/devices/{device_id}/telemetry/latest
 
 OpenWrt agent собирает:
 
-- `system`: uptime, load 1/5/15, память, hostname, kernel, conntrack, сервисы и `ubus system info`;
+- `system`: uptime, load 1/5/15, память, hostname, kernel, conntrack, сервисы, часовой пояс, NTP и `ubus system info`;
 - `board`: `ubus system board`;
-- `network`: интерфейсы, адреса, gateway, DNS, устройства и traffic;
+- `network`: интерфейсы, IPv4 с длиной префикса и маской, IPv6, gateway, DNS, устройства и traffic;
 - `wifi`: multi-radio snapshot, SSID, channel, country, htmode и параметры интерфейсов;
 - `clients`: DHCP leases, neighbour table и, при наличии `nlbwmon`, RX/TX по MAC;
-- `dhcp`: динамические и статические leases;
+- `dhcp`: динамические и статические leases, реальные границы и срок аренды DHCP-пулов;
 - `agent`: версия, update status, interval и capabilities.
 - `vpn`: WireGuard-интерфейсы и peer, handshake/RX/TX, OpenVPN profiles и правила PBR без приватных ключей.
 
-`schema_version=2` остаётся форматом telemetry; capability report в `v0.10.1` имеет версию 10. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество пакетов и обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки.
+`schema_version=2` остаётся форматом telemetry; capability report в `v0.10.2` имеет версию 10. Сервер принимает как текущий компактный формат агента, так и прежний ответ `ubus`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество пакетов и обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки.
 
 Retention: сервер хранит последние 100 telemetry snapshots на устройство. Старые snapshots удаляются после успешного ingest.
 

@@ -816,16 +816,30 @@ execute_command() {
         wifi.set_guest)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
             [ -n "$guest_radio" ] || guest_radio="$(resolve_wifi_radio "" || true)"; [ -n "$guest_radio" ] || guest_radio="radio0"
+            guest_ip="$(uci -q get network.wrtmonitor_guest.ipaddr 2>/dev/null || true)"
+            if [ -z "$guest_ip" ]; then
+                guest_octet=2
+                while [ "$guest_octet" -le 254 ]; do
+                    guest_subnet="192.168.$guest_octet.0/24"
+                    if ! ip -4 route show 2>/dev/null | grep -Fq "$guest_subnet" \
+                        && ! uci -q show network 2>/dev/null | grep -Fq "192.168.$guest_octet."; then
+                        guest_ip="192.168.$guest_octet.1"
+                        break
+                    fi
+                    guest_octet=$((guest_octet + 1))
+                done
+            fi
             wireless_backup="$(backup_config wireless "$command_id" "$command_type" || true)"; network_backup="$(backup_config network "$command_id" "$command_type" || true)"; dhcp_backup="$(backup_config dhcp "$command_id" "$command_type" || true)"; firewall_backup="$(backup_config firewall "$command_id" "$command_type" || true)"
-            if [ -z "$wireless_backup" ] || [ -z "$network_backup" ] || [ -z "$dhcp_backup" ] || [ -z "$firewall_backup" ]; then status="failed"; result="$(command_failed_result "failed to create guest network backups")"
+            if [ -z "$guest_ip" ]; then status="failed"; result="$(command_failed_result "no unused guest subnet is available")"
+            elif [ -z "$wireless_backup" ] || [ -z "$network_backup" ] || [ -z "$dhcp_backup" ] || [ -z "$firewall_backup" ]; then status="failed"; result="$(command_failed_result "failed to create guest network backups")"
             else
-                uci set network.wrtmonitor_guest=interface; uci set network.wrtmonitor_guest.proto=static; uci set network.wrtmonitor_guest.ipaddr=192.168.3.1; uci set network.wrtmonitor_guest.netmask=255.255.255.0
+                uci set network.wrtmonitor_guest=interface; uci set network.wrtmonitor_guest.proto=static; uci set "network.wrtmonitor_guest.ipaddr=$guest_ip"; uci set network.wrtmonitor_guest.netmask=255.255.255.0
                 uci set dhcp.wrtmonitor_guest=dhcp; uci set dhcp.wrtmonitor_guest.interface=wrtmonitor_guest; uci set dhcp.wrtmonitor_guest.start=100; uci set dhcp.wrtmonitor_guest.limit=150; uci set dhcp.wrtmonitor_guest.leasetime=12h
                 uci set firewall.wrtmonitor_guest=zone; uci set firewall.wrtmonitor_guest.name=wrtmonitor_guest; uci add_list firewall.wrtmonitor_guest.network=wrtmonitor_guest; uci set firewall.wrtmonitor_guest.input=REJECT; uci set firewall.wrtmonitor_guest.output=ACCEPT; uci set firewall.wrtmonitor_guest.forward=REJECT
                 uci set firewall.wrtmonitor_guest_forward=forwarding; uci set firewall.wrtmonitor_guest_forward.src=wrtmonitor_guest; uci set firewall.wrtmonitor_guest_forward.dest=wan
                 uci set wireless.wrtmonitor_guest=wifi-iface; uci set wireless.wrtmonitor_guest.device="$guest_radio"; uci set wireless.wrtmonitor_guest.network=wrtmonitor_guest; uci set wireless.wrtmonitor_guest.mode=ap; uci set wireless.wrtmonitor_guest.isolate=1
                 if [ "$guest_enabled" = "true" ]; then uci set wireless.wrtmonitor_guest.disabled=0; uci set wireless.wrtmonitor_guest.ssid="$guest_ssid"; uci set wireless.wrtmonitor_guest.encryption=psk2; uci set wireless.wrtmonitor_guest.key="$guest_password"; else uci set wireless.wrtmonitor_guest.disabled=1; fi
-                if uci commit network && uci commit dhcp && uci commit firewall && uci commit wireless; then result="$(command_success_result "guest Wi-Fi configuration saved")"; (sleep 2; /etc/init.d/network restart; /etc/init.d/dnsmasq restart; /etc/init.d/firewall reload; wifi reload) >/dev/null 2>&1 & else status="failed"; result="$(command_failed_result "failed to configure guest Wi-Fi")"; fi
+                if uci commit network && uci commit dhcp && uci commit firewall && uci commit wireless; then result="$(command_success_result "guest Wi-Fi configuration saved" "\"gateway\":\"$(json_escape "$guest_ip")\"")"; (sleep 2; /etc/init.d/network restart; /etc/init.d/dnsmasq restart; /etc/init.d/firewall reload; wifi reload) >/dev/null 2>&1 & else status="failed"; result="$(command_failed_result "failed to configure guest Wi-Fi")"; fi
             fi
             ;;
         system.set_timezone)

@@ -20,6 +20,12 @@ from sqlalchemy.orm import Session
 
 from ..config import APP_NAME, APP_VERSION, Settings
 from ..db import get_db
+from ..management_options import (
+    NETMASK_OPTIONS,
+    TIMEZONE_OPTIONS,
+    WIFI_CHANNELS,
+    WIFI_COUNTRIES,
+)
 from ..models import (
     AuditLog,
     ClientProfile,
@@ -534,6 +540,7 @@ def device_page(
     vpn = normalize_vpn_summary(payload)
     telemetry_clients = normalize_clients_summary(payload)
     maintenance = normalize_maintenance_summary(payload)
+    dhcp_config = payload.get("dhcp") or {}
     registry_clients = db.scalars(
         select(NetworkClient)
         .where(NetworkClient.device_id == device_id)
@@ -550,6 +557,38 @@ def device_page(
     network_devices = payload.get("network_devices") or {}
     radios = wifi.get("radios") or []
     interfaces = network.get("interfaces") or []
+    lan_interface = next(
+        (item for item in interfaces if item.get("interface") == "lan"), {}
+    )
+    wan_interface = next(
+        (item for item in interfaces if item.get("interface") == "wan"), {}
+    )
+    interface_options = sorted(
+        {
+            str(value)
+            for item in interfaces
+            for value in (item.get("interface"), item.get("device"))
+            if value
+        }
+    )
+    network_options = sorted(
+        {str(item.get("interface")) for item in interfaces if item.get("interface")}
+    )
+    firewall_zone_options = sorted(
+        {
+            str(item.get("name"))
+            for item in network.get("firewall_zones") or []
+            if item.get("name")
+        }
+    )
+    lan_dhcp_pool = next(
+        (
+            item
+            for item in dhcp_config.get("pools") or []
+            if isinstance(item, dict) and item.get("interface") == "lan"
+        ),
+        {},
+    )
     capabilities = agent.get("capabilities") or {}
     capability_details = agent.get("capability_details") or {}
     capabilities_summary = capability_summary(capabilities)
@@ -705,6 +744,17 @@ def device_page(
             "wifi": wifi,
             "radios": radios,
             "interfaces": interfaces,
+            "lan_interface": lan_interface,
+            "wan_interface": wan_interface,
+            "interface_options": interface_options,
+            "network_options": network_options,
+            "lan_dhcp_pool": lan_dhcp_pool,
+            "firewall_zone_options": firewall_zone_options,
+            "netmask_options": NETMASK_OPTIONS,
+            "timezone_options": TIMEZONE_OPTIONS,
+            "timezone_names": {item[0] for item in TIMEZONE_OPTIONS},
+            "wifi_countries": WIFI_COUNTRIES,
+            "wifi_channels": WIFI_CHANNELS,
             "network": network,
             "vpn": vpn,
             "network_devices": network_devices,
