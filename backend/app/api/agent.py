@@ -5,14 +5,16 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..config import Settings
 from ..db import get_db
 from ..models import Device, DeviceCommand
 from ..services.audit import audit
-from ..services.auth import device_from_token
+from ..services.auth import device_from_token, settings
 from ..schemas import AgentRegisterRequest, CommandResultRequest
 from ..security import hash_token
 from ..services.commands import (
     TERMINAL_STATUSES,
+    cleanup_device_command_history,
     expire_old_commands,
     requeue_stale_sent_commands,
 )
@@ -73,6 +75,7 @@ def command_result(
     command_id: UUID,
     payload: CommandResultRequest,
     authorization: str | None = Header(default=None),
+    config: Settings = Depends(settings),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     device = device_from_token(authorization, db)
@@ -119,5 +122,12 @@ def command_result(
         str(command.id),
         {"status": command.status},
     )
+    if command.status in TERMINAL_STATUSES:
+        cleanup_device_command_history(
+            db,
+            device.id,
+            config.command_history_retention_days,
+            config.command_history_max_per_device,
+        )
     db.commit()
     return {"status": command.status}

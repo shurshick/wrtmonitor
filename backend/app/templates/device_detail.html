@@ -25,7 +25,7 @@
         <div class="device-header__title-row"><h1>{{ device.name or device.hostname or 'Роутер' }}</h1><span class="status status--{{ device.status|lower }}">{{ device.status|status_label }}</span></div>
         <p class="device-meta">{{ device.firmware or 'Прошивка не определена' }} · Последняя связь {{ latest }}</p>
       </div>
-      <a class="button button--secondary" href="/devices/{{ device.id }}?section={{ section }}">Обновить</a>
+      <a class="button button--secondary" href="/devices/{{ device.id }}?section={{ section }}{% if section == 'management' %}&command_page={{ command_pagination.page }}{% endif %}">Обновить</a>
     </header>
 
     {% if section == 'overview' %}

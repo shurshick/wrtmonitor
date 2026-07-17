@@ -194,13 +194,15 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .router-card__action { display: flex; align-items: center; padding: 12px; border-left: 1px solid var(--border); }
 
 .command-list { display: grid; gap: 8px; }
-.command-item { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
+.command-item { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
 .command-item__main, .command-item__meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .command-item__main { justify-content: space-between; }
 .command-item__main code { color: #bceaf3; font-size: 13px; font-weight: 700; }
 .command-item__meta { color: var(--muted); font-size: 12px; }
 .command-item details summary, .debug-panel summary { color: var(--primary); cursor: pointer; font-weight: 700; }
 .command-item pre { margin-top: 10px; padding: 10px; background: #090f17; border-radius: 5px; }
+.command-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; color: var(--muted); font-size: 12px; }
+.command-pagination nav { display: flex; align-items: center; gap: 9px; }
 .debug-panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--surface-muted); }
 .debug-panel .raw-telemetry { margin-top: 14px; }
 .danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px; border: 1px solid #66343b; border-radius: var(--radius); background: #211419; }
@@ -420,4 +422,5 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .inline-actions form, .inline-actions label { width: 100%; }
   .inline-actions button { align-self: flex-start; }
   .settings-panel > summary { align-items: flex-start; }
+  .command-pagination { align-items: flex-start; flex-direction: column; }
 }

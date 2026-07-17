@@ -337,6 +337,12 @@ def test_device_page_renders_agent_update_status(monkeypatch):
                 return FakeScalars([telemetry])
             return FakeScalars([])
 
+        def scalar(self, statement):
+            return 0
+
+        def commit(self):
+            return None
+
     def fake_db():
         yield FakeSession()
 
@@ -347,6 +353,7 @@ def test_device_page_renders_agent_update_status(monkeypatch):
     monkeypatch.setattr(
         main, "get_user_device_or_404", lambda db, user, device_id: device
     )
+    monkeypatch.setattr(main, "cleanup_device_command_history", lambda *args: 0)
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
     client.cookies.set("wrtmonitor_session", "token")
@@ -406,6 +413,12 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
                 return FakeScalars([telemetry])
             return FakeScalars([])
 
+        def scalar(self, statement):
+            return 0
+
+        def commit(self):
+            return None
+
     def fake_db():
         yield FakeSession()
 
@@ -416,6 +429,7 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
     monkeypatch.setattr(
         main, "get_user_device_or_404", lambda db, user, device_id: device
     )
+    monkeypatch.setattr(main, "cleanup_device_command_history", lambda *args: 0)
     monkeypatch.setattr(
         main,
         "device_supports",

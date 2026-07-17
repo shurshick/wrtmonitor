@@ -33,6 +33,8 @@ services:
       WRTMONITOR_ALLOW_INSECURE_LOCAL: "false"
       WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "false"
       WRTMONITOR_ENABLE_API_DOCS: "false"
+      WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS: 30
+      WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE: 500
     volumes:
       - wrtmonitor_backups:/backups
     healthcheck:

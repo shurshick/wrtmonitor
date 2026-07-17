@@ -15,7 +15,7 @@ from fastapi.responses import (
     Response,
 )
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..config import APP_NAME, APP_VERSION, Settings
@@ -40,6 +40,7 @@ from ..schemas import SetupRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
     build_command_payload_from_web_form,
+    cleanup_device_command_history,
     command_history_entry,
     create_device_command,
     validate_command_request,
@@ -512,6 +513,7 @@ def device_page(
     request: Request,
     device_id: UUID,
     section: str = "overview",
+    command_page: int = 1,
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
     wrtmonitor_session: str | None = Cookie(default=None),
@@ -658,13 +660,46 @@ def device_page(
         "maintenance_bundle": has("maintenance.diagnostics.bundle"),
         "maintenance_recovery": has("maintenance.recovery"),
     }
+    cleanup_device_command_history(
+        db,
+        device_id,
+        config.command_history_retention_days,
+        config.command_history_max_per_device,
+    )
+    command_page_size = 5
+    command_total = int(
+        db.scalar(
+            select(func.count(DeviceCommand.id)).where(
+                DeviceCommand.device_id == device_id
+            )
+        )
+        or 0
+    )
+    command_pages = max(1, (command_total + command_page_size - 1) // command_page_size)
+    command_page = min(max(command_page, 1), command_pages)
     commands = db.scalars(
         select(DeviceCommand)
         .where(DeviceCommand.device_id == device_id)
         .order_by(DeviceCommand.created_at.desc())
-        .limit(10)
+        .offset((command_page - 1) * command_page_size)
+        .limit(command_page_size)
     ).all()
     command_entries = [command_history_entry(command) for command in commands]
+    support_commands = db.scalars(
+        select(DeviceCommand)
+        .where(
+            DeviceCommand.device_id == device_id,
+            DeviceCommand.command_type.in_(
+                (
+                    "diagnostics.run",
+                    "maintenance.backup.create",
+                    "maintenance.diagnostics.bundle",
+                )
+            ),
+        )
+        .order_by(DeviceCommand.created_at.desc())
+        .limit(20)
+    ).all()
     download_artifacts = [
         {
             "id": str(command.id),
@@ -675,7 +710,7 @@ def device_page(
             if command.command_type == "maintenance.backup.create"
             else "Скачать диагностический архив",
         }
-        for command in commands
+        for command in support_commands
         if command.status == "success"
         and isinstance(command.result, dict)
         and (
@@ -685,12 +720,13 @@ def device_page(
     latest_diagnostics = next(
         (
             command
-            for command in command_entries
+            for command in (command_history_entry(item) for item in support_commands)
             if command["command_type"] == "diagnostics.run"
         ),
         None,
     )
     latest = format_timestamp(telemetry.created_at) if telemetry else "нет данных"
+    db.commit()
 
     age = (
         max(0, int((datetime.now(UTC) - telemetry.created_at).total_seconds()))
@@ -768,6 +804,18 @@ def device_page(
             "services": services,
             "maintenance": maintenance,
             "commands": command_entries,
+            "command_pagination": {
+                "page": command_page,
+                "pages": command_pages,
+                "total": command_total,
+                "page_size": command_page_size,
+                "start": (command_page - 1) * command_page_size + 1
+                if command_total
+                else 0,
+                "end": min(command_page * command_page_size, command_total),
+                "retention_days": config.command_history_retention_days,
+                "max_per_device": config.command_history_max_per_device,
+            },
             "download_artifacts": download_artifacts,
             "latest_diagnostics": latest_diagnostics,
             "raw_telemetry": json.dumps(payload, ensure_ascii=False, indent=2),

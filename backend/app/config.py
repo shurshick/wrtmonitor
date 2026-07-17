@@ -33,6 +33,8 @@ class Settings:
     allow_insecure_dev_defaults: bool
     enable_api_docs: bool
     telemetry_retention_per_device: int = 100
+    command_history_retention_days: int = 30
+    command_history_max_per_device: int = 500
 
 
 def bool_from_env(value: str | None, default: bool = False) -> bool:
@@ -132,5 +134,11 @@ def load_settings() -> Settings:
         enable_api_docs=bool_from_env(os.getenv("WRTMONITOR_ENABLE_API_DOCS"), False),
         telemetry_retention_per_device=max(
             1, int(os.getenv("WRTMONITOR_TELEMETRY_RETENTION_PER_DEVICE", "100"))
+        ),
+        command_history_retention_days=max(
+            1, int(os.getenv("WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS", "30"))
+        ),
+        command_history_max_per_device=max(
+            10, int(os.getenv("WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE", "500"))
         ),
     )

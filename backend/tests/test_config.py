@@ -91,3 +91,13 @@ def test_access_and_refresh_tokens_are_not_interchangeable():
         decode_access_token(refresh, config)
     with pytest.raises(Exception):
         decode_refresh_token(access, config)
+
+
+def test_command_history_retention_is_configurable(monkeypatch):
+    monkeypatch.setenv("WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS", "14")
+    monkeypatch.setenv("WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE", "250")
+
+    config = load_settings()
+
+    assert config.command_history_retention_days == 14
+    assert config.command_history_max_per_device == 250

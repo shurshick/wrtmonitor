@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.10.2` сохраняет capability schema 10 и добавляет передачу фактического LAN IPv4/префикса/маски, DHCP-пула, часового пояса и NTP. После обновления сервера агент обновляется обычной кнопкой; переустановка не нужна.
+Версия `0.10.3` сохраняет capability schema 10 и передачу фактического LAN IPv4/префикса/маски, DHCP-пула, часового пояса и NTP. После обновления сервера агент обновляется обычной кнопкой; переустановка не нужна.
 
 ## Требования
 
@@ -78,7 +78,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.10.2/wrtmonitor-openwrt-agent-v0.10.2.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.10.3/wrtmonitor-openwrt-agent-v0.10.3.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -183,7 +183,7 @@ wrtmonitor-agent diagnostics --json
 
 ## Обслуживание роутера
 
-Команды `v0.10.2` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
+Команды `v0.10.3` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
 
 - обновление каталога, установка и удаление `opkg`-пакетов;
 - создание и восстановление штатного backup OpenWrt;

@@ -1,6 +1,6 @@
 # Развёртывание серверной части
 
-Документ актуален для `WrtMonitor v0.10.2`.
+Документ актуален для `WrtMonitor v0.10.3`.
 
 ## Перед первым запуском
 
@@ -32,15 +32,20 @@ POSTGRES_USER=wrtmonitor
 WRTMONITOR_ALLOW_INSECURE_LOCAL=false
 WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS=false
 WRTMONITOR_ENABLE_API_DOCS=false
+WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS=30
+WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE=500
 ```
+
+Завершённые команды автоматически удаляются после указанного срока или при
+превышении лимита на роутер. Активные команды очистка не затрагивает.
 
 ## TrueNAS Custom App
 
-1. Откройте релиз `v0.10.2`.
+1. Откройте релиз `v0.10.3`.
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-v0.10.2.yaml
+   wrtmonitor-truenas-v0.10.3.yaml
    ```
 
 3. При необходимости скачайте и проверьте `SHA256SUMS.txt`.

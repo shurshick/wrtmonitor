@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..config import Settings
 from ..db import get_db
 from ..models import DeviceCommand, User
 from ..services.audit import audit
-from ..services.auth import current_user
+from ..services.auth import current_user, settings
 from ..services.devices import (
     device_supports,
     get_user_device_or_404,
@@ -18,6 +19,7 @@ from ..services.devices import (
 from ..schemas import CommandCreateRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
+    cleanup_device_command_history,
     command_history_entry,
     create_device_command,
     expire_old_commands,
@@ -128,17 +130,27 @@ def disconnect_device(
 def list_device_commands(
     device_id: UUID,
     limit: int = 20,
+    offset: int = 0,
     status: str | None = None,
     user: User = Depends(current_user),
+    config: Settings = Depends(settings),
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     get_user_device_or_404(db, user, device_id)
     expire_old_commands(db)
+    cleanup_device_command_history(
+        db,
+        device_id,
+        config.command_history_retention_days,
+        config.command_history_max_per_device,
+    )
     query = select(DeviceCommand).where(DeviceCommand.device_id == device_id)
     if status:
         query = query.where(DeviceCommand.status == status)
     commands = db.scalars(
-        query.order_by(DeviceCommand.created_at.desc()).limit(min(max(limit, 1), 100))
+        query.order_by(DeviceCommand.created_at.desc())
+        .offset(max(offset, 0))
+        .limit(min(max(limit, 1), 100))
     ).all()
     db.commit()
 

@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.orm import Session
 
 from ..config import APP_VERSION
@@ -2100,6 +2100,43 @@ def expire_old_commands(db: Session) -> int:
         )
     )
     return int(result.rowcount or 0)
+
+
+def cleanup_device_command_history(
+    db: Session,
+    device_id: UUID,
+    retention_days: int,
+    max_per_device: int,
+) -> int:
+    """Remove old terminal commands without touching active lifecycle records."""
+    cutoff = now_utc() - timedelta(days=max(1, retention_days))
+    terminal_statuses = tuple(TERMINAL_STATUSES)
+    removed_by_age = db.execute(
+        delete(DeviceCommand).where(
+            DeviceCommand.device_id == device_id,
+            DeviceCommand.status.in_(terminal_statuses),
+            or_(
+                DeviceCommand.completed_at < cutoff,
+                and_(
+                    DeviceCommand.completed_at.is_(None),
+                    DeviceCommand.updated_at < cutoff,
+                ),
+            ),
+        )
+    )
+    overflow_ids = (
+        select(DeviceCommand.id)
+        .where(
+            DeviceCommand.device_id == device_id,
+            DeviceCommand.status.in_(terminal_statuses),
+        )
+        .order_by(DeviceCommand.created_at.desc(), DeviceCommand.id.desc())
+        .offset(max(10, max_per_device))
+    )
+    removed_overflow = db.execute(
+        delete(DeviceCommand).where(DeviceCommand.id.in_(overflow_ids))
+    )
+    return int(removed_by_age.rowcount or 0) + int(removed_overflow.rowcount or 0)
 
 
 def requeue_stale_sent_commands(db: Session) -> int:
