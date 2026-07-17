@@ -4,8 +4,8 @@
 <div class="network-summary">
   <div><span>Интернет</span><strong class="state-text {{ 'is-online' if ns.wan and ns.wan.up else 'is-offline' }}">{{ 'Подключён' if ns.wan and ns.wan.up else 'Нет подключения' }}</strong></div>
   <div><span>Внешний адрес</span><strong>{{ ns.wan.ipv4|join(', ') if ns.wan and ns.wan.ipv4 else 'не получен' }}</strong></div>
-  <div><span>Получено</span><strong>{{ traffic.rx_bytes|bytes }}</strong></div>
-  <div><span>Отправлено</span><strong>{{ traffic.tx_bytes|bytes }}</strong></div>
+  <div><span>Получено</span><strong>{{ traffic.get('rx_bytes')|bytes }}</strong></div>
+  <div><span>Отправлено</span><strong>{{ traffic.get('tx_bytes')|bytes }}</strong></div>
 </div>
 
 {% if supports.network_ipv6 or supports.network_multiwan or supports.network_routes or supports.network_ddns or supports.firewall_zones or supports.firewall_rules or supports.firewall_upnp %}
