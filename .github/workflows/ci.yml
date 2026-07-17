@@ -168,7 +168,8 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew :android:app:assembleRelease
       - name: Verify Android signature
-        run: "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android/app/build/outputs/apk/release/app-release.apk
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android/app/build/outputs/apk/release/app-release.apk
       - run: tar -czf "wrtmonitor-openwrt-agent-v$RELEASE_VERSION.tar.gz" -C openwrt-agent .
       - run: cp android/app/build/outputs/apk/release/app-release.apk "wrtmonitor-android-v$RELEASE_VERSION.apk"
       - run: cp deploy/truenas/wrtmonitor-truenas.yaml "wrtmonitor-truenas-v$RELEASE_VERSION.yaml"
