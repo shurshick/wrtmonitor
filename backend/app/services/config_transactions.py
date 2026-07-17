@@ -43,6 +43,7 @@ CONNECTIVITY_SENSITIVE_COMMANDS = {
 }
 
 SECRET_FIELDS = {"password", "key", "wifi_password"}
+SELECTOR_FIELDS = {"iface", "radio", "interface"}
 
 
 def is_transactional_command(command_type: str) -> bool:
@@ -198,7 +199,7 @@ def build_command_preview(
     transactional = is_transactional_command(command_type)
     changes = []
     for key, proposed in payload.items():
-        if key.startswith("_"):
+        if key.startswith("_") or key in SELECTOR_FIELDS:
             continue
         current = _current_value(command_type, key, payload, telemetry)
         if current == proposed and key not in SECRET_FIELDS:
