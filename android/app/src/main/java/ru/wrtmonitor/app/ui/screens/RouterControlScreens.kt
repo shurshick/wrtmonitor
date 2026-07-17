@@ -1052,6 +1052,13 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     var zoneName by remember { mutableStateOf("Europe/Moscow") }
     var timezoneValue by remember { mutableStateOf("MSK-3") }
     var ntpServers by remember { mutableStateOf("0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org") }
+    var packageName by remember { mutableStateOf("") }
+    var backupArchive by remember { mutableStateOf("") }
+    var firmwareUrl by remember { mutableStateOf("") }
+    var firmwareSha256 by remember { mutableStateOf("") }
+    var logLines by remember { mutableStateOf("100") }
+    var processPid by remember { mutableStateOf("") }
+    var cronContent by remember { mutableStateOf("") }
     var pendingSystemCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     val refresh: () -> Unit = {
         scope.launch {
@@ -1183,6 +1190,62 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
                         Text(stringResource(R.string.restart_service))
                     }
                 }
+            }
+        }
+    }
+    if (capabilities["maintenance.packages.read"] == true || capabilities["maintenance.packages.write"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.router_packages), stringResource(R.string.router_packages_summary)) {
+            if (capabilities["maintenance.packages.read"] == true) {
+                TonalActionButton(stringResource(R.string.refresh_package_catalog), { pendingSystemCommand = PendingSafeCommand("maintenance.packages.refresh", JSONObject(), systemCommandQueued) })
+            }
+            if (capabilities["maintenance.packages.write"] == true) {
+                OutlinedTextField(packageName, { packageName = it }, label = { Text(stringResource(R.string.package_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                ActionRow {
+                    PrimaryActionButton(stringResource(R.string.install_package), { pendingSystemCommand = PendingSafeCommand("maintenance.package.install", JSONObject().put("package", packageName), systemCommandQueued) }, enabled = packageName.isNotBlank())
+                    TextButton({ pendingSystemCommand = PendingSafeCommand("maintenance.package.remove", JSONObject().put("package", packageName), systemCommandQueued) }, enabled = packageName.isNotBlank()) { Text(stringResource(R.string.remove_package)) }
+                }
+            }
+        }
+    }
+    if (capabilities["maintenance.backup"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.configuration_backup), stringResource(R.string.configuration_backup_summary)) {
+            TonalActionButton(stringResource(R.string.create_backup), { pendingSystemCommand = PendingSafeCommand("maintenance.backup.create", JSONObject(), systemCommandQueued) })
+            OutlinedTextField(backupArchive, { backupArchive = it }, label = { Text(stringResource(R.string.backup_base64)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+            SecondaryActionButton(stringResource(R.string.restore_backup), { pendingSystemCommand = PendingSafeCommand("maintenance.backup.restore", JSONObject().put("archive_base64", backupArchive), systemCommandQueued) }, enabled = backupArchive.isNotBlank())
+        }
+    }
+    if (capabilities["maintenance.sysupgrade.check"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.openwrt_update), stringResource(R.string.openwrt_update_summary)) {
+            OutlinedTextField(firmwareUrl, { firmwareUrl = it }, label = { Text(stringResource(R.string.firmware_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(firmwareSha256, { firmwareSha256 = it }, label = { Text("SHA-256") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            PrimaryActionButton(stringResource(R.string.validate_firmware), { pendingSystemCommand = PendingSafeCommand("maintenance.sysupgrade.check", JSONObject().put("url", firmwareUrl).put("sha256", firmwareSha256).put("expected_model", "").put("preserve_config", true), systemCommandQueued) }, enabled = firmwareUrl.startsWith("https://") && firmwareSha256.length == 64)
+            if (capabilities["maintenance.sysupgrade.apply"] == true) {
+                SecondaryActionButton(stringResource(R.string.install_validated_firmware), { pendingSystemCommand = PendingSafeCommand("maintenance.sysupgrade.apply", JSONObject().put("sha256", firmwareSha256).put("preserve_config", true), systemCommandQueued) }, enabled = firmwareSha256.length == 64)
+            }
+        }
+    }
+    if (capabilities["maintenance.logs"] == true || capabilities["maintenance.processes"] == true || capabilities["maintenance.cron"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.advanced_maintenance), stringResource(R.string.advanced_maintenance_summary)) {
+            if (capabilities["maintenance.logs"] == true) {
+                OutlinedTextField(logLines, { logLines = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.log_lines)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                TonalActionButton(stringResource(R.string.request_logs), { pendingSystemCommand = PendingSafeCommand("maintenance.logs.read", JSONObject().put("lines", logLines.toIntOrNull() ?: 100), systemCommandQueued) })
+            }
+            if (capabilities["maintenance.processes"] == true) {
+                OutlinedTextField(processPid, { processPid = it.filter(Char::isDigit) }, label = { Text("PID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                SecondaryActionButton(stringResource(R.string.terminate_process), { pendingSystemCommand = PendingSafeCommand("maintenance.process.signal", JSONObject().put("pid", processPid.toIntOrNull() ?: 0).put("signal", "TERM"), systemCommandQueued) }, enabled = (processPid.toIntOrNull() ?: 0) > 1)
+            }
+            if (capabilities["maintenance.cron"] == true) {
+                OutlinedTextField(cronContent, { cronContent = it }, label = { Text(stringResource(R.string.root_crontab)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+                SecondaryActionButton(stringResource(R.string.save_schedule), { pendingSystemCommand = PendingSafeCommand("maintenance.cron.set", JSONObject().put("content", cronContent), systemCommandQueued) })
+            }
+        }
+    }
+    if (capabilities["maintenance.diagnostics.bundle"] == true || capabilities["maintenance.recovery"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.recovery_tools), stringResource(R.string.recovery_tools_summary)) {
+            if (capabilities["maintenance.diagnostics.bundle"] == true) TonalActionButton(stringResource(R.string.create_diagnostic_bundle), { pendingSystemCommand = PendingSafeCommand("maintenance.diagnostics.bundle", JSONObject(), systemCommandQueued) })
+            if (capabilities["maintenance.recovery"] == true) ActionRow {
+                SecondaryActionButton(stringResource(R.string.enable_recovery_mode), { pendingSystemCommand = PendingSafeCommand("maintenance.recovery.enable", JSONObject(), systemCommandQueued) })
+                TextButton({ pendingSystemCommand = PendingSafeCommand("maintenance.recovery.disable", JSONObject(), systemCommandQueued) }) { Text(stringResource(R.string.disable_recovery_mode)) }
             }
         }
     }

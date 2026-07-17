@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="9"
+CAPABILITIES_VERSION="10"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -14,6 +14,8 @@ capability_keys() {
         network.ipv6.configure network.multiwan.configure network.routes.configure network.ddns.configure \
         firewall.zones.configure firewall.rules.configure firewall.upnp.configure telemetry.perimeter \
         vpn.wireguard.read vpn.wireguard.configure vpn.openvpn.read vpn.openvpn.configure vpn.policy.read vpn.policy.configure telemetry.vpn \
+        maintenance.packages.read maintenance.packages.write maintenance.backup maintenance.sysupgrade.check maintenance.sysupgrade.apply \
+        maintenance.logs maintenance.processes maintenance.cron maintenance.diagnostics.bundle maintenance.recovery telemetry.maintenance \
         clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
         system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
         diagnostics.check_server diagnostics.check_dependencies diagnostics.check_dns diagnostics.check_route diagnostics.check_wifi
@@ -116,6 +118,16 @@ capability_supported() {
         vpn.openvpn.configure) has_uci_config openvpn && [ -x "$(capability_path /etc/init.d/openvpn)" ] && has_commands openvpn base64 ;;
         vpn.policy.read|vpn.policy.configure) has_uci_config pbr && [ -x "$(capability_path /etc/init.d/pbr)" ] ;;
         telemetry.vpn) capability_supported vpn.wireguard.read || capability_supported vpn.openvpn.read || capability_supported vpn.policy.read ;;
+        maintenance.packages.read|maintenance.packages.write) has_commands opkg ;;
+        maintenance.backup) has_commands sysupgrade tar gzip base64 ;;
+        maintenance.sysupgrade.check) has_commands sysupgrade curl sha256sum df ;;
+        maintenance.sysupgrade.apply) has_commands sysupgrade sha256sum ;;
+        maintenance.logs) has_commands logread ;;
+        maintenance.processes) has_commands ps kill ;;
+        maintenance.cron) [ -d "$(capability_path /etc/crontabs)" ] && [ -x "$(capability_path /etc/init.d/cron)" ] ;;
+        maintenance.diagnostics.bundle) has_commands tar gzip base64 ubus logread ps df ;;
+        maintenance.recovery) has_uci_config wrtmonitor ;;
+        telemetry.maintenance) capability_supported maintenance.packages.read || capability_supported maintenance.recovery ;;
         clients.block|clients.policy|firewall.port_forward) has_firewall_write ;;
         qos.sqm) has_uci_config sqm && [ -x "$(capability_path /etc/init.d/sqm)" ] ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.configure|dns.configure) has_dhcp_write ;;
@@ -151,6 +163,14 @@ capability_unavailable_reason() {
         vpn.wireguard.*|telemetry.vpn) printf 'wireguard-tools or network support is unavailable' ;;
         vpn.openvpn.*) printf 'openvpn-openssl package or OpenVPN service is unavailable' ;;
         vpn.policy.*) printf 'pbr package or service is unavailable' ;;
+        maintenance.packages.*) printf 'opkg is unavailable' ;;
+        maintenance.backup) printf 'sysupgrade backup tools are unavailable' ;;
+        maintenance.sysupgrade.*) printf 'sysupgrade verification tools are unavailable' ;;
+        maintenance.logs) printf 'logread is unavailable' ;;
+        maintenance.processes) printf 'process tools are unavailable' ;;
+        maintenance.cron) printf 'cron service or crontab storage is unavailable' ;;
+        maintenance.diagnostics.bundle) printf 'diagnostic archive tools are unavailable' ;;
+        maintenance.recovery|telemetry.maintenance) printf 'maintenance runtime is unavailable' ;;
         clients.block|clients.policy|firewall.port_forward) printf 'firewall UCI configuration or service is unavailable' ;;
         qos.sqm) printf 'sqm-scripts package or SQM init service is unavailable' ;;
         dhcp.*|dns.configure) printf 'DHCP configuration or dnsmasq service is unavailable' ;;

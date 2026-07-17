@@ -143,10 +143,31 @@ def test_smoke_cli_capabilities_json():
         env=shell_env(),
     )
     payload = json.loads(completed.stdout)
-    assert payload["agent"]["capabilities_version"] == 9
+    assert payload["agent"]["capabilities_version"] == 10
     assert payload["capabilities"]["agent.status"] is True
     assert isinstance(payload["capabilities"]["agent.update"], bool)
     assert payload["capability_details"]["agent.status"]["reason"] == "available"
+    assert "maintenance.backup" in payload["capabilities"]
+    assert "maintenance.sysupgrade.check" in payload["capabilities"]
+    assert "maintenance.diagnostics.bundle" in payload["capabilities"]
+
+
+def test_maintenance_handlers_and_multiline_json_escape_are_present():
+    commands = read_text(LIB_DIR / "commands.sh")
+    common = read_text(LIB_DIR / "common.sh")
+    for command in (
+        "maintenance.package.install",
+        "maintenance.backup.create",
+        "maintenance.backup.restore",
+        "maintenance.sysupgrade.check",
+        "maintenance.logs.read",
+        "maintenance.cron.set",
+        "maintenance.diagnostics.bundle",
+        "maintenance.recovery.enable",
+    ):
+        assert command in commands
+    assert 'if (NR > 1) printf "\\\\n"' in common
+    assert "system package removal is not allowed" in commands
 
 
 def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):

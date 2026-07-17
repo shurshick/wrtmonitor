@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+import base64
+import binascii
 from ipaddress import (
     IPv4Address,
     AddressValueError,
@@ -10,6 +12,7 @@ from ipaddress import (
 )
 import re
 from typing import Any, Callable
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
@@ -220,6 +223,84 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
     "vpn.policy.delete": {
         "risk_level": "level_3_reversible_config",
         "capability": "vpn.policy.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.packages.refresh": {
+        "risk_level": "level_1_readonly",
+        "capability": "maintenance.packages.read",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "maintenance.package.install": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "maintenance.packages.write",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.package.remove": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "maintenance.packages.write",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.backup.create": {
+        "risk_level": "level_1_readonly",
+        "capability": "maintenance.backup",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "maintenance.backup.restore": {
+        "risk_level": "level_4_disruptive",
+        "capability": "maintenance.backup",
+        "requires_confirmation": True,
+        "secret_fields": ["archive_base64"],
+    },
+    "maintenance.sysupgrade.check": {
+        "risk_level": "level_2_safe_action",
+        "capability": "maintenance.sysupgrade.check",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.sysupgrade.apply": {
+        "risk_level": "level_4_disruptive",
+        "capability": "maintenance.sysupgrade.apply",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.logs.read": {
+        "risk_level": "level_1_readonly",
+        "capability": "maintenance.logs",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "maintenance.process.signal": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "maintenance.processes",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.cron.set": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "maintenance.cron",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.diagnostics.bundle": {
+        "risk_level": "level_1_readonly",
+        "capability": "maintenance.diagnostics.bundle",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "maintenance.recovery.enable": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "maintenance.recovery",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.recovery.disable": {
+        "risk_level": "level_2_safe_action",
+        "capability": "maintenance.recovery",
         "requires_confirmation": True,
         "secret_fields": [],
     },
@@ -1239,6 +1320,81 @@ def _normalize_vpn_policy_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _maintenance_package(
+    payload: dict[str, Any], *, remove: bool = False
+) -> dict[str, str]:
+    package = _require_string(payload, "package", max_length=128)
+    if not re.fullmatch(r"[A-Za-z0-9+_.-]+", package):
+        raise HTTPException(status_code=400, detail="Invalid package name")
+    if remove and package in {
+        "base-files",
+        "busybox",
+        "dnsmasq",
+        "dropbear",
+        "firewall4",
+        "kernel",
+        "libc",
+        "netifd",
+        "procd",
+        "ubus",
+        "uci",
+        "wrtmonitor",
+        "wrtmonitor-agent",
+    }:
+        raise HTTPException(
+            status_code=400, detail="system package removal is not allowed"
+        )
+    return {"package": package}
+
+
+def _maintenance_backup_restore(payload: dict[str, Any]) -> dict[str, str]:
+    archive = _require_string(payload, "archive_base64", max_length=2_000_000)
+    try:
+        decoded = base64.b64decode(archive, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid backup archive") from exc
+    if not decoded.startswith(b"\x1f\x8b") or len(decoded) > 1_500_000:
+        raise HTTPException(status_code=400, detail="Invalid backup archive")
+    return {"archive_base64": archive}
+
+
+def _maintenance_sysupgrade(payload: dict[str, Any], *, apply: bool) -> dict[str, Any]:
+    checksum = _require_string(payload, "sha256", max_length=64).lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", checksum):
+        raise HTTPException(status_code=400, detail="Invalid firmware checksum")
+    result: dict[str, Any] = {
+        "sha256": checksum,
+        "preserve_config": _boolean(payload, "preserve_config", default=True),
+    }
+    if not apply:
+        url = _require_string(payload, "url", max_length=2048)
+        parsed = urlsplit(url)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+        ):
+            raise HTTPException(status_code=400, detail="Firmware URL must use HTTPS")
+        result["url"] = url
+        result["expected_model"] = _optional_string(payload, "expected_model") or ""
+    return result
+
+
+def _maintenance_cron(payload: dict[str, Any]) -> dict[str, str]:
+    content = str(payload.get("content") or "")
+    if len(content) > 8192 or any(
+        ord(char) < 32 and char not in "\r\n\t" for char in content
+    ):
+        raise HTTPException(status_code=400, detail="Invalid cron content")
+    if any(
+        line.lstrip().startswith(("@reboot", "@hourly", "@daily"))
+        for line in content.splitlines()
+    ):
+        raise HTTPException(status_code=400, detail="Cron macros are not supported")
+    return {"content": content.rstrip() + ("\n" if content else "")}
+
+
 def _normalize_diagnostics_payload(payload: dict[str, Any]) -> dict[str, Any]:
     checks = payload.get("checks")
     if checks in (None, [], ()):
@@ -1359,6 +1515,37 @@ def validate_command_payload(
         return _normalize_vpn_policy_payload(normalized_payload)
     if command_type == "vpn.policy.delete":
         return {"name": _name(normalized_payload)}
+    if command_type in {
+        "maintenance.packages.refresh",
+        "maintenance.backup.create",
+        "maintenance.diagnostics.bundle",
+        "maintenance.recovery.enable",
+        "maintenance.recovery.disable",
+    }:
+        return {}
+    if command_type == "maintenance.package.install":
+        return _maintenance_package(normalized_payload)
+    if command_type == "maintenance.package.remove":
+        return _maintenance_package(normalized_payload, remove=True)
+    if command_type == "maintenance.backup.restore":
+        return _maintenance_backup_restore(normalized_payload)
+    if command_type == "maintenance.sysupgrade.check":
+        return _maintenance_sysupgrade(normalized_payload, apply=False)
+    if command_type == "maintenance.sysupgrade.apply":
+        return _maintenance_sysupgrade(normalized_payload, apply=True)
+    if command_type == "maintenance.logs.read":
+        return {"lines": _integer(normalized_payload, "lines", 20, 500) or 100}
+    if command_type == "maintenance.process.signal":
+        return {
+            "pid": _integer(normalized_payload, "pid", 2, 4_194_304),
+            "signal": _safe_identifier(
+                str(normalized_payload.get("signal") or "TERM"),
+                "signal",
+                r"(?:TERM|HUP|KILL)",
+            ),
+        }
+    if command_type == "maintenance.cron.set":
+        return _maintenance_cron(normalized_payload)
     if command_type == "firewall.set_zone":
         return _normalize_zone_payload(normalized_payload)
     if command_type == "firewall.set_forwarding":
@@ -1462,6 +1649,12 @@ def build_command_payload_from_web_form(
     config_text: str = "",
     source: str = "",
     destination: str = "",
+    url: str = "",
+    sha256: str = "",
+    archive_base64: str = "",
+    content: str = "",
+    pid: str = "",
+    signal: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -1661,6 +1854,36 @@ def build_command_payload_from_web_form(
         }
     elif command_type == "vpn.policy.delete":
         payload = {"name": name}
+    elif command_type in {"maintenance.package.install", "maintenance.package.remove"}:
+        payload = {"package": name}
+    elif command_type == "maintenance.backup.restore":
+        payload = {"archive_base64": archive_base64 or config_text}
+    elif command_type == "maintenance.sysupgrade.check":
+        payload = {
+            "url": url or hostname,
+            "sha256": sha256 or password,
+            "expected_model": name,
+            "preserve_config": enabled.lower() == "true",
+        }
+    elif command_type == "maintenance.sysupgrade.apply":
+        payload = {
+            "sha256": sha256 or password,
+            "preserve_config": enabled.lower() == "true",
+        }
+    elif command_type == "maintenance.logs.read":
+        payload = {"lines": limit or "100"}
+    elif command_type == "maintenance.process.signal":
+        payload = {"pid": pid or internal_port, "signal": signal or protocol or "TERM"}
+    elif command_type == "maintenance.cron.set":
+        payload = {"content": content or config_text}
+    elif command_type in {
+        "maintenance.packages.refresh",
+        "maintenance.backup.create",
+        "maintenance.diagnostics.bundle",
+        "maintenance.recovery.enable",
+        "maintenance.recovery.disable",
+    }:
+        payload = {}
     elif command_type == "system.set_hostname":
         payload = {"hostname": hostname}
     elif command_type == "system.restart_service":
@@ -1749,7 +1972,11 @@ def public_command_result(
         return None
     metadata = COMMAND_REGISTRY.get(command_type, {})
     secret_fields = set(metadata.get("secret_fields", []))
-    return mask_secrets(result, secret_fields)
+    safe_result = mask_secrets(result, secret_fields)
+    for field in ("archive_base64", "bundle_base64"):
+        if field in safe_result:
+            safe_result[field] = "download available"
+    return safe_result
 
 
 def command_history_entry(command: DeviceCommand) -> dict[str, Any]:

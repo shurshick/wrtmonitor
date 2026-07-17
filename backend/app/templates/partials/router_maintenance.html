@@ -1,0 +1,56 @@
+<div class="maintenance-status section">
+  <div><span class="maintenance-status__label">Пакеты</span><strong>{{ maintenance.installed_packages }} установлено</strong></div>
+  <div><span class="maintenance-status__label">Обновления</span><strong>{{ maintenance.upgradable_packages }}</strong></div>
+  <div><span class="maintenance-status__label">Задания cron</span><strong>{{ maintenance.cron_entries }}</strong></div>
+  <div><span class="maintenance-status__label">Recovery mode</span><strong>{{ 'включён' if maintenance.recovery_mode else 'выключен' }}</strong></div>
+</div>
+
+<div class="maintenance-grid section">
+  <section class="card maintenance-card">
+    <div class="maintenance-card__heading"><div><span class="eyebrow">OpenWrt</span><h2>Пакеты</h2></div><span class="risk-badge risk-badge--readonly">opkg</span></div>
+    <p class="muted">Обновление каталога и точечная установка пакетов. Системные пакеты защищены от удаления.</p>
+    <div class="maintenance-actions">
+      {% if supports.maintenance_packages_read %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.packages.refresh"><input type="hidden" name="confirmed" value="true"><button type="submit">Обновить каталог</button></form>{% endif %}
+    </div>
+    {% if supports.maintenance_packages_write %}
+    <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.package.install"><input type="hidden" name="confirmed" value="true"><label>Имя пакета<input name="name" required pattern="[A-Za-z0-9+_.-]+" placeholder="tcpdump"></label><button type="submit">Установить</button></form>
+    <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить выбранный пакет?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.package.remove"><input type="hidden" name="confirmed" value="true"><label>Имя пакета<input name="name" required pattern="[A-Za-z0-9+_.-]+"></label><button class="button--danger" type="submit">Удалить пакет</button></form>
+    {% endif %}
+  </section>
+
+  <section class="card maintenance-card">
+    <div class="maintenance-card__heading"><div><span class="eyebrow">Конфигурация</span><h2>Резервная копия</h2></div></div>
+    <p class="muted">Архив создаётся штатным `sysupgrade` и хранится только в результате команды.</p>
+    {% if supports.maintenance_backup %}
+    <form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.backup.create"><input type="hidden" name="confirmed" value="true"><button type="submit">Создать копию</button></form>
+    <details class="compact-form--separated"><summary>Восстановить из base64-архива</summary><form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Восстановить конфигурацию роутера? Текущие настройки будут заменены.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.backup.restore"><input type="hidden" name="confirmed" value="true"><label>Архив<input name="archive_base64" required autocomplete="off"></label><button class="button--danger" type="submit">Восстановить</button></form></details>
+    {% endif %}
+    {% for artifact in download_artifacts %}<a class="button button--secondary section" href="/devices/{{ device.id }}/commands/{{ artifact.id }}/download/{{ artifact.kind }}">{{ artifact.label }}</a>{% endfor %}
+  </section>
+
+  <section class="card maintenance-card">
+    <div class="maintenance-card__heading"><div><span class="eyebrow">Прошивка</span><h2>Обновление OpenWrt</h2></div><span class="risk-badge risk-badge--danger">перезагрузка</span></div>
+    <p class="muted">Перед применением проверяются HTTPS, SHA-256, модель, свободное место и совместимость образа.</p>
+    {% if supports.maintenance_sysupgrade_check %}<form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.sysupgrade.check"><input type="hidden" name="confirmed" value="true"><label>HTTPS-адрес образа<input type="url" name="url" required pattern="https://.*"></label><label>SHA-256<input name="sha256" required minlength="64" maxlength="64"></label><label>Точная модель<input name="name" placeholder="необязательно"></label><label class="checkbox-row"><input type="checkbox" name="enabled" value="true" checked><span>Сохранить конфигурацию</span></label><button type="submit">Проверить и подготовить</button></form>{% endif %}
+    {% if supports.maintenance_sysupgrade_apply and maintenance.staged_firmware_sha256 %}<form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Начать обновление OpenWrt? Роутер перезагрузится.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.sysupgrade.apply"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="sha256" value="{{ maintenance.staged_firmware_sha256 }}"><input type="hidden" name="enabled" value="true"><button class="button--danger" type="submit">Установить подготовленный образ</button></form>{% endif %}
+  </section>
+
+  <section class="card maintenance-card">
+    <div class="maintenance-card__heading"><div><span class="eyebrow">Наблюдение</span><h2>Журналы и процессы</h2></div></div>
+    {% if supports.maintenance_logs %}<form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.logs.read"><input type="hidden" name="confirmed" value="true"><label>Последние строки<input type="number" name="limit" min="20" max="500" value="100"></label><button type="submit">Получить журнал</button></form>{% endif %}
+    {% if supports.maintenance_processes %}<form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Отправить сигнал процессу?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.process.signal"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>PID<input type="number" name="pid" min="2" required></label><label>Сигнал<select name="signal"><option>TERM</option><option>HUP</option><option>KILL</option></select></label></div><button class="button--danger" type="submit">Отправить сигнал</button></form>{% endif %}
+  </section>
+
+  <section class="card maintenance-card">
+    <div class="maintenance-card__heading"><div><span class="eyebrow">Автоматизация</span><h2>Cron</h2></div></div>
+    <p class="muted">Полная замена root crontab. Перед записью агент сохраняет локальную копию.</p>
+    {% if supports.maintenance_cron %}<form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Заменить расписание root cron?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.cron.set"><input type="hidden" name="confirmed" value="true"><label>Расписание<textarea name="content" rows="7" maxlength="16000" placeholder="0 4 * * * /usr/bin/example"></textarea></label><button type="submit">Сохранить расписание</button></form>{% endif %}
+  </section>
+
+  <section class="card maintenance-card">
+    <div class="maintenance-card__heading"><div><span class="eyebrow">Восстановление</span><h2>Диагностический архив</h2></div></div>
+    <p class="muted">Содержит сведения о системе, сети, пакетах и последние строки журнала. Секреты конфигурации не включаются.</p>
+    {% if supports.maintenance_bundle %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.diagnostics.bundle"><input type="hidden" name="confirmed" value="true"><button type="submit">Собрать архив</button></form>{% endif %}
+    {% if supports.maintenance_recovery %}<form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="{{ 'maintenance.recovery.disable' if maintenance.recovery_mode else 'maintenance.recovery.enable' }}"><input type="hidden" name="confirmed" value="true"><button class="button--secondary" type="submit">{{ 'Выключить recovery mode' if maintenance.recovery_mode else 'Включить recovery mode' }}</button></form>{% endif %}
+  </section>
+</div>

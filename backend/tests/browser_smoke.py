@@ -100,6 +100,17 @@ def prepare_router() -> str:
             "vpn.policy.read": True,
             "vpn.policy.configure": True,
             "telemetry.vpn": True,
+            "maintenance.packages.read": True,
+            "maintenance.packages.write": True,
+            "maintenance.backup": True,
+            "maintenance.sysupgrade.check": True,
+            "maintenance.sysupgrade.apply": True,
+            "maintenance.logs": True,
+            "maintenance.processes": True,
+            "maintenance.cron": True,
+            "maintenance.diagnostics.bundle": True,
+            "maintenance.recovery": True,
+            "telemetry.maintenance": True,
         }
         telemetry = client.post(
             "/api/v1/agent/telemetry",
@@ -110,7 +121,7 @@ def prepare_router() -> str:
                     "agent": {
                         "version": "0.5.0",
                         "status": "running",
-                        "capabilities_version": 9,
+                        "capabilities_version": 10,
                         "capabilities": capabilities,
                     },
                     "system": {
@@ -119,6 +130,12 @@ def prepare_router() -> str:
                         "load": "0.12",
                         "memory": {"total_kb": 262144, "available_kb": 131072},
                         "services": {"network": "running", "dnsmasq": "running"},
+                    },
+                    "maintenance": {
+                        "packages": {"installed": 143, "upgradable": 2},
+                        "cron_entries": 1,
+                        "recovery_mode": False,
+                        "staged_firmware_sha256": "",
                     },
                     "wifi": {
                         "available": True,

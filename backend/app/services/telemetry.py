@@ -75,6 +75,26 @@ def extract_agent_capability_details(
     return normalized
 
 
+def normalize_maintenance_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    maintenance = payload.get("maintenance") or {}
+    if not isinstance(maintenance, dict):
+        maintenance = {}
+    packages = maintenance.get("packages") or {}
+    if not isinstance(packages, dict):
+        packages = {}
+    return {
+        "installed_packages": int(
+            packages.get("installed", maintenance.get("installed_packages")) or 0
+        ),
+        "upgradable_packages": int(
+            packages.get("upgradable", maintenance.get("upgradable_packages")) or 0
+        ),
+        "cron_entries": int(maintenance.get("cron_entries") or 0),
+        "recovery_mode": bool(maintenance.get("recovery_mode", False)),
+        "staged_firmware_sha256": str(maintenance.get("staged_firmware_sha256") or ""),
+    }
+
+
 def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
     wifi = payload.get("wifi") or {}
     radios = wifi.get("radios") or []

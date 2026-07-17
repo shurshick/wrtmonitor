@@ -1,28 +1,29 @@
-# v0.8.0
+# v0.9.0
 
-Релиз VPN и policy routing.
+Релиз обслуживания и восстановления OpenWrt.
 
 ## Изменения
 
-- WireGuard server/client: интерфейсы, peer, ключи, AllowedIPs, endpoint и keepalive.
-- Безопасный экспорт peer-конфигурации без передачи приватного ключа сервера.
-- Импорт и удаление OpenVPN client profiles.
-- Policy-based routing по адресу клиента, подсети и назначению через `pbr`.
-- Статусы туннелей, handshake и счётчики RX/TX в Web UI и Android.
-- Capability report обновлён до schema v9; Android `versionCode` увеличен до `39`.
-- VPN-конфигурации защищены transaction backup/rollback, секреты скрыты в preview и журнале.
+- Управление каталогом и пакетами `opkg` с запретом удаления критических системных пакетов.
+- Создание и восстановление конфигурационных backup OpenWrt.
+- Проверяемый `sysupgrade`: только HTTPS, SHA-256, модель, свободное место и `sysupgrade -T`.
+- Получение журналов, управление процессами и root cron.
+- Скачиваемый диагностический архив без конфигурационных секретов.
+- Ограниченный recovery mode, блокирующий изменяющие команды до ручного отключения.
+- Одинаковые capability-aware действия в Web UI и Android; capability schema v10.
+- Исправлено JSON-экранирование многострочного вывода агента; Android `versionCode` увеличен до `40`.
 
 ## Обновление
 
 - Сервер: выполните redeploy `ghcr.io/shurshick/wrtmonitor:latest`.
-- Агент: автообновление установит `0.8.0`; для WireGuard/OpenVPN/PBR установите соответствующие пакеты OpenWrt.
-- Android: установите `wrtmonitor-android-v0.8.0-debug.apk` поверх предыдущей версии.
+- Агент: автообновление установит `0.9.0` поверх `0.8.0`.
+- Android: установите `wrtmonitor-android-v0.9.0-debug.apk` поверх предыдущей версии.
 
 PostgreSQL volume при обновлении контейнера сохраняется. Новая миграция БД этому релизу не требуется.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.8.0-debug.apk`
-- `wrtmonitor-openwrt-agent-v0.8.0.tar.gz`
-- `wrtmonitor-truenas-v0.8.0.yaml`
+- `wrtmonitor-android-v0.9.0-debug.apk`
+- `wrtmonitor-openwrt-agent-v0.9.0.tar.gz`
+- `wrtmonitor-truenas-v0.9.0.yaml`
 - `SHA256SUMS.txt`

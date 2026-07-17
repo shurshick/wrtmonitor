@@ -4,15 +4,15 @@
 
 ## Текущая версия
 
-Текущая стабильная версия: `v0.8.0`.
+Текущая стабильная версия: `v0.9.0`.
 
-Главное в `0.8.0`:
+Главное в `0.9.0`:
 
-- WireGuard server/client и управление peer;
-- импорт OpenVPN client profiles;
-- policy routing через `pbr` по клиентам, подсетям и назначениям;
-- статусы туннелей, handshake и VPN-трафик;
-- одинаковое управление VPN в Web UI и Android, capability report schema v9.
+- пакеты `opkg`, backup/restore и безопасный `sysupgrade`;
+- системные журналы, процессы и root cron;
+- скачиваемый диагностический архив и recovery mode;
+- одинаковое обслуживание роутера в Web UI и Android;
+- capability report schema v10.
 
 В предыдущих релизах:
 
@@ -72,7 +72,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 В релизе он публикуется как:
 
 ```text
-wrtmonitor-truenas-v0.8.0.yaml
+wrtmonitor-truenas-v0.9.0.yaml
 ```
 
 Контейнер использует:

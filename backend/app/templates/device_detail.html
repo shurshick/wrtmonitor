@@ -48,6 +48,7 @@
     {% elif section == 'management' %}
       <div class="section-heading"><p class="eyebrow">Служебный раздел</p><h2>Обслуживание</h2><p>Обновление агента, диагностика и история команд.</p></div>
       {% include "partials/agent.html" %}
+      {% include "partials/router_maintenance.html" %}
       <section class="section">{% include "partials/commands.html" %}</section>
       <details class="technical-panel section">
         <summary><span>Технические данные</span><small>Capabilities: {{ capabilities_summary }} · исходная telemetry</small></summary>

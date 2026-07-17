@@ -1,10 +1,12 @@
+import base64
+import binascii
 from datetime import UTC, datetime
 import json
 import secrets
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -38,6 +40,7 @@ from ..services.auth import settings, web_user_from_session
 from ..services.setup import complete_setup, is_setup_required
 from ..services.telemetry import (
     normalize_clients_summary,
+    normalize_maintenance_summary,
     normalize_network_summary,
     normalize_services_summary,
     normalize_system_summary,
@@ -366,6 +369,7 @@ def device_page(
     network = normalize_network_summary(payload)
     vpn = normalize_vpn_summary(payload)
     telemetry_clients = normalize_clients_summary(payload)
+    maintenance = normalize_maintenance_summary(payload)
     registry_clients = db.scalars(
         select(NetworkClient)
         .where(NetworkClient.device_id == device_id)
@@ -440,6 +444,16 @@ def device_page(
         "wifi_stations": has("telemetry.wifi.stations"),
         "system_timezone": has("system.set_timezone"),
         "system_ntp": has("system.set_ntp"),
+        "maintenance_packages_read": has("maintenance.packages.read"),
+        "maintenance_packages_write": has("maintenance.packages.write"),
+        "maintenance_backup": has("maintenance.backup"),
+        "maintenance_sysupgrade_check": has("maintenance.sysupgrade.check"),
+        "maintenance_sysupgrade_apply": has("maintenance.sysupgrade.apply"),
+        "maintenance_logs": has("maintenance.logs"),
+        "maintenance_processes": has("maintenance.processes"),
+        "maintenance_cron": has("maintenance.cron"),
+        "maintenance_bundle": has("maintenance.diagnostics.bundle"),
+        "maintenance_recovery": has("maintenance.recovery"),
     }
     commands = db.scalars(
         select(DeviceCommand)
@@ -448,6 +462,23 @@ def device_page(
         .limit(10)
     ).all()
     command_entries = [command_history_entry(command) for command in commands]
+    download_artifacts = [
+        {
+            "id": str(command.id),
+            "kind": "backup"
+            if command.command_type == "maintenance.backup.create"
+            else "diagnostics",
+            "label": "Скачать резервную копию"
+            if command.command_type == "maintenance.backup.create"
+            else "Скачать диагностический архив",
+        }
+        for command in commands
+        if command.status == "success"
+        and isinstance(command.result, dict)
+        and (
+            command.result.get("archive_base64") or command.result.get("bundle_base64")
+        )
+    ]
     latest_diagnostics = next(
         (
             command
@@ -521,7 +552,9 @@ def device_page(
             "system_summary": system_summary,
             "system_view": system_view,
             "services": services,
+            "maintenance": maintenance,
             "commands": command_entries,
+            "download_artifacts": download_artifacts,
             "latest_diagnostics": latest_diagnostics,
             "raw_telemetry": json.dumps(payload, ensure_ascii=False, indent=2),
         },
@@ -693,6 +726,46 @@ def web_delete_client_profile(
     return RedirectResponse(f"/devices/{device_id}?section=clients", status_code=303)
 
 
+@router.get("/devices/{device_id}/commands/{command_id}/download/{kind}")
+def download_command_artifact(
+    device_id: UUID,
+    command_id: UUID,
+    kind: str,
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> Response:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    get_user_device_or_404(db, user, device_id)
+    command = db.scalar(
+        select(DeviceCommand).where(
+            DeviceCommand.id == command_id,
+            DeviceCommand.device_id == device_id,
+            DeviceCommand.status == "success",
+        )
+    )
+    if command is None or not isinstance(command.result, dict):
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    field, filename = {
+        "backup": ("archive_base64", "wrtmonitor-openwrt-backup.tar.gz"),
+        "diagnostics": ("bundle_base64", "wrtmonitor-diagnostics.tar.gz"),
+    }.get(kind, ("", ""))
+    encoded = command.result.get(field) if field else None
+    if not isinstance(encoded, str):
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    try:
+        content = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="Artifact is corrupted") from exc
+    return Response(
+        content=content,
+        media_type="application/gzip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.post("/devices/{device_id}/web-command")
 def web_device_command(
     device_id: UUID,
@@ -752,6 +825,12 @@ def web_device_command(
     config_text: str = Form(default=""),
     source: str = Form(default=""),
     destination: str = Form(default=""),
+    url: str = Form(default=""),
+    sha256: str = Form(default=""),
+    archive_base64: str = Form(default=""),
+    content: str = Form(default=""),
+    pid: str = Form(default=""),
+    signal: str = Form(default=""),
     confirmed: bool = Form(default=False),
     diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
@@ -825,6 +904,12 @@ def web_device_command(
             config_text=config_text,
             source=source,
             destination=destination,
+            url=url,
+            sha256=sha256,
+            archive_base64=archive_base64,
+            content=content,
+            pid=pid,
+            signal=signal,
             diagnostics_checks=diagnostics_checks,
         )
         payload = validate_command_request(
@@ -945,6 +1030,12 @@ async def web_device_command_preview(
             config_text=value("config_text"),
             source=value("source"),
             destination=value("destination"),
+            url=value("url"),
+            sha256=value("sha256"),
+            archive_base64=value("archive_base64"),
+            content=value("content"),
+            pid=value("pid"),
+            signal=value("signal"),
             diagnostics_checks=[
                 str(item) for item in form.getlist("diagnostics_checks")
             ],

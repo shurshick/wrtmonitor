@@ -16,7 +16,7 @@ telemetry_payload() {
         ""|*[!0-9]*) uptime_value="0" ;;
     esac
     load_value="$(json_escape "$load_value")"
-    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"vpn":%s,"agent":%s}}' \
+    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"wireless_status":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"vpn":%s,"maintenance":%s,"agent":%s}}' \
         "$(device_id)" \
         "$uptime_value" \
         "$load_value" \
@@ -43,7 +43,27 @@ telemetry_payload() {
         "$(dhcp_json)" \
         "$(perimeter_json)" \
         "$(vpn_json)" \
+        "$(maintenance_json)" \
         "$(agent_status_json)"
+}
+
+maintenance_json() {
+    installed=0
+    upgrades=0
+    if command -v opkg >/dev/null 2>&1; then
+        installed="$(opkg list-installed 2>/dev/null | wc -l | tr -d ' ')"
+        upgrades="$(opkg list-upgradable 2>/dev/null | wc -l | tr -d ' ')"
+    fi
+    cron_entries=0
+    if [ -r "${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root" ]; then
+        cron_entries="$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root" | wc -l | tr -d ' ')"
+    fi
+    recovery="$(uci -q get wrtmonitor.main.recovery_mode 2>/dev/null || echo 0)"
+    staged_checksum="$(uci -q get wrtmonitor.main.staged_firmware_sha256 2>/dev/null || true)"
+    printf '{"packages":{"installed":%s,"upgradable":%s},"cron_entries":%s,"recovery_mode":%s,"staged_firmware_sha256":"%s"}' \
+        "${installed:-0}" "${upgrades:-0}" "${cron_entries:-0}" \
+        "$( [ "$recovery" = 1 ] && printf true || printf false )" \
+        "$(json_escape "$staged_checksum")"
 }
 
 vpn_json() {

@@ -233,6 +233,9 @@ config wrtmonitor 'main'
     option update_interval_hours '6'
     option update_channel 'stable'
     option allow_downgrade '0'
+    option recovery_mode '0'
+    option staged_firmware_sha256 ''
+    option staged_firmware_preserve '1'
 EOF
 }
 

@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.8.0` добавляет WireGuard, OpenVPN client, policy routing и VPN-телеметрию. Она обновляется поверх `0.7.x` штатным update-механизмом.
+Версия `0.9.0` добавляет обслуживание пакетов, backup/restore, проверяемое обновление OpenWrt, журналы, cron, диагностический архив и recovery mode. Она обновляется поверх `0.8.0` штатным update-механизмом.
 
 ## Требования
 
@@ -78,7 +78,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.8.0/wrtmonitor-openwrt-agent-v0.8.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.9.0/wrtmonitor-openwrt-agent-v0.9.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -180,6 +180,19 @@ wrtmonitor-agent check-dependencies
 wrtmonitor-agent diagnostics
 wrtmonitor-agent diagnostics --json
 ```
+
+## Обслуживание роутера
+
+Команды `v0.9.0` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
+
+- обновление каталога, установка и удаление `opkg`-пакетов;
+- создание и восстановление штатного backup OpenWrt;
+- загрузка и проверка sysupgrade-образа по HTTPS, SHA-256, модели, свободному месту и `sysupgrade -T`;
+- чтение `logread`, отправка ограниченного набора сигналов процессам и замена root crontab;
+- диагностический архив из board/system/network, журнала, процессов, дисков, пакетов и capabilities;
+- recovery mode, в котором изменяющие команды блокируются до явного отключения режима.
+
+Агент запрещает удалять критические пакеты OpenWrt. Конфигурация, токены, ключи Wi-Fi и VPN в диагностический архив не включаются. Backup и диагностический архив передаются серверу как результат команды и скачиваются владельцем через Web UI.
 
 ## Wi-Fi и backup
 

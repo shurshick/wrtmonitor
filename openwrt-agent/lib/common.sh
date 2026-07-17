@@ -69,7 +69,14 @@ iso_now() {
 }
 
 json_escape() {
-    printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+    printf '%s' "$1" | awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
 }
 
 shell_escape_single() {
