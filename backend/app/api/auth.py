@@ -40,7 +40,9 @@ def login(
     if is_setup_required(db, config):
         raise HTTPException(status_code=403, detail="Setup required")
     user = db.scalars(
-        select(User).where(User.username == payload.username, User.disabled.is_(False))
+        select(User).where(
+            User.username == payload.username.strip(), User.disabled.is_(False)
+        )
     ).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")

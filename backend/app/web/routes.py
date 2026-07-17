@@ -260,6 +260,12 @@ def require_web_csrf(
         raise HTTPException(status_code=403, detail="Invalid CSRF token")
 
 
+def request_uses_https(request: Request) -> bool:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "")
+    scheme = forwarded_proto.split(",", 1)[0].strip() or request.url.scheme
+    return scheme.lower() == "https"
+
+
 @router.get("/", response_class=HTMLResponse)
 def index(
     request: Request,
@@ -285,12 +291,27 @@ def index(
 @router.get("/login", response_class=HTMLResponse)
 def login_page(
     request: Request,
+    reason: str | None = None,
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
 ):
     if is_setup_required(db, config):
         return RedirectResponse("/setup", status_code=303)
-    return templates.TemplateResponse(request, "login.html", {})
+    error = (
+        "Браузер не сохранил защищённую сессию. Проверьте HTTPS и разрешение cookies."
+        if reason == "session_cookie"
+        else None
+    )
+    return templates.TemplateResponse(
+        request,
+        "login.html",
+        {
+            "error": error,
+            "https_required": not config.allow_insecure_local
+            and not request_uses_https(request),
+            "public_server_url": config.public_server_url,
+        },
+    )
 
 
 @router.post("/login")
@@ -303,6 +324,18 @@ def login_form(
 ):
     if is_setup_required(db, config):
         return RedirectResponse("/setup", status_code=303)
+    if not config.allow_insecure_local and not request_uses_https(request):
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {
+                "error": "Вход через HTTP отключён: браузер не сохранит защищённую сессию.",
+                "https_required": True,
+                "public_server_url": config.public_server_url,
+            },
+            status_code=400,
+        )
+    username = username.strip()
     user = db.scalars(
         select(User).where(User.username == username, User.disabled.is_(False))
     ).first()
@@ -317,7 +350,7 @@ def login_form(
             },
             status_code=401,
         )
-    response = RedirectResponse("/devices", status_code=303)
+    response = RedirectResponse("/devices?login=1", status_code=303)
     response.set_cookie(
         "wrtmonitor_session",
         create_web_session_token(user.id, user.role, config),
@@ -351,6 +384,7 @@ def logout_form(
 @router.get("/devices", response_class=HTMLResponse)
 def devices_page(
     request: Request,
+    login: bool = False,
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
     wrtmonitor_session: str | None = Cookie(default=None),
@@ -359,7 +393,10 @@ def devices_page(
         return RedirectResponse("/setup", status_code=303)
     user = web_user_from_session(wrtmonitor_session, config, db)
     if not user:
-        return RedirectResponse("/login", status_code=303)
+        target = "/login?reason=session_cookie" if login else "/login"
+        return RedirectResponse(target, status_code=303)
+    if login:
+        return RedirectResponse("/devices", status_code=303)
     csrf_token = generate_csrf_token(wrtmonitor_session or "", config.jwt_secret)
     devices = db.scalars(
         select(Device)

@@ -4,6 +4,7 @@
 {% block content %}
 <section class="card card--form"><p class="eyebrow">WrtMonitor</p><h1>Вход в сервер</h1><p class="page-heading__description">Используйте учётную запись администратора.</p>
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if https_required %}<div class="notice notice--compact">Откройте Web UI по HTTPS{% if public_server_url %}: <a href="{{ public_server_url }}/login">{{ public_server_url }}</a>{% endif %}. Для локального HTTP необходимо явно включить <code>WRTMONITOR_ALLOW_INSECURE_LOCAL=true</code>.</div>{% endif %}
 <form class="form-stack" method="post" action="/login"><label>Администратор<input name="username" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">Войти</button></form>
 </section>
 {% endblock %}
