@@ -329,6 +329,10 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .client-item__heading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .client-item__heading > div { display: grid; min-width: 0; }
 .client-item__heading small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.profile-list { display: grid; gap: 8px; margin-top: 12px; }
+.profile-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 6px; }
+.profile-row > div { display: grid; gap: 2px; }
+.profile-row small { color: var(--muted); }
 .client-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 6px; background: #173b4a; color: var(--primary); font-weight: 800; }
 .client-facts { grid-template-columns: minmax(90px, .8fr) minmax(0, 1.2fr); gap: 5px 9px; font-size: 13px; }
 .client-actions { padding-top: 9px; border-top: 1px solid var(--border); }

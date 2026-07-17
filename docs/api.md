@@ -19,6 +19,12 @@ Access token используется клиентами владельца. Dev
 - `DELETE /api/v1/devices/{device_id}` — безвозвратно удалить роутер и связанные данные
 - `GET /api/v1/devices/{device_id}/telemetry/latest`
 - `GET /api/v1/devices/{device_id}/agent`
+- `GET /api/v1/devices/{device_id}/clients`
+- `PUT|PATCH /api/v1/devices/{device_id}/clients/{client_id}`
+- `POST /api/v1/devices/{device_id}/clients/{client_id}/apply-policy`
+- `GET /api/v1/devices/{device_id}/clients/{client_id}/traffic`
+- `GET|POST /api/v1/devices/{device_id}/client-profiles`
+- `PUT|DELETE /api/v1/devices/{device_id}/client-profiles/{profile_id}`
 - `POST /api/v1/agent/register`
 - `GET /api/v1/agent/commands`
 - `POST /api/v1/agent/commands/{command_id}/result`
@@ -51,7 +57,7 @@ Access token используется клиентами владельца. Dev
 
 ```json
 {
-  "version": "0.4.0",
+  "version": "0.5.0",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -127,17 +133,20 @@ Content-Type: application/json
 
 Тело совпадает с созданием команды. Ответ содержит `changes`, `warnings`, `errors`, `can_apply`, список UCI-конфигураций и timeout автоматического rollback.
 
-### Управляющие команды v0.4.0
+### Управляющие команды v0.5.0
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`
 - `network.set_wan`, `network.set_lan`
 - `dhcp.set_lease`, `dhcp.delete_lease`, `dhcp.set_pool`, `dns.set_servers`
-- `firewall.set_port_forward`, `firewall.delete_port_forward`, `client.set_blocked`
+- `firewall.set_port_forward`, `firewall.delete_port_forward`, `client.set_blocked`, `client.set_policy`
+- `qos.set_sqm`
 - `wifi.set_guest`
 - `system.set_hostname`, `system.restart_service`, `system.set_timezone`, `system.set_ntp`, `router.reboot`
 - `agent.update`, `agent.rollback`, `agent.set_auto_update`, `agent.set_interval`, `agent.disconnect`
 - `diagnostics.run`
+
+`client.set_policy` принимает MAC, признак блокировки, расписание и приоритет. `qos.set_sqm` задаёт общие download/upload в Кбит/с для выбранного WAN-интерфейса. Точный per-client shaping в `v0.5.0` не обещается.
 
 ### Secret masking
 

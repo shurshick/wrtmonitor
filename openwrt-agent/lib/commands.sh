@@ -495,6 +495,84 @@ execute_command() {
                 if uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "client internet access restored" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\"")"; else status="failed"; result="$(command_failed_result "failed to unblock client")"; fi
             fi
             ;;
+        client.set_policy)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
+            client_mac="$(json_get_string "$payload_file" '@.mac')"
+            client_blocked="$(json_get_bool "$payload_file" '@.blocked')"
+            schedule_enabled="$(json_get_bool "$payload_file" '@.schedule.enabled')"
+            schedule_start="$(json_get_string "$payload_file" '@.schedule.start')"
+            schedule_stop="$(json_get_string "$payload_file" '@.schedule.stop')"
+            schedule_days="$(jsonfilter -i "$payload_file" -e '@.schedule.weekdays[*]' 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+            qos_priority="$(json_get_string "$payload_file" '@.qos.priority')"
+            download_kbps="$(json_get_number "$payload_file" '@.qos.download_kbps')"
+            upload_kbps="$(json_get_number "$payload_file" '@.qos.upload_kbps')"
+            rm -f "$payload_file"
+            client_suffix="$(printf '%s' "$client_mac" | tr -d ':')"
+            client_ref="wrtmonitor_policy_$client_suffix"
+            qos_ref="wrtmonitor_qos_$client_suffix"
+            backup_file="$(backup_config firewall "$command_id" "$command_type" || true)"
+            if [ -z "$backup_file" ]; then
+                status="failed"; result="$(command_failed_result "failed to create firewall backup")"
+            else
+                uci -q delete "firewall.$client_ref" || true
+                uci -q delete "firewall.$qos_ref" || true
+                if [ "$client_blocked" = "true" ] || [ "$schedule_enabled" = "true" ]; then
+                    uci set "firewall.$client_ref=rule"
+                    uci set "firewall.$client_ref.name=WrtMonitor policy $client_mac"
+                    uci set "firewall.$client_ref.src=lan"
+                    uci set "firewall.$client_ref.dest=wan"
+                    uci set "firewall.$client_ref.src_mac=$client_mac"
+                    uci set "firewall.$client_ref.target=REJECT"
+                    if [ "$schedule_enabled" = "true" ]; then
+                        [ -z "$schedule_days" ] || uci set "firewall.$client_ref.weekdays=$schedule_days"
+                        [ -z "$schedule_start" ] || uci set "firewall.$client_ref.start_time=$schedule_start"
+                        [ -z "$schedule_stop" ] || uci set "firewall.$client_ref.stop_time=$schedule_stop"
+                    fi
+                fi
+                if [ -n "$qos_priority" ] && [ "$qos_priority" != "normal" ]; then
+                    case "$qos_priority" in low) policy_mark="0x10" ;; high) policy_mark="0x30" ;; realtime) policy_mark="0x40" ;; *) policy_mark="0x20" ;; esac
+                    uci set "firewall.$qos_ref=rule"
+                    uci set "firewall.$qos_ref.name=WrtMonitor priority $client_mac"
+                    uci set "firewall.$qos_ref.src=lan"
+                    uci set "firewall.$qos_ref.src_mac=$client_mac"
+                    uci set "firewall.$qos_ref.target=MARK"
+                    uci set "firewall.$qos_ref.set_mark=$policy_mark"
+                fi
+                if uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then
+                    result="$(command_success_result "client policy applied" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\",\"qos_priority\":\"$(json_escape "$qos_priority")\",\"download_kbps\":${download_kbps:-0},\"upload_kbps\":${upload_kbps:-0}")"
+                else
+                    status="failed"; result="$(command_failed_result "failed to apply client policy")"
+                fi
+            fi
+            ;;
+        qos.set_sqm)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
+            sqm_enabled="$(json_get_bool "$payload_file" '@.enabled')"
+            sqm_interface="$(json_get_string "$payload_file" '@.interface')"
+            sqm_download="$(json_get_number "$payload_file" '@.download_kbps')"
+            sqm_upload="$(json_get_number "$payload_file" '@.upload_kbps')"
+            sqm_qdisc="$(json_get_string "$payload_file" '@.qdisc')"
+            sqm_script="$(json_get_string "$payload_file" '@.script')"
+            rm -f "$payload_file"
+            [ -n "$sqm_qdisc" ] || sqm_qdisc="cake"
+            [ -n "$sqm_script" ] || sqm_script="piece_of_cake.qos"
+            sqm_backup="$(backup_config sqm "$command_id" "$command_type" || true)"
+            if [ -z "$sqm_backup" ]; then
+                status="failed"; result="$(command_failed_result "failed to create SQM backup")"
+            elif uci set sqm.wrtmonitor=queue \
+                && uci set "sqm.wrtmonitor.enabled=$( [ "$sqm_enabled" = "true" ] && printf 1 || printf 0 )" \
+                && uci set "sqm.wrtmonitor.interface=$sqm_interface" \
+                && uci set "sqm.wrtmonitor.download=$sqm_download" \
+                && uci set "sqm.wrtmonitor.upload=$sqm_upload" \
+                && uci set "sqm.wrtmonitor.qdisc=$sqm_qdisc" \
+                && uci set "sqm.wrtmonitor.script=$sqm_script" \
+                && uci commit sqm \
+                && /etc/init.d/sqm restart >/dev/null 2>&1; then
+                result="$(command_success_result "SQM configuration applied" "\"backup\":\"$(json_escape "$sqm_backup")\",\"interface\":\"$(json_escape "$sqm_interface")\",\"download_kbps\":$sqm_download,\"upload_kbps\":$sqm_upload")"
+            else
+                status="failed"; result="$(command_failed_result "failed to apply SQM configuration")"
+            fi
+            ;;
         wifi.set_guest)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
             [ -n "$guest_radio" ] || guest_radio="$(resolve_wifi_radio "" || true)"; [ -n "$guest_radio" ] || guest_radio="radio0"

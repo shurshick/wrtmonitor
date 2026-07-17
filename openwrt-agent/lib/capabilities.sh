@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="5"
+CAPABILITIES_VERSION="6"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -7,10 +7,10 @@ capability_path() {
 capability_keys() {
     printf '%s\n' \
         agent.status agent.update agent.set_interval agent.rollback agent.disable config.transaction \
-        telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.clients telemetry.services \
+        telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.clients telemetry.clients.traffic telemetry.services \
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
-        clients.read clients.block dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
+        clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
         system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
         diagnostics.check_server diagnostics.check_dependencies diagnostics.check_dns diagnostics.check_route diagnostics.check_wifi
 }
@@ -74,6 +74,7 @@ capability_supported() {
         telemetry.network|network.read) has_network_runtime ;;
         telemetry.wifi|wifi.read) has_wifi_radio ;;
         telemetry.clients|clients.read) has_commands ip || [ -r "$(capability_path /tmp/dhcp.leases)" ] ;;
+        telemetry.clients.traffic) has_commands nlbw ;;
         telemetry.services) [ -d "$(capability_path /etc/init.d)" ] ;;
         wifi.enable|wifi.disable|wifi.set_channel|wifi.set_country) has_wifi_radio && has_commands wifi ;;
         wifi.set_ssid|wifi.set_password) has_wifi_iface && has_commands wifi ;;
@@ -81,7 +82,8 @@ capability_supported() {
         network.interface_restart) has_network_runtime && has_commands ifup ifdown ;;
         network.restart) [ -x "$(capability_path /etc/init.d/network)" ] ;;
         network.write|network.wan.configure|network.lan.configure) has_network_write && has_commands ifup ifdown ;;
-        clients.block|firewall.port_forward) has_firewall_write ;;
+        clients.block|clients.policy|firewall.port_forward) has_firewall_write ;;
+        qos.sqm) has_uci_config sqm && [ -x "$(capability_path /etc/init.d/sqm)" ] ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.configure|dns.configure) has_dhcp_write ;;
         system.reboot) has_commands reboot ;;
         system.set_hostname|system.set_timezone) has_system_write ;;
@@ -107,10 +109,12 @@ capability_unavailable_reason() {
         telemetry.network|network.read) printf 'ubus network runtime or jsonfilter is unavailable' ;;
         telemetry.wifi|wifi.*|diagnostics.check_wifi) printf 'wireless configuration, radio or wifi utility is unavailable' ;;
         telemetry.clients|clients.read) printf 'neighbour and DHCP lease sources are unavailable' ;;
+        telemetry.clients.traffic) printf 'nlbwmon is not installed or its client is unavailable' ;;
         telemetry.services|system.restart_service) printf 'OpenWrt init services are unavailable' ;;
         network.interface_restart) printf 'ubus network runtime, ifup or ifdown is unavailable' ;;
         network.*) printf 'network UCI configuration or init service is unavailable' ;;
-        clients.block|firewall.port_forward) printf 'firewall UCI configuration or service is unavailable' ;;
+        clients.block|clients.policy|firewall.port_forward) printf 'firewall UCI configuration or service is unavailable' ;;
+        qos.sqm) printf 'sqm-scripts package or SQM init service is unavailable' ;;
         dhcp.*|dns.configure) printf 'DHCP configuration or dnsmasq service is unavailable' ;;
         system.reboot) printf 'reboot utility is unavailable' ;;
         system.set_hostname|system.set_timezone) printf 'system UCI configuration is unavailable' ;;

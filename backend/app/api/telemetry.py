@@ -11,6 +11,7 @@ from ..models import DeviceTelemetry, User
 from ..services.auth import current_user, device_from_token, settings
 from ..services.devices import get_latest_agent_status, get_user_device_or_404
 from ..services.telemetry import TELEMETRY_STALE_SECONDS, cleanup_device_telemetry
+from ..services.client_registry import sync_client_inventory
 from ..schemas import TelemetryRequest
 from ..services.telemetry import (
     build_telemetry_summary,
@@ -91,6 +92,7 @@ def agent_telemetry(
         )
     )
     db.flush()
+    sync_client_inventory(db, device.id, payload.telemetry, now)
     cleanup_device_telemetry(db, device.id, settings().telemetry_retention_per_device)
     db.commit()
     return {"status": "ok"}

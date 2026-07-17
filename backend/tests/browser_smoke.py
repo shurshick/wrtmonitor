@@ -60,6 +60,8 @@ def prepare_router() -> str:
             "network.lan.configure": True,
             "clients.read": True,
             "clients.block": True,
+            "clients.policy": True,
+            "qos.sqm": True,
             "dhcp.set_lease": True,
             "dhcp.delete_lease": True,
             "dhcp.configure": True,
@@ -85,9 +87,9 @@ def prepare_router() -> str:
                 "device_id": device_id,
                 "telemetry": {
                     "agent": {
-                        "version": "0.3.0",
+                        "version": "0.5.0",
                         "status": "running",
-                        "capabilities_version": 5,
+                        "capabilities_version": 6,
                         "capabilities": capabilities,
                     },
                     "system": {
@@ -141,6 +143,8 @@ def prepare_router() -> str:
                                     "mac": "00:11:22:33:44:55",
                                     "ip": "192.168.1.10",
                                     "hostname": "test-client",
+                                    "rx_bytes": 1048576,
+                                    "tx_bytes": 524288,
                                 }
                             ]
                         }

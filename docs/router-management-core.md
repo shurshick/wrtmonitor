@@ -1,6 +1,6 @@
 # Router Management Core
 
-Документ фиксирует фундамент управления роутером, актуальный для `v0.4.0`.
+Документ фиксирует фундамент управления роутером, актуальный для `v0.5.0`.
 
 ## Что закреплено
 
@@ -13,6 +13,7 @@
 - compact capabilities UX в Web UI и Android
 - модульная структура OpenWrt-агента
 - WAN/LAN, DHCP/DNS, firewall, client policy, guest Wi-Fi и системное время
+- постоянный реестр клиентов, профили доступа, `nlbwmon` и SQM
 
 ## OpenWrt-агент
 

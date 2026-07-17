@@ -12,6 +12,27 @@ data class DeviceDto(
     val lastSeenAt: String?,
 )
 
+data class NetworkClientDto(
+    val id: String,
+    val mac: String,
+    val displayName: String?,
+    val hostname: String?,
+    val vendor: String?,
+    val ipAddress: String?,
+    val networkInterface: String?,
+    val online: Boolean,
+    val isStatic: Boolean,
+    val profileId: String?,
+    val effectivePolicy: JSONObject,
+    val traffic: JSONObject?,
+)
+
+data class ClientProfileDto(
+    val id: String,
+    val name: String,
+    val policy: JSONObject,
+)
+
 data class TelemetryDto(
     val createdAt: String?,
     val ageSeconds: Long?,

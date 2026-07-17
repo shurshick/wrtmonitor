@@ -5,8 +5,10 @@ import org.json.JSONObject
 import ru.wrtmonitor.app.api.dto.AgentStatusDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
+import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
+import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import java.net.HttpURLConnection
 import java.net.URL
@@ -97,6 +99,84 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 services = json.optJSONObject("services"),
             )
         }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getNetworkClients(deviceId: String): ApiResult<List<NetworkClientDto>> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/clients")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val array = JSONArray(response)
+        (0 until array.length()).map { index ->
+            array.getJSONObject(index).let { item ->
+                NetworkClientDto(
+                    id = item.optString("id"),
+                    mac = item.optString("mac"),
+                    displayName = item.optString("display_name").takeIf { it.isNotBlank() && it != "null" },
+                    hostname = item.optString("hostname").takeIf { it.isNotBlank() && it != "null" },
+                    vendor = item.optString("vendor").takeIf { it.isNotBlank() && it != "null" },
+                    ipAddress = item.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
+                    networkInterface = item.optString("interface").takeIf { it.isNotBlank() && it != "null" },
+                    online = item.optBoolean("online"),
+                    isStatic = item.optBoolean("is_static"),
+                    profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },
+                    effectivePolicy = item.optJSONObject("effective_policy") ?: JSONObject(),
+                    traffic = item.optJSONObject("traffic"),
+                )
+            }
+        }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getClientProfiles(deviceId: String): ApiResult<List<ClientProfileDto>> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/client-profiles")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val array = JSONArray(response)
+        (0 until array.length()).map { index ->
+            array.getJSONObject(index).let { item ->
+                ClientProfileDto(item.optString("id"), item.optString("name"), item.optJSONObject("policy") ?: JSONObject())
+            }
+        }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun createClientProfile(deviceId: String, name: String, blocked: Boolean): ApiResult<Unit> = runCatching {
+        val policy = JSONObject()
+            .put("blocked", blocked)
+            .put("schedule", JSONObject().put("enabled", false).put("weekdays", JSONArray()).put("start", "").put("stop", ""))
+            .put("qos", JSONObject().put("priority", "normal").put("download_kbps", 0).put("upload_kbps", 0))
+        val (status, _) = request(
+            "/api/v1/devices/$deviceId/client-profiles",
+            "POST",
+            JSONObject().put("name", name).put("policy", policy),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun deleteClientProfile(deviceId: String, profileId: String): ApiResult<Unit> = runCatching {
+        val (status, _) = request("/api/v1/devices/$deviceId/client-profiles/$profileId", "DELETE")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun updateNetworkClient(
+        deviceId: String,
+        clientId: String,
+        displayName: String,
+        profileId: String?,
+        policy: JSONObject,
+    ): ApiResult<Unit> = runCatching {
+        val (status, _) = request(
+            "/api/v1/devices/$deviceId/clients/$clientId",
+            "PUT",
+            JSONObject().put("display_name", displayName).put("profile_id", profileId ?: JSONObject.NULL).put("policy", policy),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun applyNetworkClientPolicy(deviceId: String, clientId: String): ApiResult<String> = runCatching {
+        val (status, response) = request(
+            "/api/v1/devices/$deviceId/clients/$clientId/apply-policy",
+            "POST",
+            JSONObject(),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        JSONObject(response).optString("status", "queued")
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
     fun getDeviceAgent(deviceId: String): ApiResult<AgentStatusDto> = runCatching {

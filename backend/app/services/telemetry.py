@@ -196,6 +196,9 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
             "source": "static-dhcp",
             "expires": None,
             "is_static": True,
+            "vendor": lease.get("vendor"),
+            "rx_bytes": lease.get("rx_bytes"),
+            "tx_bytes": lease.get("tx_bytes"),
         }
 
     for lease in leases:
@@ -215,6 +218,9 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "source": "dhcp",
                 "expires": lease.get("expires"),
                 "is_static": False,
+                "vendor": lease.get("vendor"),
+                "rx_bytes": lease.get("rx_bytes"),
+                "tx_bytes": lease.get("tx_bytes"),
             },
         )
         item["ip"] = lease.get("ip") or item.get("ip")
@@ -224,6 +230,9 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
             else item.get("hostname")
         )
         item["expires"] = lease.get("expires") or item.get("expires")
+        item["vendor"] = lease.get("vendor") or item.get("vendor")
+        item["rx_bytes"] = lease.get("rx_bytes") or item.get("rx_bytes")
+        item["tx_bytes"] = lease.get("tx_bytes") or item.get("tx_bytes")
 
     for neighbour in neighbours:
         if not isinstance(neighbour, dict):
@@ -242,11 +251,17 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "source": "neighbour",
                 "expires": None,
                 "is_static": False,
+                "vendor": neighbour.get("vendor"),
+                "rx_bytes": neighbour.get("rx_bytes"),
+                "tx_bytes": neighbour.get("tx_bytes"),
             },
         )
         item["ip"] = neighbour.get("ip") or item.get("ip")
         item["interface"] = neighbour.get("interface") or item.get("interface")
         item["state"] = neighbour.get("state") or item.get("state")
+        item["vendor"] = neighbour.get("vendor") or item.get("vendor")
+        item["rx_bytes"] = neighbour.get("rx_bytes") or item.get("rx_bytes")
+        item["tx_bytes"] = neighbour.get("tx_bytes") or item.get("tx_bytes")
         if item.get("source") in {"dhcp", "static-dhcp"}:
             item["source"] = "dhcp+neighbour"
 

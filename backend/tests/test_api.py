@@ -15,6 +15,7 @@ from backend.app.db import get_db, get_engine, init_db
 from backend.app.models import (
     AppSetting,
     AuditLog,
+    ClientTrafficSample,
     Device,
     DeviceCommand,
     DeviceTelemetry,
@@ -513,6 +514,12 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         "network": {"interfaces": [{"name": "lan", "up": True}]},
         "agent": {
             "version": APP_VERSION,
+            "capabilities_version": 6,
+            "capabilities": {
+                "clients.policy": True,
+                "config.transaction": True,
+                "qos.sqm": True,
+            },
             "auto_update_enabled": True,
             "last_update_status": "success",
             "last_update_error": "",
@@ -521,6 +528,28 @@ def test_router_registration_telemetry_and_latest_api_e2e():
             "backup_available": True,
             "available_version": APP_VERSION,
             "update_source": "https://monitor.example.ru/downloads/openwrt",
+        },
+        "clients": {
+            "neighbours": [
+                {
+                    "mac": "00:11:22:33:44:55",
+                    "ip": "192.168.1.42",
+                    "interface": "br-lan",
+                    "state": "REACHABLE",
+                    "vendor": "Example Corp",
+                    "rx_bytes": 1234,
+                    "tx_bytes": 5678,
+                }
+            ],
+            "dhcp": {
+                "static_leases": [
+                    {
+                        "mac": "00:11:22:33:44:55",
+                        "ip": "192.168.1.42",
+                        "hostname": "workstation",
+                    }
+                ]
+            },
         },
     }
     for index in range(105):
@@ -544,9 +573,53 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert latest["age_seconds"] >= 0
     assert latest["is_stale"] is False
     assert latest["source"] == "agent"
-    assert latest["clients"] == {"count": 0, "items": []}
+    assert latest["clients"]["count"] == 1
+    assert latest["clients"]["items"][0]["hostname"] == "workstation"
     assert "system" in latest
     assert "services" in latest
+
+    clients_response = client.get(
+        f"/api/v1/devices/{device_id}/clients", headers=admin_headers
+    )
+    assert clients_response.status_code == 200
+    registered_client = clients_response.json()[0]
+    assert registered_client["vendor"] == "Example Corp"
+    assert registered_client["is_static"] is True
+    assert registered_client["traffic"]["rx_bytes"] == 1234
+
+    profile_response = client.post(
+        f"/api/v1/devices/{device_id}/client-profiles",
+        headers=admin_headers,
+        json={"name": "Children", "policy": {"blocked": True}},
+    )
+    assert profile_response.status_code == 200
+    profile_id = profile_response.json()["id"]
+    update_response = client.patch(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}",
+        headers=admin_headers,
+        json={
+            "display_name": "Desk PC",
+            "profile_id": profile_id,
+            "policy": {
+                "blocked": False,
+                "qos": {"priority": "high", "download_kbps": 50000},
+            },
+        },
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["display_name"] == "Desk PC"
+    assert update_response.json()["effective_policy"]["qos"]["priority"] == "high"
+    apply_response = client.post(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/apply-policy",
+        headers=admin_headers,
+    )
+    assert apply_response.status_code == 200
+    traffic_response = client.get(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/traffic",
+        headers=admin_headers,
+    )
+    assert traffic_response.status_code == 200
+    assert len(traffic_response.json()) == 96
 
     session_factory = sessionmaker(
         bind=get_engine(), autoflush=False, expire_on_commit=False
@@ -557,7 +630,9 @@ def test_router_registration_telemetry_and_latest_api_e2e():
             .filter(DeviceTelemetry.device_id == UUID(device_id))
             .count()
         )
+        traffic_count = session.query(ClientTrafficSample).count()
     assert count == 100
+    assert traffic_count == 96
 
 
 def test_device_delete_removes_router_and_all_related_data():

@@ -8,18 +8,39 @@
   <div class="client-grid client-grid--friendly">
     {% for client in clients %}
     <article class="client-item">
-      <div class="client-item__heading"><span class="client-avatar">{{ (client.hostname or 'У')[:1]|upper }}</span><div><strong>{{ client.hostname or 'Неизвестное устройство' }}</strong><small>{{ client.mac }}</small></div><span class="status status--{{ 'online' if client.state and client.state|lower not in ['failed', 'incomplete'] else 'offline' }}">{{ 'В сети' if client.state and client.state|lower not in ['failed', 'incomplete'] else 'Нет связи' }}</span></div>
-      <dl class="client-facts"><dt>IP-адрес</dt><dd>{{ client.ip or 'не определён' }}</dd><dt>Подключение</dt><dd>{{ client.interface or 'домашняя сеть' }}</dd><dt>Адрес DHCP</dt><dd>{{ 'Постоянный' if client.is_static else 'Автоматический' }}</dd></dl>
-      {% if supports.clients_block or (supports.dhcp_delete_lease and client.is_static) %}
-      <details class="client-actions"><summary>Управление устройством</summary><div>
-        {% if supports.clients_block and client.mac %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Заблокировать доступ в интернет для {{ client.mac }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="client.set_blocked"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><input type="hidden" name="blocked" value="true"><button class="button--secondary button--small" type="submit">Приостановить интернет</button></form><form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="client.set_blocked"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><input type="hidden" name="blocked" value="false"><button class="button--secondary button--small" type="submit">Разрешить интернет</button></form>{% endif %}
-        {% if supports.dhcp_delete_lease and client.is_static %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить постоянный адрес для {{ client.mac }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.delete_lease"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><button class="button--danger button--small" type="submit">Удалить постоянный адрес</button></form>{% endif %}
-      </div></details>
+      <div class="client-item__heading"><span class="client-avatar">{{ (client.display_name or client.hostname or 'У')[:1]|upper }}</span><div><strong>{{ client.display_name or client.hostname or 'Неизвестное устройство' }}</strong><small>{{ client.vendor or 'Производитель не определён' }} · {{ client.mac }}</small></div><span class="status status--{{ 'online' if client.online else 'offline' }}">{{ 'В сети' if client.online else 'Нет связи' }}</span></div>
+      <dl class="client-facts"><dt>IP-адрес</dt><dd>{{ client.ip_address or 'не определён' }}</dd><dt>Подключение</dt><dd>{{ client.interface or 'домашняя сеть' }}</dd><dt>Впервые замечен</dt><dd>{{ client.first_seen_at|timestamp }}</dd><dt>Последняя активность</dt><dd>{{ client.last_seen_at|timestamp }}</dd>{% if client.traffic %}<dt>Трафик RX / TX</dt><dd>{{ client.traffic.rx_bytes|bytes }} / {{ client.traffic.tx_bytes|bytes }}</dd>{% endif %}</dl>
+      {% if supports.dhcp_delete_lease and client.is_static %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить постоянный адрес для {{ client.mac }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.delete_lease"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><button class="button--ghost button--small" type="submit">Удалить постоянный адрес</button></form>{% endif %}
+      {% if supports.clients_policy %}
+      <details class="client-actions"><summary>Доступ и приоритет</summary>
+        <form class="compact-form settings-panel__body" method="post" action="/devices/{{ device.id }}/clients/{{ client.id }}/policy" onsubmit="return confirm('Применить политику доступа для {{ client.mac }}?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label>Понятное имя<input name="display_name" maxlength="120" value="{{ client.display_name or '' }}" placeholder="Телевизор в гостиной"></label>
+          <label>Профиль<select name="profile_id"><option value="">Без профиля</option>{% for profile in client_profiles %}<option value="{{ profile.id }}" {% if client.profile_id == profile.id|string %}selected{% endif %}>{{ profile.name }}</option>{% endfor %}</select></label>
+          <label class="checkbox-row"><input type="checkbox" name="blocked" value="true" {% if client.effective_policy.blocked %}checked{% endif %}> Всегда блокировать интернет</label>
+          <label class="checkbox-row"><input type="checkbox" name="schedule_enabled" value="true" {% if client.effective_policy.schedule.enabled %}checked{% endif %}> Ограничивать по расписанию</label>
+          <div class="form-grid"><label>Дни (mon,tue,... )<input name="weekdays" value="{{ client.effective_policy.schedule.weekdays|join(',') }}"></label><label>Начало<input name="start" type="time" value="{{ client.effective_policy.schedule.start }}"></label><label>Окончание<input name="stop" type="time" value="{{ client.effective_policy.schedule.stop }}"></label></div>
+          <div class="form-grid"><label>Приоритет<select name="priority"><option value="low" {% if client.effective_policy.qos.priority == 'low' %}selected{% endif %}>Низкий</option><option value="normal" {% if client.effective_policy.qos.priority == 'normal' %}selected{% endif %}>Обычный</option><option value="high" {% if client.effective_policy.qos.priority == 'high' %}selected{% endif %}>Высокий</option><option value="realtime" {% if client.effective_policy.qos.priority == 'realtime' %}selected{% endif %}>Реальное время</option></select></label><label>Загрузка, Кбит/с<input name="download_kbps" type="number" min="0" value="{{ client.effective_policy.qos.download_kbps }}"></label><label>Отдача, Кбит/с<input name="upload_kbps" type="number" min="0" value="{{ client.effective_policy.qos.upload_kbps }}"></label></div>
+          <div class="form-actions"><button class="button--small" type="submit">Сохранить и применить</button></div>
+        </form>
+      </details>
       {% endif %}
     </article>
     {% else %}<div class="empty-state"><h2>Устройств пока нет</h2><p>Список появится после следующего опроса роутера.</p></div>{% endfor %}
   </div>
 </section>
+
+{% if supports.clients_policy %}
+<section class="workspace-section section">
+  <div class="card__heading"><div><p class="eyebrow">Общие правила</p><h2>Профили доступа</h2><p class="muted">Один профиль можно назначить нескольким устройствам.</p></div></div>
+  <div class="profile-list">
+    {% for profile in client_profiles %}
+    <div class="profile-row"><div><strong>{{ profile.name }}</strong><small>{{ 'Интернет заблокирован' if profile.policy.blocked else 'Доступ разрешён' }}</small></div><form method="post" action="/devices/{{ device.id }}/client-profiles/{{ profile.id }}/delete" onsubmit="return confirm('Удалить профиль? Устройства сохранят индивидуальные правила.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--ghost button--small" type="submit">Удалить</button></form></div>
+    {% else %}<p class="muted">Профили ещё не созданы.</p>{% endfor %}
+  </div>
+  <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/client-profiles"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="form-grid"><label>Название профиля<input name="name" required maxlength="80" placeholder="Дети"></label><label class="checkbox-row"><input type="checkbox" name="blocked" value="true"> Запретить интернет</label></div><div class="form-actions"><button class="button--small" type="submit">Создать профиль</button></div></form>
+</section>
+{% endif %}
 
 {% if supports.dhcp_set_lease or supports.network_lan_configure or supports.dhcp_configure %}
 <div class="settings-workspace section">

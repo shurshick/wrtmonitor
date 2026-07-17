@@ -65,6 +65,18 @@
     </div>
   </details>
   {% endif %}
+
+  {% if supports.qos_sqm %}
+  <details class="settings-panel card">
+    <summary><span><strong>Приоритизация трафика SQM</strong><small>Снижает задержки при полной загрузке канала</small></span><span>Настроить</span></summary>
+    <form class="compact-form settings-panel__body" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="qos.set_sqm"><input type="hidden" name="confirmed" value="true">
+      <div class="form-grid"><label>Состояние<select name="enabled"><option value="true">Включить</option><option value="false">Выключить</option></select></label><label>WAN-устройство<input name="interface" required placeholder="pppoe-wan или eth1"></label><label>Загрузка, Кбит/с<input name="download_kbps" required type="number" min="0" max="10000000"></label><label>Отдача, Кбит/с<input name="upload_kbps" required type="number" min="0" max="10000000"></label></div>
+      <p class="muted">Укажите примерно 90% измеренной скорости. Используются CAKE и piece_of_cake.qos.</p>
+      <div class="form-actions"><button type="submit">Применить SQM</button></div>
+    </form>
+  </details>
+  {% endif %}
 </div>
 
 {% if supports.network_interface_restart or supports.network_restart %}

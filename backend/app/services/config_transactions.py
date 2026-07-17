@@ -31,6 +31,8 @@ CONFIG_TRANSACTION_SCOPES: dict[str, tuple[str, ...]] = {
     "firewall.set_port_forward": ("firewall",),
     "firewall.delete_port_forward": ("firewall",),
     "client.set_blocked": ("firewall",),
+    "client.set_policy": ("firewall",),
+    "qos.set_sqm": ("sqm",),
     "system.set_hostname": ("system",),
     "system.set_timezone": ("system",),
     "system.set_ntp": ("system",),

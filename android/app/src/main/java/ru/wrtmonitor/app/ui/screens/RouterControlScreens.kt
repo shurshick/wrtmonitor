@@ -35,7 +35,9 @@ import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
+import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
+import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.ui.components.InfoRow
@@ -56,6 +58,97 @@ private data class PendingSafeCommand(
     val payload: JSONObject,
     val successMessage: String = "",
 )
+
+@Composable
+private fun ClientPolicyCard(
+    client: NetworkClientDto,
+    profiles: List<ClientProfileDto>,
+    canDeleteLease: Boolean,
+    onDeleteLease: () -> Unit,
+    onSave: (String, String?, JSONObject) -> Unit,
+) {
+    val policy = client.effectivePolicy
+    val schedule = policy.optJSONObject("schedule") ?: JSONObject()
+    val qos = policy.optJSONObject("qos") ?: JSONObject()
+    var displayName by remember(client.id) { mutableStateOf(client.displayName.orEmpty()) }
+    var profileId by remember(client.id) { mutableStateOf(client.profileId) }
+    var blocked by remember(client.id) { mutableStateOf(policy.optBoolean("blocked")) }
+    var scheduleEnabled by remember(client.id) { mutableStateOf(schedule.optBoolean("enabled")) }
+    var weekdays by remember(client.id) {
+        mutableStateOf(schedule.optJSONArray("weekdays")?.let { array ->
+            (0 until array.length()).joinToString(",") { array.optString(it) }
+        }.orEmpty())
+    }
+    var start by remember(client.id) { mutableStateOf(schedule.optString("start")) }
+    var stop by remember(client.id) { mutableStateOf(schedule.optString("stop")) }
+    var priority by remember(client.id) { mutableStateOf(qos.optString("priority", "normal")) }
+    var download by remember(client.id) { mutableStateOf(qos.optInt("download_kbps").toString()) }
+    var upload by remember(client.id) { mutableStateOf(qos.optInt("upload_kbps").toString()) }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        displayName.ifBlank { client.hostname ?: stringResource(R.string.client_unknown) },
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(client.vendor ?: client.mac, style = MaterialTheme.typography.bodySmall)
+                }
+                StatusPill(
+                    if (client.online) stringResource(R.string.online) else stringResource(R.string.offline),
+                    client.online,
+                )
+            }
+            InfoRow(stringResource(R.string.ip_address), client.ipAddress.orEmpty(), stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.mac_address), client.mac, stringResource(R.string.no_data))
+            if (canDeleteLease && client.isStatic) {
+                TextButton(onClick = onDeleteLease, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.delete_lease)) }
+            }
+            ExpandableSettingsCard(
+                title = stringResource(R.string.client_access_policy),
+                summary = if (blocked) stringResource(R.string.access_blocked) else stringResource(R.string.access_allowed),
+            ) {
+                OutlinedTextField(displayName, { displayName = it }, label = { Text(stringResource(R.string.device_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Text(stringResource(R.string.client_profile), style = MaterialTheme.typography.labelLarge)
+                TextButton(onClick = { profileId = null }) { Text(if (profileId == null) stringResource(R.string.no_profile_selected) else stringResource(R.string.no_profile)) }
+                profiles.forEach { profile ->
+                    TextButton(onClick = { profileId = profile.id }) { Text(if (profileId == profile.id) "${profile.name} · ${stringResource(R.string.selected)}" else profile.name) }
+                }
+                SwitchSettingRow(stringResource(R.string.block_client), checked = blocked, onCheckedChange = { blocked = it })
+                SwitchSettingRow(stringResource(R.string.access_schedule), checked = scheduleEnabled, onCheckedChange = { scheduleEnabled = it })
+                if (scheduleEnabled) {
+                    OutlinedTextField(weekdays, { weekdays = it }, label = { Text(stringResource(R.string.schedule_weekdays)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(start, { start = it }, label = { Text(stringResource(R.string.schedule_start)) }, modifier = Modifier.weight(1f), singleLine = true)
+                        OutlinedTextField(stop, { stop = it }, label = { Text(stringResource(R.string.schedule_stop)) }, modifier = Modifier.weight(1f), singleLine = true)
+                    }
+                }
+                OutlinedTextField(priority, { priority = it }, label = { Text(stringResource(R.string.traffic_priority)) }, supportingText = { Text("low / normal / high / realtime") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(download, { download = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.download_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(upload, { upload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.upload_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
+                }
+                PrimaryActionButton(
+                    label = stringResource(R.string.save_policy),
+                    onClick = {
+                        val days = JSONArray()
+                        weekdays.split(',').map(String::trim).filter(String::isNotBlank).forEach(days::put)
+                        onSave(
+                            displayName,
+                            profileId,
+                            JSONObject()
+                                .put("blocked", blocked)
+                                .put("schedule", JSONObject().put("enabled", scheduleEnabled).put("weekdays", days).put("start", start).put("stop", stop))
+                                .put("qos", JSONObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0)),
+                        )
+                    },
+                    modifier = Modifier.align(Alignment.End),
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun SafeCommandDialog(
@@ -119,6 +212,10 @@ private fun SafeCommandDialog(
 fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
     val scope = rememberCoroutineScope()
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
+    var networkClients by remember { mutableStateOf<List<NetworkClientDto>>(emptyList()) }
+    var clientProfiles by remember { mutableStateOf<List<ClientProfileDto>>(emptyList()) }
+    var profileName by remember { mutableStateOf("") }
+    var profileBlocked by remember { mutableStateOf(false) }
     var hostname by remember { mutableStateOf("") }
     var mac by remember { mutableStateOf("") }
     var ip by remember { mutableStateOf("") }
@@ -133,8 +230,23 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
 
     val refresh: () -> Unit = {
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
+            val api = WrtMonitorApi(serverUrl, accessToken)
+            when (val result = withContext(Dispatchers.IO) { api.getLatestTelemetry(device.id) }) {
                 is ApiResult.Success -> telemetry = result.data
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                    message = result.message
+                    messageIsError = true
+                }
+            }
+            when (val result = withContext(Dispatchers.IO) { api.getNetworkClients(device.id) }) {
+                is ApiResult.Success -> networkClients = result.data
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                    message = result.message
+                    messageIsError = true
+                }
+            }
+            when (val result = withContext(Dispatchers.IO) { api.getClientProfiles(device.id) }) {
+                is ApiResult.Success -> clientProfiles = result.data
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
                     messageIsError = true
@@ -164,55 +276,68 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     }
 
     LaunchedEffect(device.id) { refresh() }
-    val clients = telemetry?.clients?.optJSONArray("items") ?: JSONArray()
+    val clients = networkClients
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
 
     RouterPageHeader(
         title = stringResource(R.string.home_network),
-        subtitle = stringResource(R.string.clients_found, clients.length()),
+        subtitle = stringResource(R.string.clients_found, clients.size),
         onRefresh = refresh,
     )
-    if (clients.length() == 0) {
+    if (clients.isEmpty()) {
         Card(Modifier.fillMaxWidth()) { Text(stringResource(R.string.no_data), Modifier.padding(16.dp)) }
     }
-    for (index in 0 until clients.length()) {
-        val client = clients.optJSONObject(index) ?: continue
-        val clientMac = client.optString("mac")
-        val clientState = client.optString("state")
-        val clientOnline = clientState.lowercase() !in setOf("", "offline", "expired", "failed")
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        client.optString("hostname").ifBlank { stringResource(R.string.client_unknown) },
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StatusPill(
-                        if (clientOnline) stringResource(R.string.online) else stringResource(R.string.offline),
-                        clientOnline,
-                    )
-                }
-                InfoRow(stringResource(R.string.ip_address), client.optString("ip"), stringResource(R.string.no_data))
-                InfoRow(stringResource(R.string.mac_address), clientMac, stringResource(R.string.no_data))
-                InfoRow(stringResource(R.string.client_source), client.optString("source"), stringResource(R.string.no_data))
-                if (capabilities["dhcp.delete_lease"] == true && client.optBoolean("is_static", false)) {
-                    TextButton(
-                        onClick = { pendingCommand = PendingSafeCommand("dhcp.delete_lease", JSONObject().put("mac", clientMac), genericQueuedText) },
-                        modifier = Modifier.align(Alignment.End),
-                    ) { Text(stringResource(R.string.delete_lease)) }
-                }
-                if (capabilities["clients.block"] == true && clientMac.isNotBlank()) {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-                        TextButton(
-                            onClick = { pendingCommand = PendingSafeCommand("client.set_blocked", JSONObject().put("mac", clientMac).put("blocked", true), genericQueuedText) },
-                        ) { Text(stringResource(R.string.block_client)) }
-                        TextButton(
-                            onClick = { pendingCommand = PendingSafeCommand("client.set_blocked", JSONObject().put("mac", clientMac).put("blocked", false), genericQueuedText) },
-                        ) { Text(stringResource(R.string.unblock_client)) }
+    for (client in clients) {
+        ClientPolicyCard(
+            client,
+            clientProfiles,
+            canDeleteLease = capabilities["dhcp.delete_lease"] == true,
+            onDeleteLease = { pendingCommand = PendingSafeCommand("dhcp.delete_lease", JSONObject().put("mac", client.mac), genericQueuedText) },
+        ) { displayName, profileId, policy ->
+            scope.launch {
+                val api = WrtMonitorApi(serverUrl, accessToken)
+                val storedPolicy = if (profileId == null) policy else JSONObject()
+                when (val update = withContext(Dispatchers.IO) { api.updateNetworkClient(device.id, client.id, displayName, profileId, storedPolicy) }) {
+                    is ApiResult.Success -> when (val apply = withContext(Dispatchers.IO) { api.applyNetworkClientPolicy(device.id, client.id) }) {
+                        is ApiResult.Success -> { message = genericQueuedText; messageIsError = false; refresh() }
+                        is ApiResult.Error -> if (apply.isUnauthorized()) onSessionExpired() else { message = apply.message; messageIsError = true }
                     }
+                    is ApiResult.Error -> if (update.isUnauthorized()) onSessionExpired() else { message = update.message; messageIsError = true }
                 }
             }
+        }
+    }
+
+    if (capabilities["clients.policy"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.access_profiles), stringResource(R.string.profiles_count, clientProfiles.size)) {
+            clientProfiles.forEach { profile ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(profile.name, modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        scope.launch {
+                            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).deleteClientProfile(device.id, profile.id) }) {
+                                is ApiResult.Success -> refresh()
+                                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else { message = result.message; messageIsError = true }
+                            }
+                        }
+                    }) { Text(stringResource(R.string.delete)) }
+                }
+            }
+            OutlinedTextField(profileName, { profileName = it }, label = { Text(stringResource(R.string.profile_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            SwitchSettingRow(stringResource(R.string.block_client), checked = profileBlocked, onCheckedChange = { profileBlocked = it })
+            PrimaryActionButton(
+                label = stringResource(R.string.create_profile),
+                onClick = {
+                    scope.launch {
+                        when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).createClientProfile(device.id, profileName, profileBlocked) }) {
+                            is ApiResult.Success -> { profileName = ""; profileBlocked = false; refresh() }
+                            is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else { message = result.message; messageIsError = true }
+                        }
+                    }
+                },
+                enabled = profileName.isNotBlank(),
+                modifier = Modifier.align(Alignment.End),
+            )
         }
     }
 
@@ -480,6 +605,10 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var forwardExternalPort by remember { mutableStateOf("") }
     var forwardInternalIp by remember { mutableStateOf("") }
     var forwardInternalPort by remember { mutableStateOf("") }
+    var sqmEnabled by remember { mutableStateOf(true) }
+    var sqmInterface by remember { mutableStateOf("eth1") }
+    var sqmDownload by remember { mutableStateOf("") }
+    var sqmUpload by remember { mutableStateOf("") }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     val refresh: () -> Unit = {
         scope.launch {
@@ -604,6 +733,22 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             PrimaryActionButton(
                 label = stringResource(R.string.apply_dns),
                 onClick = { pendingCommand = PendingSafeCommand("dns.set_servers", JSONObject().put("servers", dnsServers), genericCommandQueued) },
+                modifier = Modifier.align(Alignment.End),
+            )
+        }
+    }
+    if (capabilities["qos.sqm"] == true) {
+        ExpandableSettingsCard(stringResource(R.string.sqm_title), stringResource(R.string.sqm_summary)) {
+            SwitchSettingRow(stringResource(R.string.sqm_enabled), checked = sqmEnabled, onCheckedChange = { sqmEnabled = it })
+            OutlinedTextField(sqmInterface, { sqmInterface = it }, label = { Text(stringResource(R.string.sqm_interface)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(sqmDownload, { sqmDownload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.download_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(sqmUpload, { sqmUpload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.upload_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            PrimaryActionButton(
+                label = stringResource(R.string.apply_sqm),
+                onClick = { pendingCommand = PendingSafeCommand("qos.set_sqm", JSONObject().put("enabled", sqmEnabled).put("interface", sqmInterface).put("download_kbps", sqmDownload).put("upload_kbps", sqmUpload), genericCommandQueued) },
+                enabled = sqmInterface.isNotBlank() && sqmDownload.isNotBlank() && sqmUpload.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             )
         }

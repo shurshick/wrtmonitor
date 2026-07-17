@@ -131,7 +131,7 @@ def test_smoke_cli_capabilities_json():
         env=shell_env(),
     )
     payload = json.loads(completed.stdout)
-    assert payload["agent"]["capabilities_version"] == 5
+    assert payload["agent"]["capabilities_version"] == 6
     assert payload["capabilities"]["agent.status"] is True
     assert isinstance(payload["capabilities"]["agent.update"], bool)
     assert payload["capability_details"]["agent.status"]["reason"] == "available"
@@ -151,7 +151,7 @@ def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
     for name in ("uptime", "loadavg", "cpuinfo"):
         (system_root / "proc" / name).write_text("fixture\n", encoding="utf-8")
     (system_root / "tmp" / "dhcp.leases").write_text("", encoding="utf-8")
-    for service in ("network", "dnsmasq", "firewall", "sysntpd", "wrtmonitor"):
+    for service in ("network", "dnsmasq", "firewall", "sysntpd", "wrtmonitor", "sqm"):
         path = system_root / "etc" / "init.d" / service
         path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
         path.chmod(0o755)
@@ -167,6 +167,7 @@ def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
         "nslookup",
         "curl",
         "sha256sum",
+        "nlbw",
     ):
         path = command_dir / command
         path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
@@ -247,6 +248,8 @@ def test_installer_bootstraps_runtime_dependencies():
     assert "--remove-config" in source
     for dependency in ("curl", "jsonfilter", "ca-bundle", "uci", "ubus", "coreutils-sha256sum"):
         assert dependency in source
+    assert "ensure_optional_dependencies()" in source
+    assert "nlbwmon" in source
 
 
 def test_agent_version_file_matches_entrypoint():
@@ -259,6 +262,7 @@ def test_management_capabilities_cover_full_router_foundation():
     source = read_text(ROOT / "lib" / "capabilities.sh")
     for capability in (
         "telemetry.clients",
+        "telemetry.clients.traffic",
         "wifi.set_channel",
         "wifi.set_country",
         "network.interface_restart",
@@ -266,6 +270,8 @@ def test_management_capabilities_cover_full_router_foundation():
         "network.wan.configure",
         "network.lan.configure",
         "clients.block",
+        "clients.policy",
+        "qos.sqm",
         "dhcp.set_lease",
         "dhcp.delete_lease",
         "dhcp.configure",
@@ -293,8 +299,11 @@ def test_management_commands_have_openwrt_handlers():
         "firewall.set_port_forward",
         "firewall.delete_port_forward",
         "client.set_blocked",
+        "client.set_policy",
+        "qos.set_sqm",
         "wifi.set_guest",
         "system.set_timezone",
         "system.set_ntp",
     ):
         assert f"{command})" in source
+    assert 'backup_config sqm "$command_id" "$command_type"' in source

@@ -60,6 +60,13 @@ ensure_dependencies() {
     fi
 }
 
+ensure_optional_dependencies() {
+    command -v nlbw >/dev/null 2>&1 && return 0
+    command -v opkg >/dev/null 2>&1 || return 0
+    echo "Installing optional per-client traffic dependency: nlbwmon"
+    opkg install nlbwmon >/dev/null 2>&1 || echo "Optional package nlbwmon is unavailable; per-client traffic counters are disabled" >&2
+}
+
 json_escape() {
     printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
@@ -240,6 +247,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 ensure_dependencies
+ensure_optional_dependencies
 
 if [ -z "$SERVER_URL" ] && [ -n "$DOWNLOAD_BASE" ]; then
     SERVER_URL="$(printf '%s' "$DOWNLOAD_BASE" | sed 's#/downloads/openwrt$##; s#/$##')"

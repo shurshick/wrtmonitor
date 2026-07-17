@@ -151,6 +151,18 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "client.set_policy": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "clients.policy",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "qos.set_sqm": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "qos.sqm",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "wifi.set_guest": {
         "risk_level": "level_4_disruptive",
         "capability": "wifi.guest",
@@ -533,6 +545,75 @@ def _normalize_client_block_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_client_policy_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    mac = _normalize_mac(_require_string(payload, "mac", max_length=17))
+    if not isinstance(payload.get("blocked"), bool):
+        raise HTTPException(status_code=400, detail="Field 'blocked' must be boolean")
+    schedule = payload.get("schedule") or {}
+    if not isinstance(schedule, dict):
+        raise HTTPException(
+            status_code=400, detail="Field 'schedule' must be an object"
+        )
+    weekdays = schedule.get("weekdays") or []
+    allowed_days = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+    if not isinstance(weekdays, list) or any(
+        str(day).lower() not in allowed_days for day in weekdays
+    ):
+        raise HTTPException(status_code=400, detail="Invalid policy weekdays")
+    result_schedule = {
+        "enabled": bool(schedule.get("enabled", False)),
+        "weekdays": [str(day).lower() for day in weekdays],
+        "start": str(schedule.get("start") or ""),
+        "stop": str(schedule.get("stop") or ""),
+    }
+    for field in ("start", "stop"):
+        if result_schedule[field] and not re.fullmatch(
+            r"(?:[01]\d|2[0-3]):[0-5]\d", result_schedule[field]
+        ):
+            raise HTTPException(status_code=400, detail=f"Invalid schedule {field}")
+    qos = payload.get("qos") or {}
+    if not isinstance(qos, dict):
+        raise HTTPException(status_code=400, detail="Field 'qos' must be an object")
+    priority = str(qos.get("priority") or "normal")
+    if priority not in {"low", "normal", "high", "realtime"}:
+        raise HTTPException(status_code=400, detail="Invalid QoS priority")
+    return {
+        "mac": mac,
+        "blocked": payload["blocked"],
+        "schedule": result_schedule,
+        "qos": {
+            "priority": priority,
+            "download_kbps": _integer(
+                {"download_kbps": qos.get("download_kbps", 0)},
+                "download_kbps",
+                0,
+                10_000_000,
+            ),
+            "upload_kbps": _integer(
+                {"upload_kbps": qos.get("upload_kbps", 0)}, "upload_kbps", 0, 10_000_000
+            ),
+        },
+    }
+
+
+def _normalize_sqm_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload.get("enabled"), bool):
+        raise HTTPException(status_code=400, detail="Field 'enabled' must be boolean")
+    interface = _safe_identifier(
+        _require_string(payload, "interface", max_length=40),
+        "interface",
+        r"[A-Za-z0-9_.@:-]+",
+    )
+    return {
+        "enabled": payload["enabled"],
+        "interface": interface,
+        "download_kbps": _integer(payload, "download_kbps", 0, 10_000_000),
+        "upload_kbps": _integer(payload, "upload_kbps", 0, 10_000_000),
+        "qdisc": "cake",
+        "script": "piece_of_cake.qos",
+    }
+
+
 def _normalize_guest_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload.get("enabled"), bool):
         raise HTTPException(
@@ -665,6 +746,10 @@ def validate_command_payload(
         return _normalize_port_forward_payload(normalized_payload, delete=True)
     if command_type == "client.set_blocked":
         return _normalize_client_block_payload(normalized_payload)
+    if command_type == "client.set_policy":
+        return _normalize_client_policy_payload(normalized_payload)
+    if command_type == "qos.set_sqm":
+        return _normalize_sqm_payload(normalized_payload)
     if command_type == "wifi.set_guest":
         return _normalize_guest_payload(normalized_payload)
     if command_type == "system.set_timezone":
@@ -716,6 +801,8 @@ def build_command_payload_from_web_form(
     blocked: str = "true",
     zonename: str = "",
     timezone: str = "",
+    download_kbps: str = "",
+    upload_kbps: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -779,6 +866,13 @@ def build_command_payload_from_web_form(
         payload = {"name": name}
     elif command_type == "client.set_blocked":
         payload = {"mac": mac, "blocked": blocked.lower() == "true"}
+    elif command_type == "qos.set_sqm":
+        payload = {
+            "enabled": enabled.lower() == "true",
+            "interface": interface,
+            "download_kbps": download_kbps,
+            "upload_kbps": upload_kbps,
+        }
     elif command_type == "wifi.set_guest":
         payload = {
             "enabled": enabled.lower() == "true",

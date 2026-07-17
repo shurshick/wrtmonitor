@@ -170,6 +170,20 @@ clients_json() {
 $(ip neigh show 2>/dev/null || true)
 EOF
     fi
+    if command -v nlbw >/dev/null 2>&1; then
+        traffic_file="/tmp/wrtmonitor-nlbw-$$.csv"
+        if nlbw -c csv -g mac -n -q -s ';' >"$traffic_file" 2>/dev/null; then
+            while IFS=';' read -r mac _ rx_bytes _ tx_bytes _; do
+                [ "$mac" = "mac" ] && continue
+                case "$mac" in ""|00:00:00:00:00:00) continue ;; esac
+                case "$rx_bytes" in ""|*[!0-9]*) rx_bytes=0 ;; esac
+                case "$tx_bytes" in ""|*[!0-9]*) tx_bytes=0 ;; esac
+                [ -n "$neighbours" ] && neighbours="$neighbours,"
+                neighbours="$neighbours{\"mac\":\"$(json_escape "$mac")\",\"state\":\"traffic\",\"rx_bytes\":$rx_bytes,\"tx_bytes\":$tx_bytes}"
+            done <"$traffic_file"
+        fi
+        rm -f "$traffic_file"
+    fi
     printf '{"neighbours":[%s],"dhcp":%s}' "$neighbours" "$(dhcp_json)"
 }
 

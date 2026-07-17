@@ -47,6 +47,7 @@ def register_routers(app: FastAPI) -> None:
     from .api.telemetry import router as telemetry_router
     from .api.commands import router as commands_router
     from .api.agent import router as agent_router
+    from .api.clients import router as clients_router
 
     app.include_router(web_router)
     app.include_router(health_router)
@@ -56,6 +57,7 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(telemetry_router)
     app.include_router(commands_router)
     app.include_router(agent_router)
+    app.include_router(clients_router)
 
 
 def create_application() -> FastAPI:

@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.4.0` добавляет транзакционное применение UCI-конфигурации и обновляется поверх `0.3.x` штатным update-механизмом.
+Версия `0.5.0` добавляет реестр клиентов, политики доступа, SQM и счётчики `nlbwmon`. Она обновляется поверх `0.4.x` штатным update-механизмом.
 
 ## Требования
 
@@ -34,6 +34,8 @@ Installer сам подтягивает зависимости через `opkg 
 - `ubus`
 - `ca-bundle`
 - `coreutils-sha256sum`
+
+Для истории трафика по клиентам installer пытается установить `nlbwmon`. Это опциональная зависимость: если пакета нет в feed конкретной сборки OpenWrt, агент продолжит работу без RX/TX по MAC.
 
 По умолчанию агент отправляет telemetry и опрашивает команды раз в `60` секунд. Интервал можно менять из Web UI и Android, минимальное значение `5` секунд.
 
@@ -75,7 +77,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.4.0/wrtmonitor-openwrt-agent-v0.4.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.5.0/wrtmonitor-openwrt-agent-v0.5.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \

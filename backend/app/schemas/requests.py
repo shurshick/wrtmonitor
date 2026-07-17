@@ -49,3 +49,14 @@ class CommandCreateRequest(BaseModel):
 class CommandResultRequest(BaseModel):
     status: str
     result: dict[str, Any] = Field(default_factory=dict)
+
+
+class ClientUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=120)
+    profile_id: UUID | None = None
+    policy: dict[str, Any] | None = None
+
+
+class ClientProfileRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    policy: dict[str, Any] = Field(default_factory=dict)

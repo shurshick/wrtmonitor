@@ -28,10 +28,12 @@ OpenWrt agent собирает:
 - `board`: `ubus system board`;
 - `network`: интерфейсы, адреса, gateway, DNS, устройства и traffic;
 - `wifi`: multi-radio snapshot, SSID, channel, country, htmode и параметры интерфейсов;
-- `clients`: DHCP leases и neighbour table;
+- `clients`: DHCP leases, neighbour table и, при наличии `nlbwmon`, RX/TX по MAC;
 - `dhcp`: динамические и статические leases;
 - `agent`: версия, update status, interval и capabilities.
 
-`schema_version=2` используется в ветке `v0.3.0`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
+`schema_version=2` остаётся форматом telemetry; capability report в `v0.5.0` имеет версию 6. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest.
 
 Retention: сервер хранит последние 100 telemetry snapshots на устройство. Старые snapshots удаляются после успешного ingest.
+
+Реестр клиентов живёт отдельно от raw telemetry. Для каждого MAC сохраняются первая и последняя активность, имя, vendor и до 96 последних точек счётчиков.
