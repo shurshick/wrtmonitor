@@ -23,7 +23,9 @@ Android, API и Web UI создают только команды из `COMMAND_
 - `expired`
 - `cancelled`
 
-При polling agent получает команды и сервер переводит их в `sent`, заполняя `picked_at` и `retry_count`.
+При polling agent получает команды и сервер переводит их в `sent`, заполняя `picked_at` и `retry_count`. Перед выполнением агент подтверждает статус `running`.
+
+Если агент получил команду, но не подтвердил запуск за 45 секунд, delivery lease истекает и команда снова становится `queued`. Общий TTL команды остаётся пять минут.
 
 После результата agent переводит команду в:
 
@@ -35,6 +37,8 @@ Android, API и Web UI создают только команды из `COMMAND_
 - `completed_at`
 - `result`
 - `last_error`
+
+Повторная отправка финального результата идемпотентна: сохранённый terminal status не перезаписывается.
 
 Перед опросом сервер помечает просроченные `queued`, `sent` и `running` команды как `expired`.
 
@@ -48,13 +52,7 @@ Android, API и Web UI создают только команды из `COMMAND_
 
 ## Валидация payload
 
-В `rc8` backend валидирует:
-
-- `wifi.set_enabled`
-- `wifi.set_ssid`
-- `wifi.set_password`
-- `diagnostics.run`
-- `agent.set_auto_update`
+Backend валидирует payload всех команд из `COMMAND_REGISTRY`: идентификаторы, IP/MAC, диапазоны портов, Wi-Fi, WAN/LAN, DHCP/DNS, системные действия и параметры агента.
 
 Это защищает сервер от некорректных UI-форм и старых клиентов.
 

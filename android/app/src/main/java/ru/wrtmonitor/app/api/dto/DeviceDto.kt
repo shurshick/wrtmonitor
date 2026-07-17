@@ -29,6 +29,7 @@ data class TelemetryDto(
 data class AgentStatusDto(
     val version: String?,
     val status: String?,
+    val capabilitiesVersion: Int?,
     val autoUpdateEnabled: Boolean,
     val telemetryIntervalSeconds: Int?,
     val lastUpdateStatus: String?,
@@ -39,6 +40,7 @@ data class AgentStatusDto(
     val rollbackAvailable: Boolean,
     val updateSource: String?,
     val capabilities: Map<String, Boolean>,
+    val capabilityReasons: Map<String, String>,
 )
 
 data class CommandDto(

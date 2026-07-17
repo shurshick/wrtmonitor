@@ -42,7 +42,11 @@ poll_commands() {
         command_payload="$(json_get_object /tmp/wrtmonitor-commands "@[$index].payload")"
         [ -n "$command_id" ] || break
         [ -n "$command_payload" ] || command_payload="{}"
-        execute_command "$command_id" "$command_type" "$command_payload"
+        if api POST "/api/v1/agent/commands/$command_id/result" '{"status":"running","result":{}}' >/dev/null; then
+            execute_command "$command_id" "$command_type" "$command_payload"
+        else
+            log_notice "failed to acknowledge command $command_id"
+        fi
         index=$((index + 1))
     done
     rm -f /tmp/wrtmonitor-commands

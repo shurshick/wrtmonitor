@@ -31,15 +31,32 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         return status to (stream?.bufferedReader()?.use { it.readText() }.orEmpty())
     }
 
-    fun login(username: String, password: String): ApiResult<String> = runCatching {
+    data class AuthTokens(val accessToken: String, val refreshToken: String)
+
+    fun login(username: String, password: String): ApiResult<AuthTokens> = runCatching {
         val (status, response) = request(
             "/api/v1/auth/login",
             "POST",
             JSONObject().put("username", username).put("password", password),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
-        JSONObject(response).getString("access_token")
+        parseAuthTokens(JSONObject(response))
     }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun refresh(refreshToken: String): ApiResult<AuthTokens> = runCatching {
+        val (status, response) = request(
+            "/api/v1/auth/refresh",
+            "POST",
+            JSONObject().put("refresh_token", refreshToken),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        parseAuthTokens(JSONObject(response))
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    private fun parseAuthTokens(json: JSONObject) = AuthTokens(
+        accessToken = json.getString("access_token"),
+        refreshToken = json.getString("refresh_token"),
+    )
 
     fun getDevices(): ApiResult<List<DeviceDto>> = runCatching {
         val (status, response) = request("/api/v1/devices")
@@ -123,6 +140,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
     private fun parseAgentStatus(json: JSONObject): AgentStatusDto = AgentStatusDto(
         version = json.optString("version").takeIf { it.isNotBlank() },
         status = json.optString("status").takeIf { it.isNotBlank() },
+        capabilitiesVersion = if (json.has("capabilities_version") && !json.isNull("capabilities_version")) json.optInt("capabilities_version") else null,
         autoUpdateEnabled = json.optBoolean("auto_update_enabled", false),
         telemetryIntervalSeconds = if (json.has("telemetry_interval_seconds") && !json.isNull("telemetry_interval_seconds")) {
             json.optInt("telemetry_interval_seconds")
@@ -137,6 +155,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         rollbackAvailable = json.optBoolean("rollback_available", json.optBoolean("backup_available", false)),
         updateSource = json.optString("update_source").takeIf { it.isNotBlank() },
         capabilities = json.optJSONObject("capabilities").toBooleanMap(),
+        capabilityReasons = json.optJSONObject("capability_details").toCapabilityReasons(),
     )
 
     private fun parseCommand(json: JSONObject): CommandDto = CommandDto(
@@ -158,6 +177,13 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
     private fun JSONObject?.toBooleanMap(): Map<String, Boolean> {
         if (this == null) return emptyMap()
         return keys().asSequence().associateWith { key -> optBoolean(key, false) }
+    }
+
+    private fun JSONObject?.toCapabilityReasons(): Map<String, String> {
+        if (this == null) return emptyMap()
+        return keys().asSequence().associateWith { key ->
+            optJSONObject(key)?.optString("reason").orEmpty()
+        }
     }
 
     private fun toApiError(error: Throwable): ApiResult.Error {

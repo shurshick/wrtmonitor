@@ -54,7 +54,7 @@ fun ServerSetupScreen(onSave: (String) -> Unit) {
 }
 
 @Composable
-fun AdminLoginScreen(serverUrl: String, onLogin: (String) -> Unit, onChangeServer: () -> Unit) {
+fun AdminLoginScreen(serverUrl: String, onLogin: (WrtMonitorApi.AuthTokens) -> Unit, onChangeServer: () -> Unit) {
     var username by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }; var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()

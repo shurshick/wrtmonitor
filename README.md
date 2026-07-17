@@ -4,9 +4,17 @@
 
 ## Текущая версия
 
-Текущий prerelease: `v0.3.0-rc5`.
+Текущий prerelease: `v0.3.0-rc6`.
 
-Главное в `0.3.0-rc5`:
+Главное в `0.3.0-rc6`:
+
+- динамическое определение capabilities агента с объяснением недоступных функций;
+- полный lifecycle команд с running, retry, expiry и идемпотентным результатом;
+- PostgreSQL E2E и адаптивный Chromium smoke-test в CI;
+- автоматическое обновление Android-сессии через refresh token;
+- capability report schema v4 в Web UI и Android.
+
+В предыдущих релизах:
 
 - единые аккуратные кнопки в Web UI и Android;
 - компактная высота, отступы и типографика без потери удобной области нажатия;
@@ -64,7 +72,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 В релизе он публикуется как:
 
 ```text
-wrtmonitor-truenas-v0.3.0-rc5.yaml
+wrtmonitor-truenas-v0.3.0-rc6.yaml
 ```
 
 Контейнер использует:

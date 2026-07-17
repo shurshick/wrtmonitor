@@ -1,12 +1,151 @@
-CAPABILITIES_VERSION="3"
+CAPABILITIES_VERSION="4"
+
+capability_path() {
+    printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
+}
+
+capability_keys() {
+    printf '%s\n' \
+        agent.status agent.update agent.set_interval agent.rollback agent.disable \
+        telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.clients telemetry.services \
+        wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
+        network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
+        clients.read clients.block dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
+        system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
+        diagnostics.check_server diagnostics.check_dependencies diagnostics.check_dns diagnostics.check_route diagnostics.check_wifi
+}
+
+has_commands() {
+    for CAP_COMMAND in "$@"; do
+        command -v "$CAP_COMMAND" >/dev/null 2>&1 || return 1
+    done
+}
+
+has_uci_config() {
+    has_commands uci || return 1
+    uci -q show "$1" >/dev/null 2>&1
+}
+
+has_wifi_radio() {
+    has_uci_config wireless || return 1
+    uci -q get 'wireless.@wifi-device[0]' >/dev/null 2>&1
+}
+
+has_wifi_iface() {
+    has_wifi_radio || return 1
+    uci -q get 'wireless.@wifi-iface[0]' >/dev/null 2>&1
+}
+
+has_network_runtime() {
+    has_commands ubus jsonfilter || return 1
+    ubus list network.interface >/dev/null 2>&1
+}
+
+has_network_write() {
+    has_uci_config network && [ -x "$(capability_path /etc/init.d/network)" ]
+}
+
+has_dhcp_write() {
+    has_uci_config dhcp && [ -x "$(capability_path /etc/init.d/dnsmasq)" ]
+}
+
+has_firewall_write() {
+    has_uci_config firewall && [ -x "$(capability_path /etc/init.d/firewall)" ]
+}
+
+has_system_write() {
+    has_uci_config system
+}
+
+capability_supported() {
+    case "$1" in
+        agent.status) return 0 ;;
+        agent.update) has_commands curl sha256sum cp mv ;;
+        agent.set_interval) has_uci_config wrtmonitor ;;
+        agent.rollback) has_commands cp mv && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
+        agent.disable) has_uci_config wrtmonitor && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
+        telemetry.system) [ -r "$(capability_path /proc/uptime)" ] && [ -r "$(capability_path /proc/loadavg)" ] ;;
+        telemetry.hardware) [ -r "$(capability_path /proc/cpuinfo)" ] && has_commands df ;;
+        telemetry.network|network.read) has_network_runtime ;;
+        telemetry.wifi|wifi.read) has_wifi_radio ;;
+        telemetry.clients|clients.read) has_commands ip || [ -r "$(capability_path /tmp/dhcp.leases)" ] ;;
+        telemetry.services) [ -d "$(capability_path /etc/init.d)" ] ;;
+        wifi.enable|wifi.disable|wifi.set_channel|wifi.set_country) has_wifi_radio && has_commands wifi ;;
+        wifi.set_ssid|wifi.set_password) has_wifi_iface && has_commands wifi ;;
+        wifi.guest) has_wifi_iface && has_network_write && has_dhcp_write && has_firewall_write && has_commands wifi ;;
+        network.interface_restart) has_network_runtime && has_commands ifup ifdown ;;
+        network.restart) [ -x "$(capability_path /etc/init.d/network)" ] ;;
+        network.write|network.wan.configure|network.lan.configure) has_network_write && has_commands ifup ifdown ;;
+        clients.block|firewall.port_forward) has_firewall_write ;;
+        dhcp.set_lease|dhcp.delete_lease|dhcp.configure|dns.configure) has_dhcp_write ;;
+        system.reboot) has_commands reboot ;;
+        system.set_hostname|system.set_timezone) has_system_write ;;
+        system.restart_service) [ -d "$(capability_path /etc/init.d)" ] ;;
+        system.set_ntp) has_system_write && [ -x "$(capability_path /etc/init.d/sysntpd)" ] ;;
+        diagnostics.check_server) has_commands curl ;;
+        diagnostics.check_dependencies) return 0 ;;
+        diagnostics.check_dns) has_commands nslookup ;;
+        diagnostics.check_route) has_commands ip ;;
+        diagnostics.check_wifi) has_commands wifi && has_wifi_radio ;;
+        *) return 1 ;;
+    esac
+}
+
+capability_unavailable_reason() {
+    case "$1" in
+        agent.update) printf 'curl, sha256sum or file tools are unavailable' ;;
+        agent.set_interval|agent.disable) printf 'wrtmonitor UCI configuration is unavailable' ;;
+        agent.rollback) printf 'agent init service or file tools are unavailable' ;;
+        telemetry.system) printf 'required procfs metrics are unavailable' ;;
+        telemetry.hardware) printf 'hardware metrics or df are unavailable' ;;
+        telemetry.network|network.read) printf 'ubus network runtime or jsonfilter is unavailable' ;;
+        telemetry.wifi|wifi.*|diagnostics.check_wifi) printf 'wireless configuration, radio or wifi utility is unavailable' ;;
+        telemetry.clients|clients.read) printf 'neighbour and DHCP lease sources are unavailable' ;;
+        telemetry.services|system.restart_service) printf 'OpenWrt init services are unavailable' ;;
+        network.interface_restart) printf 'ubus network runtime, ifup or ifdown is unavailable' ;;
+        network.*) printf 'network UCI configuration or init service is unavailable' ;;
+        clients.block|firewall.port_forward) printf 'firewall UCI configuration or service is unavailable' ;;
+        dhcp.*|dns.configure) printf 'DHCP configuration or dnsmasq service is unavailable' ;;
+        system.reboot) printf 'reboot utility is unavailable' ;;
+        system.set_hostname|system.set_timezone) printf 'system UCI configuration is unavailable' ;;
+        system.set_ntp) printf 'system UCI configuration or sysntpd is unavailable' ;;
+        diagnostics.check_server) printf 'curl is unavailable' ;;
+        diagnostics.check_dns) printf 'nslookup is unavailable' ;;
+        diagnostics.check_route) printf 'ip utility is unavailable' ;;
+        *) printf 'capability requirements are unavailable' ;;
+    esac
+}
 
 agent_capabilities_json() {
-    printf '{"agent.status":true,"agent.update":true,"agent.set_interval":true,"agent.rollback":true,"agent.disable":true,"telemetry.system":true,"telemetry.hardware":true,"telemetry.network":true,"telemetry.wifi":true,"telemetry.clients":true,"telemetry.services":true,"wifi.read":true,"wifi.enable":true,"wifi.disable":true,"wifi.set_ssid":true,"wifi.set_password":true,"wifi.set_channel":true,"wifi.set_country":true,"wifi.guest":true,"network.read":true,"network.interface_restart":true,"network.restart":true,"network.write":true,"network.wan.configure":true,"network.lan.configure":true,"clients.read":true,"clients.block":true,"dhcp.set_lease":true,"dhcp.delete_lease":true,"dhcp.configure":true,"dns.configure":true,"firewall.port_forward":true,"system.reboot":true,"system.set_hostname":true,"system.restart_service":true,"system.set_timezone":true,"system.set_ntp":true,"diagnostics.check_server":true,"diagnostics.check_dependencies":true,"diagnostics.check_dns":true,"diagnostics.check_route":true,"diagnostics.check_wifi":true}'
+    CAP_OUTPUT=""
+    for CAP_KEY in $(capability_keys); do
+        CAP_VALUE=false
+        capability_supported "$CAP_KEY" && CAP_VALUE=true
+        [ -n "$CAP_OUTPUT" ] && CAP_OUTPUT="$CAP_OUTPUT,"
+        CAP_OUTPUT="$CAP_OUTPUT\"$CAP_KEY\":$CAP_VALUE"
+    done
+    printf '{%s}' "$CAP_OUTPUT"
+}
+
+agent_capability_details_json() {
+    CAP_OUTPUT=""
+    for CAP_KEY in $(capability_keys); do
+        CAP_VALUE=false
+        CAP_REASON="$(capability_unavailable_reason "$CAP_KEY")"
+        if capability_supported "$CAP_KEY"; then
+            CAP_VALUE=true
+            CAP_REASON="available"
+        fi
+        [ -n "$CAP_OUTPUT" ] && CAP_OUTPUT="$CAP_OUTPUT,"
+        CAP_OUTPUT="$CAP_OUTPUT\"$CAP_KEY\":{\"supported\":$CAP_VALUE,\"reason\":\"$(json_escape "$CAP_REASON")\"}"
+    done
+    printf '{%s}' "$CAP_OUTPUT"
 }
 
 capabilities_json() {
-    printf '{"agent":{"version":"%s","platform":"openwrt","capabilities_version":%s},"capabilities":%s}' \
+    printf '{"agent":{"version":"%s","platform":"openwrt","capabilities_version":%s},"capabilities":%s,"capability_details":%s}' \
         "$(json_escape "$AGENT_VERSION")" \
         "$CAPABILITIES_VERSION" \
-        "$(agent_capabilities_json)"
+        "$(agent_capabilities_json)" \
+        "$(agent_capability_details_json)"
 }

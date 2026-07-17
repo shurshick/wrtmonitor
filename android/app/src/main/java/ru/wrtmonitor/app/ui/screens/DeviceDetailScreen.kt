@@ -293,7 +293,7 @@ internal fun AgentSection(
             title = stringResource(R.string.capabilities),
             summary = capabilitiesSummary(capabilities),
         ) {
-            groupedCapabilities(capabilities).forEach { (title, values) ->
+            groupedCapabilities(capabilities, agent?.capabilityReasons.orEmpty()).forEach { (title, values) ->
                 InfoRow(title, values.joinToString(", "))
             }
         }

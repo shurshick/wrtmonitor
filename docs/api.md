@@ -1,5 +1,12 @@
 # API WrtMonitor
 
+## Авторизация
+
+- `POST /api/v1/auth/login` возвращает `access_token`, `refresh_token` и `expires_in`.
+- `POST /api/v1/auth/refresh` принимает `refresh_token` и выдаёт новую пару токенов.
+
+Access token используется клиентами владельца. Device token агента не участвует в refresh flow.
+
 ## Основные backend endpoints
 
 Сохраняются и поддерживаются:
@@ -44,7 +51,7 @@
 
 ```json
 {
-  "version": "0.3.0-rc5",
+  "version": "0.3.0-rc6",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -110,7 +117,7 @@ Body:
 - `level_3_reversible_config`
 - `level_4_disruptive`
 
-### Управляющие команды v0.3.0-rc5
+### Управляющие команды v0.3.0-rc6
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`

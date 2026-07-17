@@ -25,6 +25,7 @@ internal fun capabilitiesSummary(capabilities: Map<String, Boolean>): String {
 @Composable
 internal fun groupedCapabilities(
     capabilities: Map<String, Boolean>,
+    reasons: Map<String, String> = emptyMap(),
 ): List<Pair<String, List<String>>> {
     if (capabilities.isEmpty()) return emptyList()
     val remaining = capabilities.toSortedMap().toMutableMap()
@@ -35,13 +36,17 @@ internal fun groupedCapabilities(
             prefixes.any { prefix -> key.startsWith(prefix) }
         }
         if (items.isNotEmpty()) {
-            result += stringResource(titleRes) to items
+            result += stringResource(titleRes) to items.map { key ->
+                if (capabilities[key] == true) key else "$key: ${reasons[key].orEmpty()}"
+            }
             items.forEach { remaining.remove(it) }
         }
     }
 
     if (remaining.isNotEmpty()) {
-        result += stringResource(R.string.capability_group_other) to remaining.keys.toList()
+        result += stringResource(R.string.capability_group_other) to remaining.keys.map { key ->
+            if (capabilities[key] == true) key else "$key: ${reasons[key].orEmpty()}"
+        }
     }
 
     return result

@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import subprocess
@@ -128,9 +129,58 @@ def test_smoke_cli_capabilities_json():
         text=True,
         env=shell_env(),
     )
-    assert '"capabilities"' in completed.stdout
-    assert '"agent.update":true' in completed.stdout
-    assert '"agent.set_interval":true' in completed.stdout
+    payload = json.loads(completed.stdout)
+    assert payload["agent"]["capabilities_version"] == 4
+    assert payload["capabilities"]["agent.status"] is True
+    assert isinstance(payload["capabilities"]["agent.update"], bool)
+    assert payload["capability_details"]["agent.status"]["reason"] == "available"
+
+
+def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    system_root = tmp_path / "root"
+    command_dir = tmp_path / "bin"
+    (system_root / "proc").mkdir(parents=True)
+    (system_root / "etc" / "init.d").mkdir(parents=True)
+    (system_root / "tmp").mkdir(parents=True)
+    command_dir.mkdir()
+    for name in ("uptime", "loadavg", "cpuinfo"):
+        (system_root / "proc" / name).write_text("fixture\n", encoding="utf-8")
+    (system_root / "tmp" / "dhcp.leases").write_text("", encoding="utf-8")
+    for service in ("network", "dnsmasq", "firewall", "sysntpd", "wrtmonitor"):
+        path = system_root / "etc" / "init.d" / service
+        path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        path.chmod(0o755)
+    for command in (
+        "uci",
+        "ubus",
+        "jsonfilter",
+        "wifi",
+        "ifup",
+        "ifdown",
+        "ip",
+        "reboot",
+        "nslookup",
+        "curl",
+        "sha256sum",
+    ):
+        path = command_dir / command
+        path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        path.chmod(0o755)
+    env = shell_env()
+    env["PATH"] = str(command_dir) + os.pathsep + env["PATH"]
+    env["WRTMONITOR_SYSTEM_ROOT"] = system_root.as_posix()
+    completed = subprocess.run(
+        [shell, str(AGENT), "capabilities", "--json"],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    payload = json.loads(completed.stdout)
+    assert all(payload["capabilities"].values())
 
 
 def test_smoke_cli_diagnostics_json():
@@ -187,7 +237,10 @@ def test_management_capabilities_cover_full_router_foundation():
         "system.set_timezone",
         "system.set_ntp",
     ):
-        assert f'"{capability}":true' in source
+        assert capability in source
+    assert '"wifi.set_password":true' not in source
+    assert "capability_supported()" in source
+    assert "capability_unavailable_reason()" in source
 
 
 def test_management_commands_have_openwrt_handlers():

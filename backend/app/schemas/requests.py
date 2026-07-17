@@ -9,6 +9,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(min_length=20)
+
+
 class SetupRequest(BaseModel):
     username: str = Field(min_length=3, max_length=120)
     password: str = Field(min_length=8, max_length=256)

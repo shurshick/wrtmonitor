@@ -4,6 +4,7 @@ from .requests import (
     CommandResultRequest,
     DeviceProvisionRequest,
     LoginRequest,
+    RefreshTokenRequest,
     SetupRequest,
     TelemetryRequest,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "CommandResultRequest",
     "DeviceProvisionRequest",
     "LoginRequest",
+    "RefreshTokenRequest",
     "SetupRequest",
     "TelemetryRequest",
 ]

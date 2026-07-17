@@ -48,7 +48,7 @@
       <details class="technical-panel section">
         <summary><span>Технические данные</span><small>Capabilities: {{ capabilities_summary }} · исходная telemetry</small></summary>
         <div class="technical-panel__content">
-          {% if capabilities_groups %}<div><h3>Capabilities</h3><div class="capability-groups">{% for group in capabilities_groups %}<div><strong>{{ group.title }}</strong>{% if group.enabled %}<span>{{ group.enabled|join(', ') }}</span>{% endif %}{% if group.disabled %}<span class="muted">Отключено: {{ group.disabled|join(', ') }}</span>{% endif %}</div>{% endfor %}</div></div>{% endif %}
+          {% if capabilities_groups %}<div><h3>Capabilities</h3><div class="capability-groups">{% for group in capabilities_groups %}<div><strong>{{ group.title }}</strong>{% if group.enabled %}<span>{{ group.enabled|join(', ') }}</span>{% endif %}{% for item in group.disabled %}<span class="muted">{{ item.name }}: {{ item.reason }}</span>{% endfor %}</div>{% endfor %}</div></div>{% endif %}
           <div><h3>Исходная telemetry</h3><pre class="raw-telemetry">{{ raw_telemetry }}</pre></div>
         </div>
       </details>

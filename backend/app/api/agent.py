@@ -11,7 +11,11 @@ from ..services.audit import audit
 from ..services.auth import device_from_token
 from ..schemas import AgentRegisterRequest, CommandResultRequest
 from ..security import hash_token
-from ..services.commands import expire_old_commands
+from ..services.commands import (
+    TERMINAL_STATUSES,
+    expire_old_commands,
+    requeue_stale_sent_commands,
+)
 
 
 router = APIRouter(prefix="/api/v1/agent")
@@ -38,6 +42,7 @@ def poll_commands(
 ) -> list[dict]:
     device = device_from_token(authorization, db)
     expire_old_commands(db)
+    requeue_stale_sent_commands(db)
     commands = db.scalars(
         select(DeviceCommand)
         .where(DeviceCommand.device_id == device.id, DeviceCommand.status == "queued")
@@ -74,16 +79,37 @@ def command_result(
     command = db.get(DeviceCommand, command_id)
     if not command or command.device_id != device.id:
         raise HTTPException(status_code=404, detail="Command not found")
+    if command.status in TERMINAL_STATUSES:
+        return {"status": command.status}
     now = datetime.now(UTC)
-    command.status = "success" if payload.status in {"done", "success"} else "failed"
-    command.result, command.updated_at, command.completed_at = payload.result, now, now
-    command.last_error = (
-        str(payload.result.get("error")) if payload.result.get("error") else None
-    )
+    if payload.status == "running":
+        if command.status not in {"sent", "running"}:
+            raise HTTPException(status_code=409, detail="Command cannot start")
+        command.status = "running"
+        command.updated_at = now
+        command.result = payload.result or None
+        command.last_error = None
+    elif payload.status in {"done", "success", "failed"}:
+        command.status = (
+            "success" if payload.status in {"done", "success"} else "failed"
+        )
+        command.result, command.updated_at, command.completed_at = (
+            payload.result,
+            now,
+            now,
+        )
+        command.last_error = (
+            str(payload.result.get("error")) if payload.result.get("error") else None
+        )
+    else:
+        raise HTTPException(status_code=422, detail="Unsupported command status")
     if command.command_type == "agent.disconnect" and command.status == "success":
         device.status = "disabled"
         device.updated_at = now
-    if command.command_type == "wifi.set_password":
+    if (
+        command.command_type == "wifi.set_password"
+        and command.status in TERMINAL_STATUSES
+    ):
         command.payload = {}
     audit(
         db,
@@ -94,4 +120,4 @@ def command_result(
         {"status": command.status},
     )
     db.commit()
-    return {"status": "ok"}
+    return {"status": command.status}

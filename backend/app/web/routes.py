@@ -143,7 +143,9 @@ def capability_summary(capabilities: dict[str, bool]) -> str:
     return f"{enabled} enabled / {disabled} disabled"
 
 
-def grouped_capabilities(capabilities: dict[str, bool]) -> list[dict[str, object]]:
+def grouped_capabilities(
+    capabilities: dict[str, bool], details: dict[str, dict[str, object]] | None = None
+) -> list[dict[str, object]]:
     grouped: list[dict[str, object]] = []
     if not capabilities:
         return grouped
@@ -154,12 +156,21 @@ def grouped_capabilities(capabilities: dict[str, bool]) -> list[dict[str, object
             for name, enabled in remaining.items()
             if enabled and name.startswith(prefixes)
         ]
-        disabled_items = [
+        disabled_names = [
             name
             for name, enabled in remaining.items()
             if not enabled and name.startswith(prefixes)
         ]
-        if enabled_items or disabled_items:
+        disabled_items = [
+            {
+                "name": name,
+                "reason": str(
+                    (details or {}).get(name, {}).get("reason") or "недоступно"
+                ),
+            }
+            for name in disabled_names
+        ]
+        if enabled_items or disabled_names:
             grouped.append(
                 {
                     "title": title,
@@ -167,7 +178,7 @@ def grouped_capabilities(capabilities: dict[str, bool]) -> list[dict[str, object
                     "disabled": disabled_items,
                 }
             )
-            for name in [*enabled_items, *disabled_items]:
+            for name in [*enabled_items, *disabled_names]:
                 remaining.pop(name, None)
     if remaining:
         grouped.append(
@@ -175,7 +186,14 @@ def grouped_capabilities(capabilities: dict[str, bool]) -> list[dict[str, object
                 "title": "Other",
                 "enabled": [name for name, enabled in remaining.items() if enabled],
                 "disabled": [
-                    name for name, enabled in remaining.items() if not enabled
+                    {
+                        "name": name,
+                        "reason": str(
+                            (details or {}).get(name, {}).get("reason") or "недоступно"
+                        ),
+                    }
+                    for name, enabled in remaining.items()
+                    if not enabled
                 ],
             }
         )
@@ -337,8 +355,9 @@ def device_page(
     radios = wifi.get("radios") or []
     interfaces = network.get("interfaces") or []
     capabilities = agent.get("capabilities") or {}
+    capability_details = agent.get("capability_details") or {}
     capabilities_summary = capability_summary(capabilities)
-    capabilities_groups = grouped_capabilities(capabilities)
+    capabilities_groups = grouped_capabilities(capabilities, capability_details)
     capabilities_message = capabilities_hint(capabilities)
 
     def has(name: str) -> bool:

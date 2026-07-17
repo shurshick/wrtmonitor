@@ -1,5 +1,5 @@
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -660,3 +660,136 @@ def test_device_delete_removes_router_and_all_related_data():
     assert command_count == 0
     assert command_audit_count == 0
     assert device_audit_count == 0
+
+
+def test_command_lifecycle_retry_expiry_and_idempotent_result_e2e():
+    if not postgres_e2e_enabled():
+        pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
+    clear_database()
+    config = load_settings()
+    client = TestClient(app)
+    setup = client.post(
+        "/api/v1/setup/complete",
+        json={
+            "username": "owner@example.com",
+            "password": "secret-password",
+            "password_confirm": "secret-password",
+            "server_url": "http://127.0.0.1:8080"
+            if config.allow_insecure_local
+            else "https://monitor.example.ru",
+        },
+    )
+    assert setup.status_code == 200
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"username": "owner@example.com", "password": "secret-password"},
+    )
+    assert login.status_code == 200
+    assert login.json()["refresh_token"]
+    refresh = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": login.json()["refresh_token"]},
+    )
+    assert refresh.status_code == 200
+    owner_headers = {"Authorization": f"Bearer {refresh.json()['access_token']}"}
+    provision = client.post(
+        "/api/v1/devices/provision",
+        headers=owner_headers,
+        json={"name": "Lifecycle", "hostname": "openwrt"},
+    )
+    assert provision.status_code == 200
+    device_id = provision.json()["device_id"]
+    agent_headers = {"Authorization": f"Bearer {provision.json()['device_token']}"}
+    telemetry = client.post(
+        "/api/v1/agent/telemetry",
+        headers=agent_headers,
+        json={
+            "device_id": device_id,
+            "telemetry": {
+                "agent": {
+                    "version": APP_VERSION,
+                    "capabilities": {"diagnostics.check_server": True},
+                }
+            },
+        },
+    )
+    assert telemetry.status_code == 200
+
+    def create_diagnostics() -> str:
+        response = client.post(
+            f"/api/v1/devices/{device_id}/commands",
+            headers=owner_headers,
+            json={
+                "command_type": "diagnostics.run",
+                "payload": {"checks": ["server"]},
+                "confirmed": True,
+            },
+        )
+        assert response.status_code == 200
+        return response.json()["command_id"]
+
+    command_id = create_diagnostics()
+    polled = client.get("/api/v1/agent/commands", headers=agent_headers)
+    assert polled.status_code == 200
+    assert polled.json()[0]["id"] == command_id
+    running = client.post(
+        f"/api/v1/agent/commands/{command_id}/result",
+        headers=agent_headers,
+        json={"status": "running", "result": {}},
+    )
+    assert running.json()["status"] == "running"
+    completed = client.post(
+        f"/api/v1/agent/commands/{command_id}/result",
+        headers=agent_headers,
+        json={"status": "success", "result": {"server": {"ok": True}}},
+    )
+    assert completed.json()["status"] == "success"
+    duplicate = client.post(
+        f"/api/v1/agent/commands/{command_id}/result",
+        headers=agent_headers,
+        json={"status": "failed", "result": {"error": "late duplicate"}},
+    )
+    assert duplicate.json()["status"] == "success"
+
+    failed_id = create_diagnostics()
+    client.get("/api/v1/agent/commands", headers=agent_headers)
+    failed = client.post(
+        f"/api/v1/agent/commands/{failed_id}/result",
+        headers=agent_headers,
+        json={"status": "failed", "result": {"error": "dns unavailable"}},
+    )
+    assert failed.json()["status"] == "failed"
+
+    retry_id = create_diagnostics()
+    client.get("/api/v1/agent/commands", headers=agent_headers)
+    session_factory = sessionmaker(
+        bind=get_engine(), autoflush=False, expire_on_commit=False
+    )
+    with session_factory() as session:
+        retry_command = session.get(DeviceCommand, UUID(retry_id))
+        retry_command.updated_at = datetime.now(UTC) - timedelta(seconds=60)
+        session.commit()
+    retried = client.get("/api/v1/agent/commands", headers=agent_headers)
+    assert retried.status_code == 200
+    assert retried.json()[0]["id"] == retry_id
+    history = client.get(
+        f"/api/v1/devices/{device_id}/commands?limit=20", headers=owner_headers
+    ).json()
+    retry_entry = next(item for item in history if item["id"] == retry_id)
+    assert retry_entry["status"] == "sent"
+    assert retry_entry["retry_count"] == 2
+
+    expired_id = create_diagnostics()
+    with session_factory() as session:
+        expired_command = session.get(DeviceCommand, UUID(expired_id))
+        expired_command.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        session.commit()
+    polled_after_expiry = client.get("/api/v1/agent/commands", headers=agent_headers)
+    assert all(item["id"] != expired_id for item in polled_after_expiry.json())
+    history = client.get(
+        f"/api/v1/devices/{device_id}/commands?limit=20", headers=owner_headers
+    ).json()
+    assert (
+        next(item for item in history if item["id"] == expired_id)["status"]
+        == "expired"
+    )

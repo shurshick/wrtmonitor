@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import ru.wrtmonitor.app.api.ApiResult
+import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.data.SessionStore
 import ru.wrtmonitor.app.ui.screens.AdminLoginScreen
@@ -73,16 +79,40 @@ fun WrtMonitorApp() {
     val sessionStore = remember { SessionStore(context) }
     var serverUrl by remember { mutableStateOf(sessionStore.serverUrl) }
     var accessToken by remember { mutableStateOf(sessionStore.accessToken) }
+    var refreshingSession by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(Tab.Routers) }
     var selectedDevice by remember { mutableStateOf<DeviceDto?>(null) }
     var deviceListRefreshNonce by remember { mutableStateOf(0) }
 
-    val expireSession = {
+    val scope = rememberCoroutineScope()
+    val clearExpiredSession = {
         sessionStore.clearSession()
         accessToken = ""
         selectedDevice = null
         tab = Tab.Routers
         deviceListRefreshNonce += 1
+    }
+    val expireSession: () -> Unit = {
+        val refreshToken = sessionStore.refreshToken
+        if (refreshToken.isBlank()) {
+            clearExpiredSession()
+        } else if (!refreshingSession) {
+            refreshingSession = true
+            scope.launch {
+                when (val result = withContext(Dispatchers.IO) {
+                    WrtMonitorApi(serverUrl).refresh(refreshToken)
+                }) {
+                    is ApiResult.Success -> {
+                        sessionStore.accessToken = result.data.accessToken
+                        sessionStore.refreshToken = result.data.refreshToken
+                        accessToken = result.data.accessToken
+                        deviceListRefreshNonce += 1
+                    }
+                    is ApiResult.Error -> clearExpiredSession()
+                }
+                refreshingSession = false
+            }
+        }
     }
 
     MaterialTheme(
@@ -120,9 +150,10 @@ fun WrtMonitorApp() {
             accessToken.isBlank() -> {
                 AdminLoginScreen(
                     serverUrl = serverUrl,
-                    onLogin = { token ->
-                        sessionStore.accessToken = token
-                        accessToken = token
+                    onLogin = { tokens ->
+                        sessionStore.accessToken = tokens.accessToken
+                        sessionStore.refreshToken = tokens.refreshToken
+                        accessToken = tokens.accessToken
                     },
                     onChangeServer = {
                         sessionStore.clearAll()

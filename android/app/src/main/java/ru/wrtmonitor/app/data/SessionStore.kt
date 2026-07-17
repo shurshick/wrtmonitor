@@ -10,7 +10,8 @@ class SessionStore(context: Context) {
 
     var serverUrl: String get() = prefs.getString("server_url", "").orEmpty(); set(value) = prefs.edit().putString("server_url", value).apply()
     var accessToken: String get() = prefs.getString("access_token", "").orEmpty(); set(value) = prefs.edit().putString("access_token", value).apply()
-    fun clearSession() = prefs.edit().remove("access_token").apply()
+    var refreshToken: String get() = prefs.getString("refresh_token", "").orEmpty(); set(value) = prefs.edit().putString("refresh_token", value).apply()
+    fun clearSession() = prefs.edit().remove("access_token").remove("refresh_token").apply()
     fun clearAll() = prefs.edit().clear().apply()
 
     private fun securePreferences(context: Context): SharedPreferences {

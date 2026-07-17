@@ -32,6 +32,8 @@ jobs:
           python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - run: pip install -r backend/requirements.txt
+      - run: pip install -r backend/requirements-browser.txt
+      - run: python -m playwright install --with-deps chromium
       - run: ruff check backend --select E9,F63,F7,F82
       - run: ruff format --check backend
       - run: pytest backend/tests openwrt-agent/tests
@@ -41,6 +43,7 @@ jobs:
           WRTMONITOR_ALLOW_INSECURE_LOCAL: "true"
           WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "true"
           WRTMONITOR_JWT_SECRET: ci-test-secret-value-with-more-than-32-characters
+          WRTMONITOR_SKIP_E2E: "0"
       - run: sh -n openwrt-agent/wrtmonitor-agent
       - run: sh -n openwrt-agent/install-openwrt.sh
       - run: for f in openwrt-agent/lib/*.sh; do sh -n "$f"; done
@@ -48,6 +51,25 @@ jobs:
       - run: shellcheck --shell=sh openwrt-agent/install-openwrt.sh openwrt-agent/lib/*.sh
       - run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
       - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
+      - name: Browser smoke test
+        env:
+          WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:change-me-db-password@localhost:5432/wrtmonitor_test
+          WRTMONITOR_PUBLIC_SERVER_URL: http://127.0.0.1:8090
+          WRTMONITOR_ALLOW_INSECURE_LOCAL: "true"
+          WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "true"
+          WRTMONITOR_JWT_SECRET: ci-test-secret-value-with-more-than-32-characters
+        run: |
+          python -c "from backend.tests.test_api import clear_database; clear_database()"
+          python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8090 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          for attempt in $(seq 1 30); do curl -fsS http://127.0.0.1:8090/health && break; sleep 1; done
+          python backend/tests/browser_smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-responsive-smoke
+          path: artifacts/browser
 
   docker:
     runs-on: ubuntu-latest

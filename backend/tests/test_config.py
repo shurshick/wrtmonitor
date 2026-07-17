@@ -1,12 +1,20 @@
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
 from backend.app.config import (
+    load_settings,
     read_repo_version,
     validate_database_url,
     validate_jwt_secret,
     validate_server_url,
+)
+from backend.app.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_access_token,
+    decode_refresh_token,
 )
 
 
@@ -70,3 +78,16 @@ def test_read_repo_version_has_safe_unknown_fallback(
     monkeypatch.delenv("WRTMONITOR_VERSION", raising=False)
 
     assert read_repo_version(tmp_path / "missing-version") == "0.0.0+unknown"
+
+
+def test_access_and_refresh_tokens_are_not_interchangeable():
+    config = load_settings()
+    user_id = uuid4()
+    access = create_access_token(user_id, "owner", config)
+    refresh = create_refresh_token(user_id, "owner", config)
+    assert decode_access_token(access, config)["sub"] == str(user_id)
+    assert decode_refresh_token(refresh, config)["sub"] == str(user_id)
+    with pytest.raises(Exception):
+        decode_access_token(refresh, config)
+    with pytest.raises(Exception):
+        decode_refresh_token(access, config)

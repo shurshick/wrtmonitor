@@ -33,6 +33,7 @@ def extract_agent_status(payload: dict[str, Any]) -> dict[str, Any]:
         "version": agent.get("version"),
         "status": agent.get("status", "running"),
         "platform": agent.get("platform", "openwrt"),
+        "capabilities_version": agent.get("capabilities_version"),
         "auto_update_enabled": bool(agent.get("auto_update_enabled", False)),
         "telemetry_interval_seconds": agent.get("telemetry_interval_seconds"),
         "last_update_status": agent.get("last_update_status") or "",
@@ -44,6 +45,7 @@ def extract_agent_status(payload: dict[str, Any]) -> dict[str, Any]:
         "backup_available": bool(agent.get("backup_available", False)),
         "update_source": agent.get("update_source") or "",
         "capabilities": capabilities,
+        "capability_details": extract_agent_capability_details(payload),
     }
 
 
@@ -53,6 +55,24 @@ def extract_agent_capabilities(payload: dict[str, Any]) -> dict[str, bool]:
     if not isinstance(capabilities, dict):
         return {}
     return {str(key): bool(value) for key, value in capabilities.items()}
+
+
+def extract_agent_capability_details(
+    payload: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    agent = payload.get("agent") or {}
+    details = agent.get("capability_details") or {}
+    if not isinstance(details, dict):
+        return {}
+    normalized: dict[str, dict[str, Any]] = {}
+    for key, detail in details.items():
+        if not isinstance(detail, dict):
+            continue
+        normalized[str(key)] = {
+            "supported": bool(detail.get("supported", False)),
+            "reason": str(detail.get("reason") or ""),
+        }
+    return normalized
 
 
 def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:

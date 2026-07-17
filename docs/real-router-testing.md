@@ -7,6 +7,7 @@
 | Тест | Ожидаемо | Факт | PASS/FAIL | Комментарий |
 |---|---|---|---|---|
 | `capabilities --json` | JSON валиден и содержит capabilities | | | |
+| Capability detection | отсутствующие пакеты/радио имеют `false` и понятную причину | | | |
 | Telemetry | latest telemetry содержит `agent`, `wifi`, `network` | | | |
 | Diagnostics | `diagnostics --json` возвращает structured result | | | |
 | Wi-Fi on/off | меняется только выбранный radio | | | |
@@ -15,6 +16,17 @@
 | Backup | перед Wi-Fi-командой появляется backup `wireless-*` | | | |
 | Network | interfaces обновляются через `network.interfaces` | | | |
 | Reboot | result приходит до reboot | | | |
+| WAN DHCP/static/PPPoE | настройки применяются, агент восстанавливает связь | | | |
+| LAN | адрес меняется только после backup конфигурации | | | |
+| DHCP/DNS | pool, static lease и DNS применяются без потери конфигурации | | | |
+| Firewall | port forward создаётся и удаляется | | | |
+| Clients | блокировка и разблокировка MAC работает | | | |
+| Guest Wi-Fi | сеть создаётся с изоляцией | | | |
+| System | hostname, timezone, NTP и restart service работают | | | |
+| Agent interval | принимаются значения от 5 секунд | | | |
+| Agent update | переход `0.1.1-rc9 -> 0.3.x` успешен | | | |
+| Agent rollback | предыдущая версия восстанавливается | | | |
+| Command lifecycle | видны `sent`, `running` и terminal status | | | |
 
 ## Порядок
 

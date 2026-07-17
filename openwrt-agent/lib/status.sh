@@ -96,8 +96,9 @@ update_status_json() {
 
 agent_status_json() {
     load_status
-    printf '{"version":"%s","status":"running","platform":"openwrt","auto_update_enabled":%s,"telemetry_interval_seconds":%s,"last_update_check":"%s","last_update_status":"%s","last_update_error":"%s","last_successful_update":"%s","rollback_available":%s,"update_source":"%s","available_version":"%s","capabilities":%s}' \
+    printf '{"version":"%s","status":"running","platform":"openwrt","capabilities_version":%s,"auto_update_enabled":%s,"telemetry_interval_seconds":%s,"last_update_check":"%s","last_update_status":"%s","last_update_error":"%s","last_successful_update":"%s","rollback_available":%s,"update_source":"%s","available_version":"%s","capabilities":%s,"capability_details":%s}' \
         "$(json_escape "$CURRENT_VERSION")" \
+        "$CAPABILITIES_VERSION" \
         "$( [ "$AUTO_UPDATE_STATUS" = "enabled" ] && printf true || printf false )" \
         "$(telemetry_interval_seconds)" \
         "$(json_escape "$LAST_UPDATE_CHECK")" \
@@ -107,5 +108,6 @@ agent_status_json() {
         "$( [ "$BACKUP_AVAILABLE_FLAG" = "1" ] && printf true || printf false )" \
         "$(json_escape "$UPDATE_SOURCE_VALUE")" \
         "$(json_escape "$AVAILABLE_VERSION")" \
-        "$(agent_capabilities_json)"
+        "$(agent_capabilities_json)" \
+        "$(agent_capability_details_json)"
 }

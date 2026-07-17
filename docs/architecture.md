@@ -49,12 +49,15 @@ flowchart LR
 
 ## Capabilities
 
-Начиная с `rc8`, agent публикует:
+Начиная с `v0.3.0-rc6`, agent публикует capability report schema v4:
 
 - версию;
 - платформу;
 - `capabilities_version`;
 - булевы capabilities.
+- `capability_details` с признаком поддержки и причиной недоступности.
+
+Поддержка определяется по фактическому окружению: UCI-конфигурациям, ubus, init-сервисам, установленным утилитам и наличию Wi-Fi radio/iface.
 
 Capabilities передаются в latest telemetry и через `GET /api/v1/devices/{device_id}/agent`.
 

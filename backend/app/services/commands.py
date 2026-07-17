@@ -14,6 +14,7 @@ from ..models import DeviceCommand
 
 
 COMMAND_TTL = timedelta(minutes=5)
+COMMAND_DELIVERY_LEASE = timedelta(seconds=45)
 TERMINAL_STATUSES = {"success", "failed", "expired", "cancelled"}
 
 ALLOWED_DIAGNOSTIC_CHECKS = {"server", "dns", "route", "wifi", "dependencies"}
@@ -917,6 +918,25 @@ def expire_old_commands(db: Session) -> int:
             updated_at=timestamp,
             completed_at=timestamp,
             last_error="Command expired",
+        )
+    )
+    return int(result.rowcount or 0)
+
+
+def requeue_stale_sent_commands(db: Session) -> int:
+    timestamp = now_utc()
+    result = db.execute(
+        update(DeviceCommand)
+        .where(
+            DeviceCommand.status == "sent",
+            DeviceCommand.updated_at < timestamp - COMMAND_DELIVERY_LEASE,
+            DeviceCommand.expires_at.is_not(None),
+            DeviceCommand.expires_at >= timestamp,
+        )
+        .values(
+            status="queued",
+            updated_at=timestamp,
+            last_error="Delivery lease expired; command queued for retry",
         )
     )
     return int(result.rowcount or 0)
