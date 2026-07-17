@@ -10,5 +10,6 @@ lib/update.sh
 lib/telemetry.sh
 lib/capabilities.sh
 lib/diagnostics.sh
+lib/transactions.sh
 lib/commands.sh
 lib/api.sh

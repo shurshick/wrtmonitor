@@ -271,4 +271,6 @@
     <string name="settings_summary">Server connection and application details</string>
     <string name="server_connection">Server connection</string>
     <string name="app_tagline">Manage your OpenWrt routers</string>
+    <string name="safe_apply_title">Review changes</string>
+    <string name="rollback_timeout">The agent will verify connectivity for %1$d seconds and automatically restore the previous configuration if the server becomes unavailable.</string>
 </resources>

@@ -51,7 +51,7 @@ Access token используется клиентами владельца. Dev
 
 ```json
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "status": "running",
   "auto_update_enabled": true,
   "telemetry_interval_seconds": 60,
@@ -117,7 +117,17 @@ Body:
 - `level_3_reversible_config`
 - `level_4_disruptive`
 
-### Управляющие команды v0.3.0
+### Предварительная проверка конфигурации
+
+```http
+POST /api/v1/devices/{device_id}/commands/preview
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+Тело совпадает с созданием команды. Ответ содержит `changes`, `warnings`, `errors`, `can_apply`, список UCI-конфигураций и timeout автоматического rollback.
+
+### Управляющие команды v0.4.0
 
 - `wifi.set_enabled`, `wifi.set_ssid`, `wifi.set_password`, `wifi.set_channel`, `wifi.set_country`
 - `network.interfaces`, `network.interface_restart`, `network.restart`

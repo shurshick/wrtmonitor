@@ -5,7 +5,7 @@
 ## v0.3.0 - стабильная основа
 
 - telemetry schema v2: система, hardware, WAN/LAN, Wi-Fi, клиенты и сервисы;
-- capability report v4 с динамическим определением функций и причинами недоступности;
+- capability report v5 с динамическим определением функций и причинами недоступности;
 - управление WAN, LAN, DHCP, DNS, Wi-Fi, клиентами, firewall и системными сервисами;
 - одинаковые capability-aware действия в Android и Web UI;
 - lifecycle команд `queued -> sent -> running -> success/failed`, retry, expiry и аудит;
@@ -15,6 +15,8 @@
 - Docker/TrueNAS deployment, GitHub Release и GHCR `latest`.
 
 ## v0.4.0 - безопасная конфигурация
+
+Статус: реализовано.
 
 - единый transaction layer для сетевых изменений;
 - preflight-проверка payload, UCI-секций и конфликтов адресов;

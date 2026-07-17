@@ -11,6 +11,11 @@ from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from ..models import DeviceCommand
+from .config_transactions import (
+    attach_transaction_metadata,
+    ensure_preflight_valid,
+    is_transactional_command,
+)
 
 
 COMMAND_TTL = timedelta(minutes=5)
@@ -867,11 +872,12 @@ def create_device_command(
     source: str,
 ) -> DeviceCommand:
     now = now_utc()
+    command_id = uuid4()
     command = DeviceCommand(
-        id=uuid4(),
+        id=command_id,
         device_id=device_id,
         command_type=command_type,
-        payload=payload,
+        payload=attach_transaction_metadata(command_type, payload, command_id),
         status="queued",
         result=None,
         created_by=created_by,
@@ -895,6 +901,16 @@ def validate_command_request(
     metadata = get_command_metadata(command_type)
     _require_confirmation(command_type, confirmed)
     normalized_payload = validate_command_payload(command_type, payload or {})
+    ensure_preflight_valid(command_type, normalized_payload)
+    if (
+        is_transactional_command(command_type)
+        and device_supports is not None
+        and not device_supports("config.transaction")
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Agent update required: safe configuration transactions are unavailable",
+        )
     capability = metadata.get("capability")
     if capability and device_supports is not None and not device_supports(capability):
         raise HTTPException(

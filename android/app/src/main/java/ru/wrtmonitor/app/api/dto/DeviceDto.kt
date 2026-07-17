@@ -58,3 +58,20 @@ data class CommandDto(
     val riskLevel: String?,
     val capability: String?,
 )
+
+data class ConfigChangeDto(
+    val field: String,
+    val current: String,
+    val proposed: String,
+)
+
+data class CommandPreviewDto(
+    val transactional: Boolean,
+    val configs: List<String>,
+    val rollbackTimeoutSeconds: Int,
+    val connectivitySensitive: Boolean,
+    val changes: List<ConfigChangeDto>,
+    val warnings: List<String>,
+    val errors: List<String>,
+    val canApply: Boolean,
+)

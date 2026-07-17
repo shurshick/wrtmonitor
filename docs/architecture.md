@@ -49,13 +49,14 @@ flowchart LR
 
 ## Capabilities
 
-Начиная с `v0.3.0-rc6`, agent публикует capability report schema v4:
+Начиная с `v0.4.0`, agent публикует capability report schema v5:
 
 - версию;
 - платформу;
 - `capabilities_version`;
 - булевы capabilities.
 - `capability_details` с признаком поддержки и причиной недоступности.
+- `config.transaction` для безопасного изменения UCI-настроек.
 
 Поддержка определяется по фактическому окружению: UCI-конфигурациям, ubus, init-сервисам, установленным утилитам и наличию Wi-Fi radio/iface.
 

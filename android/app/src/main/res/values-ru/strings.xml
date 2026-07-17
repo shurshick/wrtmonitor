@@ -271,4 +271,6 @@
     <string name="settings_summary">Подключение к серверу и сведения о приложении</string>
     <string name="server_connection">Подключение к серверу</string>
     <string name="app_tagline">Управление вашими OpenWrt-роутерами</string>
+    <string name="safe_apply_title">Проверьте изменения</string>
+    <string name="rollback_timeout">Агент проверит связь в течение %1$d сек. и автоматически вернёт прежнюю конфигурацию, если сервер станет недоступен.</string>
 </resources>

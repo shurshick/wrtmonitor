@@ -3,7 +3,7 @@ set -eu
 
 # Used by sourced libraries from lib/*.sh.
 # shellcheck disable=SC2034
-AGENT_VERSION="0.3.0"
+AGENT_VERSION="0.4.0"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
@@ -41,6 +41,7 @@ load_lib update.sh
 load_lib telemetry.sh
 load_lib capabilities.sh
 load_lib diagnostics.sh
+load_lib transactions.sh
 load_lib commands.sh
 load_lib api.sh
 

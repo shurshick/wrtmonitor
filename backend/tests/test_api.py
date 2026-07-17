@@ -708,8 +708,25 @@ def test_command_lifecycle_retry_expiry_and_idempotent_result_e2e():
             "telemetry": {
                 "agent": {
                     "version": APP_VERSION,
-                    "capabilities": {"diagnostics.check_server": True},
-                }
+                    "capabilities_version": 5,
+                    "capabilities": {
+                        "diagnostics.check_server": True,
+                        "config.transaction": True,
+                        "wifi.set_ssid": True,
+                    },
+                },
+                "wifi": {
+                    "available": True,
+                    "radios": [
+                        {
+                            "id": "radio0",
+                            "up": True,
+                            "interfaces": [
+                                {"id": "default_radio0", "ssid": "Old SSID"}
+                            ],
+                        }
+                    ],
+                },
             },
         },
     )
@@ -793,3 +810,52 @@ def test_command_lifecycle_retry_expiry_and_idempotent_result_e2e():
         next(item for item in history if item["id"] == expired_id)["status"]
         == "expired"
     )
+
+    preview = client.post(
+        f"/api/v1/devices/{device_id}/commands/preview",
+        headers=owner_headers,
+        json={
+            "command_type": "wifi.set_ssid",
+            "payload": {"iface": "default_radio0", "ssid": "Safe SSID"},
+            "confirmed": True,
+        },
+    )
+    assert preview.status_code == 200
+    assert preview.json()["transactional"] is True
+    assert preview.json()["changes"][-1] == {
+        "field": "ssid",
+        "current": "Old SSID",
+        "proposed": "Safe SSID",
+    }
+    config_command = client.post(
+        f"/api/v1/devices/{device_id}/commands",
+        headers=owner_headers,
+        json={
+            "command_type": "wifi.set_ssid",
+            "payload": {"iface": "default_radio0", "ssid": "Safe SSID"},
+            "confirmed": True,
+        },
+    )
+    assert config_command.status_code == 200
+    config_id = config_command.json()["command_id"]
+    config_polled = client.get("/api/v1/agent/commands", headers=agent_headers)
+    config_item = next(item for item in config_polled.json() if item["id"] == config_id)
+    assert config_item["payload"]["_transaction"]["id"] == config_id
+    verifying = client.post(
+        f"/api/v1/agent/commands/{config_id}/result",
+        headers=agent_headers,
+        json={
+            "status": "running",
+            "result": {"transaction": {"id": config_id, "state": "verifying"}},
+        },
+    )
+    assert verifying.json()["status"] == "running"
+    confirmed = client.post(
+        f"/api/v1/agent/commands/{config_id}/result",
+        headers=agent_headers,
+        json={
+            "status": "success",
+            "result": {"transaction": {"id": config_id, "state": "confirmed"}},
+        },
+    )
+    assert confirmed.json()["status"] == "success"

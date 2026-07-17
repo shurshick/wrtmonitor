@@ -12,11 +12,12 @@ lib/update.sh
 lib/telemetry.sh
 lib/capabilities.sh
 lib/diagnostics.sh
+lib/transactions.sh
 lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.3.0` сохраняет модульный layout и обновляется поверх предыдущих RC штатным update-механизмом.
+Версия `0.4.0` добавляет транзакционное применение UCI-конфигурации и обновляется поверх `0.3.x` штатным update-механизмом.
 
 ## Требования
 
@@ -35,6 +36,10 @@ Installer сам подтягивает зависимости через `opkg 
 - `coreutils-sha256sum`
 
 По умолчанию агент отправляет telemetry и опрашивает команды раз в `60` секунд. Интервал можно менять из Web UI и Android, минимальное значение `5` секунд.
+
+## Безопасное применение настроек
+
+Перед изменением Wi-Fi, сети, DHCP, DNS, firewall или системной UCI-конфигурации агент создаёт точечную резервную копию. Для сетевых команд после применения запускается проверка связи с сервером. Если связь не восстановилась за 90 секунд, агент возвращает прежние файлы и перезапускает соответствующие сервисы. Подробности: [safe-configuration.md](safe-configuration.md).
 
 ## Установка с уже развернутого сервера
 
@@ -70,7 +75,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.3.0/wrtmonitor-openwrt-agent-v0.3.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.4.0/wrtmonitor-openwrt-agent-v0.4.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \

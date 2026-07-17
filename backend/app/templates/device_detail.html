@@ -62,4 +62,77 @@
     {% endif %}
   </div>
 </div>
+<dialog class="config-preview" id="config-preview">
+  <div class="config-preview__header"><div><span class="eyebrow">Безопасное применение</span><h2>Проверьте изменения</h2></div><button class="button--ghost" id="config-preview-close" type="button" aria-label="Закрыть">×</button></div>
+  <div id="config-preview-errors"></div>
+  <dl class="config-preview__changes" id="config-preview-changes"></dl>
+  <div class="config-preview__warnings" id="config-preview-warnings"></div>
+  <div class="form-actions"><button id="config-preview-apply" type="button">Применить</button><button class="button--secondary" id="config-preview-cancel" type="button">Отмена</button></div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const dialog = document.getElementById('config-preview');
+  if (!dialog) return;
+  const changes = document.getElementById('config-preview-changes');
+  const warnings = document.getElementById('config-preview-warnings');
+  const errors = document.getElementById('config-preview-errors');
+  const apply = document.getElementById('config-preview-apply');
+  let pendingForm = null;
+  const close = () => { pendingForm = null; dialog.close(); };
+  document.getElementById('config-preview-close').addEventListener('click', close);
+  document.getElementById('config-preview-cancel').addEventListener('click', close);
+  apply.addEventListener('click', () => {
+    if (!pendingForm) return;
+    const form = pendingForm;
+    pendingForm = null;
+    dialog.close();
+    form.dataset.previewConfirmed = 'true';
+    form.requestSubmit();
+  });
+  document.querySelectorAll('form[action*="/web-command"]').forEach((form) => {
+    const originalSubmit = form.onsubmit;
+    form.onsubmit = null;
+    form.addEventListener('submit', async (event) => {
+      if (form.dataset.previewConfirmed === 'true') return;
+      event.preventDefault();
+      const response = await fetch('/devices/{{ device.id }}/web-command-preview', {
+        method: 'POST', body: new FormData(form), credentials: 'same-origin'
+      });
+      const preview = await response.json();
+      if (!response.ok) {
+        const detail = typeof preview.detail === 'string' ? preview.detail : JSON.stringify(preview.detail);
+        window.alert(detail || 'Не удалось проверить конфигурацию');
+        return;
+      }
+      if (!preview.transactional) {
+        if (originalSubmit && originalSubmit.call(form, event) === false) return;
+        form.dataset.previewConfirmed = 'true';
+        form.requestSubmit();
+        return;
+      }
+      pendingForm = form;
+      changes.replaceChildren();
+      (preview.changes || []).forEach((item) => {
+        const dt = document.createElement('dt');
+        const dd = document.createElement('dd');
+        dt.textContent = item.field;
+        dd.textContent = `${item.current ?? 'не задано'} → ${item.proposed ?? 'не задано'}`;
+        changes.append(dt, dd);
+      });
+      warnings.replaceChildren();
+      (preview.warnings || []).forEach((message) => {
+        const row = document.createElement('p'); row.textContent = message; warnings.append(row);
+      });
+      errors.replaceChildren();
+      (preview.errors || []).forEach((message) => {
+        const row = document.createElement('p'); row.textContent = message; errors.append(row);
+      });
+      apply.disabled = !preview.can_apply;
+      dialog.showModal();
+    });
+  });
+})();
+</script>
 {% endblock %}

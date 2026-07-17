@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +34,7 @@ import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.CommandDto
+import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
@@ -49,6 +51,70 @@ import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.ui.components.TonalActionButton
 
+private data class PendingSafeCommand(
+    val type: String,
+    val payload: JSONObject,
+    val successMessage: String = "",
+)
+
+@Composable
+private fun SafeCommandDialog(
+    serverUrl: String,
+    accessToken: String,
+    deviceId: String,
+    command: PendingSafeCommand,
+    onDismiss: () -> Unit,
+    onApply: () -> Unit,
+    onSessionExpired: () -> Unit,
+) {
+    var preview by remember(command.type, command.payload.toString()) { mutableStateOf<CommandPreviewDto?>(null) }
+    var error by remember(command.type, command.payload.toString()) { mutableStateOf("") }
+    LaunchedEffect(command.type, command.payload.toString()) {
+        when (val result = withContext(Dispatchers.IO) {
+            WrtMonitorApi(serverUrl, accessToken).previewCommand(deviceId, command.type, command.payload)
+        }) {
+            is ApiResult.Success -> preview = result.data
+            is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else error = result.message
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.safe_apply_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                when {
+                    error.isNotBlank() -> Text(error, color = MaterialTheme.colorScheme.error)
+                    preview == null -> CircularProgressIndicator()
+                    else -> {
+                        preview?.changes?.forEach { change ->
+                            Text(change.field, style = MaterialTheme.typography.labelLarge)
+                            Text("${change.current}  →  ${change.proposed}", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        preview?.warnings?.forEach { warning ->
+                            Text(warning, color = MaterialTheme.colorScheme.tertiary)
+                        }
+                        preview?.errors?.forEach { item ->
+                            Text(item, color = MaterialTheme.colorScheme.error)
+                        }
+                        if (preview?.transactional == true) {
+                            Text(
+                                stringResource(R.string.rollback_timeout, preview?.rollbackTimeoutSeconds ?: 90),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onApply, enabled = preview?.canApply == true) {
+                Text(stringResource(R.string.apply))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
 @Composable
 fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
     val scope = rememberCoroutineScope()
@@ -61,7 +127,7 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var leaseTime by remember { mutableStateOf("12h") }
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
-    var pendingCommand by remember { mutableStateOf<Pair<String, JSONObject>?>(null) }
+    var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     val leaseQueuedText = stringResource(R.string.lease_queued)
     val genericQueuedText = stringResource(R.string.command_queued)
 
@@ -132,17 +198,17 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                 InfoRow(stringResource(R.string.client_source), client.optString("source"), stringResource(R.string.no_data))
                 if (capabilities["dhcp.delete_lease"] == true && client.optBoolean("is_static", false)) {
                     TextButton(
-                        onClick = { pendingCommand = "dhcp.delete_lease" to JSONObject().put("mac", clientMac) },
+                        onClick = { pendingCommand = PendingSafeCommand("dhcp.delete_lease", JSONObject().put("mac", clientMac), genericQueuedText) },
                         modifier = Modifier.align(Alignment.End),
                     ) { Text(stringResource(R.string.delete_lease)) }
                 }
                 if (capabilities["clients.block"] == true && clientMac.isNotBlank()) {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
                         TextButton(
-                            onClick = { pendingCommand = "client.set_blocked" to JSONObject().put("mac", clientMac).put("blocked", true) },
+                            onClick = { pendingCommand = PendingSafeCommand("client.set_blocked", JSONObject().put("mac", clientMac).put("blocked", true), genericQueuedText) },
                         ) { Text(stringResource(R.string.block_client)) }
                         TextButton(
-                            onClick = { pendingCommand = "client.set_blocked" to JSONObject().put("mac", clientMac).put("blocked", false) },
+                            onClick = { pendingCommand = PendingSafeCommand("client.set_blocked", JSONObject().put("mac", clientMac).put("blocked", false), genericQueuedText) },
                         ) { Text(stringResource(R.string.unblock_client)) }
                     }
                 }
@@ -160,7 +226,7 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(ip, { ip = it }, label = { Text(stringResource(R.string.ip_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
                 label = stringResource(R.string.save_lease),
-                onClick = { pendingCommand = "dhcp.set_lease" to JSONObject().put("hostname", hostname).put("mac", mac).put("ip", ip) },
+                onClick = { pendingCommand = PendingSafeCommand("dhcp.set_lease", JSONObject().put("hostname", hostname).put("mac", mac).put("ip", ip), leaseQueuedText) },
                 enabled = hostname.isNotBlank() && mac.length >= 17 && ip.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             )
@@ -176,22 +242,19 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(leaseTime, { leaseTime = it }, label = { Text(stringResource(R.string.lease_time)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
                 label = stringResource(R.string.save_dhcp),
-                onClick = { pendingCommand = "dhcp.set_pool" to JSONObject().put("interface", "lan").put("start", poolStart).put("limit", poolLimit).put("leasetime", leaseTime) },
+                onClick = { pendingCommand = PendingSafeCommand("dhcp.set_pool", JSONObject().put("interface", "lan").put("start", poolStart).put("limit", poolLimit).put("leasetime", leaseTime), genericQueuedText) },
                 modifier = Modifier.align(Alignment.End),
             )
         }
     }
     MessageBanner(message, error = messageIsError)
 
-    pendingCommand?.let { command ->
-        AlertDialog(
-            onDismissRequest = { pendingCommand = null },
-            title = { Text(stringResource(R.string.confirm_action)) },
-            text = { Text(stringResource(R.string.config_backup_notice)) },
-            confirmButton = { TextButton(onClick = { pendingCommand = null; queue(command.first, command.second) }) { Text(stringResource(R.string.apply)) } },
-            dismissButton = { TextButton(onClick = { pendingCommand = null }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
+    pendingCommand?.let { command -> SafeCommandDialog(
+        serverUrl, accessToken, device.id, command,
+        onDismiss = { pendingCommand = null },
+        onApply = { pendingCommand = null; queue(command.type, command.payload) },
+        onSessionExpired = onSessionExpired,
+    ) }
 }
 
 @Composable
@@ -208,7 +271,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var guestEnabled by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
-    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
 
     val refresh: () -> Unit = {
         scope.launch {
@@ -313,7 +376,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 )
                 SecondaryActionButton(
                     label = stringResource(R.string.wifi_state_apply),
-                    onClick = { pendingAction = { queue("wifi.set_enabled", JSONObject().put("enabled", enabled).put("radio", radioId), wifiToggleQueued) } },
+                    onClick = { pendingCommand = PendingSafeCommand("wifi.set_enabled", JSONObject().put("enabled", enabled).put("radio", radioId), wifiToggleQueued) },
                     modifier = Modifier.align(Alignment.End),
                 )
             }
@@ -322,7 +385,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 OutlinedTextField(ssid, { ssid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 PrimaryActionButton(
                     label = stringResource(R.string.apply_ssid),
-                    onClick = { pendingAction = { queue("wifi.set_ssid", JSONObject().put("ssid", ssid).put("iface", ifaceId), wifiSsidQueued) } },
+                    onClick = { pendingCommand = PendingSafeCommand("wifi.set_ssid", JSONObject().put("ssid", ssid).put("iface", ifaceId), wifiSsidQueued) },
                     modifier = Modifier.align(Alignment.End),
                     enabled = ssid.isNotBlank(),
                 )
@@ -332,7 +395,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.new_wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
                 PrimaryActionButton(
                     label = stringResource(R.string.change_password),
-                    onClick = { pendingAction = { queue("wifi.set_password", JSONObject().put("password", password).put("iface", ifaceId), wifiPasswordQueued) } },
+                    onClick = { pendingCommand = PendingSafeCommand("wifi.set_password", JSONObject().put("password", password).put("iface", ifaceId), wifiPasswordQueued) },
                     modifier = Modifier.align(Alignment.End),
                     enabled = password.length >= 8,
                 )
@@ -349,7 +412,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 OutlinedTextField(channel, { channel = it }, label = { Text(stringResource(R.string.wifi_channel)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 PrimaryActionButton(
                     label = stringResource(R.string.change_channel),
-                    onClick = { pendingAction = { queue("wifi.set_channel", JSONObject().put("channel", channel).put("radio", radioId), wifiChannelQueued) } },
+                    onClick = { pendingCommand = PendingSafeCommand("wifi.set_channel", JSONObject().put("channel", channel).put("radio", radioId), wifiChannelQueued) },
                     enabled = channel.isNotBlank(),
                     modifier = Modifier.align(Alignment.End),
                 )
@@ -358,7 +421,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 OutlinedTextField(country, { country = it.uppercase().take(2) }, label = { Text(stringResource(R.string.wifi_country)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 PrimaryActionButton(
                     label = stringResource(R.string.change_country),
-                    onClick = { pendingAction = { queue("wifi.set_country", JSONObject().put("country", country).put("radio", radioId), wifiCountryQueued) } },
+                    onClick = { pendingCommand = PendingSafeCommand("wifi.set_country", JSONObject().put("country", country).put("radio", radioId), wifiCountryQueued) },
                     enabled = country.length == 2,
                     modifier = Modifier.align(Alignment.End),
                 )
@@ -375,7 +438,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             OutlinedTextField(guestPassword, { guestPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
             PrimaryActionButton(
                 label = stringResource(R.string.apply_guest_wifi),
-                onClick = { pendingAction = { queue("wifi.set_guest", JSONObject().put("enabled", guestEnabled).put("ssid", guestSsid).put("password", guestPassword).put("radio", radioId), wifiToggleQueued) } },
+                onClick = { pendingCommand = PendingSafeCommand("wifi.set_guest", JSONObject().put("enabled", guestEnabled).put("ssid", guestSsid).put("password", guestPassword).put("radio", radioId), wifiToggleQueued) },
                 enabled = !guestEnabled || (guestSsid.isNotBlank() && guestPassword.length >= 8),
                 modifier = Modifier.align(Alignment.End),
             )
@@ -385,22 +448,15 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     if (capabilities.isEmpty()) MessageBanner(stringResource(R.string.capabilities_missing_reinstall))
     MessageBanner(message, error = messageIsError)
 
-    pendingAction?.let { action ->
-        AlertDialog(
-            onDismissRequest = { pendingAction = null },
-            title = { Text(stringResource(R.string.wifi_confirm_title)) },
-            text = { Text(stringResource(R.string.wifi_confirm_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingAction = null
-                    action()
-                }) { Text(stringResource(R.string.apply)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingAction = null }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
+    pendingCommand?.let { command -> SafeCommandDialog(
+        serverUrl, accessToken, device.id, command,
+        onDismiss = { pendingCommand = null },
+        onApply = {
+            pendingCommand = null
+            queue(command.type, command.payload, command.successMessage)
+        },
+        onSessionExpired = onSessionExpired,
+    ) }
 }
 
 @Composable
@@ -424,7 +480,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var forwardExternalPort by remember { mutableStateOf("") }
     var forwardInternalIp by remember { mutableStateOf("") }
     var forwardInternalPort by remember { mutableStateOf("") }
-    var pendingCommand by remember { mutableStateOf<Pair<String, JSONObject>?>(null) }
+    var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     val refresh: () -> Unit = {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
@@ -526,7 +582,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(wanDns, { wanDns = it }, label = { Text(stringResource(R.string.dns_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
                 label = stringResource(R.string.save_wan),
-                onClick = { pendingCommand = "network.set_wan" to JSONObject().put("interface", "wan").put("protocol", wanProtocol).put("ip_address", wanIp).put("netmask", wanNetmask).put("gateway", wanGateway).put("dns", wanDns).put("username", wanUsername).put("password", wanPassword) },
+                onClick = { pendingCommand = PendingSafeCommand("network.set_wan", JSONObject().put("interface", "wan").put("protocol", wanProtocol).put("ip_address", wanIp).put("netmask", wanNetmask).put("gateway", wanGateway).put("dns", wanDns).put("username", wanUsername).put("password", wanPassword), genericCommandQueued) },
                 modifier = Modifier.align(Alignment.End),
             )
         }
@@ -537,7 +593,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(lanNetmask, { lanNetmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
                 label = stringResource(R.string.save_lan),
-                onClick = { pendingCommand = "network.set_lan" to JSONObject().put("interface", "lan").put("ip_address", lanIp).put("netmask", lanNetmask) },
+                onClick = { pendingCommand = PendingSafeCommand("network.set_lan", JSONObject().put("interface", "lan").put("ip_address", lanIp).put("netmask", lanNetmask), genericCommandQueued) },
                 modifier = Modifier.align(Alignment.End),
             )
         }
@@ -547,7 +603,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             OutlinedTextField(dnsServers, { dnsServers = it }, label = { Text(stringResource(R.string.dns_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
                 label = stringResource(R.string.apply_dns),
-                onClick = { pendingCommand = "dns.set_servers" to JSONObject().put("servers", dnsServers) },
+                onClick = { pendingCommand = PendingSafeCommand("dns.set_servers", JSONObject().put("servers", dnsServers), genericCommandQueued) },
                 modifier = Modifier.align(Alignment.End),
             )
         }
@@ -561,10 +617,10 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             ActionRow {
                 PrimaryActionButton(
                     label = stringResource(R.string.add_port_forward),
-                    onClick = { pendingCommand = "firewall.set_port_forward" to JSONObject().put("name", forwardName).put("protocol", "tcp").put("external_port", forwardExternalPort).put("internal_ip", forwardInternalIp).put("internal_port", forwardInternalPort) },
+                    onClick = { pendingCommand = PendingSafeCommand("firewall.set_port_forward", JSONObject().put("name", forwardName).put("protocol", "tcp").put("external_port", forwardExternalPort).put("internal_ip", forwardInternalIp).put("internal_port", forwardInternalPort), genericCommandQueued) },
                     enabled = forwardName.isNotBlank() && forwardExternalPort.isNotBlank() && forwardInternalIp.isNotBlank() && forwardInternalPort.isNotBlank(),
                 )
-                TextButton(onClick = { pendingCommand = "firewall.delete_port_forward" to JSONObject().put("name", forwardName) }, enabled = forwardName.isNotBlank()) {
+                TextButton(onClick = { pendingCommand = PendingSafeCommand("firewall.delete_port_forward", JSONObject().put("name", forwardName), genericCommandQueued) }, enabled = forwardName.isNotBlank()) {
                     Text(stringResource(R.string.delete_port_forward))
                 }
             }
@@ -576,7 +632,7 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                 OutlinedTextField(interfaceName, { interfaceName = it }, label = { Text(stringResource(R.string.network_interfaces)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 SecondaryActionButton(
                     label = stringResource(R.string.restart_interface),
-                    onClick = { pendingCommand = "network.interface_restart" to JSONObject().put("interface", interfaceName) },
+                    onClick = { pendingCommand = PendingSafeCommand("network.interface_restart", JSONObject().put("interface", interfaceName), interfaceRestartQueued) },
                     enabled = interfaceName.isNotBlank(),
                     modifier = Modifier.align(Alignment.End),
                 )
@@ -584,40 +640,22 @@ fun NetworkControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             if (capabilities["network.restart"] == true) {
                 SecondaryActionButton(
                     stringResource(R.string.restart_network),
-                    { pendingCommand = "network.restart" to JSONObject() },
+                    { pendingCommand = PendingSafeCommand("network.restart", JSONObject(), networkRestartQueued) },
                     Modifier.align(Alignment.End),
                 )
             }
         }
     }
     MessageBanner(message, error = messageIsError)
-    pendingCommand?.let { command ->
-        AlertDialog(
-            onDismissRequest = { pendingCommand = null },
-            title = { Text(stringResource(R.string.confirm_action)) },
-            text = {
-                Text(
-                    if (command.first in setOf("network.restart", "network.interface_restart")) {
-                        stringResource(R.string.network_restart_warning)
-                    } else {
-                        stringResource(R.string.config_backup_notice)
-                    },
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingCommand = null
-                    val success = when (command.first) {
-                        "network.restart" -> networkRestartQueued
-                        "network.interface_restart" -> interfaceRestartQueued
-                        else -> genericCommandQueued
-                    }
-                    queue(command.first, command.second, success)
-                }) { Text(stringResource(R.string.apply)) }
-            },
-            dismissButton = { TextButton(onClick = { pendingCommand = null }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
+    pendingCommand?.let { command -> SafeCommandDialog(
+        serverUrl, accessToken, device.id, command,
+        onDismiss = { pendingCommand = null },
+        onApply = {
+            pendingCommand = null
+            queue(command.type, command.payload, command.successMessage)
+        },
+        onSessionExpired = onSessionExpired,
+    ) }
 }
 
 @Composable
@@ -633,7 +671,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     var zoneName by remember { mutableStateOf("Europe/Moscow") }
     var timezoneValue by remember { mutableStateOf("MSK-3") }
     var ntpServers by remember { mutableStateOf("0.openwrt.pool.ntp.org, 1.openwrt.pool.ntp.org") }
-    var pendingSystemCommand by remember { mutableStateOf<Pair<String, JSONObject>?>(null) }
+    var pendingSystemCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     val refresh: () -> Unit = {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
@@ -727,7 +765,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             OutlinedTextField(hostnameValue, { hostnameValue = it }, label = { Text(stringResource(R.string.new_hostname)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
                 label = stringResource(R.string.change_hostname),
-                onClick = { pendingSystemCommand = "system.set_hostname" to JSONObject().put("hostname", hostnameValue) },
+                onClick = { pendingSystemCommand = PendingSafeCommand("system.set_hostname", JSONObject().put("hostname", hostnameValue), hostnameQueued) },
                 enabled = hostnameValue.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             )
@@ -740,7 +778,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
                 OutlinedTextField(timezoneValue, { timezoneValue = it }, label = { Text("POSIX timezone") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 PrimaryActionButton(
                     label = stringResource(R.string.save_time_settings),
-                    onClick = { pendingSystemCommand = "system.set_timezone" to JSONObject().put("zonename", zoneName).put("timezone", timezoneValue) },
+                    onClick = { pendingSystemCommand = PendingSafeCommand("system.set_timezone", JSONObject().put("zonename", zoneName).put("timezone", timezoneValue), systemCommandQueued) },
                     modifier = Modifier.align(Alignment.End),
                 )
             }
@@ -749,7 +787,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
                 OutlinedTextField(ntpServers, { ntpServers = it }, label = { Text(stringResource(R.string.ntp_servers)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 PrimaryActionButton(
                     label = stringResource(R.string.apply_ntp),
-                    onClick = { pendingSystemCommand = "system.set_ntp" to JSONObject().put("enabled", true).put("servers", ntpServers) },
+                    onClick = { pendingSystemCommand = PendingSafeCommand("system.set_ntp", JSONObject().put("enabled", true).put("servers", ntpServers), systemCommandQueued) },
                     modifier = Modifier.align(Alignment.End),
                 )
             }
@@ -760,7 +798,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             listOf("dnsmasq", "firewall", "odhcpd", "network").forEach { service ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(service, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { pendingSystemCommand = "system.restart_service" to JSONObject().put("service", service) }) {
+                    TextButton(onClick = { pendingSystemCommand = PendingSafeCommand("system.restart_service", JSONObject().put("service", service), serviceQueued) }) {
                         Text(stringResource(R.string.restart_service))
                     }
                 }
@@ -847,25 +885,15 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
         },
         dismissButton = { TextButton(onClick = { confirmAgentRollback = false }) { Text(stringResource(R.string.cancel)) } },
     )
-    pendingSystemCommand?.let { command ->
-        AlertDialog(
-            onDismissRequest = { pendingSystemCommand = null },
-            title = { Text(stringResource(R.string.confirm_action)) },
-            text = { Text(stringResource(R.string.config_backup_notice)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingSystemCommand = null
-                    val success = when (command.first) {
-                        "system.set_hostname" -> hostnameQueued
-                        "system.restart_service" -> serviceQueued
-                        else -> systemCommandQueued
-                    }
-                    queueSystem(command.first, command.second, success)
-                }) { Text(stringResource(R.string.apply)) }
-            },
-            dismissButton = { TextButton(onClick = { pendingSystemCommand = null }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
+    pendingSystemCommand?.let { command -> SafeCommandDialog(
+        serverUrl, accessToken, device.id, command,
+        onDismiss = { pendingSystemCommand = null },
+        onApply = {
+            pendingSystemCommand = null
+            queueSystem(command.type, command.payload, command.successMessage)
+        },
+        onSessionExpired = onSessionExpired,
+    ) }
 }
 
 private fun firstRadio(telemetry: TelemetryDto?): JSONObject? =

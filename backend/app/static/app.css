@@ -335,6 +335,15 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .client-actions > div { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
 .client-actions form, .client-actions form + form { margin: 0; padding: 0; border: 0; }
 
+.config-preview { width: min(620px, calc(100% - 28px)); max-height: calc(100vh - 40px); padding: 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+.config-preview::backdrop { background: rgba(2, 8, 17, .78); }
+.config-preview__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.config-preview__header h2 { margin: 2px 0 0; }
+.config-preview__changes { grid-template-columns: minmax(130px, .7fr) minmax(0, 1.3fr); margin: 0 0 16px; }
+.config-preview__changes dt, .config-preview__changes dd { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.config-preview__warnings p, #config-preview-errors p { margin: 8px 0; padding: 9px 11px; border-left: 3px solid var(--warning); background: var(--surface-muted); }
+#config-preview-errors p { border-left-color: var(--danger); color: var(--danger); }
+
 @media (max-width: 680px) {
   .app-header__content, .page { width: min(100% - 24px, 1220px); }
   .app-header__meta { display: none; }

@@ -4,7 +4,7 @@ import secrets
 from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -21,6 +21,7 @@ from ..services.commands import (
     create_device_command,
     validate_command_request,
 )
+from ..services.config_transactions import build_command_preview, ensure_preflight_valid
 from ..services.devices import (
     delete_device_permanently,
     device_supports,
@@ -571,6 +572,12 @@ def web_device_command(
                 db, device_id, capability
             ),
         )
+        telemetry = latest_device_telemetry(db, device_id)
+        ensure_preflight_valid(
+            command_type,
+            payload,
+            telemetry.payload if telemetry else {},
+        )
     except (ValueError, HTTPException) as exc:
         detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
         raise HTTPException(status_code=400, detail=detail) from exc
@@ -593,6 +600,88 @@ def web_device_command(
     db.commit()
     section = section if section in DEVICE_SECTIONS else "overview"
     return RedirectResponse(f"/devices/{device_id}?section={section}", status_code=303)
+
+
+@router.post("/devices/{device_id}/web-command-preview")
+async def web_device_command_preview(
+    request: Request,
+    device_id: UUID,
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> JSONResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return JSONResponse({"detail": "Authentication required"}, status_code=401)
+    form = await request.form()
+    require_web_csrf(
+        wrtmonitor_session,
+        str(form.get("csrf_token") or ""),
+        config,
+    )
+    get_user_device_or_404(db, user, device_id)
+
+    def value(name: str, default: str = "") -> str:
+        return str(form.get(name) or default)
+
+    command_type = value("command_type")
+    try:
+        payload = build_command_payload_from_web_form(
+            command_type,
+            ssid=value("ssid"),
+            enabled=value("enabled", "true"),
+            wifi_password=value("wifi_password"),
+            channel=value("channel"),
+            country=value("country"),
+            interval_seconds=value("interval_seconds"),
+            radio=value("radio"),
+            iface=value("iface"),
+            interface=value("interface"),
+            hostname=value("hostname"),
+            service=value("service"),
+            mac=value("mac"),
+            ip=value("ip"),
+            protocol=value("protocol"),
+            ip_address=value("ip_address"),
+            netmask=value("netmask"),
+            gateway=value("gateway"),
+            dns=value("dns"),
+            username=value("username"),
+            password=value("password"),
+            mtu=value("mtu"),
+            start=value("start"),
+            limit=value("limit"),
+            leasetime=value("leasetime"),
+            servers=value("servers"),
+            name=value("name"),
+            external_port=value("external_port"),
+            internal_ip=value("internal_ip"),
+            internal_port=value("internal_port"),
+            blocked=value("blocked", "true"),
+            zonename=value("zonename"),
+            timezone=value("timezone"),
+            diagnostics_checks=[
+                str(item) for item in form.getlist("diagnostics_checks")
+            ],
+        )
+        payload = validate_command_request(
+            command_type=command_type,
+            payload=payload,
+            confirmed=True,
+            device_supports=lambda capability: device_supports(
+                db, device_id, capability
+            ),
+        )
+        telemetry = latest_device_telemetry(db, device_id)
+        preview = build_command_preview(
+            command_type,
+            payload,
+            telemetry.payload if telemetry else {},
+        )
+    except (ValueError, HTTPException) as exc:
+        detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
+        return JSONResponse({"detail": detail}, status_code=400)
+    return JSONResponse(preview)
 
 
 @router.post("/devices/{device_id}/disconnect")

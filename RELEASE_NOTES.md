@@ -1,26 +1,28 @@
-# v0.3.0
+# v0.4.0
 
-Первый стабильный выпуск линии `0.3` для сервера, OpenWrt-агента и Android.
+Релиз безопасного изменения конфигурации OpenWrt.
 
-## Что изменилось относительно rc6
+## Изменения
 
-- Зафиксирована совместимость сервера, агента и Android на capability report schema v4.
-- Подтверждены PostgreSQL E2E, полный lifecycle команд и адаптивный Chromium smoke-test.
-- GitHub Actions переведены на актуальный Node 24 runtime.
-- Android `versionCode` увеличен до `34`, APK устанавливается поверх предыдущих RC.
-- Документация и инструкции синхронизированы со стабильным тегом.
+- Добавлен единый transaction layer для Wi-Fi, WAN, LAN, DHCP, DNS, firewall и системных UCI-настроек.
+- Перед применением агент проверяет UCI-секции, свободное место и создаёт точечную резервную копию конфигурации.
+- Сетевые изменения переходят в состояние проверки связи; при недоступности сервера агент автоматически восстанавливает прежнюю конфигурацию.
+- Web UI и Android показывают текущие и новые значения, предупреждения и ошибки preflight до постановки команды в очередь.
+- Добавлена capability schema v5 с признаком `config.transaction`; старому агенту небезопасные изменения не выдаются.
+- Добавлены проверки rollback UCI-файла и PostgreSQL E2E транзакционного lifecycle.
+- Android `versionCode` увеличен до `35`.
 
 ## Обновление
 
 - Сервер: выполните redeploy `ghcr.io/shurshick/wrtmonitor:latest`.
-- Агент: используйте кнопку проверки обновления или штатную команду agent update.
-- Android: установите новый APK поверх предыдущей версии.
+- Агент: сначала обновите агент до `0.4.0`, затем используйте команды изменения конфигурации.
+- Android: установите `wrtmonitor-android-v0.4.0-debug.apk` поверх предыдущей версии.
 
 PostgreSQL volume при обновлении контейнера сохраняется.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.3.0-debug.apk`
-- `wrtmonitor-openwrt-agent-v0.3.0.tar.gz`
-- `wrtmonitor-truenas-v0.3.0.yaml`
+- `wrtmonitor-android-v0.4.0-debug.apk`
+- `wrtmonitor-openwrt-agent-v0.4.0.tar.gz`
+- `wrtmonitor-truenas-v0.4.0.yaml`
 - `SHA256SUMS.txt`

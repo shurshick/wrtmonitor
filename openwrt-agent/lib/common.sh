@@ -3,12 +3,13 @@
 RUN_LOCK_DIR="/tmp/wrtmonitor-agent.lock"
 UPDATE_LOCK_FILE="/tmp/wrtmonitor-agent-update.lock"
 UPDATE_LOCK_STALE_SECONDS="1800"
-STATUS_DIR="/etc/wrtmonitor"
+STATUS_DIR="${WRTMONITOR_STATUS_DIR:-/etc/wrtmonitor}"
 BACKUP_DIR="$STATUS_DIR/backup"
 CONFIG_BACKUP_DIR="$STATUS_DIR/config-backups"
+CONFIG_TRANSACTION_DIR="$STATUS_DIR/config-transactions"
 STATUS_FILE="$STATUS_DIR/update-status.env"
 STATE_FILE="$STATUS_DIR/agent-state.env"
-LIB_INSTALL_DIR="/usr/lib/wrtmonitor"
+LIB_INSTALL_DIR="${WRTMONITOR_LIB_INSTALL_DIR:-/usr/lib/wrtmonitor}"
 PENDING_AGENT_EXEC=0
 
 cfg() {
@@ -76,7 +77,7 @@ shell_escape_single() {
 }
 
 ensure_state_dirs() {
-    mkdir -p "$STATUS_DIR" "$BACKUP_DIR" "$CONFIG_BACKUP_DIR"
+    mkdir -p "$STATUS_DIR" "$BACKUP_DIR" "$CONFIG_BACKUP_DIR" "$CONFIG_TRANSACTION_DIR"
 }
 
 acquire_lock() {

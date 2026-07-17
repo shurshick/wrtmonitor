@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="4"
+CAPABILITIES_VERSION="5"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -6,7 +6,7 @@ capability_path() {
 
 capability_keys() {
     printf '%s\n' \
-        agent.status agent.update agent.set_interval agent.rollback agent.disable \
+        agent.status agent.update agent.set_interval agent.rollback agent.disable config.transaction \
         telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.clients telemetry.services \
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
@@ -57,6 +57,10 @@ has_system_write() {
     has_uci_config system
 }
 
+has_config_transactions() {
+    has_commands uci curl cp df sed awk && [ -d "$(capability_path /etc/config)" ]
+}
+
 capability_supported() {
     case "$1" in
         agent.status) return 0 ;;
@@ -64,6 +68,7 @@ capability_supported() {
         agent.set_interval) has_uci_config wrtmonitor ;;
         agent.rollback) has_commands cp mv && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
         agent.disable) has_uci_config wrtmonitor && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
+        config.transaction) has_config_transactions ;;
         telemetry.system) [ -r "$(capability_path /proc/uptime)" ] && [ -r "$(capability_path /proc/loadavg)" ] ;;
         telemetry.hardware) [ -r "$(capability_path /proc/cpuinfo)" ] && has_commands df ;;
         telemetry.network|network.read) has_network_runtime ;;
@@ -96,6 +101,7 @@ capability_unavailable_reason() {
         agent.update) printf 'curl, sha256sum or file tools are unavailable' ;;
         agent.set_interval|agent.disable) printf 'wrtmonitor UCI configuration is unavailable' ;;
         agent.rollback) printf 'agent init service or file tools are unavailable' ;;
+        config.transaction) printf 'UCI configuration, connectivity or backup tools are unavailable' ;;
         telemetry.system) printf 'required procfs metrics are unavailable' ;;
         telemetry.hardware) printf 'hardware metrics or df are unavailable' ;;
         telemetry.network|network.read) printf 'ubus network runtime or jsonfilter is unavailable' ;;

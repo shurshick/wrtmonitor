@@ -48,6 +48,7 @@ def prepare_router() -> str:
         device_id = provision.json()["device_id"]
         agent_headers = {"Authorization": f"Bearer {provision.json()['device_token']}"}
         capabilities = {
+            "config.transaction": True,
             "agent.update": True,
             "agent.set_interval": True,
             "agent.rollback": True,
@@ -86,7 +87,7 @@ def prepare_router() -> str:
                     "agent": {
                         "version": "0.3.0",
                         "status": "running",
-                        "capabilities_version": 4,
+                        "capabilities_version": 5,
                         "capabilities": capabilities,
                     },
                     "system": {

@@ -142,6 +142,7 @@ main() {
             printf '\n'
             ;;
         list-config-backups) list_config_backups ;;
+        verify-transaction) verify_transaction "${2:-}" ;;
         register) register_device ;;
         update) shift; manual_update "$@" ;;
         rollback) manual_rollback ;;

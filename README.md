@@ -4,15 +4,15 @@
 
 ## Текущая версия
 
-Текущая стабильная версия: `v0.3.0`.
+Текущая стабильная версия: `v0.4.0`.
 
-Главное в `0.3.0`:
+Главное в `0.4.0`:
 
-- динамическое определение capabilities агента с объяснением недоступных функций;
-- полный lifecycle команд с running, retry, expiry и идемпотентным результатом;
-- PostgreSQL E2E и адаптивный Chromium smoke-test в CI;
-- автоматическое обновление Android-сессии через refresh token;
-- capability report schema v4 в Web UI и Android.
+- безопасное применение UCI-настроек через preflight, backup и transaction layer;
+- автоматический rollback, если после изменения пропала связь с сервером;
+- предварительный diff текущих и новых значений в Web UI и Android;
+- capability report schema v5 с явной поддержкой `config.transaction`;
+- E2E жизненного цикла транзакционной команды и тест восстановления конфигурации.
 
 В предыдущих релизах:
 
@@ -72,7 +72,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 В релизе он публикуется как:
 
 ```text
-wrtmonitor-truenas-v0.3.0.yaml
+wrtmonitor-truenas-v0.4.0.yaml
 ```
 
 Контейнер использует:

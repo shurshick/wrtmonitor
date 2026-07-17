@@ -144,6 +144,17 @@ execute_command() {
     status="done"
     result="{}"
     disconnect_after=0
+    transaction_active=0
+    if transaction_configs_for_command "$command_type" >/dev/null 2>&1; then
+        transaction_timeout="$(transaction_timeout_from_payload "$command_payload")"
+        if transaction_begin "$command_id" "$command_type" "$transaction_timeout"; then
+            transaction_active=1
+        else
+            result="$(transaction_failure_result "$command_id" "configuration preflight or backup failed" "not_applied")"
+            api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"failed\",\"result\":$result}" >/dev/null || true
+            return 1
+        fi
+    fi
     case "$command_type" in
         router.reboot)
             result="$(command_success_result "reboot scheduled")"
@@ -592,6 +603,22 @@ execute_command() {
             result='{"error":"unsupported command"}'
             ;;
     esac
+    if [ "$transaction_active" = "1" ]; then
+        if [ "$status" = "done" ] && transaction_is_connectivity_sensitive "$command_type"; then
+            result="{\"message\":\"configuration applied; connectivity verification is running\",\"transaction\":{\"id\":\"$(json_escape "$command_id")\",\"state\":\"verifying\",\"rollback_timeout_seconds\":$transaction_timeout}}"
+            api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"running\",\"result\":$result}" >/dev/null || true
+            transaction_schedule_verification "$command_id"
+            return 0
+        fi
+        if [ "$status" = "done" ]; then
+            transaction_set_state "$command_id" "confirmed"
+            result="$(transaction_success_result "$command_id")"
+        elif transaction_restore "$command_id"; then
+            result="$(transaction_failure_result "$command_id" "configuration command failed; backup restored" "rolled_back")"
+        else
+            result="$(transaction_failure_result "$command_id" "configuration command failed and rollback failed" "rollback_failed")"
+        fi
+    fi
     api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"$status\",\"result\":$result}" >/dev/null || true
     if [ "$disconnect_after" = "1" ] && [ "$status" = "done" ]; then
         uci set "$CONFIG.enabled=0"

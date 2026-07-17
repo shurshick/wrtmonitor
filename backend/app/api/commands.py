@@ -10,7 +10,11 @@ from ..db import get_db
 from ..models import DeviceCommand, User
 from ..services.audit import audit
 from ..services.auth import current_user
-from ..services.devices import device_supports, get_user_device_or_404
+from ..services.devices import (
+    device_supports,
+    get_user_device_or_404,
+    latest_device_telemetry,
+)
 from ..schemas import CommandCreateRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
@@ -19,9 +23,32 @@ from ..services.commands import (
     expire_old_commands,
     validate_command_request,
 )
+from ..services.config_transactions import build_command_preview, ensure_preflight_valid
 
 
 router = APIRouter(prefix="/api/v1/devices")
+
+
+@router.post("/{device_id}/commands/preview")
+def preview_command(
+    device_id: UUID,
+    payload: CommandCreateRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    get_user_device_or_404(db, user, device_id)
+    normalized_payload = validate_command_request(
+        command_type=payload.command_type,
+        payload=payload.payload,
+        confirmed=True,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    telemetry = latest_device_telemetry(db, device_id)
+    return build_command_preview(
+        payload.command_type,
+        normalized_payload,
+        telemetry.payload if telemetry else {},
+    )
 
 
 @router.post("/{device_id}/commands")
@@ -39,6 +66,12 @@ def create_command(
         payload=payload.payload,
         confirmed=payload.confirmed,
         device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    telemetry = latest_device_telemetry(db, device_id)
+    ensure_preflight_valid(
+        payload.command_type,
+        normalized_payload,
+        telemetry.payload if telemetry else {},
     )
     command = create_device_command(
         db,

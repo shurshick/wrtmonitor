@@ -4,6 +4,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import ru.wrtmonitor.app.api.dto.AgentStatusDto
 import ru.wrtmonitor.app.api.dto.CommandDto
+import ru.wrtmonitor.app.api.dto.CommandPreviewDto
+import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import java.net.HttpURLConnection
@@ -125,6 +127,35 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         JSONObject(response).optString("status", "queued")
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
+    fun previewCommand(deviceId: String, type: String, payload: JSONObject): ApiResult<CommandPreviewDto> = runCatching {
+        val (status, response) = request(
+            "/api/v1/devices/$deviceId/commands/preview",
+            "POST",
+            JSONObject().put("command_type", type).put("payload", payload).put("confirmed", true),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val json = JSONObject(response)
+        val changes = json.optJSONArray("changes") ?: JSONArray()
+        CommandPreviewDto(
+            transactional = json.optBoolean("transactional"),
+            configs = json.optJSONArray("configs").toStringList(),
+            rollbackTimeoutSeconds = json.optInt("rollback_timeout_seconds", 90),
+            connectivitySensitive = json.optBoolean("connectivity_sensitive"),
+            changes = (0 until changes.length()).map { index ->
+                changes.getJSONObject(index).let { item ->
+                    ConfigChangeDto(
+                        field = item.optString("field"),
+                        current = item.optString("current", "-"),
+                        proposed = item.optString("proposed", "-"),
+                    )
+                }
+            },
+            warnings = json.optJSONArray("warnings").toStringList(),
+            errors = json.optJSONArray("errors").toStringList(),
+            canApply = json.optBoolean("can_apply", false),
+        )
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
     fun disconnectDevice(deviceId: String): ApiResult<String> = runCatching {
         val (status, response) = request("/api/v1/devices/$deviceId/disconnect", "POST", JSONObject())
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
@@ -173,6 +204,10 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         riskLevel = json.optString("risk_level").takeIf { it.isNotBlank() && it != "null" },
         capability = json.optString("capability").takeIf { it.isNotBlank() && it != "null" },
     )
+
+    private fun JSONArray?.toStringList(): List<String> = this?.let { array ->
+        (0 until array.length()).map { index -> array.optString(index) }
+    } ?: emptyList()
 
     private fun JSONObject?.toBooleanMap(): Map<String, Boolean> {
         if (this == null) return emptyMap()
