@@ -17,6 +17,15 @@ from .telemetry import normalize_clients_summary
 WEEKDAYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 TIME_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 CLIENT_TRAFFIC_RETENTION = 96
+ONLINE_CLIENT_STATES = {
+    "REACHABLE",
+    "STALE",
+    "DELAY",
+    "PROBE",
+    "PERMANENT",
+    "NOARP",
+    "WIFI",
+}
 
 
 def normalize_mac(value: str) -> str:
@@ -107,12 +116,10 @@ def sync_client_inventory(
         client.ip_address = item.get("ip") or client.ip_address
         client.interface = item.get("interface") or client.interface
         client.vendor = inferred_vendor(mac, item.get("vendor")) or client.vendor
-        client.online = str(item.get("state") or "").upper() not in {
-            "FAILED",
-            "INCOMPLETE",
-        }
+        client.online = str(item.get("state") or "").upper() in ONLINE_CLIENT_STATES
         client.is_static = bool(item.get("is_static", False))
-        client.last_seen_at = now
+        if client.online:
+            client.last_seen_at = now
         client.updated_at = now
         try:
             rx_bytes = max(0, int(item.get("rx_bytes") or 0))

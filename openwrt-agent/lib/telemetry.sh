@@ -441,6 +441,7 @@ wifi_stations_json() {
     station_groups=""
     if command -v ubus >/dev/null 2>&1; then
         for hostapd_object in $(ubus list 'hostapd.*' 2>/dev/null || true); do
+            station_interface="${hostapd_object#hostapd.}"
             station_response="$(ubus call "$hostapd_object" get_clients 2>/dev/null || true)"
             [ -n "$station_response" ] || continue
             station_file="/tmp/wrtmonitor-stations-$$"
@@ -448,8 +449,20 @@ wifi_stations_json() {
             station_clients="$(jsonfilter -i "$station_file" -e '@.clients' 2>/dev/null || printf '{}')"
             rm -f "$station_file"
             case "$station_clients" in \{*\}) ;; *) station_clients='{}' ;; esac
+            station_ssid=""
+            station_band=""
+            if command -v iwinfo >/dev/null 2>&1; then
+                station_info="$(iwinfo "$station_interface" info 2>/dev/null || true)"
+                station_ssid="$(printf '%s\n' "$station_info" | sed -n 's/.*ESSID: "\(.*\)".*/\1/p' | head -n 1)"
+                case "$station_info" in
+                    *" GHz"*)
+                        station_frequency="$(printf '%s\n' "$station_info" | sed -n 's/.*(\([0-9][0-9]*\.[0-9][0-9]*\) GHz).*/\1/p' | head -n 1)"
+                        case "$station_frequency" in 2.*) station_band="2g" ;; 5.*) station_band="5g" ;; 6.*) station_band="6g" ;; esac
+                        ;;
+                esac
+            fi
             [ -n "$station_groups" ] && station_groups="$station_groups,"
-            station_groups="$station_groups{\"interface\":\"$(json_escape "${hostapd_object#hostapd.}")\",\"clients\":$station_clients}"
+            station_groups="$station_groups{\"interface\":\"$(json_escape "$station_interface")\",\"ssid\":\"$(json_escape "$station_ssid")\",\"band\":\"$(json_escape "$station_band")\",\"clients\":$station_clients}"
         done
     fi
     printf '[%s]' "$station_groups"

@@ -73,7 +73,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private data class PendingSafeCommand(
+internal data class PendingSafeCommand(
     val type: String,
     val payload: JSONObject,
     val successMessage: String = "",
@@ -346,7 +346,7 @@ private fun ClientFilterButton(
 }
 
 @Composable
-private fun SafeCommandDialog(
+internal fun SafeCommandDialog(
     serverUrl: String,
     accessToken: String,
     deviceId: String,
@@ -404,7 +404,7 @@ private fun SafeCommandDialog(
 }
 
 @Composable
-fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
+private fun LegacyClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
     val scope = rememberCoroutineScope()
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var networkClients by remember { mutableStateOf<List<NetworkClientDto>>(emptyList()) }

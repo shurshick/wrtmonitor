@@ -388,6 +388,8 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 {
                     "mac": str(mac).lower(),
                     "interface": station_group.get("interface"),
+                    "ssid": station_group.get("ssid"),
+                    "band": station_group.get("band"),
                     "signal": details.get("signal", details.get("avg_ack_signal")),
                     "noise": details.get("noise"),
                     "rx_bitrate": rx.get("rate") if isinstance(rx, dict) else rx,
@@ -595,6 +597,14 @@ def normalize_vpn_summary(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    active_neighbour_states = {
+        "REACHABLE",
+        "STALE",
+        "DELAY",
+        "PROBE",
+        "PERMANENT",
+        "NOARP",
+    }
     clients = payload.get("clients") or {}
     dhcp = clients.get("dhcp") or payload.get("dhcp") or {}
     leases = dhcp.get("leases") or []
@@ -679,12 +689,53 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
         )
         item["ip"] = neighbour.get("ip") or item.get("ip")
         item["interface"] = neighbour.get("interface") or item.get("interface")
-        item["state"] = neighbour.get("state") or item.get("state")
+        current_state = str(item.get("state") or "").upper()
+        candidate_state = str(neighbour.get("state") or "").upper()
+        if candidate_state in active_neighbour_states or (
+            current_state not in active_neighbour_states and candidate_state
+        ):
+            item["state"] = candidate_state
         item["vendor"] = neighbour.get("vendor") or item.get("vendor")
         item["rx_bytes"] = neighbour.get("rx_bytes") or item.get("rx_bytes")
         item["tx_bytes"] = neighbour.get("tx_bytes") or item.get("tx_bytes")
         if item.get("source") in {"dhcp", "static-dhcp"}:
             item["source"] = "dhcp+neighbour"
+
+    wifi = payload.get("wifi") or {}
+    for station_group in wifi.get("stations") or []:
+        if not isinstance(station_group, dict):
+            continue
+        station_clients = station_group.get("clients") or {}
+        if not isinstance(station_clients, dict):
+            continue
+        for station_mac, details in station_clients.items():
+            mac = str(station_mac or "").lower()
+            if not mac or not isinstance(details, dict):
+                continue
+            item = by_mac.setdefault(
+                mac,
+                {
+                    "mac": mac,
+                    "ip": None,
+                    "hostname": None,
+                    "interface": None,
+                    "state": None,
+                    "source": "wifi",
+                    "expires": None,
+                    "is_static": False,
+                    "vendor": details.get("vendor"),
+                    "rx_bytes": details.get("rx_bytes"),
+                    "tx_bytes": details.get("tx_bytes"),
+                },
+            )
+            item["interface"] = station_group.get("interface") or item.get("interface")
+            item["state"] = "wifi"
+            item["connection_type"] = "wifi"
+            item["ssid"] = station_group.get("ssid")
+            item["band"] = station_group.get("band")
+            item["signal"] = details.get("signal", details.get("avg_ack_signal"))
+            if item.get("source") != "wifi":
+                item["source"] = f"{item.get('source') or 'client'}+wifi"
 
     items = sorted(
         by_mac.values(),

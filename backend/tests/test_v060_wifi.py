@@ -91,6 +91,8 @@ def test_wifi_station_telemetry_is_flattened():
                 "stations": [
                     {
                         "interface": "wlan0",
+                        "ssid": "HomeNET",
+                        "band": "5g",
                         "clients": {
                             "AA:BB:CC:DD:EE:FF": {
                                 "signal": -48,
@@ -106,3 +108,5 @@ def test_wifi_station_telemetry_is_flattened():
     assert summary["station_count"] == 1
     assert summary["stations"][0]["mac"] == "aa:bb:cc:dd:ee:ff"
     assert summary["stations"][0]["signal"] == -48
+    assert summary["stations"][0]["ssid"] == "HomeNET"
+    assert summary["stations"][0]["band"] == "5g"

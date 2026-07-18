@@ -26,6 +26,54 @@ from ..services.devices import (
 router = APIRouter(prefix="/api/v1/devices")
 
 
+def _client_connection_details(payload: dict) -> dict[str, dict]:
+    clients = payload.get("clients") or {}
+    neighbours = clients.get("neighbours") or []
+    details: dict[str, dict] = {}
+    for neighbour in neighbours:
+        if not isinstance(neighbour, dict):
+            continue
+        mac = str(neighbour.get("mac") or "").lower()
+        if not mac:
+            continue
+        item = details.setdefault(mac, {"ipv4": "", "ipv6": []})
+        address = str(neighbour.get("ip") or "")
+        if "." in address:
+            item["ipv4"] = address
+        elif ":" in address and address not in item["ipv6"]:
+            item["ipv6"].append(address)
+        interface = str(neighbour.get("interface") or "")
+        if interface:
+            item["interface"] = interface
+
+    wifi = payload.get("wifi") or {}
+    for station_group in wifi.get("stations") or []:
+        if not isinstance(station_group, dict):
+            continue
+        station_clients = station_group.get("clients") or {}
+        if not isinstance(station_clients, dict):
+            continue
+        for mac, station in station_clients.items():
+            if not isinstance(station, dict):
+                continue
+            item = details.setdefault(str(mac).lower(), {"ipv4": "", "ipv6": []})
+            rx = station.get("rx") or station.get("rx_rate") or {}
+            tx = station.get("tx") or station.get("tx_rate") or {}
+            item.update(
+                {
+                    "connection_type": "wifi",
+                    "connection_name": station_group.get("ssid") or "",
+                    "wifi_ssid": station_group.get("ssid") or "",
+                    "wifi_band": station_group.get("band") or "",
+                    "wifi_interface": station_group.get("interface") or "",
+                    "signal_dbm": station.get("signal", station.get("avg_ack_signal")),
+                    "rx_bitrate": rx.get("rate") if isinstance(rx, dict) else rx,
+                    "tx_bitrate": tx.get("rate") if isinstance(tx, dict) else tx,
+                }
+            )
+    return details
+
+
 def get_client(db: Session, device_id: UUID, client_id: UUID) -> NetworkClient:
     client = db.get(NetworkClient, client_id)
     if not client or client.device_id != device_id:
@@ -61,15 +109,32 @@ def list_clients(
         for item in dhcp.get("static_leases") or []
         if isinstance(item, dict) and "." in str(item.get("ip") or "")
     }
+    connection_by_mac = _client_connection_details(telemetry_payload)
     for item in response:
         mac_key = str(item.get("mac") or "").lower()
         registry_address = str(item.get("ip_address") or "")
+        connection = connection_by_mac.get(mac_key) or {}
         item["current_ipv4"] = (
             lease_ipv4_by_mac.get(mac_key)
             or static_ipv4_by_mac.get(mac_key)
+            or connection.get("ipv4")
             or (registry_address if "." in registry_address else "")
         )
         item["static_ipv4"] = static_ipv4_by_mac.get(mac_key) or ""
+        item["ipv6_addresses"] = connection.get("ipv6") or (
+            [registry_address] if ":" in registry_address else []
+        )
+        item["connection_type"] = connection.get("connection_type") or (
+            "wired"
+            if connection.get("interface") or item.get("interface")
+            else "unknown"
+        )
+        item["connection_name"] = connection.get("connection_name") or ""
+        item["wifi_ssid"] = connection.get("wifi_ssid") or ""
+        item["wifi_band"] = connection.get("wifi_band") or ""
+        item["signal_dbm"] = connection.get("signal_dbm")
+        item["rx_bitrate"] = connection.get("rx_bitrate")
+        item["tx_bitrate"] = connection.get("tx_bitrate")
     return response
 
 

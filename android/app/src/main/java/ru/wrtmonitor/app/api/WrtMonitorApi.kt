@@ -214,7 +214,17 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     ipAddress = item.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
                     currentIpv4 = item.optString("current_ipv4").takeIf { it.isNotBlank() && it != "null" },
                     staticIpv4 = item.optString("static_ipv4").takeIf { it.isNotBlank() && it != "null" },
+                    ipv6Addresses = item.optJSONArray("ipv6_addresses")?.let { values ->
+                        (0 until values.length()).map(values::optString).filter(String::isNotBlank)
+                    } ?: emptyList(),
                     networkInterface = item.optString("interface").takeIf { it.isNotBlank() && it != "null" },
+                    connectionType = item.optString("connection_type", "unknown"),
+                    connectionName = item.optString("connection_name").takeIf { it.isNotBlank() && it != "null" },
+                    wifiSsid = item.optString("wifi_ssid").takeIf { it.isNotBlank() && it != "null" },
+                    wifiBand = item.optString("wifi_band").takeIf { it.isNotBlank() && it != "null" },
+                    signalDbm = item.optInt("signal_dbm").takeIf { !item.isNull("signal_dbm") },
+                    rxBitrate = item.optLong("rx_bitrate").takeIf { !item.isNull("rx_bitrate") },
+                    txBitrate = item.optLong("tx_bitrate").takeIf { !item.isNull("tx_bitrate") },
                     online = item.optBoolean("online"),
                     isStatic = item.optBoolean("is_static"),
                     profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },

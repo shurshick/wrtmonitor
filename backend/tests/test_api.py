@@ -604,6 +604,24 @@ def test_router_registration_telemetry_and_latest_api_e2e():
                 ]
             },
         },
+        "wifi": {
+            "available": True,
+            "radios": [{"name": "radio0", "up": True, "band": "5g"}],
+            "stations": [
+                {
+                    "interface": "phy0-ap0",
+                    "ssid": "HomeNET",
+                    "band": "5g",
+                    "clients": {
+                        "00:11:22:33:44:55": {
+                            "signal": -51,
+                            "rx": {"rate": 866700},
+                            "tx": {"rate": 721000},
+                        }
+                    },
+                }
+            ],
+        },
     }
     for index in range(105):
         telemetry_response = client.post(
@@ -640,6 +658,10 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert registered_client["is_static"] is True
     assert registered_client["current_ipv4"] == "192.168.1.42"
     assert registered_client["static_ipv4"] == "192.168.1.42"
+    assert registered_client["connection_type"] == "wifi"
+    assert registered_client["wifi_ssid"] == "HomeNET"
+    assert registered_client["wifi_band"] == "5g"
+    assert registered_client["signal_dbm"] == -51
     assert registered_client["traffic"]["rx_bytes"] == 1234
 
     profile_response = client.post(

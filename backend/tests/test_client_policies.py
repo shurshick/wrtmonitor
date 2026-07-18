@@ -85,6 +85,61 @@ def test_client_normalization_preserves_vendor_and_traffic_counters():
     assert summary["items"][0]["tx_bytes"] == 5678
 
 
+def test_client_normalization_marks_wifi_station_online_and_keeps_ipv4():
+    summary = normalize_clients_summary(
+        {
+            "clients": {
+                "dhcp": {
+                    "leases": [
+                        {
+                            "mac": "00:11:22:33:44:55",
+                            "ip": "192.168.31.42",
+                            "hostname": "phone",
+                        }
+                    ]
+                }
+            },
+            "wifi": {
+                "stations": [
+                    {
+                        "interface": "phy0-ap0",
+                        "ssid": "HomeNET",
+                        "band": "5g",
+                        "clients": {"00:11:22:33:44:55": {"signal": -51}},
+                    }
+                ]
+            },
+        }
+    )
+    item = summary["items"][0]
+    assert item["ip"] == "192.168.31.42"
+    assert item["state"] == "wifi"
+    assert item["ssid"] == "HomeNET"
+    assert item["band"] == "5g"
+
+
+def test_client_normalization_does_not_let_failed_ipv6_hide_reachable_ipv4():
+    summary = normalize_clients_summary(
+        {
+            "clients": {
+                "neighbours": [
+                    {
+                        "mac": "00:11:22:33:44:55",
+                        "ip": "192.168.31.42",
+                        "state": "REACHABLE",
+                    },
+                    {
+                        "mac": "00:11:22:33:44:55",
+                        "ip": "fe80::211:22ff:fe33:4455",
+                        "state": "FAILED",
+                    },
+                ]
+            }
+        }
+    )
+    assert summary["items"][0]["state"] == "REACHABLE"
+
+
 def test_vendor_lookup_uses_bundled_oui_database_and_handles_private_macs():
     assert inferred_vendor("bc:ee:7b:00:00:00") == "ASUSTek COMPUTER INC."
     assert inferred_vendor("02:11:22:33:44:55") == "Private/randomized MAC"
