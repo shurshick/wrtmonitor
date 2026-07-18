@@ -379,7 +379,7 @@ def run() -> None:
                     )
                 if section == "management":
                     journal = page.locator("[data-command-journal]")
-                    interval_input = page.locator('input[name="interval"]')
+                    interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
                     page.locator(
