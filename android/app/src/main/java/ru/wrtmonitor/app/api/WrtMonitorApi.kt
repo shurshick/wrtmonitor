@@ -218,6 +218,8 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },
                     effectivePolicy = item.optJSONObject("effective_policy") ?: JSONObject(),
                     traffic = item.optJSONObject("traffic"),
+                    firstSeenAt = item.optString("first_seen_at").takeIf { it.isNotBlank() && it != "null" },
+                    lastSeenAt = item.optString("last_seen_at").takeIf { it.isNotBlank() && it != "null" },
                 )
             }
         }

@@ -1,14 +1,23 @@
 package ru.wrtmonitor.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,8 +31,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,6 +67,10 @@ import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.ui.components.TonalActionButton
 import ru.wrtmonitor.app.ui.components.SelectOption
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private data class PendingSafeCommand(
     val type: String,
@@ -121,10 +137,13 @@ private val ipv6PrefixOptions = listOf("48", "52", "56", "60", "64").map { Selec
 private val processSignalOptions = listOf("TERM", "HUP", "INT", "KILL").map { SelectOption(it, it) }
 
 @Composable
-private fun ClientPolicyCard(
+private fun ClientListItem(
     client: NetworkClientDto,
     profiles: List<ClientProfileDto>,
+    expanded: Boolean,
+    canManagePolicy: Boolean,
     canDeleteLease: Boolean,
+    onToggle: () -> Unit,
     onDeleteLease: () -> Unit,
     onSave: (String, String?, JSONObject) -> Unit,
 ) {
@@ -145,69 +164,147 @@ private fun ClientPolicyCard(
     var priority by remember(client.id) { mutableStateOf(qos.optString("priority", "normal")) }
     var download by remember(client.id) { mutableStateOf(qos.optInt("download_kbps").toString()) }
     var upload by remember(client.id) { mutableStateOf(qos.optInt("upload_kbps").toString()) }
+    val profileOptions = listOf(SelectOption("", stringResource(R.string.no_profile))) +
+        profiles.map { SelectOption(it.id, it.name) }
+    val clientName = displayName.ifBlank { client.hostname ?: stringResource(R.string.client_unknown) }
+    val traffic = client.traffic
+    val trafficLabel = traffic?.let {
+        "${formatClientBytes(it.optLong("rx_bytes"))} / ${formatClientBytes(it.optLong("tx_bytes"))}"
+    } ?: stringResource(R.string.no_data)
 
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        displayName.ifBlank { client.hostname ?: stringResource(R.string.client_unknown) },
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(client.vendor ?: client.mac, style = MaterialTheme.typography.bodySmall)
-                }
-                StatusPill(
-                    if (client.online) stringResource(R.string.online) else stringResource(R.string.offline),
-                    client.online,
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(
+                        if (client.online) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                        CircleShape,
+                    ),
+            )
+            Column(Modifier.weight(1f)) {
+                Text(clientName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    listOfNotNull(client.vendor, client.mac).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            InfoRow(stringResource(R.string.ip_address), client.ipAddress.orEmpty(), stringResource(R.string.no_data))
-            InfoRow(stringResource(R.string.mac_address), client.mac, stringResource(R.string.no_data))
-            if (canDeleteLease && client.isStatic) {
-                TextButton(onClick = onDeleteLease, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.delete_lease)) }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(client.ipAddress ?: stringResource(R.string.no_data), style = MaterialTheme.typography.labelLarge)
+                Text(
+                    client.networkInterface ?: stringResource(R.string.home_network),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            ExpandableSettingsCard(
-                title = stringResource(R.string.client_access_policy),
-                summary = if (blocked) stringResource(R.string.access_blocked) else stringResource(R.string.access_allowed),
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+        if (expanded) {
+            HorizontalDivider()
+            Column(
+                Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(11.dp),
             ) {
-                OutlinedTextField(displayName, { displayName = it }, label = { Text(stringResource(R.string.device_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Text(stringResource(R.string.client_profile), style = MaterialTheme.typography.labelLarge)
-                TextButton(onClick = { profileId = null }) { Text(if (profileId == null) stringResource(R.string.no_profile_selected) else stringResource(R.string.no_profile)) }
-                profiles.forEach { profile ->
-                    TextButton(onClick = { profileId = profile.id }) { Text(if (profileId == profile.id) "${profile.name} · ${stringResource(R.string.selected)}" else profile.name) }
+                Text(stringResource(R.string.client_connection_details), style = MaterialTheme.typography.titleSmall)
+                InfoRow(stringResource(R.string.connection_status), if (client.online) stringResource(R.string.online) else stringResource(R.string.offline))
+                InfoRow(stringResource(R.string.ip_address), client.ipAddress.orEmpty(), stringResource(R.string.no_data))
+                InfoRow(stringResource(R.string.mac_address), client.mac, stringResource(R.string.no_data))
+                InfoRow(stringResource(R.string.client_traffic_rx_tx), trafficLabel, stringResource(R.string.no_data))
+                InfoRow(stringResource(R.string.first_seen), formatClientTimestamp(client.firstSeenAt), stringResource(R.string.no_data))
+                InfoRow(stringResource(R.string.last_activity), formatClientTimestamp(client.lastSeenAt), stringResource(R.string.no_data))
+                if (canDeleteLease && client.isStatic) {
+                    SecondaryActionButton(
+                        label = stringResource(R.string.delete_lease),
+                        onClick = onDeleteLease,
+                        modifier = Modifier.align(Alignment.End),
+                    )
                 }
-                SwitchSettingRow(stringResource(R.string.block_client), checked = blocked, onCheckedChange = { blocked = it })
-                SwitchSettingRow(stringResource(R.string.access_schedule), checked = scheduleEnabled, onCheckedChange = { scheduleEnabled = it })
-                if (scheduleEnabled) {
-                    MultiOptionSelector(stringResource(R.string.schedule_weekdays), weekdays, weekdayOptions, { weekdays = it })
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(start, { start = it }, label = { Text(stringResource(R.string.schedule_start)) }, modifier = Modifier.weight(1f), singleLine = true)
-                        OutlinedTextField(stop, { stop = it }, label = { Text(stringResource(R.string.schedule_stop)) }, modifier = Modifier.weight(1f), singleLine = true)
+                if (canManagePolicy) {
+                    HorizontalDivider()
+                    Text(stringResource(R.string.client_main_settings), style = MaterialTheme.typography.titleSmall)
+                    OutlinedTextField(displayName, { displayName = it }, label = { Text(stringResource(R.string.device_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OptionSelector(stringResource(R.string.client_profile), profileId.orEmpty(), profileOptions, { profileId = it.ifBlank { null } })
+                    SwitchSettingRow(stringResource(R.string.block_client), checked = blocked, onCheckedChange = { blocked = it })
+                    HorizontalDivider()
+                    Text(stringResource(R.string.access_schedule), style = MaterialTheme.typography.titleSmall)
+                    SwitchSettingRow(stringResource(R.string.access_schedule), checked = scheduleEnabled, onCheckedChange = { scheduleEnabled = it })
+                    if (scheduleEnabled) {
+                        MultiOptionSelector(stringResource(R.string.schedule_weekdays), weekdays, weekdayOptions, { weekdays = it })
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(start, { start = it }, label = { Text(stringResource(R.string.schedule_start)) }, modifier = Modifier.weight(1f), singleLine = true)
+                            OutlinedTextField(stop, { stop = it }, label = { Text(stringResource(R.string.schedule_stop)) }, modifier = Modifier.weight(1f), singleLine = true)
+                        }
                     }
+                    HorizontalDivider()
+                    Text(stringResource(R.string.client_priority_limits), style = MaterialTheme.typography.titleSmall)
+                    OptionSelector(stringResource(R.string.traffic_priority), priority, priorityOptions, { priority = it })
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(download, { download = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.download_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
+                        OutlinedTextField(upload, { upload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.upload_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
+                    }
+                    PrimaryActionButton(
+                        label = stringResource(R.string.save_policy),
+                        onClick = {
+                            val days = JSONArray()
+                            weekdays.sorted().forEach(days::put)
+                            onSave(
+                                displayName,
+                                profileId,
+                                JSONObject()
+                                    .put("blocked", blocked)
+                                    .put("schedule", JSONObject().put("enabled", scheduleEnabled).put("weekdays", days).put("start", start).put("stop", stop))
+                                    .put("qos", JSONObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0)),
+                            )
+                        },
+                        modifier = Modifier.align(Alignment.End),
+                    )
                 }
-                OptionSelector(stringResource(R.string.traffic_priority), priority, priorityOptions, { priority = it })
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(download, { download = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.download_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(upload, { upload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.upload_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
-                }
-                PrimaryActionButton(
-                    label = stringResource(R.string.save_policy),
-                    onClick = {
-                        val days = JSONArray()
-                        weekdays.sorted().forEach(days::put)
-                        onSave(
-                            displayName,
-                            profileId,
-                            JSONObject()
-                                .put("blocked", blocked)
-                                .put("schedule", JSONObject().put("enabled", scheduleEnabled).put("weekdays", days).put("start", start).put("stop", stop))
-                                .put("qos", JSONObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0)),
-                        )
-                    },
-                    modifier = Modifier.align(Alignment.End),
-                )
             }
         }
+    }
+}
+
+private fun formatClientBytes(value: Long): String = when {
+    value >= 1024L * 1024 * 1024 -> String.format(Locale.getDefault(), "%.1f GB", value / (1024.0 * 1024 * 1024))
+    value >= 1024L * 1024 -> String.format(Locale.getDefault(), "%.1f MB", value / (1024.0 * 1024))
+    value >= 1024L -> String.format(Locale.getDefault(), "%.1f KB", value / 1024.0)
+    else -> "$value B"
+}
+
+private fun formatClientTimestamp(value: String?): String = runCatching {
+    Instant.parse(value).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+}.getOrNull() ?: ""
+
+@Composable
+private fun ClientFilterButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.textButtonColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+            contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+    ) {
+        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -287,6 +384,9 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var messageIsError by remember { mutableStateOf(false) }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     var dhcpInitialized by remember(device.id) { mutableStateOf(false) }
+    var expandedClientId by remember(device.id) { mutableStateOf<String?>(null) }
+    var clientSearch by remember(device.id) { mutableStateOf("") }
+    var clientFilter by remember(device.id) { mutableStateOf("all") }
     val leaseQueuedText = stringResource(R.string.lease_queued)
     val genericQueuedText = stringResource(R.string.command_queued)
 
@@ -354,33 +454,63 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
 
     LaunchedEffect(device.id) { refresh() }
     val clients = networkClients
+    val onlineClients = clients.count(NetworkClientDto::online)
+    val filteredClients = clients.filter { client ->
+        val stateMatches = clientFilter == "all" || (clientFilter == "online" && client.online) || (clientFilter == "offline" && !client.online)
+        val query = clientSearch.trim().lowercase(Locale.getDefault())
+        val searchValue = listOfNotNull(client.displayName, client.hostname, client.vendor, client.ipAddress, client.mac)
+            .joinToString(" ").lowercase(Locale.getDefault())
+        stateMatches && (query.isBlank() || query in searchValue)
+    }
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
 
     RouterPageHeader(
         title = stringResource(R.string.home_network),
-        subtitle = stringResource(R.string.clients_found, clients.size),
+        subtitle = stringResource(R.string.clients_summary_value, clients.size, onlineClients),
         onRefresh = refresh,
     )
     if (clients.isEmpty()) {
         Card(Modifier.fillMaxWidth()) { Text(stringResource(R.string.no_data), Modifier.padding(16.dp)) }
-    }
-    for (client in clients) {
-        ClientPolicyCard(
-            client,
-            clientProfiles,
-            canDeleteLease = capabilities["dhcp.delete_lease"] == true,
-            onDeleteLease = { pendingCommand = PendingSafeCommand("dhcp.delete_lease", JSONObject().put("mac", client.mac), genericQueuedText) },
-        ) { displayName, profileId, policy ->
-            scope.launch {
-                val api = WrtMonitorApi(serverUrl, accessToken)
-                val storedPolicy = if (profileId == null) policy else JSONObject()
-                when (val update = withContext(Dispatchers.IO) { api.updateNetworkClient(device.id, client.id, displayName, profileId, storedPolicy) }) {
-                    is ApiResult.Success -> when (val apply = withContext(Dispatchers.IO) { api.applyNetworkClientPolicy(device.id, client.id) }) {
-                        is ApiResult.Success -> { message = genericQueuedText; messageIsError = false; refresh() }
-                        is ApiResult.Error -> if (apply.isUnauthorized()) onSessionExpired() else { message = apply.message; messageIsError = true }
+    } else {
+        OutlinedTextField(
+            clientSearch,
+            { clientSearch = it },
+            label = { Text(stringResource(R.string.client_search_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ClientFilterButton(stringResource(R.string.client_filter_all, clients.size), clientFilter == "all", { clientFilter = "all" }, Modifier.weight(1f))
+            ClientFilterButton(stringResource(R.string.client_filter_online, onlineClients), clientFilter == "online", { clientFilter = "online" }, Modifier.weight(1f))
+            ClientFilterButton(stringResource(R.string.client_filter_offline, clients.size - onlineClients), clientFilter == "offline", { clientFilter = "offline" }, Modifier.weight(1f))
+        }
+        SectionCard(title = stringResource(R.string.home_network_clients), subtitle = stringResource(R.string.clients_visible, filteredClients.size)) {
+            if (filteredClients.isEmpty()) {
+                Text(stringResource(R.string.client_filter_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            filteredClients.forEachIndexed { index, client ->
+                ClientListItem(
+                    client,
+                    clientProfiles,
+                    expanded = expandedClientId == client.id,
+                    canManagePolicy = capabilities["clients.policy"] == true,
+                    canDeleteLease = capabilities["dhcp.delete_lease"] == true,
+                    onToggle = { expandedClientId = if (expandedClientId == client.id) null else client.id },
+                    onDeleteLease = { pendingCommand = PendingSafeCommand("dhcp.delete_lease", JSONObject().put("mac", client.mac), genericQueuedText) },
+                ) { displayName, profileId, policy ->
+                    scope.launch {
+                        val api = WrtMonitorApi(serverUrl, accessToken)
+                        val storedPolicy = if (profileId == null) policy else JSONObject()
+                        when (val update = withContext(Dispatchers.IO) { api.updateNetworkClient(device.id, client.id, displayName, profileId, storedPolicy) }) {
+                            is ApiResult.Success -> when (val apply = withContext(Dispatchers.IO) { api.applyNetworkClientPolicy(device.id, client.id) }) {
+                                is ApiResult.Success -> { message = genericQueuedText; messageIsError = false; refresh() }
+                                is ApiResult.Error -> if (apply.isUnauthorized()) onSessionExpired() else { message = apply.message; messageIsError = true }
+                            }
+                            is ApiResult.Error -> if (update.isUnauthorized()) onSessionExpired() else { message = update.message; messageIsError = true }
+                        }
                     }
-                    is ApiResult.Error -> if (update.isUnauthorized()) onSessionExpired() else { message = update.message; messageIsError = true }
                 }
+                if (index < filteredClients.lastIndex) HorizontalDivider()
             }
         }
     }

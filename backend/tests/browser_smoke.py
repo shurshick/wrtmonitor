@@ -399,6 +399,22 @@ def run() -> None:
                     page.screenshot(
                         path=str(ARTIFACTS / f"{name}-wifi-5g.png"), full_page=True
                     )
+                if section == "clients":
+                    client_row = page.locator(".client-list-row").first
+                    assert client_row.count() == 1
+                    page.locator("[data-client-search]").fill("test-client")
+                    assert client_row.is_visible()
+                    page.locator('[data-client-filter="offline"]').click()
+                    assert client_row.is_hidden()
+                    assert page.locator("[data-client-empty]").is_visible()
+                    page.locator('[data-client-filter="online"]').click()
+                    assert client_row.is_visible()
+                    client_row.locator("summary").click()
+                    assert client_row.get_attribute("open") is not None
+                    page.screenshot(
+                        path=str(ARTIFACTS / f"{name}-clients-expanded.png"),
+                        full_page=True,
+                    )
                 if section == "management":
                     journal = page.locator("[data-command-journal]")
                     interval_input = page.locator('input[name="interval_seconds"]')

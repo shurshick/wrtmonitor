@@ -26,6 +26,8 @@ data class NetworkClientDto(
     val profileId: String?,
     val effectivePolicy: JSONObject,
     val traffic: JSONObject?,
+    val firstSeenAt: String?,
+    val lastSeenAt: String?,
 )
 
 data class ClientProfileDto(

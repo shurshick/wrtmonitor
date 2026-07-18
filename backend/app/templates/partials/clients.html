@@ -1,33 +1,49 @@
+{% set online_count = clients|selectattr('online')|list|length %}
 <div class="clients-summary">
   <div><span>Всего устройств</span><strong>{{ client_count }}</strong></div>
-  <p>Здесь собраны устройства из DHCP и таблицы соседей. Постоянные адреса отмечены отдельно.</p>
+  <div><span>Сейчас в сети</span><strong>{{ online_count }}</strong></div>
+  <div><span>Не в сети</span><strong>{{ client_count - online_count }}</strong></div>
+  <p>Нажмите на устройство, чтобы открыть его параметры доступа и приоритет.</p>
 </div>
 
-<section class="workspace-section section">
-  <div class="card__heading"><div><p class="eyebrow">Устройства</p><h2>Клиенты домашней сети</h2></div></div>
-  <div class="client-grid client-grid--friendly">
+<section class="workspace-section section client-list-section">
+  <div class="card__heading client-list-heading">
+    <div><p class="eyebrow">Устройства</p><h2>Клиенты домашней сети</h2></div>
+    {% if clients %}<div class="client-list-tools"><label class="client-search"><span class="visually-hidden">Найти устройство</span><input type="search" placeholder="Имя, IP или MAC" data-client-search></label><div class="client-filter" aria-label="Фильтр клиентов"><button class="is-active" type="button" data-client-filter="all" aria-pressed="true">Все</button><button type="button" data-client-filter="online" aria-pressed="false">В сети</button><button type="button" data-client-filter="offline" aria-pressed="false">Не в сети</button></div></div>{% endif %}
+  </div>
+  {% if clients %}
+  <div class="client-list" data-client-list>
+    <div class="client-list__header" aria-hidden="true"><span>Клиент</span><span>Адрес</span><span>Сегмент</span><span>Подключение</span><span>Трафик</span><span>Политика</span><span></span></div>
     {% for client in clients %}
-    <article class="client-item">
-      <div class="client-item__heading"><span class="client-avatar">{{ (client.display_name or client.hostname or 'У')[:1]|upper }}</span><div><strong>{{ client.display_name or client.hostname or 'Неизвестное устройство' }}</strong><small>{{ client.vendor or 'Производитель не определён' }} · {{ client.mac }}</small></div><span class="status status--{{ 'online' if client.online else 'offline' }}">{{ 'В сети' if client.online else 'Нет связи' }}</span></div>
-      <dl class="client-facts"><dt>IP-адрес</dt><dd>{{ client.ip_address or 'не определён' }}</dd><dt>Подключение</dt><dd>{{ client.interface or 'домашняя сеть' }}</dd><dt>Впервые замечен</dt><dd>{{ client.first_seen_at|timestamp }}</dd><dt>Последняя активность</dt><dd>{{ client.last_seen_at|timestamp }}</dd>{% if client.traffic %}<dt>Трафик RX / TX</dt><dd>{{ client.traffic.rx_bytes|bytes }} / {{ client.traffic.tx_bytes|bytes }}</dd>{% endif %}</dl>
-      {% if supports.dhcp_delete_lease and client.is_static %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить постоянный адрес для {{ client.mac }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.delete_lease"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><button class="button--ghost button--small" type="submit">Удалить постоянный адрес</button></form>{% endif %}
-      {% if supports.clients_policy %}
-      <details class="client-actions"><summary>Доступ и приоритет</summary>
-        <form class="compact-form settings-panel__body" method="post" action="/devices/{{ device.id }}/clients/{{ client.id }}/policy" onsubmit="return confirm('Применить политику доступа для {{ client.mac }}?');">
+    {% set assigned_profile = namespace(name='Без профиля') %}{% for profile in client_profiles %}{% if client.profile_id == profile.id|string %}{% set assigned_profile.name = profile.name %}{% endif %}{% endfor %}
+    <details class="client-list-row" data-client-online="{{ 'true' if client.online else 'false' }}" data-client-search-value="{{ ((client.display_name or '') ~ ' ' ~ (client.hostname or '') ~ ' ' ~ (client.vendor or '') ~ ' ' ~ (client.ip_address or '') ~ ' ' ~ client.mac)|lower }}">
+      <summary class="client-list-row__summary">
+        <span class="client-list-cell client-list-cell--identity"><span class="client-state-dot {{ 'is-online' if client.online else '' }}"></span><span class="client-avatar">{{ (client.display_name or client.hostname or 'У')[:1]|upper }}</span><span><strong>{{ client.display_name or client.hostname or 'Неизвестное устройство' }}</strong><small>{{ client.vendor or 'Производитель не определён' }}</small></span></span>
+        <span class="client-list-cell"><strong>{{ client.ip_address or 'Адрес не определён' }}</strong><small>{{ client.mac }}{% if client.is_static %} · постоянный{% endif %}</small></span>
+        <span class="client-list-cell"><strong>{{ client.interface or 'Домашняя сеть' }}</strong><small>{{ 'Постоянный IP' if client.is_static else 'Автоматический IP' }}</small></span>
+        <span class="client-list-cell"><span class="status status--{{ 'online' if client.online else 'offline' }}">{{ 'В сети' if client.online else 'Нет связи' }}</span><small>{{ client.last_seen_at|timestamp }}</small></span>
+        <span class="client-list-cell"><strong>{% if client.traffic %}{{ client.traffic.rx_bytes|bytes }} / {{ client.traffic.tx_bytes|bytes }}{% else %}Нет данных{% endif %}</strong><small>получено / отправлено</small></span>
+        <span class="client-list-cell"><strong>{{ 'Интернет заблокирован' if client.effective_policy.blocked else assigned_profile.name }}</strong><small>Приоритет: {{ {'low':'низкий','normal':'обычный','high':'высокий','realtime':'реальное время'}.get(client.effective_policy.qos.priority, 'обычный') }}</small></span>
+        <span class="client-list-row__chevron" aria-hidden="true"></span>
+      </summary>
+      <div class="client-list-row__details">
+        <div class="client-detail-facts"><div><span>MAC-адрес</span><strong>{{ client.mac }}</strong></div><div><span>Впервые замечен</span><strong>{{ client.first_seen_at|timestamp }}</strong></div><div><span>Последняя активность</span><strong>{{ client.last_seen_at|timestamp }}</strong></div></div>
+        {% if supports.clients_policy %}
+        <form class="compact-form client-policy-form" method="post" action="/devices/{{ device.id }}/clients/{{ client.id }}/policy" onsubmit="return confirm('Применить политику доступа для {{ client.mac }}?');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <label>Понятное имя<input name="display_name" maxlength="120" value="{{ client.display_name or '' }}" placeholder="Телевизор в гостиной"></label>
-          <label>Профиль<select name="profile_id"><option value="">Без профиля</option>{% for profile in client_profiles %}<option value="{{ profile.id }}" {% if client.profile_id == profile.id|string %}selected{% endif %}>{{ profile.name }}</option>{% endfor %}</select></label>
-          <label class="checkbox-row"><input type="checkbox" name="blocked" value="true" {% if client.effective_policy.blocked %}checked{% endif %}> Всегда блокировать интернет</label>
-          <label class="checkbox-row"><input type="checkbox" name="schedule_enabled" value="true" {% if client.effective_policy.schedule.enabled %}checked{% endif %}> Ограничивать по расписанию</label>
-          <fieldset><legend>Дни доступа</legend>{% for value, label in [('mon','Пн'),('tue','Вт'),('wed','Ср'),('thu','Чт'),('fri','Пт'),('sat','Сб'),('sun','Вс')] %}<label class="choice"><input type="checkbox" name="weekdays" value="{{ value }}" {% if value in client.effective_policy.schedule.weekdays %}checked{% endif %}> {{ label }}</label>{% endfor %}</fieldset><div class="form-grid"><label>Начало<input name="start" type="time" value="{{ client.effective_policy.schedule.start }}"></label><label>Окончание<input name="stop" type="time" value="{{ client.effective_policy.schedule.stop }}"></label></div>
-          <div class="form-grid"><label>Приоритет<select name="priority"><option value="low" {% if client.effective_policy.qos.priority == 'low' %}selected{% endif %}>Низкий</option><option value="normal" {% if client.effective_policy.qos.priority == 'normal' %}selected{% endif %}>Обычный</option><option value="high" {% if client.effective_policy.qos.priority == 'high' %}selected{% endif %}>Высокий</option><option value="realtime" {% if client.effective_policy.qos.priority == 'realtime' %}selected{% endif %}>Реальное время</option></select></label><label>Загрузка, Кбит/с<input name="download_kbps" type="number" min="0" value="{{ client.effective_policy.qos.download_kbps }}"></label><label>Отдача, Кбит/с<input name="upload_kbps" type="number" min="0" value="{{ client.effective_policy.qos.upload_kbps }}"></label></div>
+          <section><h3>Основные настройки</h3><div class="form-grid"><label>Понятное имя<input name="display_name" maxlength="120" value="{{ client.display_name or '' }}" placeholder="Телевизор в гостиной"></label><label>Профиль<select name="profile_id"><option value="">Без профиля</option>{% for profile in client_profiles %}<option value="{{ profile.id }}" {% if client.profile_id == profile.id|string %}selected{% endif %}>{{ profile.name }}</option>{% endfor %}</select></label></div><label class="checkbox-row"><input type="checkbox" name="blocked" value="true" {% if client.effective_policy.blocked %}checked{% endif %}> Всегда блокировать интернет</label></section>
+          <section><h3>Расписание доступа</h3><label class="checkbox-row"><input type="checkbox" name="schedule_enabled" value="true" {% if client.effective_policy.schedule.enabled %}checked{% endif %}> Ограничивать по расписанию</label><fieldset><legend>Дни доступа</legend>{% for value, label in [('mon','Пн'),('tue','Вт'),('wed','Ср'),('thu','Чт'),('fri','Пт'),('sat','Сб'),('sun','Вс')] %}<label class="choice"><input type="checkbox" name="weekdays" value="{{ value }}" {% if value in client.effective_policy.schedule.weekdays %}checked{% endif %}> {{ label }}</label>{% endfor %}</fieldset><div class="form-grid"><label>Начало<input name="start" type="time" value="{{ client.effective_policy.schedule.start }}"></label><label>Окончание<input name="stop" type="time" value="{{ client.effective_policy.schedule.stop }}"></label></div></section>
+          <section><h3>Приоритет и лимиты</h3><div class="form-grid"><label>Приоритет<select name="priority"><option value="low" {% if client.effective_policy.qos.priority == 'low' %}selected{% endif %}>Низкий</option><option value="normal" {% if client.effective_policy.qos.priority == 'normal' %}selected{% endif %}>Обычный</option><option value="high" {% if client.effective_policy.qos.priority == 'high' %}selected{% endif %}>Высокий</option><option value="realtime" {% if client.effective_policy.qos.priority == 'realtime' %}selected{% endif %}>Реальное время</option></select></label><label>Загрузка, Кбит/с<input name="download_kbps" type="number" min="0" value="{{ client.effective_policy.qos.download_kbps }}"></label><label>Отдача, Кбит/с<input name="upload_kbps" type="number" min="0" value="{{ client.effective_policy.qos.upload_kbps }}"></label></div></section>
           <div class="form-actions"><button class="button--small" type="submit">Сохранить и применить</button></div>
         </form>
-      </details>
-      {% endif %}
-    </article>
-    {% else %}<div class="empty-state"><h2>Устройств пока нет</h2><p>Список появится после следующего опроса роутера.</p></div>{% endfor %}
+        {% endif %}
+        {% if supports.dhcp_delete_lease and client.is_static %}<form class="client-delete-lease" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить постоянный адрес для {{ client.mac }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.delete_lease"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><button class="button--ghost button--small" type="submit">Удалить постоянный адрес</button></form>{% endif %}
+      </div>
+    </details>
+    {% endfor %}
+    <div class="client-list-empty" data-client-empty hidden>По этому фильтру устройств нет.</div>
   </div>
+  {% else %}<div class="empty-state"><h2>Устройств пока нет</h2><p>Список появится после следующего опроса роутера.</p></div>{% endif %}
 </section>
 
 {% if supports.clients_policy %}
