@@ -380,9 +380,10 @@ def run() -> None:
                 if section == "management":
                     journal = page.locator("[data-command-journal]")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
-                    page.wait_for_function(
-                        "document.querySelector('[data-command-journal] .command-pagination nav span').textContent.includes('2 / 2')"
-                    )
+                    page.locator(
+                        "[data-command-journal] .command-pagination nav span",
+                        has_text="2 / 2",
+                    ).wait_for()
                     assert "command_page=2" in page.url
                     assert journal.count() == 1
                     page.screenshot(
