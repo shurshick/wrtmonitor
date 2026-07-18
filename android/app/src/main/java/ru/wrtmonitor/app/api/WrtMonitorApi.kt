@@ -212,6 +212,8 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     hostname = item.optString("hostname").takeIf { it.isNotBlank() && it != "null" },
                     vendor = item.optString("vendor").takeIf { it.isNotBlank() && it != "null" },
                     ipAddress = item.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
+                    currentIpv4 = item.optString("current_ipv4").takeIf { it.isNotBlank() && it != "null" },
+                    staticIpv4 = item.optString("static_ipv4").takeIf { it.isNotBlank() && it != "null" },
                     networkInterface = item.optString("interface").takeIf { it.isNotBlank() && it != "null" },
                     online = item.optBoolean("online"),
                     isStatic = item.optBoolean("is_static"),

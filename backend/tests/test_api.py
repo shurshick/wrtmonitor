@@ -638,6 +638,8 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     registered_client = clients_response.json()[0]
     assert registered_client["vendor"] == "Example Corp"
     assert registered_client["is_static"] is True
+    assert registered_client["current_ipv4"] == "192.168.1.42"
+    assert registered_client["static_ipv4"] == "192.168.1.42"
     assert registered_client["traffic"]["rx_bytes"] == 1234
 
     profile_response = client.post(

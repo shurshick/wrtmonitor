@@ -20,6 +20,8 @@ data class NetworkClientDto(
     val hostname: String?,
     val vendor: String?,
     val ipAddress: String?,
+    val currentIpv4: String?,
+    val staticIpv4: String?,
     val networkInterface: String?,
     val online: Boolean,
     val isStatic: Boolean,

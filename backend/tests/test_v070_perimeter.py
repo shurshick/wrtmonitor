@@ -85,6 +85,64 @@ def test_ddns_secret_is_masked_and_transactions_cover_perimeter():
     assert CONFIG_TRANSACTION_SCOPES["network.set_ipv6"] == ("network", "dhcp")
     assert CONFIG_TRANSACTION_SCOPES["network.set_upnp"] == ("upnpd", "firewall")
     assert CONFIG_TRANSACTION_SCOPES["firewall.set_rule"] == ("firewall",)
+    assert CONFIG_TRANSACTION_SCOPES["firewall.delete_zone"] == ("firewall",)
+    assert CONFIG_TRANSACTION_SCOPES["firewall.delete_forwarding"] == ("firewall",)
+
+
+def test_existing_firewall_sections_can_be_updated_and_deleted():
+    section = "@zone[2]"
+    zone = validate_command_payload(
+        "firewall.set_zone",
+        {
+            "section": section,
+            "name": "guest",
+            "networks": ["guest"],
+            "input": "REJECT",
+            "output": "ACCEPT",
+            "forward": "REJECT",
+            "masquerade": False,
+        },
+    )
+    assert zone["section"] == section
+    assert validate_command_payload(
+        "firewall.delete_zone", {"section": section, "name": "guest"}
+    ) == {"section": section, "name": "guest"}
+    assert (
+        validate_command_payload(
+            "firewall.delete_forwarding",
+            {"section": "@forwarding[0]", "src": "guest", "dest": "wan"},
+        )["section"]
+        == "@forwarding[0]"
+    )
+    assert (
+        validate_command_payload(
+            "firewall.delete_rule",
+            {"section": "@rule[3]", "name": "Allow-DNS"},
+        )["section"]
+        == "@rule[3]"
+    )
+
+
+def test_firewall_section_rejects_uci_injection():
+    with pytest.raises(HTTPException):
+        validate_command_payload(
+            "firewall.delete_rule",
+            {"section": "@rule[0];reboot", "name": "bad"},
+        )
+
+
+def test_firewall_rule_supports_any_source_but_forwarding_requires_a_zone():
+    rule = validate_command_payload(
+        "firewall.set_rule",
+        {"name": "Allow-Ping", "protocol": "icmp", "target": "ACCEPT"},
+    )
+    assert rule["src"] == "*"
+
+    with pytest.raises(HTTPException):
+        validate_command_payload(
+            "firewall.set_forwarding",
+            {"src": "", "dest": "wan", "enabled": True},
+        )
 
 
 def test_perimeter_telemetry_is_normalized_for_interfaces_and_services():

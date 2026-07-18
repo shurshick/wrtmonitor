@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -135,6 +136,8 @@ private val wifiModeOptions = listOf("HE80", "HE40", "HE20", "VHT160", "VHT80", 
 private val wifiEncryptionOptions = listOf("sae-mixed", "sae", "psk2", "none").map { SelectOption(it, it) }
 private val ipv6PrefixOptions = listOf("48", "52", "56", "60", "64").map { SelectOption(it, "/$it") }
 private val processSignalOptions = listOf("TERM", "HUP", "INT", "KILL").map { SelectOption(it, it) }
+private val firewallPolicyOptions = listOf("ACCEPT", "REJECT", "DROP").map { SelectOption(it, it) }
+private val firewallProtocolOptions = listOf("tcpudp", "tcp", "udp", "icmp", "all").map { SelectOption(it, it.uppercase()) }
 
 @Composable
 private fun ClientListItem(
@@ -142,8 +145,10 @@ private fun ClientListItem(
     profiles: List<ClientProfileDto>,
     expanded: Boolean,
     canManagePolicy: Boolean,
+    canSetLease: Boolean,
     canDeleteLease: Boolean,
     onToggle: () -> Unit,
+    onSetLease: (String, String) -> Unit,
     onDeleteLease: () -> Unit,
     onSave: (String, String?, JSONObject) -> Unit,
 ) {
@@ -164,6 +169,9 @@ private fun ClientListItem(
     var priority by remember(client.id) { mutableStateOf(qos.optString("priority", "normal")) }
     var download by remember(client.id) { mutableStateOf(qos.optInt("download_kbps").toString()) }
     var upload by remember(client.id) { mutableStateOf(qos.optInt("upload_kbps").toString()) }
+    var leaseIp by remember(client.id, client.currentIpv4, client.staticIpv4) {
+        mutableStateOf(client.staticIpv4 ?: client.currentIpv4.orEmpty())
+    }
     val profileOptions = listOf(SelectOption("", stringResource(R.string.no_profile))) +
         profiles.map { SelectOption(it.id, it.name) }
     val clientName = displayName.ifBlank { client.hostname ?: stringResource(R.string.client_unknown) }
@@ -183,12 +191,20 @@ private fun ClientListItem(
         ) {
             Box(
                 Modifier
-                    .size(8.dp)
+                    .size(34.dp)
                     .background(
-                        if (client.online) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                        if (client.online) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                         CircleShape,
                     ),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Devices,
+                    contentDescription = null,
+                    modifier = Modifier.size(19.dp),
+                    tint = if (client.online) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                )
+            }
             Column(Modifier.weight(1f)) {
                 Text(clientName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
@@ -200,7 +216,7 @@ private fun ClientListItem(
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(client.ipAddress ?: stringResource(R.string.no_data), style = MaterialTheme.typography.labelLarge)
+                Text(client.currentIpv4 ?: client.ipAddress ?: stringResource(R.string.no_data), style = MaterialTheme.typography.labelLarge)
                 Text(
                     client.networkInterface ?: stringResource(R.string.home_network),
                     style = MaterialTheme.typography.bodySmall,
@@ -221,17 +237,38 @@ private fun ClientListItem(
             ) {
                 Text(stringResource(R.string.client_connection_details), style = MaterialTheme.typography.titleSmall)
                 InfoRow(stringResource(R.string.connection_status), if (client.online) stringResource(R.string.online) else stringResource(R.string.offline))
-                InfoRow(stringResource(R.string.ip_address), client.ipAddress.orEmpty(), stringResource(R.string.no_data))
+                InfoRow(stringResource(R.string.ip_address), client.currentIpv4 ?: client.ipAddress.orEmpty(), stringResource(R.string.no_data))
                 InfoRow(stringResource(R.string.mac_address), client.mac, stringResource(R.string.no_data))
                 InfoRow(stringResource(R.string.client_traffic_rx_tx), trafficLabel, stringResource(R.string.no_data))
                 InfoRow(stringResource(R.string.first_seen), formatClientTimestamp(client.firstSeenAt), stringResource(R.string.no_data))
                 InfoRow(stringResource(R.string.last_activity), formatClientTimestamp(client.lastSeenAt), stringResource(R.string.no_data))
-                if (canDeleteLease && client.isStatic) {
-                    SecondaryActionButton(
-                        label = stringResource(R.string.delete_lease),
-                        onClick = onDeleteLease,
-                        modifier = Modifier.align(Alignment.End),
+                if (canSetLease || (canDeleteLease && client.staticIpv4 != null)) {
+                    HorizontalDivider()
+                    Text(stringResource(R.string.static_lease), style = MaterialTheme.typography.titleSmall)
+                    OutlinedTextField(
+                        value = leaseIp,
+                        onValueChange = { leaseIp = it },
+                        label = { Text(stringResource(R.string.ip_address)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
                     )
+                    ActionRow {
+                        if (canSetLease) {
+                            PrimaryActionButton(
+                                label = stringResource(R.string.save_lease),
+                                onClick = {
+                                    onSetLease(
+                                        displayName.ifBlank { client.hostname ?: "client-${client.mac.takeLast(5).replace(":", "")}" },
+                                        leaseIp,
+                                    )
+                                },
+                                enabled = leaseIp.isNotBlank(),
+                            )
+                        }
+                        if (canDeleteLease && client.staticIpv4 != null) {
+                            TextButton(onClick = onDeleteLease) { Text(stringResource(R.string.delete_lease)) }
+                        }
+                    }
                 }
                 if (canManagePolicy) {
                     HorizontalDivider()
@@ -374,9 +411,6 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
     var clientProfiles by remember { mutableStateOf<List<ClientProfileDto>>(emptyList()) }
     var profileName by remember { mutableStateOf("") }
     var profileBlocked by remember { mutableStateOf(false) }
-    var hostname by remember { mutableStateOf("") }
-    var mac by remember { mutableStateOf("") }
-    var ip by remember { mutableStateOf("") }
     var poolStart by remember { mutableStateOf("") }
     var poolLimit by remember { mutableStateOf("") }
     var leaseTime by remember { mutableStateOf("") }
@@ -437,11 +471,6 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
                 is ApiResult.Success -> {
                     message = if (type.startsWith("dhcp.")) leaseQueuedText else genericQueuedText
                     messageIsError = false
-                    if (type == "dhcp.set_lease") {
-                        hostname = ""
-                        mac = ""
-                        ip = ""
-                    }
                     refresh()
                 }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
@@ -484,33 +513,54 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
             ClientFilterButton(stringResource(R.string.client_filter_online, onlineClients), clientFilter == "online", { clientFilter = "online" }, Modifier.weight(1f))
             ClientFilterButton(stringResource(R.string.client_filter_offline, clients.size - onlineClients), clientFilter == "offline", { clientFilter = "offline" }, Modifier.weight(1f))
         }
-        SectionCard(title = stringResource(R.string.home_network_clients), subtitle = stringResource(R.string.clients_visible, filteredClients.size)) {
-            if (filteredClients.isEmpty()) {
+        val defaultSegment = stringResource(R.string.home_network)
+        val groupedClients = filteredClients.groupBy { it.networkInterface?.ifBlank { null } ?: defaultSegment }
+        if (filteredClients.isEmpty()) {
+            SectionCard(title = stringResource(R.string.home_network_clients)) {
                 Text(stringResource(R.string.client_filter_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            filteredClients.forEachIndexed { index, client ->
-                ClientListItem(
-                    client,
-                    clientProfiles,
-                    expanded = expandedClientId == client.id,
-                    canManagePolicy = capabilities["clients.policy"] == true,
-                    canDeleteLease = capabilities["dhcp.delete_lease"] == true,
-                    onToggle = { expandedClientId = if (expandedClientId == client.id) null else client.id },
-                    onDeleteLease = { pendingCommand = PendingSafeCommand("dhcp.delete_lease", JSONObject().put("mac", client.mac), genericQueuedText) },
-                ) { displayName, profileId, policy ->
-                    scope.launch {
-                        val api = WrtMonitorApi(serverUrl, accessToken)
-                        val storedPolicy = if (profileId == null) policy else JSONObject()
-                        when (val update = withContext(Dispatchers.IO) { api.updateNetworkClient(device.id, client.id, displayName, profileId, storedPolicy) }) {
-                            is ApiResult.Success -> when (val apply = withContext(Dispatchers.IO) { api.applyNetworkClientPolicy(device.id, client.id) }) {
-                                is ApiResult.Success -> { message = genericQueuedText; messageIsError = false; refresh() }
-                                is ApiResult.Error -> if (apply.isUnauthorized()) onSessionExpired() else { message = apply.message; messageIsError = true }
+        }
+        groupedClients.forEach { (segment, segmentClients) ->
+            SectionCard(
+                title = segment,
+                subtitle = stringResource(
+                    R.string.client_segment_summary,
+                    segmentClients.size,
+                    segmentClients.count(NetworkClientDto::online),
+                ),
+            ) {
+                segmentClients.forEachIndexed { index, client ->
+                    ClientListItem(
+                        client,
+                        clientProfiles,
+                        expanded = expandedClientId == client.id,
+                        canManagePolicy = capabilities["clients.policy"] == true,
+                        canSetLease = capabilities["dhcp.set_lease"] == true,
+                        canDeleteLease = capabilities["dhcp.delete_lease"] == true,
+                        onToggle = { expandedClientId = if (expandedClientId == client.id) null else client.id },
+                        onSetLease = { leaseHostname, leaseIp ->
+                            pendingCommand = PendingSafeCommand(
+                                "dhcp.set_lease",
+                                JSONObject().put("hostname", leaseHostname).put("mac", client.mac).put("ip", leaseIp),
+                                leaseQueuedText,
+                            )
+                        },
+                        onDeleteLease = { pendingCommand = PendingSafeCommand("dhcp.delete_lease", JSONObject().put("mac", client.mac), genericQueuedText) },
+                    ) { displayName, profileId, policy ->
+                        scope.launch {
+                            val api = WrtMonitorApi(serverUrl, accessToken)
+                            val storedPolicy = if (profileId == null) policy else JSONObject()
+                            when (val update = withContext(Dispatchers.IO) { api.updateNetworkClient(device.id, client.id, displayName, profileId, storedPolicy) }) {
+                                is ApiResult.Success -> when (val apply = withContext(Dispatchers.IO) { api.applyNetworkClientPolicy(device.id, client.id) }) {
+                                    is ApiResult.Success -> { message = genericQueuedText; messageIsError = false; refresh() }
+                                    is ApiResult.Error -> if (apply.isUnauthorized()) onSessionExpired() else { message = apply.message; messageIsError = true }
+                                }
+                                is ApiResult.Error -> if (update.isUnauthorized()) onSessionExpired() else { message = update.message; messageIsError = true }
                             }
-                            is ApiResult.Error -> if (update.isUnauthorized()) onSessionExpired() else { message = update.message; messageIsError = true }
                         }
                     }
+                    if (index < segmentClients.lastIndex) HorizontalDivider()
                 }
-                if (index < filteredClients.lastIndex) HorizontalDivider()
             }
         }
     }
@@ -548,22 +598,6 @@ fun ClientsControlScreen(serverUrl: String, accessToken: String, device: DeviceD
         }
     }
 
-    if (capabilities["dhcp.set_lease"] == true) {
-        ExpandableSettingsCard(
-            title = stringResource(R.string.static_lease),
-            summary = stringResource(R.string.static_lease_summary),
-        ) {
-            OutlinedTextField(hostname, { hostname = it }, label = { Text(stringResource(R.string.device_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(mac, { mac = it }, label = { Text(stringResource(R.string.mac_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(ip, { ip = it }, label = { Text(stringResource(R.string.ip_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            PrimaryActionButton(
-                label = stringResource(R.string.save_lease),
-                onClick = { pendingCommand = PendingSafeCommand("dhcp.set_lease", JSONObject().put("hostname", hostname).put("mac", mac).put("ip", ip), leaseQueuedText) },
-                enabled = hostname.isNotBlank() && mac.length >= 17 && ip.isNotBlank(),
-                modifier = Modifier.align(Alignment.End),
-            )
-        }
-    }
     if (capabilities["dhcp.configure"] == true) {
         ExpandableSettingsCard(
             title = stringResource(R.string.dhcp_pool),
@@ -981,9 +1015,20 @@ fun NetworkControlScreen(
     var upnpSecure by remember { mutableStateOf(true) }
     var zoneNameValue by remember { mutableStateOf("") }
     var zoneNetworks by remember { mutableStateOf("") }
+    var zoneSection by remember { mutableStateOf("") }
+    var zoneInput by remember { mutableStateOf("REJECT") }
+    var zoneOutput by remember { mutableStateOf("ACCEPT") }
+    var zoneForward by remember { mutableStateOf("REJECT") }
+    var zoneMasquerade by remember { mutableStateOf(false) }
+    var forwardingSection by remember { mutableStateOf("") }
+    var forwardingSource by remember { mutableStateOf("") }
+    var forwardingDestination by remember { mutableStateOf("") }
     var ruleNameValue by remember { mutableStateOf("") }
+    var ruleSection by remember { mutableStateOf("") }
     var ruleSource by remember { mutableStateOf("") }
     var ruleDestination by remember { mutableStateOf("") }
+    var ruleProtocol by remember { mutableStateOf("tcpudp") }
+    var ruleTarget by remember { mutableStateOf("ACCEPT") }
     var rulePort by remember { mutableStateOf("") }
     var wgName by remember { mutableStateOf("") }
     var wgAddress by remember { mutableStateOf("") }
@@ -1049,13 +1094,16 @@ fun NetworkControlScreen(
             .flatMap { listOf(it.optString("interface"), it.optString("device")) }
             .filter(String::isNotBlank).distinct().map { SelectOption(it, it) }
     }.orEmpty()
-    val firewallZoneOptions = telemetry?.network?.optJSONArray("firewall_zones")?.let { array ->
+    val firewallZoneOptions = listOf(SelectOption("*", stringResource(R.string.any_zone))) + (telemetry?.network?.optJSONArray("firewall_zones")?.let { array ->
         (0 until array.length()).mapNotNull(array::optJSONObject)
             .map { it.optString("name") }
             .filter(String::isNotBlank)
             .distinct()
             .map { SelectOption(it, it) }
-    }.orEmpty()
+    }.orEmpty())
+    val firewallZones = telemetry?.network?.optJSONArray("firewall_zones") ?: JSONArray()
+    val firewallForwardings = telemetry?.network?.optJSONArray("firewall_forwardings") ?: JSONArray()
+    val firewallRules = telemetry?.network?.optJSONArray("firewall_rules") ?: JSONArray()
     val vpn = telemetry?.payload?.optJSONObject("vpn")
     val interfacesRequestQueued = stringResource(R.string.interfaces_request_queued)
     val interfaceRestartQueued = stringResource(R.string.interface_restart_queued)
@@ -1281,19 +1329,146 @@ fun NetworkControlScreen(
         }
     }
     if (mode == NetworkScreenMode.Rules && capabilities["firewall.zones.configure"] == true) {
+        SectionCard(
+            title = stringResource(R.string.firewall_zones_list),
+            subtitle = stringResource(R.string.items_count, firewallZones.length()),
+        ) {
+            for (index in 0 until firewallZones.length()) {
+                val item = firewallZones.optJSONObject(index) ?: continue
+                val itemName = item.optString("name")
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(itemName, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            listOf(item.optString("input"), item.optString("output"), item.optString("forward"))
+                                .filter(String::isNotBlank).joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(onClick = {
+                        zoneSection = item.optString("section")
+                        zoneNameValue = itemName
+                        zoneNetworks = item.optJSONArray("networks")?.let { values ->
+                            (0 until values.length()).joinToString(" ") { values.optString(it) }
+                        } ?: item.optString("networks")
+                        zoneInput = item.optString("input", "REJECT")
+                        zoneOutput = item.optString("output", "ACCEPT")
+                        zoneForward = item.optString("forward", "REJECT")
+                        zoneMasquerade = item.optBoolean("masquerade")
+                    }) { Text(stringResource(R.string.edit)) }
+                    if (itemName !in setOf("lan", "wan")) {
+                        TextButton(
+                            onClick = {
+                                pendingCommand = PendingSafeCommand(
+                                    "firewall.delete_zone",
+                                    JSONObject().put("section", item.optString("section")).put("name", itemName),
+                                    genericCommandQueued,
+                                )
+                            },
+                            enabled = item.optString("section").isNotBlank(),
+                        ) { Text(stringResource(R.string.delete)) }
+                    }
+                }
+                if (index < firewallZones.length() - 1) HorizontalDivider()
+            }
+        }
         ExpandableSettingsCard(stringResource(R.string.firewall_zone), zoneNameValue) {
             OutlinedTextField(zoneNameValue, { zoneNameValue = it }, label = { Text(stringResource(R.string.firewall_zone)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(zoneNetworks, { zoneNetworks = it }, label = { Text(stringResource(R.string.zone_networks)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_zone", JSONObject().put("name", zoneNameValue).put("networks", JSONArray(zoneNetworks.split(' ').filter(String::isNotBlank))).put("input", "REJECT").put("output", "ACCEPT").put("forward", "REJECT").put("masquerade", false), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = zoneNameValue.isNotBlank() && zoneNetworks.isNotBlank())
+            OptionSelector(stringResource(R.string.firewall_input), zoneInput, firewallPolicyOptions, { zoneInput = it })
+            OptionSelector(stringResource(R.string.firewall_output), zoneOutput, firewallPolicyOptions, { zoneOutput = it })
+            OptionSelector(stringResource(R.string.firewall_forward), zoneForward, firewallPolicyOptions, { zoneForward = it })
+            SwitchSettingRow(stringResource(R.string.masquerading), checked = zoneMasquerade, onCheckedChange = { zoneMasquerade = it })
+            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_zone", JSONObject().put("section", zoneSection).put("name", zoneNameValue).put("networks", JSONArray(zoneNetworks.split(' ').filter(String::isNotBlank))).put("input", zoneInput).put("output", zoneOutput).put("forward", zoneForward).put("masquerade", zoneMasquerade), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = zoneNameValue.isNotBlank() && zoneNetworks.isNotBlank())
+        }
+        SectionCard(
+            title = stringResource(R.string.firewall_forwardings),
+            subtitle = stringResource(R.string.items_count, firewallForwardings.length()),
+        ) {
+            for (index in 0 until firewallForwardings.length()) {
+                val item = firewallForwardings.optJSONObject(index) ?: continue
+                val src = item.optString("src")
+                val dest = item.optString("dest")
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("$src → $dest", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                    TextButton(onClick = {
+                        forwardingSection = item.optString("section")
+                        forwardingSource = src
+                        forwardingDestination = dest
+                    }) { Text(stringResource(R.string.edit)) }
+                    TextButton(
+                        onClick = {
+                            pendingCommand = PendingSafeCommand(
+                                "firewall.delete_forwarding",
+                                JSONObject().put("section", item.optString("section")).put("src", src).put("dest", dest),
+                                genericCommandQueued,
+                            )
+                        },
+                        enabled = item.optString("section").isNotBlank(),
+                    ) { Text(stringResource(R.string.delete)) }
+                }
+                if (index < firewallForwardings.length() - 1) HorizontalDivider()
+            }
+            OptionSelector(stringResource(R.string.source_zone), forwardingSource, firewallZoneOptions, { forwardingSource = it })
+            OptionSelector(stringResource(R.string.destination_zone), forwardingDestination, firewallZoneOptions, { forwardingDestination = it })
+            PrimaryActionButton(
+                stringResource(R.string.save),
+                { pendingCommand = PendingSafeCommand("firewall.set_forwarding", JSONObject().put("section", forwardingSection).put("src", forwardingSource).put("dest", forwardingDestination).put("enabled", true), genericCommandQueued) },
+                Modifier.align(Alignment.End),
+                enabled = forwardingSource.isNotBlank() && forwardingDestination.isNotBlank(),
+            )
         }
     }
     if (mode == NetworkScreenMode.Rules && capabilities["firewall.rules.configure"] == true) {
+        SectionCard(
+            title = stringResource(R.string.firewall_rules_list),
+            subtitle = stringResource(R.string.items_count, firewallRules.length()),
+        ) {
+            for (index in 0 until firewallRules.length()) {
+                val item = firewallRules.optJSONObject(index) ?: continue
+                val itemName = item.optString("name")
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(itemName, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            listOf(item.optString("src"), item.optString("dest"), item.optString("protocol"), item.optString("dest_port"), item.optString("target"))
+                                .filter(String::isNotBlank).joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(onClick = {
+                        ruleSection = item.optString("section")
+                        ruleNameValue = itemName
+                        ruleSource = item.optString("src").ifBlank { "*" }
+                        ruleDestination = item.optString("dest").ifBlank { "*" }
+                        ruleProtocol = item.optString("protocol", "tcpudp").let { if (it == "tcp udp") "tcpudp" else it }
+                        rulePort = item.optString("dest_port")
+                        ruleTarget = item.optString("target", "ACCEPT")
+                    }) { Text(stringResource(R.string.edit)) }
+                    TextButton(
+                        onClick = {
+                            pendingCommand = PendingSafeCommand(
+                                "firewall.delete_rule",
+                                JSONObject().put("section", item.optString("section")).put("name", itemName),
+                                genericCommandQueued,
+                            )
+                        },
+                        enabled = item.optString("section").isNotBlank(),
+                    ) { Text(stringResource(R.string.delete)) }
+                }
+                if (index < firewallRules.length() - 1) HorizontalDivider()
+            }
+        }
         ExpandableSettingsCard(stringResource(R.string.firewall_rule), ruleNameValue) {
             OutlinedTextField(ruleNameValue, { ruleNameValue = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OptionSelector(stringResource(R.string.source_zone), ruleSource, firewallZoneOptions, { ruleSource = it })
             OptionSelector(stringResource(R.string.destination_zone), ruleDestination, firewallZoneOptions, { ruleDestination = it })
+            OptionSelector(stringResource(R.string.protocol), ruleProtocol, firewallProtocolOptions, { ruleProtocol = it })
             OutlinedTextField(rulePort, { rulePort = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.internal_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_rule", JSONObject().put("name", ruleNameValue).put("src", ruleSource).put("dest", ruleDestination).put("protocol", "tcpudp").put("dest_port", rulePort).put("target", "ACCEPT"), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()); TextButton({ pendingCommand = PendingSafeCommand("firewall.delete_rule", JSONObject().put("name", ruleNameValue), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank()) { Text(stringResource(R.string.delete)) } }
+            OptionSelector(stringResource(R.string.action), ruleTarget, firewallPolicyOptions, { ruleTarget = it })
+            ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_rule", JSONObject().put("section", ruleSection).put("name", ruleNameValue).put("src", ruleSource).put("dest", ruleDestination).put("protocol", ruleProtocol).put("dest_port", rulePort).put("target", ruleTarget), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank() && ruleSource.isNotBlank()) }
         }
     }
     if (mode == NetworkScreenMode.Vpn && capabilities["vpn.wireguard.configure"] == true) {

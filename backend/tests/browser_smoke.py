@@ -159,7 +159,21 @@ def prepare_router() -> str:
                     },
                     "traffic": {"rx_bytes": 16_000_000, "tx_bytes": 4_000_000},
                     "maintenance": {
-                        "packages": {"installed": 143, "upgradable": 2},
+                        "packages": {
+                            "installed": 143,
+                            "upgradable": 2,
+                            "installed_items": [
+                                {"name": "tcpdump-mini", "version": "4.99.5"},
+                                {"name": "busybox", "version": "1.36.1"},
+                            ],
+                            "upgradable_items": [
+                                {
+                                    "name": "tcpdump-mini",
+                                    "current_version": "4.99.4",
+                                    "available_version": "4.99.5",
+                                }
+                            ],
+                        },
                         "cron_entries": 1,
                         "recovery_mode": False,
                         "staged_firmware_sha256": "",
@@ -234,6 +248,42 @@ def prepare_router() -> str:
                                 "device": "eth0",
                             },
                         ]
+                    },
+                    "perimeter": {
+                        "firewall_zones": [
+                            {
+                                "section": "@zone[0]",
+                                "name": "lan",
+                                "networks": "lan",
+                                "input": "ACCEPT",
+                                "output": "ACCEPT",
+                                "forward": "ACCEPT",
+                                "masquerade": False,
+                            },
+                            {
+                                "section": "@zone[1]",
+                                "name": "wan",
+                                "networks": "wan wan6",
+                                "input": "REJECT",
+                                "output": "ACCEPT",
+                                "forward": "REJECT",
+                                "masquerade": True,
+                            },
+                        ],
+                        "firewall_forwardings": [
+                            {"section": "@forwarding[0]", "src": "lan", "dest": "wan"}
+                        ],
+                        "firewall_rules": [
+                            {
+                                "section": "@rule[0]",
+                                "name": "Allow-DHCP-Renew",
+                                "src": "wan",
+                                "dest": "",
+                                "protocol": "udp",
+                                "dest_port": "68",
+                                "target": "ACCEPT",
+                            }
+                        ],
                     },
                     "vpn": {
                         "wireguard": {
@@ -411,11 +461,25 @@ def run() -> None:
                     assert client_row.is_visible()
                     client_row.locator("summary").click()
                     assert client_row.get_attribute("open") is not None
+                    assert page.locator(".client-address-panel").count() == 1
                     page.screenshot(
                         path=str(ARTIFACTS / f"{name}-clients-expanded.png"),
                         full_page=True,
                     )
+                if section == "rules":
+                    assert (
+                        page.locator(
+                            '.managed-record input[name="uci_section"]'
+                        ).count()
+                        >= 3
+                    )
+                    assert page.get_by_text("Удалить правило", exact=True).count() == 1
                 if section == "management":
+                    assert page.get_by_text("Обновить каталог", exact=True).count() == 1
+                    assert (
+                        page.get_by_text("Создать резервную копию", exact=True).count()
+                        == 1
+                    )
                     journal = page.locator("[data-command-journal]")
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")

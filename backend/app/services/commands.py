@@ -359,7 +359,19 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "firewall.delete_zone": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.zones.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "firewall.set_forwarding": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.zones.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.delete_forwarding": {
         "risk_level": "level_4_disruptive",
         "capability": "firewall.zones.configure",
         "requires_confirmation": True,
@@ -1153,6 +1165,7 @@ def _normalize_zone_payload(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
     return {
+        "section": _uci_section(payload),
         "name": _name(payload),
         "networks": [
             _safe_identifier(v, "networks", r"[A-Za-z0-9_.-]+")
@@ -1167,6 +1180,7 @@ def _normalize_zone_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _normalize_forwarding_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {
+        "section": _uci_section(payload),
         "src": _name(payload, "src"),
         "dest": _name(payload, "dest"),
         "enabled": _boolean(payload, "enabled"),
@@ -1181,8 +1195,9 @@ def _normalize_firewall_rule_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if target not in {"ACCEPT", "REJECT", "DROP"}:
         raise HTTPException(status_code=400, detail="Invalid firewall target")
     return {
+        "section": _uci_section(payload),
         "name": _name(payload),
-        "src": _name(payload, "src"),
+        "src": _optional_string(payload, "src") or "*",
         "dest": _optional_string(payload, "dest") or "*",
         "protocol": protocol,
         "src_ip": _optional_string(payload, "src_ip") or "",
@@ -1191,6 +1206,15 @@ def _normalize_firewall_rule_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "dest_port": _optional_string(payload, "dest_port") or "",
         "target": target,
     }
+
+
+def _uci_section(payload: dict[str, Any]) -> str:
+    section = _optional_string(payload, "section") or ""
+    if section and not re.fullmatch(
+        r"(?:@[A-Za-z0-9_-]+\[[0-9]+\]|[A-Za-z0-9_.-]+)", section
+    ):
+        raise HTTPException(status_code=400, detail="Invalid UCI section")
+    return section
 
 
 def _wireguard_key(payload: dict[str, Any], field: str, *, required: bool) -> str:
@@ -1551,12 +1575,31 @@ def validate_command_payload(
         return _maintenance_cron(normalized_payload)
     if command_type == "firewall.set_zone":
         return _normalize_zone_payload(normalized_payload)
+    if command_type == "firewall.delete_zone":
+        zone = {
+            "section": _uci_section(normalized_payload),
+            "name": _name(normalized_payload),
+        }
+        if zone["name"] in {"lan", "wan"}:
+            raise HTTPException(
+                status_code=400, detail="core firewall zone cannot be deleted"
+            )
+        return zone
     if command_type == "firewall.set_forwarding":
         return _normalize_forwarding_payload(normalized_payload)
+    if command_type == "firewall.delete_forwarding":
+        return {
+            "section": _uci_section(normalized_payload),
+            "src": _name(normalized_payload, "src"),
+            "dest": _name(normalized_payload, "dest"),
+        }
     if command_type == "firewall.set_rule":
         return _normalize_firewall_rule_payload(normalized_payload)
     if command_type == "firewall.delete_rule":
-        return {"name": _name(normalized_payload)}
+        return {
+            "section": _uci_section(normalized_payload),
+            "name": _name(normalized_payload),
+        }
     if command_type == "system.set_hostname":
         return _normalize_hostname_payload(normalized_payload)
     if command_type == "system.restart_service":
@@ -1658,6 +1701,7 @@ def build_command_payload_from_web_form(
     content: str = "",
     pid: str = "",
     signal: str = "",
+    uci_section: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -1788,6 +1832,7 @@ def build_command_payload_from_web_form(
         }
     elif command_type == "firewall.set_zone":
         payload = {
+            "section": uci_section,
             "name": name,
             "networks": network,
             "input": protocol,
@@ -1795,14 +1840,20 @@ def build_command_payload_from_web_form(
             "forward": password,
             "masquerade": enabled.lower() == "true",
         }
+    elif command_type == "firewall.delete_zone":
+        payload = {"section": uci_section, "name": name}
     elif command_type == "firewall.set_forwarding":
         payload = {
+            "section": uci_section,
             "src": interface or name,
             "dest": network,
             "enabled": enabled.lower() == "true",
         }
+    elif command_type == "firewall.delete_forwarding":
+        payload = {"section": uci_section, "src": interface or name, "dest": network}
     elif command_type == "firewall.set_rule":
         payload = {
+            "section": uci_section,
             "name": name,
             "src": interface,
             "dest": network,
@@ -1814,7 +1865,7 @@ def build_command_payload_from_web_form(
             "target": hostname,
         }
     elif command_type == "firewall.delete_rule":
-        payload = {"name": name}
+        payload = {"section": uci_section, "name": name}
     elif command_type == "vpn.wireguard.set_interface":
         payload = {
             "name": name or interface,

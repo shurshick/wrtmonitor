@@ -42,7 +42,7 @@ OpenWrt agent собирает:
 - `agent`: версия, update status, interval и capabilities.
 - `vpn`: WireGuard-интерфейсы и peer, handshake/RX/TX, OpenVPN profiles и правила PBR без приватных ключей.
 
-`schema_version=2` остаётся форматом telemetry; capability report в `v0.13.2` имеет версию 10. Сервер принимает как текущий компактный формат агента, так и прежний ответ `ubus`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество пакетов и обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки.
+`schema_version=2` остаётся форматом telemetry; capability report в `v0.13.3` имеет версию 11. Сервер принимает как текущий компактный формат агента, так и прежний ответ `ubus`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество и ограниченные списки пакетов/обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки. Объекты firewall содержат безопасные UCI section для адресного редактирования и удаления.
 
 Retention разделён: последние 100 исходных JSON snapshots нужны для диагностики, а компактные метрики графиков хранятся 45 дней. Срок метрик задаётся `WRTMONITOR_TELEMETRY_METRIC_RETENTION_DAYS`.
 

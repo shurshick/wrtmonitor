@@ -96,4 +96,6 @@ def test_web_form_and_maintenance_telemetry_summary():
         "cron_entries": 0,
         "recovery_mode": True,
         "staged_firmware_sha256": "",
+        "installed_items": [],
+        "upgradable_items": [],
     }

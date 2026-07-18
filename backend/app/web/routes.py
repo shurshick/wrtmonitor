@@ -6,7 +6,17 @@ from pathlib import Path
 import secrets
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Query, Request
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -582,13 +592,34 @@ def device_page(
     vpn = normalize_vpn_summary(payload)
     telemetry_clients = normalize_clients_summary(payload)
     maintenance = normalize_maintenance_summary(payload)
-    dhcp_config = payload.get("dhcp") or {}
+    dhcp_config = (
+        payload.get("dhcp") or (payload.get("clients") or {}).get("dhcp") or {}
+    )
     registry_clients = db.scalars(
         select(NetworkClient)
         .where(NetworkClient.device_id == device_id)
         .order_by(NetworkClient.online.desc(), NetworkClient.last_seen_at.desc())
     ).all()
     clients = [client_response(db, item) for item in registry_clients]
+    lease_ipv4_by_mac = {
+        str(item.get("mac") or "").lower(): str(item.get("ip") or "")
+        for item in dhcp_config.get("leases") or []
+        if isinstance(item, dict) and "." in str(item.get("ip") or "")
+    }
+    static_ipv4_by_mac = {
+        str(item.get("mac") or "").lower(): str(item.get("ip") or "")
+        for item in dhcp_config.get("static_leases") or []
+        if isinstance(item, dict) and "." in str(item.get("ip") or "")
+    }
+    for client in clients:
+        mac_key = str(client.get("mac") or "").lower()
+        registry_address = str(client.get("ip_address") or "")
+        client["current_ipv4"] = (
+            lease_ipv4_by_mac.get(mac_key)
+            or static_ipv4_by_mac.get(mac_key)
+            or (registry_address if "." in registry_address else "")
+        )
+        client["static_ipv4"] = static_ipv4_by_mac.get(mac_key) or ""
     client_profiles = db.scalars(
         select(ClientProfile)
         .where(ClientProfile.device_id == device_id)
@@ -1166,6 +1197,7 @@ def web_device_command(
     content: str = Form(default=""),
     pid: str = Form(default=""),
     signal: str = Form(default=""),
+    uci_section: str = Form(default=""),
     confirmed: bool = Form(default=False),
     diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
@@ -1245,6 +1277,7 @@ def web_device_command(
             content=content,
             pid=pid,
             signal=signal,
+            uci_section=uci_section,
             diagnostics_checks=diagnostics_checks,
         )
         payload = validate_command_request(
@@ -1283,6 +1316,57 @@ def web_device_command(
     db.commit()
     section = section if section in DEVICE_SECTIONS else "overview"
     return RedirectResponse(f"/devices/{device_id}?section={section}", status_code=303)
+
+
+@router.post("/devices/{device_id}/backup/restore")
+async def web_restore_router_backup(
+    device_id: UUID,
+    backup_file: UploadFile = File(...),
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    if is_setup_required(db, config):
+        return RedirectResponse("/setup", status_code=303)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    get_user_device_or_404(db, user, device_id)
+    content = await backup_file.read(1_500_001)
+    if len(content) > 1_500_000 or not content.startswith(b"\x1f\x8b"):
+        raise HTTPException(status_code=400, detail="Invalid backup archive")
+    payload = validate_command_request(
+        command_type="maintenance.backup.restore",
+        payload={"archive_base64": base64.b64encode(content).decode("ascii")},
+        confirmed=True,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    command = create_device_command(
+        db,
+        device_id=device_id,
+        command_type="maintenance.backup.restore",
+        payload=payload,
+        created_by=user.id,
+        source="web",
+    )
+    audit(
+        db,
+        user.id,
+        "command.create",
+        "device_command",
+        str(command.id),
+        {
+            "command_type": "maintenance.backup.restore",
+            "source": "web",
+            "confirmed": True,
+        },
+    )
+    db.commit()
+    return RedirectResponse(
+        f"/devices/{device_id}?section=maintenance", status_code=303
+    )
 
 
 @router.post("/devices/{device_id}/web-command-preview")
@@ -1371,6 +1455,7 @@ async def web_device_command_preview(
             content=value("content"),
             pid=value("pid"),
             signal=value("signal"),
+            uci_section=value("uci_section"),
             diagnostics_checks=[
                 str(item) for item in form.getlist("diagnostics_checks")
             ],

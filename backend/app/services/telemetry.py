@@ -194,7 +194,6 @@ def telemetry_alerts(
                 "message": "Telemetry ещё не получена",
             }
         ]
-    summary = build_telemetry_summary(payload)
     alerts: list[dict[str, str]] = []
     if age_seconds is not None and age_seconds > TELEMETRY_STALE_SECONDS:
         alerts.append(
@@ -354,6 +353,16 @@ def normalize_maintenance_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "upgradable_packages": int(
             packages.get("upgradable", maintenance.get("upgradable_packages")) or 0
         ),
+        "installed_items": [
+            item
+            for item in packages.get("installed_items") or []
+            if isinstance(item, dict)
+        ],
+        "upgradable_items": [
+            item
+            for item in packages.get("upgradable_items") or []
+            if isinstance(item, dict)
+        ],
         "cron_entries": int(maintenance.get("cron_entries") or 0),
         "recovery_mode": bool(maintenance.get("recovery_mode", False)),
         "staged_firmware_sha256": str(maintenance.get("staged_firmware_sha256") or ""),

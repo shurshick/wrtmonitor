@@ -16,7 +16,11 @@ from ..services.client_registry import (
     validate_client_policy,
 )
 from ..services.commands import create_device_command, validate_command_request
-from ..services.devices import device_supports, get_user_device_or_404
+from ..services.devices import (
+    device_supports,
+    get_user_device_or_404,
+    latest_device_telemetry,
+)
 
 
 router = APIRouter(prefix="/api/v1/devices")
@@ -39,7 +43,34 @@ def list_clients(
         .where(NetworkClient.device_id == device_id)
         .order_by(NetworkClient.online.desc(), NetworkClient.last_seen_at.desc())
     ).all()
-    return [client_response(db, client) for client in clients]
+    response = [client_response(db, client) for client in clients]
+    telemetry = latest_device_telemetry(db, device_id)
+    telemetry_payload = telemetry.payload if telemetry else {}
+    dhcp = (
+        telemetry_payload.get("dhcp")
+        or (telemetry_payload.get("clients") or {}).get("dhcp")
+        or {}
+    )
+    lease_ipv4_by_mac = {
+        str(item.get("mac") or "").lower(): str(item.get("ip") or "")
+        for item in dhcp.get("leases") or []
+        if isinstance(item, dict) and "." in str(item.get("ip") or "")
+    }
+    static_ipv4_by_mac = {
+        str(item.get("mac") or "").lower(): str(item.get("ip") or "")
+        for item in dhcp.get("static_leases") or []
+        if isinstance(item, dict) and "." in str(item.get("ip") or "")
+    }
+    for item in response:
+        mac_key = str(item.get("mac") or "").lower()
+        registry_address = str(item.get("ip_address") or "")
+        item["current_ipv4"] = (
+            lease_ipv4_by_mac.get(mac_key)
+            or static_ipv4_by_mac.get(mac_key)
+            or (registry_address if "." in registry_address else "")
+        )
+        item["static_ipv4"] = static_ipv4_by_mac.get(mac_key) or ""
+    return response
 
 
 @router.patch("/{device_id}/clients/{client_id}")

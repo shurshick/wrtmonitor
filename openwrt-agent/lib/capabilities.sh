@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="10"
+CAPABILITIES_VERSION="11"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"

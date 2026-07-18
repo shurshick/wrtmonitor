@@ -64,9 +64,30 @@ system_time_json() {
 maintenance_json() {
     installed=0
     upgrades=0
+    installed_items=""
+    upgrade_items=""
     if command -v opkg >/dev/null 2>&1; then
-        installed="$(opkg list-installed 2>/dev/null | wc -l | tr -d ' ')"
-        upgrades="$(opkg list-upgradable 2>/dev/null | wc -l | tr -d ' ')"
+        installed_file="/tmp/wrtmonitor-installed-packages-$$"
+        upgrade_file="/tmp/wrtmonitor-upgradable-packages-$$"
+        opkg list-installed 2>/dev/null >"$installed_file" || true
+        opkg list-upgradable 2>/dev/null >"$upgrade_file" || true
+        installed="$(wc -l <"$installed_file" | tr -d ' ')"
+        upgrades="$(wc -l <"$upgrade_file" | tr -d ' ')"
+        package_count=0
+        while IFS=' ' read -r package_name _ package_version _; do
+            [ -n "$package_name" ] || continue
+            [ -n "$installed_items" ] && installed_items="$installed_items,"
+            installed_items="$installed_items{\"name\":\"$(json_escape "$package_name")\",\"version\":\"$(json_escape "$package_version")\"}"
+            package_count=$((package_count + 1)); [ "$package_count" -ge 250 ] && break
+        done <"$installed_file"
+        package_count=0
+        while IFS=' ' read -r package_name _ current_version _ available_version; do
+            [ -n "$package_name" ] || continue
+            [ -n "$upgrade_items" ] && upgrade_items="$upgrade_items,"
+            upgrade_items="$upgrade_items{\"name\":\"$(json_escape "$package_name")\",\"current_version\":\"$(json_escape "$current_version")\",\"available_version\":\"$(json_escape "$available_version")\"}"
+            package_count=$((package_count + 1)); [ "$package_count" -ge 100 ] && break
+        done <"$upgrade_file"
+        rm -f "$installed_file" "$upgrade_file"
     fi
     cron_entries=0
     if [ -r "${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root" ]; then
@@ -74,8 +95,8 @@ maintenance_json() {
     fi
     recovery="$(uci -q get wrtmonitor.main.recovery_mode 2>/dev/null || echo 0)"
     staged_checksum="$(uci -q get wrtmonitor.main.staged_firmware_sha256 2>/dev/null || true)"
-    printf '{"packages":{"installed":%s,"upgradable":%s},"cron_entries":%s,"recovery_mode":%s,"staged_firmware_sha256":"%s"}' \
-        "${installed:-0}" "${upgrades:-0}" "${cron_entries:-0}" \
+    printf '{"packages":{"installed":%s,"upgradable":%s,"installed_items":[%s],"upgradable_items":[%s]},"cron_entries":%s,"recovery_mode":%s,"staged_firmware_sha256":"%s"}' \
+        "${installed:-0}" "${upgrades:-0}" "$installed_items" "$upgrade_items" "${cron_entries:-0}" \
         "$( [ "$recovery" = 1 ] && printf true || printf false )" \
         "$(json_escape "$staged_checksum")"
 }
@@ -131,19 +152,19 @@ perimeter_json() {
     zones=""; index=0
     while uci -q get "firewall.@zone[$index]" >/dev/null 2>&1; do
         ref="@zone[$index]"; [ -n "$zones" ] && zones="$zones,"
-        zones="$zones{\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || true)")\",\"input\":\"$(json_escape "$(uci -q get "firewall.$ref.input" 2>/dev/null || true)")\",\"output\":\"$(json_escape "$(uci -q get "firewall.$ref.output" 2>/dev/null || true)")\",\"forward\":\"$(json_escape "$(uci -q get "firewall.$ref.forward" 2>/dev/null || true)")\"}"
+        zones="$zones{\"section\":\"$(json_escape "$ref")\",\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || true)")\",\"networks\":\"$(json_escape "$(uci -q get "firewall.$ref.network" 2>/dev/null || true)")\",\"input\":\"$(json_escape "$(uci -q get "firewall.$ref.input" 2>/dev/null || true)")\",\"output\":\"$(json_escape "$(uci -q get "firewall.$ref.output" 2>/dev/null || true)")\",\"forward\":\"$(json_escape "$(uci -q get "firewall.$ref.forward" 2>/dev/null || true)")\",\"masquerade\":$( [ "$(uci -q get "firewall.$ref.masq" 2>/dev/null || echo 0)" = 1 ] && printf true || printf false )}"
         index=$((index + 1))
     done
     forwardings=""; index=0
     while uci -q get "firewall.@forwarding[$index]" >/dev/null 2>&1; do
         ref="@forwarding[$index]"; [ -n "$forwardings" ] && forwardings="$forwardings,"
-        forwardings="$forwardings{\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\"}"
+        forwardings="$forwardings{\"section\":\"$(json_escape "$ref")\",\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\"}"
         index=$((index + 1))
     done
     rules=""; index=0
     while uci -q get "firewall.@rule[$index]" >/dev/null 2>&1; do
         ref="@rule[$index]"; [ -n "$rules" ] && rules="$rules,"
-        rules="$rules{\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || echo rule$index)")\",\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\",\"protocol\":\"$(json_escape "$(uci -q get "firewall.$ref.proto" 2>/dev/null || true)")\",\"dest_port\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_port" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "firewall.$ref.target" 2>/dev/null || true)")\"}"
+        rules="$rules{\"section\":\"$(json_escape "$ref")\",\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || echo rule$index)")\",\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\",\"protocol\":\"$(json_escape "$(uci -q get "firewall.$ref.proto" 2>/dev/null || true)")\",\"src_ip\":\"$(json_escape "$(uci -q get "firewall.$ref.src_ip" 2>/dev/null || true)")\",\"dest_ip\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_ip" 2>/dev/null || true)")\",\"src_port\":\"$(json_escape "$(uci -q get "firewall.$ref.src_port" 2>/dev/null || true)")\",\"dest_port\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_port" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "firewall.$ref.target" 2>/dev/null || true)")\"}"
         index=$((index + 1))
     done
     ddns_services=""; index=0

@@ -15,7 +15,7 @@ transaction_configs_for_command() {
         vpn.policy.set|vpn.policy.delete) printf 'pbr' ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.set_pool|dns.set_servers) printf 'dhcp' ;;
         firewall.set_port_forward|firewall.delete_port_forward|client.set_blocked|client.set_policy) printf 'firewall' ;;
-        firewall.set_zone|firewall.set_forwarding|firewall.set_rule|firewall.delete_rule) printf 'firewall' ;;
+        firewall.set_zone|firewall.delete_zone|firewall.set_forwarding|firewall.delete_forwarding|firewall.set_rule|firewall.delete_rule) printf 'firewall' ;;
         qos.set_sqm) printf 'sqm' ;;
         system.set_hostname|system.set_timezone|system.set_ntp) printf 'system' ;;
         *) return 1 ;;

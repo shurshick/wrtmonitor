@@ -19,8 +19,8 @@
     <details class="client-list-row" data-client-online="{{ 'true' if client.online else 'false' }}" data-client-search-value="{{ ((client.display_name or '') ~ ' ' ~ (client.hostname or '') ~ ' ' ~ (client.vendor or '') ~ ' ' ~ (client.ip_address or '') ~ ' ' ~ client.mac)|lower }}">
       <summary class="client-list-row__summary">
         <span class="client-list-cell client-list-cell--identity"><span class="client-state-dot {{ 'is-online' if client.online else '' }}"></span><span class="client-avatar">{{ (client.display_name or client.hostname or 'У')[:1]|upper }}</span><span><strong>{{ client.display_name or client.hostname or 'Неизвестное устройство' }}</strong><small>{{ client.vendor or 'Производитель не определён' }}</small></span></span>
-        <span class="client-list-cell"><strong>{{ client.ip_address or 'Адрес не определён' }}</strong><small>{{ client.mac }}{% if client.is_static %} · постоянный{% endif %}</small></span>
-        <span class="client-list-cell"><strong>{{ client.interface or 'Домашняя сеть' }}</strong><small>{{ 'Постоянный IP' if client.is_static else 'Автоматический IP' }}</small></span>
+        <span class="client-list-cell"><strong>{{ client.current_ipv4 or client.ip_address or 'Адрес не определён' }}</strong><small>{{ client.mac }}{% if client.static_ipv4 %} · постоянный{% endif %}</small></span>
+        <span class="client-list-cell"><strong>{{ client.interface or 'Домашняя сеть' }}</strong><small>{{ 'Постоянный IP' if client.static_ipv4 else 'Автоматический IP' }}</small></span>
         <span class="client-list-cell"><span class="status status--{{ 'online' if client.online else 'offline' }}">{{ 'В сети' if client.online else 'Нет связи' }}</span><small>{{ client.last_seen_at|timestamp }}</small></span>
         <span class="client-list-cell"><strong>{% if client.traffic %}{{ client.traffic.rx_bytes|bytes }} / {{ client.traffic.tx_bytes|bytes }}{% else %}Нет данных{% endif %}</strong><small>получено / отправлено</small></span>
         <span class="client-list-cell"><strong>{{ 'Интернет заблокирован' if client.effective_policy.blocked else assigned_profile.name }}</strong><small>Приоритет: {{ {'low':'низкий','normal':'обычный','high':'высокий','realtime':'реальное время'}.get(client.effective_policy.qos.priority, 'обычный') }}</small></span>
@@ -37,7 +37,9 @@
           <div class="form-actions"><button class="button--small" type="submit">Сохранить и применить</button></div>
         </form>
         {% endif %}
-        {% if supports.dhcp_delete_lease and client.is_static %}<form class="client-delete-lease" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить постоянный адрес для {{ client.mac }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.delete_lease"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><button class="button--ghost button--small" type="submit">Удалить постоянный адрес</button></form>{% endif %}
+        {% if supports.dhcp_set_lease and client.current_ipv4 %}
+        <section class="client-address-panel"><div><h3>Постоянный IP-адрес</h3><p>{{ 'Адрес закреплён за устройством.' if client.static_ipv4 else 'Можно закрепить текущий адрес одной кнопкой.' }}</p></div><form class="client-address-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.set_lease"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><label>Имя DHCP<input name="hostname" required maxlength="63" value="{{ client.hostname or 'client' }}"></label><label>IPv4<input name="ip" required value="{{ client.static_ipv4 or client.current_ipv4 }}"></label><button class="button--small" type="submit">{{ 'Сохранить адрес' if client.static_ipv4 else 'Закрепить ' ~ client.current_ipv4 }}</button></form>{% if supports.dhcp_delete_lease and client.static_ipv4 %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить постоянный адрес для {{ client.mac }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.delete_lease"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="mac" value="{{ client.mac }}"><button class="button--ghost button--small" type="submit">Вернуть автоматический адрес</button></form>{% endif %}</section>
+        {% endif %}
       </div>
     </details>
     {% endfor %}
@@ -48,24 +50,17 @@
 
 {% if supports.clients_policy %}
 <section class="workspace-section section">
-  <div class="card__heading"><div><p class="eyebrow">Общие правила</p><h2>Профили доступа</h2><p class="muted">Один профиль можно назначить нескольким устройствам.</p></div></div>
+  <div class="card__heading"><div><p class="eyebrow">Общие правила</p><h2>Профили доступа</h2><p class="muted">Готовый набор ограничений для нескольких устройств.</p></div><details class="profile-create"><summary class="button button--small">Новый профиль</summary><form class="compact-form" method="post" action="/devices/{{ device.id }}/client-profiles"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Название<input name="name" required maxlength="80" placeholder="Например: Дети"></label><label>Доступ в интернет<select name="blocked"><option value="false">Разрешён</option><option value="true">Запрещён</option></select></label><div class="form-actions"><button class="button--small" type="submit">Создать</button></div></form></details></div>
   <div class="profile-list">
     {% for profile in client_profiles %}
     <div class="profile-row"><div><strong>{{ profile.name }}</strong><small>{{ 'Интернет заблокирован' if profile.policy.blocked else 'Доступ разрешён' }}</small></div><form method="post" action="/devices/{{ device.id }}/client-profiles/{{ profile.id }}/delete" onsubmit="return confirm('Удалить профиль? Устройства сохранят индивидуальные правила.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--ghost button--small" type="submit">Удалить</button></form></div>
     {% else %}<p class="muted">Профили ещё не созданы.</p>{% endfor %}
   </div>
-  <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/client-profiles"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="form-grid"><label>Название профиля<input name="name" required maxlength="80" placeholder="Дети"></label><label class="checkbox-row"><input type="checkbox" name="blocked" value="true"> Запретить интернет</label></div><div class="form-actions"><button class="button--small" type="submit">Создать профиль</button></div></form>
 </section>
 {% endif %}
 
-{% if supports.dhcp_set_lease or supports.network_lan_configure or supports.dhcp_configure %}
+{% if supports.network_lan_configure or supports.dhcp_configure %}
 <div class="settings-workspace section">
-  {% if supports.dhcp_set_lease %}
-  <details class="settings-panel card">
-    <summary><span><strong>Постоянный IP-адрес</strong><small>Закрепить адрес за конкретным устройством</small></span><span>Добавить</span></summary>
-    <form class="compact-form settings-panel__body" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="dhcp.set_lease"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>Имя устройства<input name="hostname" required maxlength="63" placeholder="Например: printer"></label><label>MAC-адрес<input name="mac" required maxlength="17" placeholder="00:11:22:33:44:55"></label><label>Постоянный IPv4<input name="ip" required maxlength="15" placeholder="Адрес в домашней сети"></label></div><div class="form-actions"><button type="submit">Закрепить адрес</button></div></form>
-  </details>
-  {% endif %}
   {% if supports.network_lan_configure %}
   <details class="settings-panel card">
     <summary><span><strong>Адрес домашней сети</strong><small>IP-адрес самого роутера в LAN</small></span><span>Изменить</span></summary>
