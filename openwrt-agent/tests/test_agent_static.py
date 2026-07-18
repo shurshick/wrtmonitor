@@ -164,7 +164,11 @@ def test_smoke_cli_capabilities_json():
         env=shell_env(),
     )
     payload = json.loads(completed.stdout)
-    assert payload["agent"]["capabilities_version"] == 11
+    capabilities_source = read_text(LIB_DIR / "capabilities.sh")
+    expected_version = int(
+        capabilities_source.split('CAPABILITIES_VERSION="', 1)[1].split('"', 1)[0]
+    )
+    assert payload["agent"]["capabilities_version"] == expected_version
     assert payload["capabilities"]["agent.status"] is True
     assert isinstance(payload["capabilities"]["agent.update"], bool)
     assert payload["capability_details"]["agent.status"]["reason"] == "available"
