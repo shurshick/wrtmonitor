@@ -11,7 +11,7 @@
 
 <div class="settings-workspace settings-workspace--masonry section">
   {% if supports.firewall_rules %}
-  <details class="settings-panel card" open>
+  <details class="settings-panel card">
     <summary><span><strong>Межсетевой экран</strong><small>{{ network.firewall_rules|length }} правил · выберите правило для изменения</small></span><span>Управлять</span></summary>
     <div class="settings-panel__body">
       <div class="managed-records">
@@ -36,7 +36,7 @@
   {% endif %}
 
   {% if supports.firewall_zones %}
-  <details class="settings-panel card" open>
+  <details class="settings-panel card">
     <summary><span><strong>Зоны и транзит</strong><small>Политики зон и разрешённые направления</small></span><span>Управлять</span></summary>
     <div class="settings-panel__body">
       <h3 class="subheading">Зоны</h3>

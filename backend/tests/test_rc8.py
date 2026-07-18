@@ -411,3 +411,21 @@ def test_web_ui_separates_internet_rules_and_vpn_workspaces():
     ):
         assert f'value="{command_type}"' in rules
         assert f'value="{command_type}"' not in internet
+
+
+def test_web_ui_management_sections_are_collapsed_by_default():
+    templates_dir = (
+        Path(__file__).resolve().parents[1] / "app" / "templates" / "partials"
+    )
+    rules = (templates_dir / "rules.html").read_text(encoding="utf-8")
+    system = (templates_dir / "system.html").read_text(encoding="utf-8")
+
+    assert '<details class="settings-panel card" open>' not in rules
+    assert "<strong>Межсетевой экран</strong>" in rules
+    assert "<strong>Зоны и транзит</strong>" in rules
+
+    for title in ("Идентификация", "Службы", "Дата и время"):
+        assert f"<strong>{title}</strong>" in system
+    assert '<details class="settings-panel card section">' in system
+    assert '<details class="settings-panel card">' in system
+    assert '<details class="settings-panel card" open>' not in system

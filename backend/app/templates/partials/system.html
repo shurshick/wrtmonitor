@@ -47,46 +47,51 @@
   </section>
 </div>
 
-{% if services %}
-<section class="card section workspace-card">
-  <div class="card__heading"><div><p class="eyebrow">Службы</p><h2>Ключевые компоненты</h2><p class="muted">Текущее состояние системных служб OpenWrt.</p></div></div>
-  <div class="service-grid service-grid--friendly">{% for name, state in services.items() %}<span class="service-pill service-pill--{{ state }}"><i></i>{{ name }}<small>{{ 'работает' if state == 'running' else state }}</small></span>{% endfor %}</div>
-</section>
+{% if services or supports.system_restart_service %}
+<details class="settings-panel card section">
+  <summary><span><strong>Службы</strong><small>Состояние и перезапуск системных компонентов</small></span><span>{{ 'Настроить' if supports.system_restart_service else 'Показать' }}</span></summary>
+  <div class="settings-panel__body">
+    {% if services %}
+    <div class="service-grid service-grid--friendly">{% for name, state in services.items() %}<span class="service-pill service-pill--{{ state }}"><i></i>{{ name }}<small>{{ 'работает' if state == 'running' else state }}</small></span>{% endfor %}</div>
+    {% endif %}
+    {% if supports.system_restart_service %}
+    <div><p class="eyebrow">Управление</p><h3>Перезапуск компонента</h3><p class="muted">Используйте, если отдельная функция роутера перестала отвечать.</p></div>
+    <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Перезапустить выбранную службу?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.restart_service"><input type="hidden" name="confirmed" value="true">
+      <label>Компонент<select name="service"><option value="dnsmasq">DHCP и DNS</option><option value="firewall">Сетевой экран</option><option value="odhcpd">IPv6 и DHCPv6</option><option value="network">Сетевые подключения</option></select></label>
+      <div class="form-actions"><button class="button--secondary" type="submit">Перезапустить службу</button></div>
+    </form>
+    {% endif %}
+  </div>
+</details>
 {% endif %}
 
 <div class="settings-workspace settings-workspace--masonry section">
   {% if supports.system_set_hostname %}
-  <section class="card control-card">
-    <div><p class="eyebrow">Идентификация</p><h2>Имя роутера</h2><p class="muted">Используется в локальной сети и списке устройств.</p></div>
-    <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_hostname"><input type="hidden" name="confirmed" value="true">
-      <label>Имя в сети<input name="hostname" required maxlength="63" value="{{ system_summary.hostname or device.hostname or '' }}"></label>
-      <div class="form-actions"><button type="submit">Сохранить</button><span class="action-note">Роутер применит новое имя</span></div>
-    </form>
-  </section>
+  <details class="settings-panel card">
+    <summary><span><strong>Идентификация</strong><small>{{ system_summary.hostname or device.hostname or 'Имя роутера в локальной сети' }}</small></span><span>Изменить</span></summary>
+    <div class="settings-panel__body">
+      <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_hostname"><input type="hidden" name="confirmed" value="true">
+        <label>Имя в сети<input name="hostname" required maxlength="63" value="{{ system_summary.hostname or device.hostname or '' }}"></label>
+        <div class="form-actions"><button type="submit">Сохранить</button><span class="action-note">Роутер применит новое имя</span></div>
+      </form>
+    </div>
+  </details>
   {% endif %}
 
   {% if supports.system_timezone or supports.system_ntp %}
-  <section class="card control-card">
-    <div><p class="eyebrow">Дата и время</p><h2>Синхронизация</h2><p class="muted">Часовой пояс и серверы точного времени.</p></div>
+  <details class="settings-panel card">
+    <summary><span><strong>Дата и время</strong><small>{{ system_summary.zonename or 'Часовой пояс и серверы точного времени' }}</small></span><span>Настроить</span></summary>
+    <div class="settings-panel__body">
     {% if supports.system_timezone %}
     <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_timezone"><input type="hidden" name="confirmed" value="true"><label>Часовой пояс<select name="zonename" required>{% if system_summary.zonename and system_summary.zonename not in timezone_names %}<option value="{{ system_summary.zonename }}" selected>{{ system_summary.zonename }} (текущий)</option>{% endif %}{% for zonename, timezone, label in timezone_options %}<option value="{{ zonename }}" {% if zonename == system_summary.zonename %}selected{% endif %}>{{ label }} · {{ zonename }}</option>{% endfor %}</select></label><div class="form-actions"><button type="submit">Сохранить пояс</button></div></form>
     {% endif %}
     {% if supports.system_ntp %}
     <form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.set_ntp"><input type="hidden" name="confirmed" value="true"><div class="form-grid"><label>Синхронизация<select name="enabled"><option value="true" {% if system_summary.ntp_enabled %}selected{% endif %}>Включена</option><option value="false" {% if not system_summary.ntp_enabled %}selected{% endif %}>Выключена</option></select></label><label>NTP-серверы<input name="servers" value="{{ system_summary.ntp_servers|join(', ') }}" placeholder="Серверы не получены"></label></div><div class="form-actions"><button type="submit">Сохранить NTP</button></div></form>
     {% endif %}
-  </section>
-  {% endif %}
-
-  {% if supports.system_restart_service %}
-  <section class="card control-card">
-    <div><p class="eyebrow">Службы</p><h2>Перезапуск компонента</h2><p class="muted">Используйте, если отдельная функция роутера перестала отвечать.</p></div>
-    <form class="compact-form" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Перезапустить выбранную службу?');">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="system.restart_service"><input type="hidden" name="confirmed" value="true">
-      <label>Компонент<select name="service"><option value="dnsmasq">DHCP и DNS</option><option value="firewall">Сетевой экран</option><option value="odhcpd">IPv6 и DHCPv6</option><option value="network">Сетевые подключения</option></select></label>
-      <div class="form-actions"><button class="button--secondary" type="submit">Перезапустить службу</button></div>
-    </form>
-  </section>
+    </div>
+  </details>
   {% endif %}
 </div>
 

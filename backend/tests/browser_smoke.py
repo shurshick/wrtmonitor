@@ -467,6 +467,16 @@ def run() -> None:
                         full_page=True,
                     )
                 if section == "rules":
+                    for panel_title in ("Межсетевой экран", "Зоны и транзит"):
+                        panel = (
+                            page.locator("details.settings-panel")
+                            .filter(has_text=panel_title)
+                            .first
+                        )
+                        assert panel.count() == 1
+                        assert panel.get_attribute("open") is None
+                        panel.locator(":scope > summary").click()
+                        assert panel.get_attribute("open") is not None
                     assert (
                         page.locator(
                             '.managed-record input[name="uci_section"]'
@@ -474,6 +484,17 @@ def run() -> None:
                         >= 3
                     )
                     assert page.get_by_text("Удалить правило", exact=True).count() == 1
+                if section == "system":
+                    for panel_title in ("Идентификация", "Службы", "Дата и время"):
+                        panel = (
+                            page.locator("details.settings-panel")
+                            .filter(has_text=panel_title)
+                            .first
+                        )
+                        assert panel.count() == 1
+                        assert panel.get_attribute("open") is None
+                        panel.locator(":scope > summary").click()
+                        assert panel.get_attribute("open") is not None
                 if section == "management":
                     assert page.get_by_text("Обновить каталог", exact=True).count() == 1
                     assert (
