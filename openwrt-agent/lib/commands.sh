@@ -870,10 +870,11 @@ execute_command() {
             else status="failed"; result="$(command_failed_result "failed to create system backup")"; fi
             ;;
         maintenance.packages.refresh)
-            if opkg update >/dev/null 2>&1; then
-                upgrades="$(opkg list-upgradable 2>/dev/null | head -n 50 | tr '\n' ';')"
-                result="$(command_success_result "package lists refreshed" "\"upgradable\":\"$(json_escape "$upgrades")\"")"
-            else status=failed; result="$(command_failed_result "opkg update failed")"; fi
+            package_manager_value="$(package_manager_name 2>/dev/null || true)"
+            if [ -n "$package_manager_value" ] && package_refresh_indexes >/dev/null 2>&1; then
+                upgrades="$(package_list_upgradeable | head -n 50 | tr '\n' ';')"
+                result="$(command_success_result "package lists refreshed" "\"manager\":\"$package_manager_value\",\"upgradable\":\"$(json_escape "$upgrades")\"")"
+            else status=failed; result="$(command_failed_result "apk/opkg package index update failed")"; fi
             ;;
         maintenance.package.install|maintenance.package.remove)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; package="$(json_get_string "$payload_file" '@.package')"; rm -f "$payload_file"
@@ -883,7 +884,7 @@ execute_command() {
                     status=failed; result="$(command_failed_result "system package removal is not allowed")"
                     ;;
                 *)
-                    if package_output="$(opkg "$package_action" "$package" 2>&1)"; then result="$(command_success_result "package operation completed" "\"package\":\"$(json_escape "$package")\",\"output\":\"$(json_escape "$package_output")\"")"; else status=failed; result="$(command_failed_result "$package_output")"; fi
+                    if package_output="$(package_apply "$package_action" "$package" 2>&1)"; then result="$(command_success_result "package operation completed" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"output\":\"$(json_escape "$package_output")\"")"; else status=failed; result="$(command_failed_result "$package_output")"; fi
                     ;;
             esac
             ;;
@@ -924,7 +925,7 @@ execute_command() {
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; cron_content="$(json_get_string "$payload_file" '@.content')"; rm -f "$payload_file"; cron_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"; cp "$cron_path" "$cron_path.wrtmonitor.bak" 2>/dev/null || true; if printf '%s' "$cron_content" >"$cron_path" && /etc/init.d/cron restart >/dev/null 2>&1; then result="$(command_success_result "cron updated")"; else status=failed; result="$(command_failed_result "failed to update cron")"; fi
             ;;
         maintenance.diagnostics.bundle)
-            bundle_dir="/tmp/wrtmonitor-diagnostics-$command_id"; bundle_path="$bundle_dir.tar.gz"; mkdir -p "$bundle_dir"; ubus call system board >"$bundle_dir/board.json" 2>&1 || true; ubus call system info >"$bundle_dir/system.json" 2>&1 || true; ubus call network.interface dump >"$bundle_dir/network.json" 2>&1 || true; logread 2>/dev/null | tail -n 500 >"$bundle_dir/logread.txt"; ps w >"$bundle_dir/processes.txt" 2>&1 || true; df -h >"$bundle_dir/storage.txt" 2>&1 || true; opkg list-installed >"$bundle_dir/packages.txt" 2>&1 || true; capabilities_json >"$bundle_dir/capabilities.json"; if tar -czf "$bundle_path" -C "$bundle_dir" .; then bundle_b64="$(base64 <"$bundle_path" | tr -d '\n')"; result="$(command_success_result "diagnostic bundle created" "\"filename\":\"wrtmonitor-diagnostics.tar.gz\",\"bundle_base64\":\"$bundle_b64\"")"; else status=failed; result="$(command_failed_result "failed to create diagnostic bundle")"; fi; rm -rf "$bundle_dir" "$bundle_path"
+            bundle_dir="/tmp/wrtmonitor-diagnostics-$command_id"; bundle_path="$bundle_dir.tar.gz"; mkdir -p "$bundle_dir"; ubus call system board >"$bundle_dir/board.json" 2>&1 || true; ubus call system info >"$bundle_dir/system.json" 2>&1 || true; ubus call network.interface dump >"$bundle_dir/network.json" 2>&1 || true; logread 2>/dev/null | tail -n 500 >"$bundle_dir/logread.txt"; ps w >"$bundle_dir/processes.txt" 2>&1 || true; df -h >"$bundle_dir/storage.txt" 2>&1 || true; package_list_installed >"$bundle_dir/packages.txt" 2>&1 || true; capabilities_json >"$bundle_dir/capabilities.json"; if tar -czf "$bundle_path" -C "$bundle_dir" .; then bundle_b64="$(base64 <"$bundle_path" | tr -d '\n')"; result="$(command_success_result "diagnostic bundle created" "\"filename\":\"wrtmonitor-diagnostics.tar.gz\",\"bundle_base64\":\"$bundle_b64\"")"; else status=failed; result="$(command_failed_result "failed to create diagnostic bundle")"; fi; rm -rf "$bundle_dir" "$bundle_path"
             ;;
         maintenance.recovery.enable)
             recovery_path=/tmp/wrtmonitor-recovery.tar.gz; if sysupgrade -b "$recovery_path" >/dev/null 2>&1; then uci set "$CONFIG.recovery_mode=1"; uci commit wrtmonitor; result="$(command_success_result "recovery mode enabled")"; else status=failed; result="$(command_failed_result "failed to create recovery backup")"; fi

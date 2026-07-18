@@ -1,9 +1,11 @@
 #!/bin/sh
 set -eu
+PATH="/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+export PATH
 
 # Used by sourced libraries from lib/*.sh.
 # shellcheck disable=SC2034
-AGENT_VERSION="0.13.5"
+AGENT_VERSION="0.13.6"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 

@@ -91,6 +91,7 @@ def test_web_form_and_maintenance_telemetry_summary():
             }
         }
     ) == {
+        "package_manager": "",
         "installed_packages": 120,
         "upgradable_packages": 3,
         "cron_entries": 0,
@@ -99,3 +100,32 @@ def test_web_form_and_maintenance_telemetry_summary():
         "installed_items": [],
         "upgradable_items": [],
     }
+
+
+def test_maintenance_summary_reports_package_manager_and_items():
+    summary = normalize_maintenance_summary(
+        {
+            "maintenance": {
+                "packages": {
+                    "manager": "apk",
+                    "installed": 2,
+                    "upgradable": 1,
+                    "installed_items": [
+                        {"name": "base-files", "version": "1.0"},
+                        {"name": "curl", "version": "8.0"},
+                    ],
+                    "upgradable_items": [
+                        {
+                            "name": "curl",
+                            "current_version": "8.0",
+                            "available_version": "8.1",
+                        }
+                    ],
+                }
+            }
+        }
+    )
+    assert summary["package_manager"] == "apk"
+    assert summary["installed_packages"] == 2
+    assert summary["upgradable_packages"] == 1
+    assert summary["installed_items"][1]["name"] == "curl"

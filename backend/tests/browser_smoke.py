@@ -160,6 +160,7 @@ def prepare_router() -> str:
                     "traffic": {"rx_bytes": 16_000_000, "tx_bytes": 4_000_000},
                     "maintenance": {
                         "packages": {
+                            "manager": "apk",
                             "installed": 143,
                             "upgradable": 2,
                             "installed_items": [

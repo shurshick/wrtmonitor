@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="12"
+CAPABILITIES_VERSION="13"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -27,6 +27,53 @@ has_commands() {
     done
 }
 
+package_manager_name() {
+    if command -v apk >/dev/null 2>&1; then
+        printf 'apk'
+    elif command -v opkg >/dev/null 2>&1; then
+        printf 'opkg'
+    else
+        return 1
+    fi
+}
+
+package_refresh_indexes() {
+    case "$(package_manager_name)" in
+        apk) apk update ;;
+        opkg) opkg update ;;
+    esac
+}
+
+package_apply() {
+    action="$1"
+    package="$2"
+    case "$(package_manager_name)" in
+        apk)
+            if [ "$action" = install ]; then apk add "$package"; else apk del "$package"; fi
+            ;;
+        opkg) opkg "$action" "$package" ;;
+    esac
+}
+
+package_list_installed() {
+    case "$(package_manager_name)" in
+        apk) apk list --installed --manifest 2>/dev/null | awk 'NF >= 2 {print $1 "|" $2}' ;;
+        opkg) opkg list-installed 2>/dev/null | awk 'NF >= 3 {print $1 "|" $3}' ;;
+    esac
+}
+
+package_list_upgradeable() {
+    case "$(package_manager_name)" in
+        apk)
+            {
+                apk list --installed --manifest 2>/dev/null | awk 'NF >= 2 {print "I|" $1 "|" $2}'
+                apk list --upgradeable --manifest 2>/dev/null | awk 'NF >= 2 {print "U|" $1 "|" $2}'
+            } | awk -F'|' '$1 == "I" {current[$2] = $3; next} $1 == "U" {print $2 "|" current[$2] "|" $3}'
+            ;;
+        opkg) opkg list-upgradable 2>/dev/null | awk 'NF >= 5 {print $1 "|" $3 "|" $5}' ;;
+    esac
+}
+
 has_uci_config() {
     has_commands uci || return 1
     uci -q show "$1" >/dev/null 2>&1
@@ -49,7 +96,9 @@ has_wifi_stations() {
 
 has_wifi_roaming() {
     has_wifi_iface || return 1
-    opkg list-installed 2>/dev/null | grep -Eq '^(wpad|hostapd)-(basic-)?(mbedtls|openssl|wolfssl)|^wpad '
+    package_list_installed 2>/dev/null \
+        | cut -d'|' -f1 \
+        | grep -Eq '^(wpad|hostapd)(-(basic-)?(mbedtls|openssl|wolfssl))?$'
 }
 
 has_wifi_mesh() {
@@ -118,8 +167,8 @@ capability_supported() {
         vpn.openvpn.configure) has_uci_config openvpn && [ -x "$(capability_path /etc/init.d/openvpn)" ] && has_commands openvpn base64 ;;
         vpn.policy.read|vpn.policy.configure) has_uci_config pbr && [ -x "$(capability_path /etc/init.d/pbr)" ] ;;
         telemetry.vpn) capability_supported vpn.wireguard.read || capability_supported vpn.openvpn.read || capability_supported vpn.policy.read ;;
-        maintenance.packages.read|maintenance.packages.write) has_commands opkg ;;
-        maintenance.backup) has_commands sysupgrade tar gzip base64 ;;
+        maintenance.packages.read|maintenance.packages.write) package_manager_name >/dev/null 2>&1 ;;
+        maintenance.backup) has_commands sysupgrade tar base64 ;;
         maintenance.sysupgrade.check) has_commands sysupgrade curl sha256sum df ;;
         maintenance.sysupgrade.apply) has_commands sysupgrade sha256sum ;;
         maintenance.logs) has_commands logread ;;
@@ -163,8 +212,8 @@ capability_unavailable_reason() {
         vpn.wireguard.*|telemetry.vpn) printf 'wireguard-tools or network support is unavailable' ;;
         vpn.openvpn.*) printf 'openvpn-openssl package or OpenVPN service is unavailable' ;;
         vpn.policy.*) printf 'pbr package or service is unavailable' ;;
-        maintenance.packages.*) printf 'opkg is unavailable' ;;
-        maintenance.backup) printf 'sysupgrade backup tools are unavailable' ;;
+        maintenance.packages.*) printf 'apk and opkg are unavailable' ;;
+        maintenance.backup) printf 'sysupgrade, tar or base64 is unavailable' ;;
         maintenance.sysupgrade.*) printf 'sysupgrade verification tools are unavailable' ;;
         maintenance.logs) printf 'logread is unavailable' ;;
         maintenance.processes) printf 'process tools are unavailable' ;;

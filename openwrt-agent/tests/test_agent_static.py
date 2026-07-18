@@ -180,6 +180,7 @@ def test_smoke_cli_capabilities_json():
 def test_maintenance_handlers_and_multiline_json_escape_are_present():
     commands = read_text(LIB_DIR / "commands.sh")
     common = read_text(LIB_DIR / "common.sh")
+    capabilities = read_text(LIB_DIR / "capabilities.sh")
     for command in (
         "maintenance.package.install",
         "maintenance.backup.create",
@@ -193,6 +194,8 @@ def test_maintenance_handlers_and_multiline_json_escape_are_present():
         assert command in commands
     assert 'if (NR > 1) printf "\\\\n"' in common
     assert "system package removal is not allowed" in commands
+    assert "maintenance.backup) has_commands sysupgrade tar base64" in capabilities
+    assert "has_commands sysupgrade tar gzip" not in capabilities
 
 
 def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
@@ -226,6 +229,8 @@ def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
         "curl",
         "sha256sum",
         "nlbw",
+        "apk",
+        "sysupgrade",
     ):
         path = command_dir / command
         path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
@@ -245,6 +250,86 @@ def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
     assert payload["capabilities"]["wifi.manage_ssid"] is True
     assert payload["capabilities"]["wifi.schedule"] is True
     assert isinstance(payload["capabilities"]["wifi.mesh"], bool)
+    assert payload["capabilities"]["maintenance.packages.read"] is True
+    assert payload["capabilities"]["maintenance.packages.write"] is True
+    assert payload["capabilities"]["maintenance.backup"] is True
+
+
+def test_apk_maintenance_telemetry_is_normalized(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    command_dir = tmp_path / "bin"
+    command_dir.mkdir()
+    apk = command_dir / "apk"
+    apk.write_text(
+        """#!/bin/sh
+case "$*" in
+  "list --installed --manifest")
+    printf 'base-files 1.0\\ncurl 8.0\\n'
+    ;;
+  "list --upgradeable --manifest")
+    printf 'curl 8.1\\n'
+    ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    apk.chmod(0o755)
+    env = shell_env()
+    env["PATH"] = str(command_dir) + os.pathsep + env["PATH"]
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "capabilities.sh").as_posix()}'
+        . '{(LIB_DIR / "telemetry.sh").as_posix()}'
+        maintenance_json
+    """
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    payload = json.loads(completed.stdout)
+    assert payload["packages"]["manager"] == "apk"
+    assert payload["packages"]["installed"] == 2
+    assert payload["packages"]["upgradable"] == 1
+    assert payload["packages"]["upgradable_items"] == [
+        {"name": "curl", "current_version": "8.0", "available_version": "8.1"}
+    ]
+
+
+def test_apk_package_operations_use_native_commands(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    command_dir = tmp_path / "bin"
+    command_dir.mkdir()
+    apk_log = tmp_path / "apk.log"
+    apk = command_dir / "apk"
+    apk.write_text(
+        "#!/bin/sh\nprintf '%s\\n' \"$*\" >>\"$APK_LOG\"\n",
+        encoding="utf-8",
+    )
+    apk.chmod(0o755)
+    env = shell_env()
+    env["PATH"] = str(command_dir) + os.pathsep + env["PATH"]
+    env["APK_LOG"] = "apk.log"
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "capabilities.sh").as_posix()}'
+        package_refresh_indexes
+        package_apply install curl
+        package_apply remove curl
+    """
+    subprocess.run([shell, "-c", script], check=True, env=env, cwd=tmp_path)
+    assert apk_log.read_text(encoding="utf-8").splitlines() == [
+        "update",
+        "add curl",
+        "del curl",
+    ]
 
 
 def test_config_transaction_restores_saved_uci_file(tmp_path: Path):
@@ -303,8 +388,11 @@ def test_smoke_cli_diagnostics_json():
 def test_installer_bootstraps_runtime_dependencies():
     source = read_text(INSTALLER)
     assert "ensure_dependencies()" in source
+    assert "package_manager_name()" in source
+    assert "apk update" in source
+    assert 'apk add "$@"' in source
     assert "opkg update" in source
-    assert "opkg install $missing_packages" in source
+    assert 'opkg install "$@"' in source
     assert "--clean" in source
     assert "--remove-config" in source
     for dependency in (

@@ -66,28 +66,30 @@ maintenance_json() {
     upgrades=0
     installed_items=""
     upgrade_items=""
-    if command -v opkg >/dev/null 2>&1; then
-        installed_file="/tmp/wrtmonitor-installed-packages-$$"
-        upgrade_file="/tmp/wrtmonitor-upgradable-packages-$$"
-        opkg list-installed 2>/dev/null >"$installed_file" || true
-        opkg list-upgradable 2>/dev/null >"$upgrade_file" || true
-        installed="$(wc -l <"$installed_file" | tr -d ' ')"
-        upgrades="$(wc -l <"$upgrade_file" | tr -d ' ')"
+    package_manager_value="$(package_manager_name 2>/dev/null || true)"
+    if [ -n "$package_manager_value" ]; then
+        installed_data="$(package_list_installed || true)"
+        upgrade_data="$(package_list_upgradeable || true)"
+        installed="$(printf '%s\n' "$installed_data" | awk 'NF {count++} END {print count + 0}')"
+        upgrades="$(printf '%s\n' "$upgrade_data" | awk 'NF {count++} END {print count + 0}')"
         package_count=0
-        while IFS=' ' read -r package_name _ package_version _; do
+        while IFS='|' read -r package_name package_version; do
             [ -n "$package_name" ] || continue
             [ -n "$installed_items" ] && installed_items="$installed_items,"
             installed_items="$installed_items{\"name\":\"$(json_escape "$package_name")\",\"version\":\"$(json_escape "$package_version")\"}"
             package_count=$((package_count + 1)); [ "$package_count" -ge 250 ] && break
-        done <"$installed_file"
+        done <<EOF
+$installed_data
+EOF
         package_count=0
-        while IFS=' ' read -r package_name _ current_version _ available_version; do
+        while IFS='|' read -r package_name current_version available_version; do
             [ -n "$package_name" ] || continue
             [ -n "$upgrade_items" ] && upgrade_items="$upgrade_items,"
             upgrade_items="$upgrade_items{\"name\":\"$(json_escape "$package_name")\",\"current_version\":\"$(json_escape "$current_version")\",\"available_version\":\"$(json_escape "$available_version")\"}"
             package_count=$((package_count + 1)); [ "$package_count" -ge 100 ] && break
-        done <"$upgrade_file"
-        rm -f "$installed_file" "$upgrade_file"
+        done <<EOF
+$upgrade_data
+EOF
     fi
     cron_entries=0
     if [ -r "${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root" ]; then
@@ -95,8 +97,8 @@ maintenance_json() {
     fi
     recovery="$(uci -q get wrtmonitor.main.recovery_mode 2>/dev/null || echo 0)"
     staged_checksum="$(uci -q get wrtmonitor.main.staged_firmware_sha256 2>/dev/null || true)"
-    printf '{"packages":{"installed":%s,"upgradable":%s,"installed_items":[%s],"upgradable_items":[%s]},"cron_entries":%s,"recovery_mode":%s,"staged_firmware_sha256":"%s"}' \
-        "${installed:-0}" "${upgrades:-0}" "$installed_items" "$upgrade_items" "${cron_entries:-0}" \
+    printf '{"packages":{"manager":"%s","installed":%s,"upgradable":%s,"installed_items":[%s],"upgradable_items":[%s]},"cron_entries":%s,"recovery_mode":%s,"staged_firmware_sha256":"%s"}' \
+        "$(json_escape "$package_manager_value")" "${installed:-0}" "${upgrades:-0}" "$installed_items" "$upgrade_items" "${cron_entries:-0}" \
         "$( [ "$recovery" = 1 ] && printf true || printf false )" \
         "$(json_escape "$staged_checksum")"
 }

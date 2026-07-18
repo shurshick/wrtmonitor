@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+PATH="/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+export PATH
 
 SERVER_URL=""
 DOWNLOAD_BASE=""
@@ -29,6 +31,30 @@ has_ca_bundle() {
         || [ -r /etc/ssl/certs/ca-bundle.crt ]
 }
 
+package_manager_name() {
+    if command -v apk >/dev/null 2>&1; then
+        printf 'apk'
+    elif command -v opkg >/dev/null 2>&1; then
+        printf 'opkg'
+    else
+        return 1
+    fi
+}
+
+refresh_package_indexes() {
+    case "$(package_manager_name)" in
+        apk) apk update ;;
+        opkg) opkg update ;;
+    esac
+}
+
+install_packages() {
+    case "$(package_manager_name)" in
+        apk) apk add "$@" ;;
+        opkg) opkg install "$@" ;;
+    esac
+}
+
 ensure_dependencies() {
     add_missing_package curl curl
     add_missing_package jsonfilter jsonfilter
@@ -40,14 +66,14 @@ ensure_dependencies() {
         missing_packages="$missing_packages ca-bundle"
     fi
     if [ -n "$missing_packages" ]; then
-        if ! command -v opkg >/dev/null 2>&1; then
-            echo "Cannot install dependencies: opkg is not available" >&2
+        if ! package_manager_name >/dev/null 2>&1; then
+            echo "Cannot install dependencies: apk or opkg is not available" >&2
             exit 1
         fi
         echo "Installing agent dependencies:$missing_packages"
-        opkg update
+        refresh_package_indexes
         # shellcheck disable=SC2086
-        opkg install $missing_packages
+        install_packages $missing_packages
     fi
     for command_name in curl jsonfilter uci ubus sha256sum base64; do
         if ! command -v "$command_name" >/dev/null 2>&1; then
@@ -62,23 +88,23 @@ ensure_dependencies() {
 }
 
 ensure_optional_dependencies() {
-    command -v opkg >/dev/null 2>&1 || return 0
-    opkg update >/dev/null 2>&1 || true
+    package_manager_name >/dev/null 2>&1 || return 0
+    refresh_package_indexes >/dev/null 2>&1 || true
     if ! command -v nlbw >/dev/null 2>&1; then
         echo "Installing optional per-client traffic dependency: nlbwmon"
-        opkg install nlbwmon >/dev/null 2>&1 || echo "Optional package nlbwmon is unavailable; per-client traffic counters are disabled" >&2
+        install_packages nlbwmon >/dev/null 2>&1 || echo "Optional package nlbwmon is unavailable; per-client traffic counters are disabled" >&2
     fi
     if ! command -v wg >/dev/null 2>&1; then
         echo "Installing optional VPN dependency: wireguard-tools"
-        opkg install wireguard-tools >/dev/null 2>&1 || echo "Optional package wireguard-tools is unavailable; WireGuard management is disabled" >&2
+        install_packages wireguard-tools >/dev/null 2>&1 || echo "Optional package wireguard-tools is unavailable; WireGuard management is disabled" >&2
     fi
     if [ ! -x /etc/init.d/openvpn ]; then
         echo "Installing optional VPN dependency: openvpn-openssl"
-        opkg install openvpn-openssl >/dev/null 2>&1 || echo "Optional package openvpn-openssl is unavailable; OpenVPN management is disabled" >&2
+        install_packages openvpn-openssl >/dev/null 2>&1 || echo "Optional package openvpn-openssl is unavailable; OpenVPN management is disabled" >&2
     fi
     if [ ! -x /etc/init.d/pbr ]; then
         echo "Installing optional VPN dependency: pbr"
-        opkg install pbr >/dev/null 2>&1 || echo "Optional package pbr is unavailable; policy routing is disabled" >&2
+        install_packages pbr >/dev/null 2>&1 || echo "Optional package pbr is unavailable; policy routing is disabled" >&2
     fi
 }
 

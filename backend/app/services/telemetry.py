@@ -347,6 +347,7 @@ def normalize_maintenance_summary(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(packages, dict):
         packages = {}
     return {
+        "package_manager": str(packages.get("manager") or ""),
         "installed_packages": int(
             packages.get("installed", maintenance.get("installed_packages")) or 0
         ),
