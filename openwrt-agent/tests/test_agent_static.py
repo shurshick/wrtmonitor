@@ -343,7 +343,9 @@ def test_agent_version_comparison_is_numeric(left, right, expected):
     shell = shell_path()
     if not shell:
         pytest.skip("sh is not available")
-    script = f'. "{(LIB_DIR / "update.sh").as_posix()}"; compare_versions "{left}" "{right}"'
+    script = (
+        f'. "{(LIB_DIR / "update.sh").as_posix()}"; compare_versions "{left}" "{right}"'
+    )
     completed = subprocess.run(
         [shell, "-c", script],
         check=True,
