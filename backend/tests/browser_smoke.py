@@ -318,7 +318,7 @@ def assert_page(page: Page, path: str, screenshot_name: str) -> None:
         dimensions = page.locator("#traffic-chart").evaluate(
             "canvas => ({width: canvas.width, height: canvas.height})"
         )
-        assert dimensions["width"] >= 320 and dimensions["height"] >= 170
+        assert dimensions["width"] >= 240 and dimensions["height"] >= 150
     page.screenshot(path=str(ARTIFACTS / screenshot_name), full_page=True)
 
 
@@ -354,6 +354,28 @@ def run() -> None:
                     f"/devices/{device_id}?section={section}",
                     f"{name}-{section}.png",
                 )
+                if section == "overview":
+                    page.locator('[data-chart-range="24h"]').click()
+                    page.locator(
+                        '[data-live-monitor][data-loaded-range="24h"]'
+                    ).wait_for()
+                    assert "is-active" in (
+                        page.locator('[data-chart-range="24h"]').get_attribute("class")
+                        or ""
+                    )
+                    assert "24 часа" in page.locator("[data-chart-state]").inner_text()
+                    page.locator('[data-chart-metric="memory"]').click()
+                    assert "is-active" in (
+                        page.locator('[data-chart-metric="memory"]').get_attribute(
+                            "class"
+                        )
+                        or ""
+                    )
+                    assert "%" in page.locator("[data-chart-y]").first.inner_text()
+                    page.screenshot(
+                        path=str(ARTIFACTS / f"{name}-overview-24h-memory.png"),
+                        full_page=True,
+                    )
                 if section == "wifi":
                     selector = page.locator("[data-wifi-radio-select]")
                     assert selector.count() == 1

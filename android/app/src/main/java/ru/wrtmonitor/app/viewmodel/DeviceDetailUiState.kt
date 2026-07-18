@@ -10,4 +10,7 @@ data class DeviceDetailUiState(
     val device: DeviceDto? = null,
     val telemetry: TelemetryDto? = null,
     val telemetryHistory: List<TelemetryHistoryPointDto> = emptyList(),
+    val telemetryHistoryLoading: Boolean = false,
+    val telemetryHistoryError: String? = null,
+    val loadedTelemetryRange: String? = null,
 )

@@ -292,6 +292,8 @@
     <string name="network_maintenance">Обслуживание сети</string>
     <string name="network_maintenance_summary">Переподключение интерфейсов и перезапуск сети</string>
     <string name="system_screen_summary">Ресурсы, службы и системные параметры</string>
+    <string name="maintenance_title">Обслуживание</string>
+    <string name="maintenance_summary">Агент, обновления, резервные копии, диагностика и история операций</string>
     <string name="router_information">Информация о роутере</string>
     <string name="services_summary">Состояние основных служб OpenWrt</string>
     <string name="service_management">Управление службами</string>
@@ -410,7 +412,7 @@
     <string name="live_update_interval">Обновление каждые 5 секунд</string>
     <string name="receive_rate">Приём</string>
     <string name="transmit_rate">Передача</string>
-    <string name="telemetry_points">Точек telemetry: %1$d</string>
+    <string name="telemetry_points">Точек: %1$d</string>
     <string name="collecting_data">Накопление данных…</string>
     <string name="live_resources">Ресурсы роутера</string>
     <string name="load_1m">Нагрузка 1 мин</string>
@@ -420,6 +422,17 @@
     <string name="telemetry_range_day">24 ч</string>
     <string name="telemetry_range_week">7 д</string>
     <string name="telemetry_range_month">30 д</string>
+    <string name="telemetry_monitor">Монитор телеметрии</string>
+    <string name="telemetry_period">Период</string>
+    <string name="telemetry_selected_period">История за %1$s</string>
+    <string name="telemetry_loading_period">Загрузка периода %1$s…</string>
+    <string name="telemetry_load_failed">Не удалось загрузить историю: %1$s</string>
+    <string name="telemetry_loaded_summary">%1$s · %2$d точек · %3$s — %4$s</string>
+    <string name="telemetry_graph_metric">График</string>
+    <string name="telemetry_metric_traffic">Трафик</string>
+    <string name="telemetry_metric_load">Нагрузка</string>
+    <string name="telemetry_metric_memory">Память</string>
+    <string name="telemetry_metric_clients">Клиенты</string>
     <string name="wifi_selected_radio">Выбранный диапазон</string>
     <string name="wifi_radio">Радиомодуль</string>
 </resources>

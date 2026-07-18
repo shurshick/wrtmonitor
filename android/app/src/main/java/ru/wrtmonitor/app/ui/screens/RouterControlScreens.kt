@@ -1242,8 +1242,16 @@ fun NetworkControlScreen(
     ) }
 }
 
+enum class SystemScreenMode { System, Management }
+
 @Composable
-fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
+fun SystemControlScreen(
+    serverUrl: String,
+    accessToken: String,
+    device: DeviceDto,
+    onSessionExpired: () -> Unit,
+    mode: SystemScreenMode = SystemScreenMode.System,
+) {
     val scope = rememberCoroutineScope()
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var commands by remember { mutableStateOf<List<CommandDto>>(emptyList()) }
@@ -1335,10 +1343,11 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
     val connectionLabel = systemSummary?.let { "${it.optLong("conntrack_count")} / ${it.optLong("conntrack_max")}" } ?: stringResource(R.string.no_data)
 
     RouterPageHeader(
-        title = stringResource(R.string.system),
-        subtitle = stringResource(R.string.system_screen_summary),
+        title = stringResource(if (mode == SystemScreenMode.System) R.string.system else R.string.maintenance_title),
+        subtitle = stringResource(if (mode == SystemScreenMode.System) R.string.system_screen_summary else R.string.maintenance_summary),
         onRefresh = refresh,
     )
+    if (mode == SystemScreenMode.System) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MetricTile(stringResource(R.string.uptime), uptimeLabel, Modifier.weight(1f))
         MetricTile(stringResource(R.string.load), system?.optString("load").orEmpty().ifBlank { stringResource(R.string.no_data) }, Modifier.weight(1f), MaterialTheme.colorScheme.tertiary)
@@ -1352,7 +1361,8 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
         InfoRow(stringResource(R.string.kernel), systemSummary?.optString("kernel"), stringResource(R.string.no_data))
         InfoRow(stringResource(R.string.connections), connectionLabel, stringResource(R.string.no_data))
     }
-    if (services != null) {
+    }
+    if (mode == SystemScreenMode.System && services != null) {
         SectionCard(stringResource(R.string.services), subtitle = stringResource(R.string.services_summary)) {
             listOf("network", "dnsmasq", "firewall", "odhcpd").forEachIndexed { index, service ->
                 val value = services.optString(service)
@@ -1364,7 +1374,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
         }
     }
-    if (capabilities["system.set_hostname"] == true) {
+    if (mode == SystemScreenMode.System && capabilities["system.set_hostname"] == true) {
         ExpandableSettingsCard(stringResource(R.string.device_name), hostnameValue) {
             OutlinedTextField(hostnameValue, { hostnameValue = it }, label = { Text(stringResource(R.string.new_hostname)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(
@@ -1375,7 +1385,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             )
         }
     }
-    if (capabilities["system.set_timezone"] == true || capabilities["system.set_ntp"] == true) {
+    if (mode == SystemScreenMode.System && (capabilities["system.set_timezone"] == true || capabilities["system.set_ntp"] == true)) {
         ExpandableSettingsCard(stringResource(R.string.time_settings), zoneName) {
             if (capabilities["system.set_timezone"] == true) {
                 OptionSelector(
@@ -1410,7 +1420,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
         }
     }
-    if (capabilities["system.restart_service"] == true) {
+    if (mode == SystemScreenMode.System && capabilities["system.restart_service"] == true) {
         ExpandableSettingsCard(stringResource(R.string.service_management), stringResource(R.string.service_management_summary)) {
             listOf("dnsmasq", "firewall", "odhcpd", "network").forEach { service ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1422,7 +1432,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
         }
     }
-    if (capabilities["maintenance.packages.read"] == true || capabilities["maintenance.packages.write"] == true) {
+    if (mode == SystemScreenMode.Management && (capabilities["maintenance.packages.read"] == true || capabilities["maintenance.packages.write"] == true)) {
         ExpandableSettingsCard(stringResource(R.string.router_packages), stringResource(R.string.router_packages_summary)) {
             if (capabilities["maintenance.packages.read"] == true) {
                 TonalActionButton(stringResource(R.string.refresh_package_catalog), { pendingSystemCommand = PendingSafeCommand("maintenance.packages.refresh", JSONObject(), systemCommandQueued) })
@@ -1436,14 +1446,14 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
         }
     }
-    if (capabilities["maintenance.backup"] == true) {
+    if (mode == SystemScreenMode.Management && capabilities["maintenance.backup"] == true) {
         ExpandableSettingsCard(stringResource(R.string.configuration_backup), stringResource(R.string.configuration_backup_summary)) {
             TonalActionButton(stringResource(R.string.create_backup), { pendingSystemCommand = PendingSafeCommand("maintenance.backup.create", JSONObject(), systemCommandQueued) })
             OutlinedTextField(backupArchive, { backupArchive = it }, label = { Text(stringResource(R.string.backup_base64)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
             SecondaryActionButton(stringResource(R.string.restore_backup), { pendingSystemCommand = PendingSafeCommand("maintenance.backup.restore", JSONObject().put("archive_base64", backupArchive), systemCommandQueued) }, enabled = backupArchive.isNotBlank())
         }
     }
-    if (capabilities["maintenance.sysupgrade.check"] == true) {
+    if (mode == SystemScreenMode.Management && capabilities["maintenance.sysupgrade.check"] == true) {
         ExpandableSettingsCard(stringResource(R.string.openwrt_update), stringResource(R.string.openwrt_update_summary)) {
             OutlinedTextField(firmwareUrl, { firmwareUrl = it }, label = { Text(stringResource(R.string.firmware_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(firmwareSha256, { firmwareSha256 = it }, label = { Text("SHA-256") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1453,7 +1463,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
         }
     }
-    if (capabilities["maintenance.logs"] == true || capabilities["maintenance.processes"] == true || capabilities["maintenance.cron"] == true) {
+    if (mode == SystemScreenMode.Management && (capabilities["maintenance.logs"] == true || capabilities["maintenance.processes"] == true || capabilities["maintenance.cron"] == true)) {
         ExpandableSettingsCard(stringResource(R.string.advanced_maintenance), stringResource(R.string.advanced_maintenance_summary)) {
             if (capabilities["maintenance.logs"] == true) {
                 OutlinedTextField(logLines, { logLines = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.log_lines)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1470,7 +1480,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
         }
     }
-    if (capabilities["maintenance.diagnostics.bundle"] == true || capabilities["maintenance.recovery"] == true) {
+    if (mode == SystemScreenMode.Management && (capabilities["maintenance.diagnostics.bundle"] == true || capabilities["maintenance.recovery"] == true)) {
         ExpandableSettingsCard(stringResource(R.string.recovery_tools), stringResource(R.string.recovery_tools_summary)) {
             if (capabilities["maintenance.diagnostics.bundle"] == true) TonalActionButton(stringResource(R.string.create_diagnostic_bundle), { pendingSystemCommand = PendingSafeCommand("maintenance.diagnostics.bundle", JSONObject(), systemCommandQueued) })
             if (capabilities["maintenance.recovery"] == true) ActionRow {
@@ -1479,9 +1489,12 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
             }
         }
     }
-    SectionCard(stringResource(R.string.system_actions), subtitle = stringResource(R.string.system_actions_summary)) {
+    if (
+        mode == SystemScreenMode.Management && capabilities["diagnostics.check_server"] == true ||
+        mode == SystemScreenMode.System && capabilities["system.reboot"] == true
+    ) SectionCard(stringResource(R.string.system_actions), subtitle = stringResource(R.string.system_actions_summary)) {
         ActionRow {
-            if (capabilities["diagnostics.check_server"] == true) {
+            if (mode == SystemScreenMode.Management && capabilities["diagnostics.check_server"] == true) {
                 TonalActionButton(
                     label = stringResource(R.string.diagnostics),
                     onClick = {
@@ -1499,7 +1512,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
                     },
                 )
             }
-            if (capabilities["system.reboot"] == true) {
+            if (mode == SystemScreenMode.System && capabilities["system.reboot"] == true) {
                 SecondaryActionButton(stringResource(R.string.reboot), { confirmReboot = true })
             }
         }
@@ -1508,7 +1521,7 @@ fun SystemControlScreen(serverUrl: String, accessToken: String, device: DeviceDt
         }
     }
     MessageBanner(message, error = messageIsError)
-    AgentSection(
+    if (mode == SystemScreenMode.Management) AgentSection(
         agent = telemetry?.agent,
         actionError = "",
         onCheckUpdate = { queueSystem("agent.update", JSONObject(), updateCheckQueued) },

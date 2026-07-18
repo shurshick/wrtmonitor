@@ -291,6 +291,8 @@
     <string name="network_maintenance">Network maintenance</string>
     <string name="network_maintenance_summary">Reconnect interfaces or restart the network</string>
     <string name="system_screen_summary">Resources, services, and system settings</string>
+    <string name="maintenance_title">Maintenance</string>
+    <string name="maintenance_summary">Agent, updates, backups, diagnostics, and operation history</string>
     <string name="router_information">Router information</string>
     <string name="services_summary">Core OpenWrt service status</string>
     <string name="service_management">Service management</string>
@@ -420,6 +422,17 @@
     <string name="telemetry_range_day">24 h</string>
     <string name="telemetry_range_week">7 d</string>
     <string name="telemetry_range_month">30 d</string>
+    <string name="telemetry_monitor">Telemetry monitor</string>
+    <string name="telemetry_period">Period</string>
+    <string name="telemetry_selected_period">History for %1$s</string>
+    <string name="telemetry_loading_period">Loading %1$s…</string>
+    <string name="telemetry_load_failed">Could not load history: %1$s</string>
+    <string name="telemetry_loaded_summary">%1$s · %2$d samples · %3$s — %4$s</string>
+    <string name="telemetry_graph_metric">Chart</string>
+    <string name="telemetry_metric_traffic">Traffic</string>
+    <string name="telemetry_metric_load">Load</string>
+    <string name="telemetry_metric_memory">Memory</string>
+    <string name="telemetry_metric_clients">Clients</string>
     <string name="wifi_selected_radio">Selected band</string>
     <string name="wifi_radio">Radio</string>
 </resources>

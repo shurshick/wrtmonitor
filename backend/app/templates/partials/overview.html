@@ -13,17 +13,22 @@
 <div class="dashboard-grid">
   <section class="dashboard-card dashboard-card--traffic" data-live-monitor data-endpoint="/devices/{{ device.id }}/live">
     <header class="dashboard-card__header">
-      <div><span class="eyebrow">Интернет</span><h2>Трафик в реальном времени</h2></div>
+      <div><span class="eyebrow">Мониторинг</span><h2>Телеметрия роутера</h2></div>
       <span class="status status--{{ 'online' if ns.wan and ns.wan.up else 'offline' }}">{{ 'Подключено' if ns.wan and ns.wan.up else 'Нет связи' }}</span>
     </header>
     <div class="live-rates">
       <div><span class="live-rates__mark live-rates__mark--rx"></span><span>Приём</span><strong data-live-rx>0 бит/с</strong></div>
       <div><span class="live-rates__mark live-rates__mark--tx"></span><span>Передача</span><strong data-live-tx>0 бит/с</strong></div>
     </div>
-    <div class="traffic-chart"><canvas id="traffic-chart" aria-label="График скорости приёма и передачи"></canvas><div class="traffic-chart__empty" data-chart-empty>Накопление данных…</div></div>
-    <div class="chart-toolbar" aria-label="Интервал графика">
-      <div><button class="chart-range is-active" type="button" data-chart-range="live">2 часа</button><button class="chart-range" type="button" data-chart-range="24h">24 часа</button><button class="chart-range" type="button" data-chart-range="7d">7 дней</button><button class="chart-range" type="button" data-chart-range="30d">30 дней</button></div>
-      <span data-live-samples>{{ dashboard_history|length }} точек</span>
+    <div class="chart-controls">
+      <div class="chart-control" aria-label="Интервал графика"><span>Период</span><div><button class="chart-range is-active" type="button" data-chart-range="live">2 часа</button><button class="chart-range" type="button" data-chart-range="24h">24 часа</button><button class="chart-range" type="button" data-chart-range="7d">7 дней</button><button class="chart-range" type="button" data-chart-range="30d">30 дней</button></div></div>
+      <div class="chart-control" aria-label="Показатель графика"><span>График</span><div><button class="chart-range is-active" type="button" data-chart-metric="traffic">Трафик</button><button class="chart-range" type="button" data-chart-metric="load">Нагрузка</button><button class="chart-range" type="button" data-chart-metric="memory">Память</button><button class="chart-range" type="button" data-chart-metric="clients">Клиенты</button></div></div>
+    </div>
+    <div class="chart-state"><span data-chart-state>Загружено: 2 часа</span><span data-chart-coverage></span><b data-live-samples>{{ dashboard_history|length }} точек</b></div>
+    <div class="chart-legend" data-chart-legend aria-live="polite"></div>
+    <div class="chart-layout">
+      <div class="chart-y-axis" aria-hidden="true"><span data-chart-y></span><span data-chart-y></span><span data-chart-y></span><span data-chart-y></span></div>
+      <div class="chart-plot"><div class="traffic-chart"><canvas id="traffic-chart" aria-label="График telemetry"></canvas><div class="traffic-chart__empty" data-chart-empty>Накопление данных…</div></div><div class="chart-x-axis" aria-hidden="true"><span data-chart-x></span><span data-chart-x></span><span data-chart-x></span></div></div>
     </div>
     <dl class="connection-facts">
       <div><dt>WAN-адрес</dt><dd>{{ ns.wan.ipv4|join(', ') if ns.wan and ns.wan.ipv4 else 'не получен' }}</dd></div>

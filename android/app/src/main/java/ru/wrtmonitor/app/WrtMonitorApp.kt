@@ -64,6 +64,7 @@ import ru.wrtmonitor.app.ui.screens.NetworkScreenMode
 import ru.wrtmonitor.app.ui.screens.RouterSectionsScreen
 import ru.wrtmonitor.app.ui.screens.ServerSetupScreen
 import ru.wrtmonitor.app.ui.screens.SystemControlScreen
+import ru.wrtmonitor.app.ui.screens.SystemScreenMode
 import ru.wrtmonitor.app.ui.screens.WifiControlScreen
 
 private enum class Tab {
@@ -75,6 +76,7 @@ private enum class Tab {
     Rules,
     Vpn,
     System,
+    Management,
     Settings,
 }
 
@@ -175,7 +177,7 @@ fun WrtMonitorApp() {
             when {
                 tab == Tab.Settings && selectedDevice != null -> tab = Tab.More
                 tab == Tab.Settings -> tab = Tab.Routers
-                tab in setOf(Tab.Rules, Tab.Vpn, Tab.System) -> tab = Tab.More
+                tab in setOf(Tab.Rules, Tab.Vpn, Tab.System, Tab.Management) -> tab = Tab.More
                 else -> {
                     selectedDevice = null
                     tab = Tab.Routers
@@ -291,11 +293,13 @@ fun WrtMonitorApp() {
                             onOpenRules = { tab = Tab.Rules },
                             onOpenVpn = { tab = Tab.Vpn },
                             onOpenSystem = { tab = Tab.System },
+                            onOpenManagement = { tab = Tab.Management },
                             onOpenSettings = { tab = Tab.Settings },
                         )
                         Tab.Rules -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession, NetworkScreenMode.Rules) }
                         Tab.Vpn -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession, NetworkScreenMode.Vpn) }
-                        Tab.System -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession) }
+                        Tab.System -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession, SystemScreenMode.System) }
+                        Tab.Management -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession, SystemScreenMode.Management) }
                         Tab.Settings -> AppSettingsScreen(
                             currentServerUrl = serverUrl,
                             accessToken = accessToken,
@@ -337,7 +341,7 @@ private fun RowScope.AppNavigationItem(
     label: Int,
 ) {
     val selected = tab == currentTab || (
-        tab == Tab.More && currentTab in setOf(Tab.Rules, Tab.Vpn, Tab.System)
+        tab == Tab.More && currentTab in setOf(Tab.Rules, Tab.Vpn, Tab.System, Tab.Management)
     )
     NavigationBarItem(
         selected = selected,

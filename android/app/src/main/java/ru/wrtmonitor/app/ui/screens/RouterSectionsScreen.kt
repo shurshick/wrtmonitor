@@ -2,6 +2,7 @@ package ru.wrtmonitor.app.ui.screens
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VpnKey
@@ -19,6 +20,7 @@ fun RouterSectionsScreen(
     onOpenRules: () -> Unit,
     onOpenVpn: () -> Unit,
     onOpenSystem: () -> Unit,
+    onOpenManagement: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     RouterPageHeader(
@@ -45,14 +47,24 @@ fun RouterSectionsScreen(
     }
     SectionCard(stringResource(R.string.management)) {
         DestinationRow(
-            icon = Icons.Default.Build,
-            title = stringResource(R.string.system_and_maintenance),
+            icon = Icons.Default.Memory,
+            title = stringResource(R.string.system),
             value = "",
-            detail = stringResource(R.string.system_and_maintenance_summary),
+            detail = stringResource(R.string.system_screen_summary),
             accent = MaterialTheme.colorScheme.tertiary,
             onClick = onOpenSystem,
         )
         HorizontalDivider()
+        DestinationRow(
+            icon = Icons.Default.Build,
+            title = stringResource(R.string.maintenance_title),
+            value = "",
+            detail = stringResource(R.string.maintenance_summary),
+            accent = MaterialTheme.colorScheme.primary,
+            onClick = onOpenManagement,
+        )
+    }
+    SectionCard(stringResource(R.string.app_and_server)) {
         DestinationRow(
             icon = Icons.Default.Settings,
             title = stringResource(R.string.app_and_server),
