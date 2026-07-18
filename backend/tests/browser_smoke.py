@@ -379,6 +379,8 @@ def run() -> None:
                     )
                 if section == "management":
                     journal = page.locator("[data-command-journal]")
+                    interval_input = page.locator('input[name="interval"]')
+                    interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
                     page.locator(
                         "[data-command-journal] .command-pagination nav span",
@@ -386,6 +388,7 @@ def run() -> None:
                     ).wait_for()
                     assert "command_page=2" in page.url
                     assert journal.count() == 1
+                    assert interval_input.input_value() == "17"
                     page.screenshot(
                         path=str(ARTIFACTS / f"{name}-management-page2.png"),
                         full_page=True,
