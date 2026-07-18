@@ -1,7 +1,11 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
-from backend.app.services.telemetry import build_telemetry_history
+from backend.app.services.telemetry import (
+    build_telemetry_history,
+    downsample_telemetry_metrics,
+    telemetry_alerts,
+)
 
 
 def test_build_telemetry_history_calculates_rates_and_resources():
@@ -59,3 +63,43 @@ def test_build_telemetry_history_treats_counter_reset_as_zero_rate():
     ]
 
     assert build_telemetry_history(rows)[1]["rx_bps"] == 0
+
+
+def test_downsample_telemetry_metrics_keeps_range_and_averages_values():
+    started = datetime(2026, 7, 17, 10, 0, tzinfo=UTC)
+    rows = [
+        SimpleNamespace(
+            created_at=started + timedelta(minutes=index),
+            rx_bps=index * 100,
+            tx_bps=index * 50,
+            rx_bytes=index * 1000,
+            tx_bytes=index * 500,
+            load_1m=float(index),
+            memory_percent=20.0 + index,
+            client_count=index,
+        )
+        for index in range(10)
+    ]
+
+    points = downsample_telemetry_metrics(rows, 5)
+
+    assert len(points) == 5
+    assert points[0]["created_at"] == rows[1].created_at.isoformat()
+    assert points[0]["rx_bps"] == 50
+    assert points[-1]["rx_bytes"] == rows[-1].rx_bytes
+
+
+def test_telemetry_alerts_reports_stale_memory_and_wan():
+    alerts = telemetry_alerts(
+        {
+            "system": {
+                "memory": {"total_kb": 1000, "available_kb": 50},
+            },
+            "network": {
+                "interfaces": [{"interface": "wan", "up": False}],
+            },
+        },
+        age_seconds=600,
+    )
+
+    assert {alert["code"] for alert in alerts} == {"stale", "memory", "wan"}

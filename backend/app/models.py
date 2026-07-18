@@ -5,6 +5,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -98,6 +99,29 @@ class DeviceTelemetry(Base):
         nullable=False,
     )
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class DeviceTelemetryMetric(Base):
+    __tablename__ = "device_telemetry_metrics"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    device_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("devices.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    rx_bps: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    tx_bps: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    rx_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    tx_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    load_1m: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    memory_percent: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    client_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    interfaces: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    wifi: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -228,6 +252,11 @@ Index(
     "ix_device_telemetry_device_created",
     DeviceTelemetry.device_id,
     DeviceTelemetry.created_at.desc(),
+)
+Index(
+    "ix_device_telemetry_metrics_device_created",
+    DeviceTelemetryMetric.device_id,
+    DeviceTelemetryMetric.created_at.desc(),
 )
 Index("ix_device_commands_device_status", DeviceCommand.device_id, DeviceCommand.status)
 Index("ix_network_clients_device_online", NetworkClient.device_id, NetworkClient.online)

@@ -35,6 +35,7 @@ services:
       WRTMONITOR_ENABLE_API_DOCS: "false"
       WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS: 30
       WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE: 500
+      WRTMONITOR_TELEMETRY_METRIC_RETENTION_DAYS: 45
     volumes:
       - wrtmonitor_backups:/backups
     healthcheck:

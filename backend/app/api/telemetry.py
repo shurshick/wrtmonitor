@@ -16,12 +16,15 @@ from ..services.telemetry import (
     TELEMETRY_STALE_SECONDS,
     build_telemetry_summary,
     cleanup_device_telemetry,
+    cleanup_device_telemetry_metrics,
     device_telemetry_history,
     normalize_clients_summary,
     normalize_network_summary,
     normalize_services_summary,
     normalize_system_summary,
     normalize_wifi_summary,
+    record_device_telemetry_metric,
+    telemetry_alerts,
 )
 
 
@@ -32,13 +35,17 @@ router = APIRouter()
 def telemetry_history(
     device_id: UUID,
     limit: int = Query(default=60, ge=2, le=120),
+    range_name: str | None = Query(
+        default=None, alias="range", pattern="^(live|24h|7d|30d)$"
+    ),
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     get_user_device_or_404(db, user, device_id)
     return {
         "device_id": str(device_id),
-        "points": device_telemetry_history(db, device_id, limit),
+        "range": range_name or "recent",
+        "points": device_telemetry_history(db, device_id, limit, range_name),
     }
 
 
@@ -68,6 +75,7 @@ def latest_device_telemetry(
             "clients": {"count": 0, "items": []},
             "system": {},
             "services": {},
+            "alerts": telemetry_alerts(None, None),
         }
     age_seconds = max(
         0, int((datetime.now(UTC) - telemetry.created_at).total_seconds())
@@ -86,6 +94,7 @@ def latest_device_telemetry(
         "clients": normalize_clients_summary(telemetry.payload),
         "system": normalize_system_summary(telemetry.payload),
         "services": normalize_services_summary(telemetry.payload),
+        "alerts": telemetry_alerts(telemetry.payload, age_seconds),
     }
 
 
@@ -108,7 +117,11 @@ def agent_telemetry(
         )
     )
     db.flush()
+    record_device_telemetry_metric(db, device.id, payload.telemetry, now)
     sync_client_inventory(db, device.id, payload.telemetry, now)
     cleanup_device_telemetry(db, device.id, settings().telemetry_retention_per_device)
+    cleanup_device_telemetry_metrics(
+        db, device.id, settings().telemetry_metric_retention_days
+    )
     db.commit()
     return {"status": "ok"}

@@ -385,8 +385,7 @@ def test_web_ui_templates_expose_v2_management_controls():
     for command_type in (
         "dhcp.set_lease",
         "dhcp.delete_lease",
-        "wifi.set_channel",
-        "wifi.set_country",
+        "wifi.set_radio",
         "network.interface_restart",
         "network.restart",
         "system.set_hostname",

@@ -287,6 +287,11 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .command-item pre { margin-top: 10px; padding: 10px; background: #090f17; border-radius: 5px; }
 .command-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; color: var(--muted); font-size: 12px; }
 .command-pagination nav { display: flex; align-items: center; gap: 9px; }
+[data-command-journal] { transition: opacity .16s ease; }
+[data-command-journal].is-loading { opacity: .48; pointer-events: none; }
+.dashboard-alerts { display: grid; gap: 8px; margin: 12px 0 0; }
+.radio-current { border-left: 3px solid var(--primary); background: var(--surface-strong); color: var(--muted); padding: 10px 12px; }
+.wifi-configuration .compact-form--separated { margin-top: 18px; padding-top: 18px; }
 .debug-panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--surface-muted); }
 .debug-panel .raw-telemetry { margin-top: 14px; }
 .danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px; border: 1px solid #66343b; border-radius: var(--radius); background: #211419; }

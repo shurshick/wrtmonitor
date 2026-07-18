@@ -172,13 +172,15 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 clients = json.optJSONObject("clients"),
                 system = json.optJSONObject("system"),
                 services = json.optJSONObject("services"),
+                alerts = json.optJSONArray("alerts"),
             )
         }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
-    fun getTelemetryHistory(deviceId: String, limit: Int = 60): ApiResult<List<TelemetryHistoryPointDto>> = runCatching {
+    fun getTelemetryHistory(deviceId: String, limit: Int = 120, range: String = "live"): ApiResult<List<TelemetryHistoryPointDto>> = runCatching {
         val safeLimit = limit.coerceIn(2, 120)
-        val (status, response) = request("/api/v1/devices/$deviceId/telemetry/history?limit=$safeLimit")
+        val safeRange = range.takeIf { it in setOf("live", "24h", "7d", "30d") } ?: "live"
+        val (status, response) = request("/api/v1/devices/$deviceId/telemetry/history?limit=$safeLimit&range=$safeRange")
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         val points = JSONObject(response).optJSONArray("points") ?: JSONArray()
         (0 until points.length()).map { index ->

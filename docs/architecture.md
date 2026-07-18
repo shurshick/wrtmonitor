@@ -96,6 +96,8 @@ POST /api/v1/agent/telemetry
 GET /api/v1/devices/{device_id}/telemetry/latest
 ```
 
+Для графиков сервер отдельно хранит компактные записи `device_telemetry_metrics`: RX/TX, load, память и число клиентов. Исходный JSON ограничен коротким диагностическим retention, метрики по умолчанию живут 45 дней и отдаются диапазонами `live`, `24h`, `7d`, `30d`.
+
 В latest telemetry теперь есть нормализованные блоки:
 
 - `agent`

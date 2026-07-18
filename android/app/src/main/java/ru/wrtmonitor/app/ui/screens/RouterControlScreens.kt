@@ -107,6 +107,14 @@ private val wifiChannelOptions = (
     listOf("auto") + (1..14).map(Int::toString) +
         listOf("36", "40", "44", "48", "52", "56", "60", "64", "100", "104", "108", "112", "116", "120", "124", "128", "132", "136", "140", "144", "149", "153", "157", "161", "165")
     ).map { SelectOption(it, if (it == "auto") "AUTO" else it) }
+private fun wifiChannelOptionsForBand(band: String): List<SelectOption> {
+    val values = when (band.lowercase()) {
+        "2g" -> listOf("auto") + (1..13).map(Int::toString)
+        "5g" -> listOf("auto", "36", "40", "44", "48", "52", "56", "60", "64", "100", "104", "108", "112", "116", "120", "124", "128", "132", "136", "140", "144", "149", "153", "157", "161", "165")
+        else -> wifiChannelOptions.map(SelectOption::value)
+    }
+    return values.map { SelectOption(it, if (it == "auto") "AUTO" else it) }
+}
 private val wifiModeOptions = listOf("HE80", "HE40", "HE20", "VHT160", "VHT80", "VHT40", "VHT20", "HT40", "HT20").map { SelectOption(it, it) }
 private val wifiEncryptionOptions = listOf("sae-mixed", "sae", "psk2", "none").map { SelectOption(it, it) }
 private val ipv6PrefixOptions = listOf("48", "52", "56", "60", "64").map { SelectOption(it, "/$it") }
@@ -480,32 +488,15 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
-    var formInitialized by remember(device.id) { mutableStateOf(false) }
+    var selectedRadioId by remember(device.id) { mutableStateOf("") }
+    var selectedInterfaceId by remember(device.id) { mutableStateOf("") }
 
     val refresh: () -> Unit = {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
                 is ApiResult.Success -> {
                     telemetry = result.data
-                    if (!formInitialized) {
-                        val radio = firstRadio(result.data)
-                        val iface = firstInterface(result.data)
-                        ssid = iface?.optString("ssid").orEmpty()
-                        enabled = radio?.optBoolean("up", true) ?: true
-                        channel = radio?.optString("channel").orEmpty()
-                        country = radio?.optString("country").orEmpty()
-                        htmode = radio?.optString("htmode").orEmpty()
-                        txpower = radio?.optString("txpower").orEmpty()
-                        newNetwork = iface?.optString("network").orEmpty()
-                        val schedule = radio?.optJSONObject("schedule")
-                        scheduleEnabled = schedule?.optBoolean("enabled") ?: false
-                        scheduleDays = schedule?.optJSONArray("weekdays")?.let { array ->
-                            (0 until array.length()).map { array.optString(it) }.filter(String::isNotBlank).toSet()
-                        } ?: scheduleDays
-                        scheduleStart = schedule?.optString("start").orEmpty().ifBlank { scheduleStart }
-                        scheduleStop = schedule?.optString("stop").orEmpty().ifBlank { scheduleStop }
-                        formInitialized = true
-                    }
+                    if (selectedRadioId.isBlank()) selectedRadioId = firstRadio(result.data)?.optString("id").orEmpty()
                 }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
@@ -538,10 +529,6 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     LaunchedEffect(device.id) { refresh() }
     val wifi = telemetry?.wifi ?: telemetry?.payload?.optJSONObject("wifi")
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
-    val radio = firstRadio(telemetry)
-    val iface = firstInterface(telemetry)
-    val radioId = radio?.optString("id").takeUnless { it.isNullOrBlank() } ?: "radio0"
-    val ifaceId = iface?.optString("id").takeUnless { it.isNullOrBlank() }
     val wifiSsidQueued = stringResource(R.string.wifi_ssid_queued)
     val wifiPasswordQueued = stringResource(R.string.wifi_password_queued)
     val wifiToggleQueued = stringResource(R.string.wifi_toggle_queued)
@@ -549,17 +536,59 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     val wifiCountryQueued = stringResource(R.string.wifi_country_queued)
 
     val radios = wifi?.optJSONArray("radios") ?: JSONArray()
+    val radio = findRadio(radios, selectedRadioId) ?: radios.optJSONObject(0)
+    val radioId = radio?.optString("id").takeUnless { it.isNullOrBlank() } ?: "radio0"
     val interfaces = radio?.optJSONArray("interfaces") ?: JSONArray()
+    val iface = findInterface(interfaces, selectedInterfaceId) ?: interfaces.optJSONObject(0)
+    val ifaceId = iface?.optString("id").takeUnless { it.isNullOrBlank() }
+    val radioOptions = (0 until radios.length()).mapNotNull(radios::optJSONObject).mapIndexed { index, item ->
+        val id = item.optString("id").ifBlank { "radio$index" }
+        SelectOption(id, listOf(item.optString("band"), item.optString("name").ifBlank { id }).filter(String::isNotBlank).joinToString(" · "))
+    }
+    val interfaceOptions = (0 until interfaces.length()).mapNotNull(interfaces::optJSONObject).map { item ->
+        val id = item.optString("id")
+        SelectOption(id, item.optString("ssid").ifBlank { id })
+    }
     val networkOptions = telemetry?.network?.optJSONArray("interfaces")?.let { array ->
         (0 until array.length()).mapNotNull(array::optJSONObject)
             .map { it.optString("interface") }.filter(String::isNotBlank).distinct()
             .map { SelectOption(it, it) }
     }.orEmpty()
+    LaunchedEffect(telemetry, selectedRadioId) {
+        val selected = findRadio(radios, selectedRadioId) ?: radios.optJSONObject(0) ?: return@LaunchedEffect
+        if (selectedRadioId != selected.optString("id")) selectedRadioId = selected.optString("id")
+        enabled = selected.optBoolean("up", true)
+        channel = selected.optString("channel").ifBlank { "auto" }
+        country = selected.optString("country")
+        htmode = selected.optString("htmode")
+        txpower = selected.optString("txpower")
+        val selectedIface = selected.optJSONArray("interfaces")?.optJSONObject(0)
+        selectedInterfaceId = selectedIface?.optString("id").orEmpty()
+        ssid = selectedIface?.optString("ssid").orEmpty()
+        newNetwork = selectedIface?.optString("network").orEmpty()
+        val schedule = selected.optJSONObject("schedule")
+        scheduleEnabled = schedule?.optBoolean("enabled") ?: false
+        scheduleDays = schedule?.optJSONArray("weekdays")?.let { array ->
+            (0 until array.length()).map { array.optString(it) }.filter(String::isNotBlank).toSet()
+        } ?: scheduleDays
+        scheduleStart = schedule?.optString("start").orEmpty().ifBlank { scheduleStart }
+        scheduleStop = schedule?.optString("stop").orEmpty().ifBlank { scheduleStop }
+    }
+    LaunchedEffect(selectedInterfaceId) {
+        val selected = findInterface(interfaces, selectedInterfaceId) ?: return@LaunchedEffect
+        ssid = selected.optString("ssid")
+        newNetwork = selected.optString("network")
+    }
     RouterPageHeader(
         title = stringResource(R.string.wifi),
         subtitle = stringResource(R.string.wifi_screen_summary),
         onRefresh = refresh,
     )
+    if (radioOptions.isNotEmpty()) {
+        SectionCard(title = stringResource(R.string.wifi_selected_radio), subtitle = radio?.optString("name").orEmpty()) {
+            OptionSelector(stringResource(R.string.wifi_radio), selectedRadioId, radioOptions, { selectedRadioId = it })
+        }
+    }
     SectionCard(
         title = stringResource(R.string.wifi_status),
         subtitle = stringResource(R.string.radio_count_value, radios.length()),
@@ -624,7 +653,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
 
     if (capabilities["wifi.radio.configure"] == true) {
         ExpandableSettingsCard(title = stringResource(R.string.wifi_radio_advanced), summary = listOf(channel, htmode, country).filter(String::isNotBlank).joinToString(" · ")) {
-            OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptions, { channel = it })
+            OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptionsForBand(radio?.optString("band").orEmpty()), { channel = it })
             OptionSelector(stringResource(R.string.wifi_width_mode), htmode, wifiModeOptions, { htmode = it })
             OptionSelector(stringResource(R.string.wifi_country), country, wifiCountryOptions, { country = it })
             OutlinedTextField(txpower, { txpower = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.wifi_txpower)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -671,6 +700,10 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             title = stringResource(R.string.main_wifi_network),
             subtitle = iface?.optString("ssid").orEmpty().ifBlank { stringResource(R.string.no_data) },
         ) {
+            if (interfaceOptions.size > 1) {
+                OptionSelector(stringResource(R.string.wifi_network_name), selectedInterfaceId, interfaceOptions, { selectedInterfaceId = it })
+                HorizontalDivider()
+            }
             if (capabilities["wifi.enable"] == true || capabilities["wifi.disable"] == true) {
                 SwitchSettingRow(
                     title = stringResource(R.string.wifi_state),
@@ -707,13 +740,13 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         }
     }
 
-    if (capabilities["wifi.set_channel"] == true || capabilities["wifi.set_country"] == true) {
+    if (capabilities["wifi.radio.configure"] != true && (capabilities["wifi.set_channel"] == true || capabilities["wifi.set_country"] == true)) {
         ExpandableSettingsCard(
             title = stringResource(R.string.wifi_radio_settings),
             summary = listOf(channel, country).filter(String::isNotBlank).joinToString(" · "),
         ) {
             if (capabilities["wifi.set_channel"] == true) {
-                OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptions, { channel = it })
+                OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptionsForBand(radio?.optString("band").orEmpty()), { channel = it })
                 PrimaryActionButton(
                     label = stringResource(R.string.change_channel),
                     onClick = { pendingCommand = PendingSafeCommand("wifi.set_channel", JSONObject().put("channel", channel).put("radio", radioId), wifiChannelQueued) },
@@ -1543,6 +1576,14 @@ private fun firstRadio(telemetry: TelemetryDto?): JSONObject? =
 
 private fun firstInterface(telemetry: TelemetryDto?): JSONObject? =
     firstRadio(telemetry)?.optJSONArray("interfaces")?.optJSONObject(0)
+
+private fun findRadio(radios: JSONArray, radioId: String): JSONObject? =
+    (0 until radios.length()).mapNotNull(radios::optJSONObject)
+        .firstOrNull { it.optString("id") == radioId }
+
+private fun findInterface(interfaces: JSONArray, interfaceId: String): JSONObject? =
+    (0 until interfaces.length()).mapNotNull(interfaces::optJSONObject)
+        .firstOrNull { it.optString("id") == interfaceId }
 
 @Composable
 private fun formatDuration(seconds: Long): String {

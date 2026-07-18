@@ -5,7 +5,7 @@
   if (!monitor || !canvas || !source) return;
 
   let points = JSON.parse(source.textContent || '[]');
-  let windowSeconds = 300;
+  let rangeName = 'live';
   const context = canvas.getContext('2d');
   const empty = monitor.querySelector('[data-chart-empty]');
 
@@ -17,11 +17,7 @@
     return `${Math.round(rate)} бит/с`;
   };
 
-  const visiblePoints = () => {
-    if (!points.length) return [];
-    const end = Date.parse(points[points.length - 1].created_at);
-    return points.filter((point) => end - Date.parse(point.created_at) <= windowSeconds * 1000);
-  };
+  const visiblePoints = () => points;
 
   const drawLine = (items, key, color, width, height, padding, maximum) => {
     context.beginPath();
@@ -81,25 +77,28 @@
   };
 
   const render = () => { renderValues(); renderChart(); };
-  document.querySelectorAll('[data-chart-window]').forEach((button) => {
-    button.addEventListener('click', () => {
-      windowSeconds = Number(button.dataset.chartWindow) || 300;
-      document.querySelectorAll('[data-chart-window]').forEach((item) => item.classList.toggle('is-active', item === button));
-      render();
+  const loadRange = async () => {
+    const response = await fetch(`${monitor.dataset.endpoint}?range=${encodeURIComponent(rangeName)}`, { credentials: 'same-origin' });
+    if (!response.ok) return;
+    const data = await response.json();
+    points = data.points || [];
+    render();
+  };
+
+  document.querySelectorAll('[data-chart-range]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      rangeName = button.dataset.chartRange || 'live';
+      document.querySelectorAll('[data-chart-range]').forEach((item) => item.classList.toggle('is-active', item === button));
+      try { await loadRange(); } catch (_) { /* Keep the last valid range. */ }
     });
   });
 
   const poll = async () => {
-    if (!document.hidden) {
+    if (!document.hidden && rangeName === 'live') {
       try {
-        const response = await fetch(monitor.dataset.endpoint, { credentials: 'same-origin' });
-        if (response.ok) {
-          const data = await response.json();
-          points = data.points || [];
-          const updated = document.querySelector('[data-live-updated]');
-          if (updated && points.length) updated.textContent = 'только что';
-          render();
-        }
+        await loadRange();
+        const updated = document.querySelector('[data-live-updated]');
+        if (updated && points.length) updated.textContent = 'только что';
       } catch (_) {
         // The last valid snapshot remains visible while the connection recovers.
       }

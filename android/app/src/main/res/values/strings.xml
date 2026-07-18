@@ -416,4 +416,10 @@
     <string name="load_1m">Load 1 min</string>
     <string name="memory_used">Memory used</string>
     <string name="clients_online">Online clients</string>
+    <string name="telemetry_range_live">2 h</string>
+    <string name="telemetry_range_day">24 h</string>
+    <string name="telemetry_range_week">7 d</string>
+    <string name="telemetry_range_month">30 d</string>
+    <string name="wifi_selected_radio">Selected band</string>
+    <string name="wifi_radio">Radio</string>
 </resources>

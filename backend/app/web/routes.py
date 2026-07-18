@@ -6,7 +6,7 @@ from pathlib import Path
 import secrets
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -72,6 +72,7 @@ from ..services.telemetry import (
     normalize_system_summary,
     normalize_vpn_summary,
     normalize_wifi_summary,
+    telemetry_alerts,
 )
 from .csrf import generate_csrf_token, verify_csrf_token
 
@@ -765,7 +766,7 @@ def device_page(
         None,
     )
     latest = format_timestamp(telemetry.created_at) if telemetry else "нет данных"
-    dashboard_history = device_telemetry_history(db, device_id, 60)
+    dashboard_history = device_telemetry_history(db, device_id, 120, range_name="live")
     db.commit()
 
     age = (
@@ -803,6 +804,7 @@ def device_page(
             "csrf_token": csrf_token,
             "latest": latest,
             "dashboard_history": dashboard_history,
+            "telemetry_alerts": telemetry_alerts(payload, age),
             "age": age,
             "system": system,
             "memory": memory,
@@ -868,6 +870,9 @@ def device_page(
 def device_live_data(
     device_id: UUID,
     limit: int = 60,
+    range_name: str = Query(
+        default="live", alias="range", pattern="^(live|24h|7d|30d)$"
+    ),
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
     wrtmonitor_session: str | None = Cookie(default=None),
@@ -883,7 +888,10 @@ def device_live_data(
             "last_seen_at": device.last_seen_at.isoformat()
             if device.last_seen_at
             else None,
-            "points": device_telemetry_history(db, device_id, limit),
+            "range": range_name,
+            "points": device_telemetry_history(
+                db, device_id, limit, range_name=range_name
+            ),
         }
     )
 

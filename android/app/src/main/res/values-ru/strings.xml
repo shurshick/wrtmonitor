@@ -416,4 +416,10 @@
     <string name="load_1m">Нагрузка 1 мин</string>
     <string name="memory_used">Память занята</string>
     <string name="clients_online">Клиенты в сети</string>
+    <string name="telemetry_range_live">2 ч</string>
+    <string name="telemetry_range_day">24 ч</string>
+    <string name="telemetry_range_week">7 д</string>
+    <string name="telemetry_range_month">30 д</string>
+    <string name="wifi_selected_radio">Выбранный диапазон</string>
+    <string name="wifi_radio">Радиомодуль</string>
 </resources>

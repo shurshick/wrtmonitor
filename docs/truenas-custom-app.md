@@ -16,6 +16,7 @@ ghcr.io/shurshick/wrtmonitor:latest
 - новый образ скачивается при redeploy;
 - в TrueNAS это делается через **Edit -> Save**;
 - PostgreSQL volume удалять нельзя, иначе потеряются пользователи, роутеры и история telemetry.
+- `WRTMONITOR_TELEMETRY_METRIC_RETENTION_DAYS` задаёт срок хранения компактных метрик графиков; по умолчанию 45 дней.
 
 ## Обновление до нового релиза
 

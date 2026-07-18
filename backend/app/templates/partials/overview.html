@@ -6,8 +6,12 @@
   <div class="health-bar__updated"><span>Последняя telemetry</span><strong data-live-updated>{{ age ~ ' сек назад' if age is not none else 'нет данных' }}</strong></div>
 </div>
 
+{% if telemetry_alerts %}<div class="dashboard-alerts" aria-label="Предупреждения">
+  {% for alert in telemetry_alerts %}<div class="notice notice--{{ 'danger' if alert.level == 'critical' else 'warning' }}"><strong>{{ alert.message }}</strong></div>{% endfor %}
+</div>{% endif %}
+
 <div class="dashboard-grid">
-  <section class="dashboard-card dashboard-card--traffic" data-live-monitor data-endpoint="/devices/{{ device.id }}/live?limit=120">
+  <section class="dashboard-card dashboard-card--traffic" data-live-monitor data-endpoint="/devices/{{ device.id }}/live">
     <header class="dashboard-card__header">
       <div><span class="eyebrow">Интернет</span><h2>Трафик в реальном времени</h2></div>
       <span class="status status--{{ 'online' if ns.wan and ns.wan.up else 'offline' }}">{{ 'Подключено' if ns.wan and ns.wan.up else 'Нет связи' }}</span>
@@ -18,7 +22,7 @@
     </div>
     <div class="traffic-chart"><canvas id="traffic-chart" aria-label="График скорости приёма и передачи"></canvas><div class="traffic-chart__empty" data-chart-empty>Накопление данных…</div></div>
     <div class="chart-toolbar" aria-label="Интервал графика">
-      <div><button class="chart-range is-active" type="button" data-chart-window="300">5 мин</button><button class="chart-range" type="button" data-chart-window="1800">30 мин</button><button class="chart-range" type="button" data-chart-window="7200">2 часа</button></div>
+      <div><button class="chart-range is-active" type="button" data-chart-range="live">2 часа</button><button class="chart-range" type="button" data-chart-range="24h">24 часа</button><button class="chart-range" type="button" data-chart-range="7d">7 дней</button><button class="chart-range" type="button" data-chart-range="30d">30 дней</button></div>
       <span data-live-samples>{{ dashboard_history|length }} точек</span>
     </div>
     <dl class="connection-facts">

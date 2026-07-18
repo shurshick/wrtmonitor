@@ -1,6 +1,7 @@
 package ru.wrtmonitor.app.api.dto
 
 import org.json.JSONObject
+import org.json.JSONArray
 
 data class DeviceDto(
     val id: String,
@@ -45,6 +46,7 @@ data class TelemetryDto(
     val clients: JSONObject? = null,
     val system: JSONObject? = null,
     val services: JSONObject? = null,
+    val alerts: JSONArray? = null,
 )
 
 data class TelemetryHistoryPointDto(

@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -85,12 +86,13 @@ fun DeviceDetailScreen(
     var state by remember(device.id) {
         mutableStateOf(DeviceDetailUiState(loading = true, device = device))
     }
+    var historyRange by rememberSaveable(device.id) { mutableStateOf("live") }
     fun refresh(showLoading: Boolean = true) {
         state = state.copy(loading = showLoading && state.telemetry == null, error = null)
         scope.launch {
             val (telemetryResult, historyResult) = withContext(Dispatchers.IO) {
                 WrtMonitorApi(serverUrl, accessToken).let { api ->
-                    api.getLatestTelemetry(device.id) to api.getTelemetryHistory(device.id, 120)
+                    api.getLatestTelemetry(device.id) to api.getTelemetryHistory(device.id, 120, historyRange)
                 }
             }
             if (
@@ -110,7 +112,7 @@ fun DeviceDetailScreen(
         }
     }
 
-    LaunchedEffect(serverUrl, accessToken, device.id) {
+    LaunchedEffect(serverUrl, accessToken, device.id, historyRange) {
         refresh()
         while (true) {
             delay(5_000)
@@ -135,6 +137,8 @@ fun DeviceDetailScreen(
                 device,
                 state.telemetry!!,
                 state.telemetryHistory,
+                historyRange,
+                { historyRange = it },
                 onOpenClients,
                 onOpenWifi,
                 onOpenNetwork,
@@ -150,6 +154,8 @@ private fun RouterOverview(
     device: DeviceDto,
     telemetry: TelemetryDto,
     history: List<TelemetryHistoryPointDto>,
+    historyRange: String,
+    onHistoryRangeChange: (String) -> Unit,
     onOpenClients: () -> Unit,
     onOpenWifi: () -> Unit,
     onOpenNetwork: () -> Unit,
@@ -191,7 +197,7 @@ private fun RouterOverview(
             StatusPill(if (healthy) stringResource(R.string.online) else stringResource(R.string.offline), healthy)
         }
     }
-    TrafficMonitorCard(history)
+    TrafficMonitorCard(history, historyRange, onHistoryRangeChange)
     SectionCard(title = stringResource(R.string.live_resources)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricTile(stringResource(R.string.uptime), formatDuration(uptime), Modifier.weight(1f))
@@ -239,7 +245,11 @@ private fun RouterOverview(
 }
 
 @Composable
-private fun TrafficMonitorCard(points: List<TelemetryHistoryPointDto>) {
+private fun TrafficMonitorCard(
+    points: List<TelemetryHistoryPointDto>,
+    historyRange: String,
+    onHistoryRangeChange: (String) -> Unit,
+) {
     val latest = points.lastOrNull()
     SectionCard(
         title = stringResource(R.string.live_traffic),
@@ -259,6 +269,24 @@ private fun TrafficMonitorCard(points: List<TelemetryHistoryPointDto>) {
                 MaterialTheme.colorScheme.secondary,
             )
         }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            listOf(
+                "live" to stringResource(R.string.telemetry_range_live),
+                "24h" to stringResource(R.string.telemetry_range_day),
+                "7d" to stringResource(R.string.telemetry_range_week),
+                "30d" to stringResource(R.string.telemetry_range_month),
+            ).forEach { (value, label) ->
+                FilterChip(
+                    selected = historyRange == value,
+                    onClick = { onHistoryRangeChange(value) },
+                    label = { Text(label) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
         TrafficChart(points)
         Text(
             stringResource(R.string.telemetry_points, points.size),
@@ -274,7 +302,7 @@ private fun TrafficChart(points: List<TelemetryHistoryPointDto>) {
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
     val grid = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-    val visible = points.takeLast(60)
+    val visible = points
     Box(
         Modifier
             .fillMaxWidth()

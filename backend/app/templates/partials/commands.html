@@ -1,4 +1,4 @@
-<div>
+<div data-command-journal>
   <div class="section-heading section-heading--compact"><p class="eyebrow">Журнал операций</p><h2>Последние команды</h2><p>Хранятся {{ command_pagination.retention_days }} дней, максимум {{ command_pagination.max_per_device }} записей на роутер.</p></div>
   <div class="command-list">
     {% for command in commands %}
@@ -25,9 +25,9 @@
   <div class="command-pagination">
     <span>Показано {{ command_pagination.start }}–{{ command_pagination.end }} из {{ command_pagination.total }}</span>
     <nav aria-label="Страницы журнала">
-      {% if command_pagination.page > 1 %}<a class="button button--secondary button--small" href="/devices/{{ device.id }}?section=management&command_page={{ command_pagination.page - 1 }}">Назад</a>{% endif %}
+      {% if command_pagination.page > 1 %}<a class="button button--secondary button--small" data-command-page href="/devices/{{ device.id }}?section=management&command_page={{ command_pagination.page - 1 }}">Назад</a>{% endif %}
       <span>{{ command_pagination.page }} / {{ command_pagination.pages }}</span>
-      {% if command_pagination.page < command_pagination.pages %}<a class="button button--secondary button--small" href="/devices/{{ device.id }}?section=management&command_page={{ command_pagination.page + 1 }}">Дальше</a>{% endif %}
+      {% if command_pagination.page < command_pagination.pages %}<a class="button button--secondary button--small" data-command-page href="/devices/{{ device.id }}?section=management&command_page={{ command_pagination.page + 1 }}">Дальше</a>{% endif %}
     </nav>
   </div>
   {% endif %}

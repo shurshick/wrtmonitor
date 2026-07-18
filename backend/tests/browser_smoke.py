@@ -173,6 +173,9 @@ def prepare_router() -> str:
                                 "up": True,
                                 "band": "2g",
                                 "channel": "6",
+                                "country": "RU",
+                                "htmode": "HT40",
+                                "txpower": 18,
                                 "interfaces": [
                                     {
                                         "id": "default_radio0",
@@ -181,7 +184,25 @@ def prepare_router() -> str:
                                         "encryption": "sae-mixed",
                                     }
                                 ],
-                            }
+                            },
+                            {
+                                "id": "radio1",
+                                "name": "radio1",
+                                "up": True,
+                                "band": "5g",
+                                "channel": "36",
+                                "country": "DE",
+                                "htmode": "VHT80",
+                                "txpower": 23,
+                                "interfaces": [
+                                    {
+                                        "id": "default_radio1",
+                                        "ssid": "WrtMonitor CI 5G",
+                                        "enabled": True,
+                                        "encryption": "sae-mixed",
+                                    }
+                                ],
+                            },
                         ],
                         "stations": [
                             {
@@ -266,6 +287,17 @@ def prepare_router() -> str:
             },
         )
         telemetry.raise_for_status()
+        for _ in range(7):
+            command = client.post(
+                f"/api/v1/devices/{device_id}/commands",
+                headers=owner_headers,
+                json={
+                    "command_type": "agent.update",
+                    "payload": {},
+                    "confirmed": True,
+                },
+            )
+            command.raise_for_status()
         return device_id
 
 
@@ -322,6 +354,41 @@ def run() -> None:
                     f"/devices/{device_id}?section={section}",
                     f"{name}-{section}.png",
                 )
+                if section == "wifi":
+                    selector = page.locator("[data-wifi-radio-select]")
+                    assert selector.count() == 1
+                    selector.select_option("radio1")
+                    assert (
+                        page.locator('[data-wifi-field="channel"]').input_value()
+                        == "36"
+                    )
+                    assert (
+                        page.locator('[data-wifi-field="htmode"]').input_value()
+                        == "VHT80"
+                    )
+                    assert (
+                        page.locator('[data-wifi-field="country"]').input_value()
+                        == "DE"
+                    )
+                    assert (
+                        page.locator('[data-wifi-field="txpower"]').input_value()
+                        == "23"
+                    )
+                    page.screenshot(
+                        path=str(ARTIFACTS / f"{name}-wifi-5g.png"), full_page=True
+                    )
+                if section == "management":
+                    journal = page.locator("[data-command-journal]")
+                    page.locator('[data-command-page]:has-text("Дальше")').click()
+                    page.wait_for_function(
+                        "document.querySelector('[data-command-journal] .command-pagination nav span').textContent.includes('2 / 2')"
+                    )
+                    assert "command_page=2" in page.url
+                    assert journal.count() == 1
+                    page.screenshot(
+                        path=str(ARTIFACTS / f"{name}-management-page2.png"),
+                        full_page=True,
+                    )
             browser.close()
 
 

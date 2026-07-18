@@ -4,7 +4,14 @@ from fastapi import HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from ..models import AuditLog, Device, DeviceCommand, DeviceTelemetry, User
+from ..models import (
+    AuditLog,
+    Device,
+    DeviceCommand,
+    DeviceTelemetry,
+    DeviceTelemetryMetric,
+    User,
+)
 from .auth import ensure_single_owner_access
 
 
@@ -43,6 +50,11 @@ def delete_device_permanently(db: Session, device: Device) -> None:
             )
         )
     db.execute(delete(DeviceTelemetry).where(DeviceTelemetry.device_id == device_id))
+    db.execute(
+        delete(DeviceTelemetryMetric).where(
+            DeviceTelemetryMetric.device_id == device_id
+        )
+    )
     db.execute(delete(DeviceCommand).where(DeviceCommand.device_id == device_id))
     db.delete(device)
 
