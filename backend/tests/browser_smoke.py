@@ -402,10 +402,10 @@ def run() -> None:
             page.screenshot(
                 path=str(ARTIFACTS / f"{name}-account-pairing.png"), full_page=True
             )
-            page.locator(
-                'form[action$="/revoke"] button', has_text="Отозвать QR"
-            ).click()
-            page.wait_for_url("**/account")
+            with page.expect_navigation(url="**/account", wait_until="networkidle"):
+                page.locator(
+                    'form[action$="/revoke"] button', has_text="Отозвать QR"
+                ).click()
             assert page.locator(".pairing-qr svg").count() == 0
             assert page.locator("[data-pairing-status]").inner_text() == "отозван"
             assert "pairing_token" not in page.content()
