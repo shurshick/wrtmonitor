@@ -51,7 +51,7 @@
 
     <a class="dashboard-card dashboard-card--network" href="/devices/{{ device.id }}?section=clients">
       <header class="dashboard-card__header"><div><span class="eyebrow">Домашняя сеть</span><h2>Сейчас в сети</h2></div><span class="dashboard-number" data-live-clients>{{ online_client_count }}</span></header>
-      <p>Активные Ethernet и Wi‑Fi-клиенты. Всего сохранено: {{ client_count }}.</p>
+      <p>Подтверждённые Ethernet и Wi‑Fi-клиенты. Недавно видели: {{ recent_client_count }} · всего сохранено: {{ client_count }}.</p>
       <span class="dashboard-card__link">Открыть список <span>&rarr;</span></span>
     </a>
 

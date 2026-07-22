@@ -12,8 +12,8 @@
     const query = (search?.value || '').trim().toLocaleLowerCase('ru');
     let visible = 0;
     rows.forEach((row) => {
-      const online = row.dataset.clientOnline === 'true';
-      const stateMatches = filter === 'all' || (filter === 'online' && online) || (filter === 'offline' && !online);
+      const presence = row.dataset.clientPresence || 'offline';
+      const stateMatches = filter === 'all' || filter === presence;
       const searchMatches = !query || (row.dataset.clientSearchValue || '').includes(query);
       row.hidden = !(stateMatches && searchMatches);
       if (!row.hidden) visible += 1;

@@ -739,7 +739,17 @@ def device_page(
         .order_by(NetworkClient.online.desc(), NetworkClient.last_seen_at.desc())
     ).all()
     clients = [client_response(db, item) for item in registry_clients]
+    presence_rank = {"online": 0, "recent": 1, "offline": 2}
+    clients.sort(
+        key=lambda item: (
+            presence_rank.get(str(item.get("presence_state")), 3),
+            str(item.get("display_name") or item.get("hostname") or item.get("mac")),
+        )
+    )
     online_client_count = sum(1 for item in clients if item.get("online"))
+    recent_client_count = sum(
+        1 for item in clients if item.get("presence_state") == "recent"
+    )
     lease_ipv4_by_mac = {
         str(item.get("mac") or "").lower(): str(item.get("ip") or "")
         for item in dhcp_config.get("leases") or []
@@ -1016,6 +1026,9 @@ def device_page(
             "online_client_count": online_client_count
             if clients
             else telemetry_clients.get("online_count", 0),
+            "recent_client_count": recent_client_count
+            if clients
+            else telemetry_clients.get("recent_count", 0),
             "client_traffic_available": bool(
                 supports["client_traffic"]
                 and any(item.get("online") and item.get("traffic") for item in clients)

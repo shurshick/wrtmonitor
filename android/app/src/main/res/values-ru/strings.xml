@@ -196,7 +196,10 @@
     <string name="client_search_hint">Имя, IP или MAC</string>
     <string name="client_filter_all">Все %1$d</string>
     <string name="client_filter_online">В сети %1$d</string>
+    <string name="client_filter_recent">Недавно %1$d</string>
     <string name="client_filter_offline">Не в сети %1$d</string>
+    <string name="client_recent">Недавно видели</string>
+    <string name="recent_clients">Недавно видели</string>
     <string name="home_network_clients">Клиенты домашней сети</string>
     <string name="clients_visible">Показано: %1$d</string>
     <string name="client_filter_empty">По этому фильтру устройств нет.</string>
@@ -207,6 +210,16 @@
     <string name="client_traffic_rx_tx">Трафик получено / отправлено</string>
     <string name="first_seen">Впервые замечен</string>
     <string name="last_activity">Последняя активность</string>
+    <string name="last_confirmed">Последний раз подтверждён в сети</string>
+    <string name="never_confirmed">Ни разу не подтверждался</string>
+    <string name="presence_source">Источник статуса</string>
+    <string name="presence_wifi">Активная Wi-Fi station</string>
+    <string name="presence_neighbour">Активная запись таблицы соседей</string>
+    <string name="presence_traffic">Изменились счётчики трафика</string>
+    <string name="presence_grace">Недавнее подтверждение</string>
+    <string name="presence_expired">Подтверждение устарело</string>
+    <string name="presence_stale">Устаревшая запись таблицы соседей</string>
+    <string name="presence_failed">Устройство недоступно</string>
     <string name="client_main_settings">Основные настройки</string>
     <string name="client_priority_limits">Приоритет и лимиты</string>
     <string name="client_source">Источник</string>

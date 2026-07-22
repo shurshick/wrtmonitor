@@ -125,6 +125,13 @@ def list_clients(
         item["signal_dbm"] = connection.get("signal_dbm")
         item["rx_bitrate"] = connection.get("rx_bitrate")
         item["tx_bitrate"] = connection.get("tx_bitrate")
+    rank = {"online": 0, "recent": 1, "offline": 2}
+    response.sort(
+        key=lambda item: (
+            rank.get(str(item.get("presence_state")), 3),
+            str(item.get("display_name") or item.get("hostname") or item.get("mac")),
+        )
+    )
     return response
 
 

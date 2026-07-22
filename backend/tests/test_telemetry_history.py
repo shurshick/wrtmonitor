@@ -56,7 +56,7 @@ def test_build_telemetry_history_calculates_rates_and_resources():
     assert points[1]["tx_bps"] == 400
     assert points[1]["memory_percent"] == 50.0
     assert points[1]["load_1m"] == 0.25
-    assert points[1]["client_count"] == 2
+    assert points[1]["client_count"] == 1
 
 
 def test_build_telemetry_history_treats_counter_reset_as_zero_rate():

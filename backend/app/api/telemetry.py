@@ -10,7 +10,7 @@ from ..db import get_db
 from ..models import DeviceTelemetry, User
 from ..schemas import TelemetryRequest
 from ..services.auth import current_user, device_from_token, settings
-from ..services.client_registry import sync_client_inventory
+from ..services.client_registry import client_inventory_summary, sync_client_inventory
 from ..services.devices import get_latest_agent_status, get_user_device_or_404
 from ..services.telemetry import (
     TELEMETRY_STALE_SECONDS,
@@ -18,7 +18,6 @@ from ..services.telemetry import (
     cleanup_device_telemetry,
     cleanup_device_telemetry_metrics,
     device_telemetry_history,
-    normalize_clients_summary,
     normalize_network_summary,
     normalize_services_summary,
     normalize_system_summary,
@@ -72,7 +71,13 @@ def latest_device_telemetry(
             "agent": {},
             "wifi": {"available": False, "radios": []},
             "network": {"interfaces": []},
-            "clients": {"count": 0, "items": []},
+            "clients": {
+                "count": 0,
+                "online_count": 0,
+                "recent_count": 0,
+                "offline_count": 0,
+                "items": [],
+            },
             "system": {},
             "services": {},
             "alerts": telemetry_alerts(None, None),
@@ -80,6 +85,7 @@ def latest_device_telemetry(
     age_seconds = max(
         0, int((datetime.now(UTC) - telemetry.created_at).total_seconds())
     )
+    clients = client_inventory_summary(db, device_id)
     return {
         "device_id": str(device_id),
         "telemetry": telemetry.payload,
@@ -91,7 +97,7 @@ def latest_device_telemetry(
         "agent": get_latest_agent_status(db, device_id),
         "wifi": normalize_wifi_summary(telemetry.payload),
         "network": normalize_network_summary(telemetry.payload),
-        "clients": normalize_clients_summary(telemetry.payload),
+        "clients": clients,
         "system": normalize_system_summary(telemetry.payload),
         "services": normalize_services_summary(telemetry.payload),
         "alerts": telemetry_alerts(telemetry.payload, age_seconds),

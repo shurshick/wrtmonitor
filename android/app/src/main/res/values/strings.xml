@@ -196,7 +196,10 @@
     <string name="client_search_hint">Name, IP or MAC</string>
     <string name="client_filter_all">All %1$d</string>
     <string name="client_filter_online">Online %1$d</string>
+    <string name="client_filter_recent">Recently seen %1$d</string>
     <string name="client_filter_offline">Offline %1$d</string>
+    <string name="client_recent">Recently seen</string>
+    <string name="recent_clients">Recently seen</string>
     <string name="home_network_clients">Home network clients</string>
     <string name="clients_visible">Shown: %1$d</string>
     <string name="client_filter_empty">No devices match this filter.</string>
@@ -207,6 +210,16 @@
     <string name="client_traffic_rx_tx">Traffic received / sent</string>
     <string name="first_seen">First seen</string>
     <string name="last_activity">Last activity</string>
+    <string name="last_confirmed">Last confirmed online</string>
+    <string name="never_confirmed">Never confirmed</string>
+    <string name="presence_source">Presence source</string>
+    <string name="presence_wifi">Active Wi-Fi station</string>
+    <string name="presence_neighbour">Active neighbour entry</string>
+    <string name="presence_traffic">Traffic counters changed</string>
+    <string name="presence_grace">Recent confirmation</string>
+    <string name="presence_expired">Confirmation expired</string>
+    <string name="presence_stale">Stale neighbour entry</string>
+    <string name="presence_failed">Neighbour is unreachable</string>
     <string name="client_main_settings">Main settings</string>
     <string name="client_priority_limits">Priority and limits</string>
     <string name="client_source">Source</string>

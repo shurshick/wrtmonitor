@@ -1,33 +1,35 @@
 {% set online_count = clients|selectattr('online')|list|length %}
+{% set recent_count = clients|selectattr('presence_state', 'equalto', 'recent')|list|length %}
 <div class="clients-summary">
   <div><span>Всего устройств</span><strong>{{ client_count }}</strong></div>
-  <div><span>Сейчас в сети</span><strong>{{ online_count }}</strong></div>
-  <div><span>Не в сети</span><strong>{{ client_count - online_count }}</strong></div>
+  <div><span>Подтверждены в сети</span><strong>{{ online_count }}</strong></div>
+  <div><span>Недавно видели</span><strong>{{ recent_count }}</strong></div>
+  <div><span>Не в сети</span><strong>{{ client_count - online_count - recent_count }}</strong></div>
   <p>Нажмите на устройство, чтобы открыть его параметры доступа и приоритет.</p>
 </div>
 
 <section class="workspace-section section client-list-section">
   <div class="card__heading client-list-heading">
     <div><p class="eyebrow">Устройства</p><h2>Клиенты домашней сети</h2></div>
-    {% if clients %}<div class="client-list-tools"><label class="client-search"><span class="visually-hidden">Найти устройство</span><input type="search" placeholder="Имя, IP или MAC" data-client-search></label><div class="client-filter" aria-label="Фильтр клиентов"><button class="is-active" type="button" data-client-filter="all" aria-pressed="true">Все</button><button type="button" data-client-filter="online" aria-pressed="false">В сети</button><button type="button" data-client-filter="offline" aria-pressed="false">Не в сети</button></div></div>{% endif %}
+    {% if clients %}<div class="client-list-tools"><label class="client-search"><span class="visually-hidden">Найти устройство</span><input type="search" placeholder="Имя, IP или MAC" data-client-search></label><div class="client-filter" aria-label="Фильтр клиентов"><button class="is-active" type="button" data-client-filter="all" aria-pressed="true">Все</button><button type="button" data-client-filter="online" aria-pressed="false">В сети</button><button type="button" data-client-filter="recent" aria-pressed="false">Недавно</button><button type="button" data-client-filter="offline" aria-pressed="false">Не в сети</button></div></div>{% endif %}
   </div>
   {% if clients %}
   <div class="client-list {{ '' if client_traffic_available else 'client-list--without-traffic' }}" data-client-list>
     <div class="client-list__header" aria-hidden="true"><span>Клиент</span><span>Адрес</span><span>Сегмент</span><span>Подключение</span>{% if client_traffic_available %}<span>Трафик</span>{% endif %}<span>Политика</span><span></span></div>
     {% for client in clients %}
     {% set assigned_profile = namespace(name='Без профиля') %}{% for profile in client_profiles %}{% if client.profile_id == profile.id|string %}{% set assigned_profile.name = profile.name %}{% endif %}{% endfor %}
-    <details class="client-list-row" data-client-online="{{ 'true' if client.online else 'false' }}" data-client-search-value="{{ ((client.display_name or '') ~ ' ' ~ (client.hostname or '') ~ ' ' ~ (client.vendor or '') ~ ' ' ~ (client.ip_address or '') ~ ' ' ~ client.mac)|lower }}">
+    <details class="client-list-row" data-client-presence="{{ client.presence_state }}" data-client-search-value="{{ ((client.display_name or '') ~ ' ' ~ (client.hostname or '') ~ ' ' ~ (client.vendor or '') ~ ' ' ~ (client.ip_address or '') ~ ' ' ~ client.mac)|lower }}">
       <summary class="client-list-row__summary">
-        <span class="client-list-cell client-list-cell--identity"><span class="client-state-dot {{ 'is-online' if client.online else '' }}"></span><span class="client-avatar">{{ (client.display_name or client.hostname or 'У')[:1]|upper }}</span><span><strong>{{ client.display_name or client.hostname or 'Неизвестное устройство' }}</strong><small>{{ client.vendor or 'Производитель не определён' }}</small></span></span>
+        <span class="client-list-cell client-list-cell--identity"><span class="client-state-dot {{ 'is-online' if client.presence_state == 'online' else 'is-recent' if client.presence_state == 'recent' else '' }}"></span><span class="client-avatar">{{ (client.display_name or client.hostname or 'У')[:1]|upper }}</span><span><strong>{{ client.display_name or client.hostname or 'Неизвестное устройство' }}</strong><small>{{ client.vendor or 'Производитель не определён' }}</small></span></span>
         <span class="client-list-cell"><strong>{{ client.current_ipv4 or client.ip_address or 'Адрес не определён' }}</strong><small>{{ client.mac }}{% if client.static_ipv4 %} · постоянный{% endif %}</small></span>
         <span class="client-list-cell"><strong>{{ client.interface or 'Домашняя сеть' }}</strong><small>{{ 'Постоянный IP' if client.static_ipv4 else 'Автоматический IP' }}</small></span>
-        <span class="client-list-cell"><span class="status status--{{ 'online' if client.online else 'offline' }}">{{ 'В сети' if client.online else 'Нет связи' }}</span><small>{{ client.last_seen_at|timestamp }}</small></span>
+        <span class="client-list-cell"><span class="status status--{{ 'online' if client.presence_state == 'online' else 'recent' if client.presence_state == 'recent' else 'offline' }}">{{ 'В сети' if client.presence_state == 'online' else 'Недавно' if client.presence_state == 'recent' else 'Нет связи' }}</span><small>{{ client.last_confirmed_at|timestamp if client.last_confirmed_at else 'не подтверждался' }}</small></span>
         {% if client_traffic_available %}<span class="client-list-cell"><strong>{% if client.online and client.traffic %}{{ client.traffic.rx_bytes|bytes }} / {{ client.traffic.tx_bytes|bytes }}{% else %}Нет текущих данных{% endif %}</strong><small>счётчики nlbwmon</small></span>{% endif %}
         <span class="client-list-cell"><strong>{{ 'Интернет заблокирован' if client.effective_policy.blocked else assigned_profile.name }}</strong><small>Приоритет: {{ {'low':'низкий','normal':'обычный','high':'высокий','realtime':'реальное время'}.get(client.effective_policy.qos.priority, 'обычный') }}</small></span>
         <span class="client-list-row__chevron" aria-hidden="true"></span>
       </summary>
       <div class="client-list-row__details">
-        <div class="client-detail-facts"><div><span>MAC-адрес</span><strong>{{ client.mac }}</strong></div><div><span>Впервые замечен</span><strong>{{ client.first_seen_at|timestamp }}</strong></div><div><span>Последняя активность</span><strong>{{ client.last_seen_at|timestamp }}</strong></div></div>
+        <div class="client-detail-facts"><div><span>MAC-адрес</span><strong>{{ client.mac }}</strong></div><div><span>Впервые замечен</span><strong>{{ client.first_seen_at|timestamp }}</strong></div><div><span>Последнее подтверждение</span><strong>{{ client.last_confirmed_at|timestamp if client.last_confirmed_at else 'нет' }}</strong></div><div><span>Источник статуса</span><strong>{{ {'wifi_station':'Wi-Fi station','neighbour_active':'активная запись соседей','traffic_activity':'активность трафика','neighbour_grace':'недавнее подтверждение','confirmation_expired':'подтверждение устарело','neighbour_stale':'устаревшая запись соседей','neighbour_failed':'устройство недоступно'}.get(client.presence_source, 'нет подтверждения') }}</strong></div></div>
         {% if supports.clients_policy %}
         <form class="compact-form client-policy-form" method="post" action="/devices/{{ device.id }}/clients/{{ client.id }}/policy" onsubmit="return confirm('Применить политику доступа для {{ client.mac }}?');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

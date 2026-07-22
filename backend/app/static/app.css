@@ -471,6 +471,8 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .client-list-cell--identity > span:last-child { display: grid; min-width: 0; gap: 2px; }
 .client-state-dot { width: 8px; height: 8px; border: 2px solid var(--muted); border-radius: 50%; }
 .client-state-dot.is-online { border-color: var(--success); background: var(--success); box-shadow: 0 0 0 4px rgb(66 211 126 / 10%); }
+.client-state-dot.is-recent { border-color: var(--warning); background: var(--warning); box-shadow: 0 0 0 4px rgb(245 189 79 / 10%); }
+.status--recent { background: #4b3d1e; color: var(--warning); }
 .client-list-row__chevron { width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform .15s ease; }
 .client-list-row[open] .client-list-row__chevron { transform: rotate(225deg) translate(-2px, -2px); }
 .client-list-row__details { padding: 16px 18px 18px; border-top: 1px solid var(--border); background: #0d1725; }

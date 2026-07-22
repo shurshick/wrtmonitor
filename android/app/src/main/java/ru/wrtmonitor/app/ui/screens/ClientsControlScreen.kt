@@ -79,7 +79,7 @@ import java.util.Locale
 
 private enum class ClientsView { List, Details, Settings }
 
-private enum class ClientsFilter { All, Online, Offline }
+private enum class ClientsFilter { All, Online, Recent, Offline }
 
 private val clientWeekdayOptions = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
     .map { SelectOption(it, it.uppercase()) }
@@ -341,12 +341,15 @@ private fun ClientsList(
     onOpenClient: (NetworkClientDto) -> Unit,
 ) {
     val onlineCount = clients.count(NetworkClientDto::online)
+    val recentCount = clients.count { it.presenceState == "recent" }
+    val offlineCount = clients.size - onlineCount - recentCount
     val query = search.trim().lowercase(Locale.getDefault())
     val filtered = clients.filter { client ->
         val stateMatches = when (filter) {
             ClientsFilter.All -> true
-            ClientsFilter.Online -> client.online
-            ClientsFilter.Offline -> !client.online
+            ClientsFilter.Online -> client.presenceState == "online"
+            ClientsFilter.Recent -> client.presenceState == "recent"
+            ClientsFilter.Offline -> client.presenceState == "offline"
         }
         val searchable = listOfNotNull(
             client.displayName,
@@ -379,25 +382,35 @@ private fun ClientsList(
         placeholder = { Text(stringResource(R.string.client_search_hint)) },
         singleLine = true,
     )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(
-            selected = filter == ClientsFilter.All,
-            onClick = { onFilterChange(ClientsFilter.All) },
-            modifier = Modifier.weight(1f),
-            label = { Text(stringResource(R.string.client_filter_all, clients.size), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        )
-        FilterChip(
-            selected = filter == ClientsFilter.Online,
-            onClick = { onFilterChange(ClientsFilter.Online) },
-            modifier = Modifier.weight(1f),
-            label = { Text(stringResource(R.string.client_filter_online, onlineCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        )
-        FilterChip(
-            selected = filter == ClientsFilter.Offline,
-            onClick = { onFilterChange(ClientsFilter.Offline) },
-            modifier = Modifier.weight(1f),
-            label = { Text(stringResource(R.string.client_filter_offline, clients.size - onlineCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = filter == ClientsFilter.All,
+                onClick = { onFilterChange(ClientsFilter.All) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(R.string.client_filter_all, clients.size), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            )
+            FilterChip(
+                selected = filter == ClientsFilter.Online,
+                onClick = { onFilterChange(ClientsFilter.Online) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(R.string.client_filter_online, onlineCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = filter == ClientsFilter.Recent,
+                onClick = { onFilterChange(ClientsFilter.Recent) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(R.string.client_filter_recent, recentCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            )
+            FilterChip(
+                selected = filter == ClientsFilter.Offline,
+                onClick = { onFilterChange(ClientsFilter.Offline) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(R.string.client_filter_offline, offlineCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            )
+        }
     }
 
     if (filtered.isEmpty()) {
@@ -408,7 +421,7 @@ private fun ClientsList(
     }
 
     val groups = filtered.groupBy(::clientGroupKey).toList().sortedWith(
-        compareBy<Pair<String, List<NetworkClientDto>>> { if (it.first == "offline") 1 else 0 }
+        compareBy<Pair<String, List<NetworkClientDto>>> { when (it.first) { "recent" -> 1; "offline" -> 2; else -> 0 } }
             .thenBy { it.first.lowercase(Locale.getDefault()) },
     )
     groups.forEach { (key, groupClients) ->
@@ -418,7 +431,13 @@ private fun ClientsList(
             initiallyExpanded = key != "offline",
             forceExpanded = query.isNotBlank() || filter != ClientsFilter.All,
             clients = groupClients.sortedWith(
-                compareByDescending<NetworkClientDto> { it.online }
+                compareBy<NetworkClientDto> {
+                    when (it.presenceState) {
+                        "online" -> 0
+                        "recent" -> 1
+                        else -> 2
+                    }
+                }
                     .thenBy { clientDisplayNameRaw(it).lowercase(Locale.getDefault()) },
             ),
             onOpenClient = onOpenClient,
@@ -481,7 +500,7 @@ private fun ClientRow(client: NetworkClientDto, onClick: () -> Unit) {
     ) {
         Box(
             Modifier.size(38.dp).background(
-                if (client.online) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                if (client.presenceState == "online") MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                 CircleShape,
             ),
             contentAlignment = Alignment.Center,
@@ -490,7 +509,11 @@ private fun ClientRow(client: NetworkClientDto, onClick: () -> Unit) {
                 clientIcon(client),
                 contentDescription = null,
                 modifier = Modifier.size(21.dp),
-                tint = if (client.online) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                tint = when (client.presenceState) {
+                    "online" -> MaterialTheme.colorScheme.secondary
+                    "recent" -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.outline
+                },
             )
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -513,7 +536,11 @@ private fun ClientRow(client: NetworkClientDto, onClick: () -> Unit) {
             Text(
                 clientConnectionLabel(client),
                 style = MaterialTheme.typography.labelMedium,
-                color = if (client.online) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                color = when (client.presenceState) {
+                    "online" -> MaterialTheme.colorScheme.secondary
+                    "recent" -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.outline
+                },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -577,8 +604,12 @@ private fun ClientDetails(
             )
         }
         StatusPill(
-            if (client.online) stringResource(R.string.online) else stringResource(R.string.offline),
-            client.online,
+            when (client.presenceState) {
+                "online" -> stringResource(R.string.online)
+                "recent" -> stringResource(R.string.client_recent)
+                else -> stringResource(R.string.offline)
+            },
+            client.presenceState == "online",
         )
     }
 
@@ -592,7 +623,8 @@ private fun ClientDetails(
         val speed = maxOf(client.rxBitrate ?: 0, client.txBitrate ?: 0)
         if (speed > 0) InfoRow(stringResource(R.string.client_link_speed), formatLinkRate(speed))
         InfoRow(stringResource(R.string.first_seen), formatClientDate(client.firstSeenAt), stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.last_activity), formatClientDate(client.lastSeenAt), stringResource(R.string.no_data))
+        InfoRow(stringResource(R.string.last_confirmed), formatClientDate(client.lastConfirmedAt), stringResource(R.string.never_confirmed))
+        InfoRow(stringResource(R.string.presence_source), presenceSourceLabel(client.presenceSource), stringResource(R.string.no_data))
     }
 
     if (canManagePolicy) {
@@ -814,7 +846,8 @@ private fun ClientBackRow(onBack: () -> Unit, label: String) {
 }
 
 private fun clientGroupKey(client: NetworkClientDto): String = when {
-    !client.online -> "offline"
+    client.presenceState == "offline" -> "offline"
+    client.presenceState == "recent" -> "recent"
     client.connectionType == "wifi" -> "wifi:${client.wifiSsid.orEmpty().ifBlank { "wifi" }}"
     client.connectionType == "wired" -> "wired"
     else -> "network"
@@ -823,6 +856,7 @@ private fun clientGroupKey(client: NetworkClientDto): String = when {
 @Composable
 private fun clientGroupTitle(key: String, clients: List<NetworkClientDto>): String = when {
     key == "offline" -> stringResource(R.string.offline_clients)
+    key == "recent" -> stringResource(R.string.recent_clients)
     key == "wired" -> stringResource(R.string.wired_clients)
     key.startsWith("wifi:") -> clients.firstOrNull()?.wifiSsid?.takeIf(String::isNotBlank) ?: stringResource(R.string.wifi_clients)
     else -> stringResource(R.string.home_network)
@@ -853,6 +887,18 @@ private fun looksLikeAddress(value: String): Boolean = value.contains(":") ||
     Regex("^\\d{1,3}(?:\\.\\d{1,3}){3}$").matches(value)
 
 private fun compactMac(mac: String): String = mac.lowercase(Locale.ROOT)
+
+@Composable
+private fun presenceSourceLabel(source: String?): String? = when (source) {
+    "wifi_station" -> stringResource(R.string.presence_wifi)
+    "neighbour_active" -> stringResource(R.string.presence_neighbour)
+    "traffic_activity" -> stringResource(R.string.presence_traffic)
+    "neighbour_grace" -> stringResource(R.string.presence_grace)
+    "confirmation_expired" -> stringResource(R.string.presence_expired)
+    "neighbour_stale" -> stringResource(R.string.presence_stale)
+    "neighbour_failed" -> stringResource(R.string.presence_failed)
+    else -> null
+}
 
 @Composable
 private fun clientConnectionLabel(client: NetworkClientDto): String = when (client.connectionType) {

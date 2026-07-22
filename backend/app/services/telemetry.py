@@ -632,14 +632,10 @@ def normalize_vpn_summary(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
-    active_neighbour_states = {
-        "REACHABLE",
-        "STALE",
-        "DELAY",
-        "PROBE",
-        "PERMANENT",
-        "NOARP",
-    }
+    confirmed_neighbour_states = {"REACHABLE", "DELAY", "PROBE"}
+    recent_neighbour_states = {"STALE"}
+    offline_neighbour_states = {"FAILED", "INCOMPLETE"}
+    preferred_neighbour_states = confirmed_neighbour_states | recent_neighbour_states
     clients = payload.get("clients") or {}
     dhcp = clients.get("dhcp") or payload.get("dhcp") or {}
     leases = dhcp.get("leases") or []
@@ -726,8 +722,8 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
         item["interface"] = neighbour.get("interface") or item.get("interface")
         current_state = str(item.get("state") or "").upper()
         candidate_state = str(neighbour.get("state") or "").upper()
-        if candidate_state in active_neighbour_states or (
-            current_state not in active_neighbour_states and candidate_state
+        if candidate_state in preferred_neighbour_states or (
+            current_state not in preferred_neighbour_states and candidate_state
         ):
             item["state"] = candidate_state
         item["vendor"] = neighbour.get("vendor") or item.get("vendor")
@@ -772,15 +768,32 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
             if item.get("source") != "wifi":
                 item["source"] = f"{item.get('source') or 'client'}+wifi"
 
+    for item in by_mac.values():
+        state = str(item.get("state") or "").upper()
+        if state == "WIFI":
+            item["presence_evidence"] = "confirmed"
+            item["presence_source"] = "wifi_station"
+        elif state in confirmed_neighbour_states:
+            item["presence_evidence"] = "confirmed"
+            item["presence_source"] = "neighbour_active"
+        elif state in recent_neighbour_states:
+            item["presence_evidence"] = "recent"
+            item["presence_source"] = "neighbour_stale"
+        elif state in offline_neighbour_states:
+            item["presence_evidence"] = "offline"
+            item["presence_source"] = "neighbour_failed"
+        else:
+            item["presence_evidence"] = "unknown"
+            item["presence_source"] = None
+
     items = sorted(
         by_mac.values(),
         key=lambda item: (str(item.get("hostname") or "~"), str(item.get("ip") or "")),
     )
     online_count = sum(
-        1
-        for item in items
-        if str(item.get("state") or "").upper() in (active_neighbour_states | {"WIFI"})
+        1 for item in items if item.get("presence_evidence") == "confirmed"
     )
+    recent_count = sum(1 for item in items if item.get("presence_evidence") == "recent")
     traffic_available = any(
         item.get("rx_bytes") is not None or item.get("tx_bytes") is not None
         for item in items
@@ -788,6 +801,7 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "count": len(items),
         "online_count": online_count,
+        "recent_count": recent_count,
         "traffic_available": traffic_available,
         "items": items,
     }
