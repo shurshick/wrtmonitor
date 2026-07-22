@@ -174,6 +174,7 @@ def exchange_mobile_pairing_token(
         ip_address=request_ip(request),
         client_type="mobile_pairing",
     )
+    db.flush()
     now = datetime.now(UTC)
     item.used_at = now
     item.used_session_id = session.id
