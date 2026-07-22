@@ -119,6 +119,11 @@ private val weekdayOptions = listOf("mon", "tue", "wed", "thu", "fri", "sat", "s
 private val priorityOptions = listOf("low", "normal", "high", "realtime").map { SelectOption(it, it) }
 private val leaseTimeOptions = listOf("30m", "1h", "6h", "12h", "24h", "72h", "168h").map { SelectOption(it, it) }
 private val wanProtocolOptions = listOf("dhcp", "static", "pppoe").map { SelectOption(it, it.uppercase()) }
+private val encryptedDnsProviderOptions = listOf(
+    SelectOption("cloudflare", "Cloudflare"),
+    SelectOption("quad9", "Quad9"),
+    SelectOption("google", "Google"),
+)
 private val wifiCountryOptions = listOf("RU", "BY", "KZ", "AM", "AZ", "GE", "KG", "UZ", "DE", "FR", "GB", "IT", "ES", "PL", "NL", "FI", "SE", "NO", "US", "CA", "CN", "JP", "KR", "AU").map { SelectOption(it, it) }
 private val wifiChannelOptions = (
     listOf("auto") + (1..14).map(Int::toString) +
@@ -137,6 +142,12 @@ private val wifiEncryptionOptions = listOf("sae-mixed", "sae", "psk2", "none").m
 private val processSignalOptions = listOf("TERM", "HUP", "INT", "KILL").map { SelectOption(it, it) }
 private val firewallPolicyOptions = listOf("ACCEPT", "REJECT", "DROP").map { SelectOption(it, it) }
 private val firewallProtocolOptions = listOf("tcpudp", "tcp", "udp", "icmp", "all").map { SelectOption(it, it.uppercase()) }
+
+private fun encryptedDnsProviderFromValue(value: String): String = when {
+    value.contains("quad9", ignoreCase = true) -> "quad9"
+    value.contains("google", ignoreCase = true) -> "google"
+    else -> "cloudflare"
+}
 
 @Composable
 private fun ClientListItem(
@@ -988,6 +999,10 @@ fun NetworkControlScreen(
     var lanIp by remember { mutableStateOf("") }
     var lanNetmask by remember { mutableStateOf("") }
     var dnsServers by remember { mutableStateOf("") }
+    var dotProvider by remember { mutableStateOf("cloudflare") }
+    var dotEnabled by remember { mutableStateOf(false) }
+    var dohProvider by remember { mutableStateOf("cloudflare") }
+    var dohEnabled by remember { mutableStateOf(false) }
     var forwardName by remember { mutableStateOf("") }
     var forwardExternalPort by remember { mutableStateOf("") }
     var forwardInternalIp by remember { mutableStateOf("") }
@@ -1067,6 +1082,13 @@ fun NetworkControlScreen(
                             (0 until array.length()).joinToString(", ") { array.optString(it) }
                         }.orEmpty()
                         dnsServers = wanDns
+                        val privacy = result.data.network?.optJSONObject("dns_privacy")
+                        val dot = privacy?.optJSONObject("dot")
+                        val doh = privacy?.optJSONObject("doh")
+                        dotEnabled = dot?.optBoolean("running", false) == true
+                        dohEnabled = doh?.optBoolean("running", false) == true
+                        dotProvider = encryptedDnsProviderFromValue(dot?.optString("provider").orEmpty())
+                        dohProvider = encryptedDnsProviderFromValue(doh?.optString("resolver_url").orEmpty())
                         interfaceName = wan?.optString("interface").orEmpty()
                         sqmInterface = wan?.optString("device").orEmpty()
                         primaryWan = wan?.optString("interface").orEmpty()
@@ -1086,6 +1108,13 @@ fun NetworkControlScreen(
         ?: telemetry?.payload?.optJSONObject("network")?.optJSONArray("interfaces")
         ?: telemetry?.payload?.optJSONObject("network")?.optJSONArray("interface")
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
+    val networkDevices = telemetry?.payload?.optJSONObject("network_devices")
+    val networkDeviceNames = remember(networkDevices?.toString()) {
+        buildList {
+            val keys = networkDevices?.keys()
+            while (keys?.hasNext() == true) add(keys.next())
+        }.sorted()
+    }
     val interfaceOptions = interfaces?.let { array ->
         (0 until array.length()).mapNotNull(array::optJSONObject)
             .flatMap { listOf(it.optString("interface"), it.optString("device")) }
@@ -1209,6 +1238,39 @@ fun NetworkControlScreen(
         }
     }
 
+    if (mode == NetworkScreenMode.Internet && networkDeviceNames.isNotEmpty()) {
+        ExpandableSettingsCard(
+            stringResource(R.string.physical_network_devices),
+            stringResource(R.string.interfaces_count, networkDeviceNames.size),
+        ) {
+            networkDeviceNames.forEachIndexed { index, name ->
+                val item = networkDevices?.optJSONObject(name)
+                val carrier = item?.optBoolean("carrier", false) == true
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(name, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            listOfNotNull(
+                                item?.optInt("speed_mbps")?.takeIf { it > 0 }?.let { "$it Mbit/s" },
+                                item?.optString("duplex")?.takeIf(String::isNotBlank),
+                                item?.optInt("mtu")?.takeIf { it > 0 }?.let { "MTU $it" },
+                            ).joinToString(" · ").ifBlank { stringResource(R.string.no_data) },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            "↓ ${formatClientBytes(item?.optLong("rx_bytes") ?: 0)} · ↑ ${formatClientBytes(item?.optLong("tx_bytes") ?: 0)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    StatusPill(if (carrier) stringResource(R.string.link_up) else stringResource(R.string.link_down), carrier)
+                }
+                if (index < networkDeviceNames.lastIndex) HorizontalDivider()
+            }
+        }
+    }
+
     if (mode == NetworkScreenMode.Internet && capabilities["network.wan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.wan_settings), wanProtocol.uppercase()) {
             OptionSelector(stringResource(R.string.connection_type), wanProtocol, wanProtocolOptions, { wanProtocol = it })
@@ -1248,6 +1310,43 @@ fun NetworkControlScreen(
                 onClick = { pendingCommand = PendingSafeCommand("dns.set_servers", JSONObject().put("servers", dnsServers), genericCommandQueued) },
                 modifier = Modifier.align(Alignment.End),
             )
+        }
+    }
+    if (mode == NetworkScreenMode.Internet && capabilities.keys.any { it.startsWith("dns.") }) {
+        ExpandableSettingsCard(stringResource(R.string.encrypted_dns), stringResource(R.string.encrypted_dns_summary)) {
+            Text("DNS over TLS", style = MaterialTheme.typography.titleSmall)
+            if (capabilities["dns.dot.configure"] == true) {
+                OptionSelector(stringResource(R.string.dns_provider), dotProvider, encryptedDnsProviderOptions, { dotProvider = it })
+                SwitchSettingRow(stringResource(R.string.enabled), checked = dotEnabled, onCheckedChange = { dotEnabled = it })
+                PrimaryActionButton(
+                    stringResource(R.string.apply_dot),
+                    { pendingCommand = PendingSafeCommand("dns.set_dot", JSONObject().put("provider", dotProvider).put("enabled", dotEnabled), genericCommandQueued) },
+                    Modifier.align(Alignment.End),
+                )
+            } else if (capabilities["dns.encrypted.install"] == true) {
+                SecondaryActionButton(
+                    stringResource(R.string.install_dot),
+                    { pendingCommand = PendingSafeCommand("dns.install_dot", JSONObject(), genericCommandQueued) },
+                    Modifier.align(Alignment.End),
+                )
+            }
+            HorizontalDivider()
+            Text("DNS over HTTPS", style = MaterialTheme.typography.titleSmall)
+            if (capabilities["dns.doh.configure"] == true) {
+                OptionSelector(stringResource(R.string.dns_provider), dohProvider, encryptedDnsProviderOptions, { dohProvider = it })
+                SwitchSettingRow(stringResource(R.string.enabled), checked = dohEnabled, onCheckedChange = { dohEnabled = it })
+                PrimaryActionButton(
+                    stringResource(R.string.apply_doh),
+                    { pendingCommand = PendingSafeCommand("dns.set_doh", JSONObject().put("provider", dohProvider).put("enabled", dohEnabled), genericCommandQueued) },
+                    Modifier.align(Alignment.End),
+                )
+            } else if (capabilities["dns.encrypted.install"] == true) {
+                SecondaryActionButton(
+                    stringResource(R.string.install_doh),
+                    { pendingCommand = PendingSafeCommand("dns.install_doh", JSONObject(), genericCommandQueued) },
+                    Modifier.align(Alignment.End),
+                )
+            }
         }
     }
     if (mode == NetworkScreenMode.Internet && capabilities["qos.sqm"] == true) {

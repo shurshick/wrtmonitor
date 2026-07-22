@@ -17,6 +17,7 @@ SUMS = ROOT / "SHA256SUMS.txt"
 AGENT_VERSION = ROOT / "agent-version.txt"
 REQUIRED_LIBS = [
     "common.sh",
+    "dependencies.sh",
     "status.sh",
     "update.sh",
     "telemetry.sh",
@@ -78,6 +79,53 @@ def test_manifest_lists_required_files():
         assert name in entries
     for name in REQUIRED_LIBS:
         assert f"lib/{name}" in entries
+
+
+def test_nlbwmon_runtime_repairs_empty_config_and_starts_service(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    system_root = tmp_path / "root"
+    init_dir = system_root / "etc" / "init.d"
+    init_dir.mkdir(parents=True)
+    init_log = tmp_path / "nlbwmon-init.log"
+    uci_log = tmp_path / "uci.log"
+    init_script = init_dir / "nlbwmon"
+    init_script.write_text(
+        '#!/bin/sh\nprintf "%s\\n" "$1" >>"$NLBW_INIT_LOG"\nexit 0\n',
+        encoding="utf-8",
+    )
+    init_script.chmod(0o755)
+    env = shell_env()
+    env["WRTMONITOR_SYSTEM_ROOT"] = system_root.as_posix()
+    env["NLBW_INIT_LOG"] = init_log.as_posix()
+    env["UCI_LOG"] = uci_log.as_posix()
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "dependencies.sh").as_posix()}'
+        uci() {{
+            printf '%s\\n' "$*" >>"$UCI_LOG"
+            case "$*" in
+                "-q get nlbwmon.@nlbwmon[0]") return 1 ;;
+                "-q get nlbwmon.@nlbwmon[0].local_network") return 1 ;;
+                "add nlbwmon nlbwmon") printf 'cfgfixture\\n' ;;
+            esac
+            return 0
+        }}
+        nlbw() {{ return 0; }}
+        ensure_nlbwmon_runtime
+    """
+    subprocess.run([shell, "-c", script], check=True, env=env)
+    uci_calls = uci_log.read_text(encoding="utf-8")
+    assert "add nlbwmon nlbwmon" in uci_calls
+    for network in ("192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8", "lan"):
+        assert f"add_list nlbwmon.@nlbwmon[0].local_network={network}" in uci_calls
+    assert init_log.read_text(encoding="utf-8").splitlines() == [
+        "enable",
+        "restart",
+        "running",
+    ]
 
 
 def test_sha256sums_lists_payload_files():
@@ -406,10 +454,26 @@ def test_installer_bootstraps_runtime_dependencies():
     ):
         assert dependency in source
     assert "ensure_optional_dependencies()" in source
-    for package in ("nlbwmon", "wireguard-tools", "openvpn-openssl", "pbr"):
+    for package in ("wireguard-tools", "openvpn-openssl", "pbr"):
         assert package in source
-    assert "/etc/init.d/nlbwmon enable" in source
-    assert "/etc/init.d/nlbwmon restart" in source
+    assert "wrtmonitor-agent ensure-dependencies" in source
+
+
+def test_required_dependency_manifest_covers_runtime_features():
+    source = read_text(LIB_DIR / "dependencies.sh")
+    for dependency in (
+        "nlbw|nlbwmon",
+        "sysupgrade|base-files",
+        "tar|tar",
+        "base64|coreutils-base64",
+        "ethtool|ethtool",
+        "iwinfo|iwinfo",
+        "ip|ip-full",
+        "ca-bundle",
+    ):
+        assert dependency in source
+    assert "ensure_nlbwmon_runtime" in source
+    assert "nlbwmon_runtime_status" in source
 
 
 def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
@@ -417,8 +481,8 @@ def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
     assert 'column["mac"]' in source
     assert 'column["rx_bytes"]' in source
     assert 'column["tx_bytes"]' in source
-    assert '"traffic":{"available":%s,"status":"%s"}' in source
-    assert "/etc/init.d/nlbwmon start" in source
+    assert '"traffic":{"available":%s,"status":"%s","records":%s}' in source
+    assert "ensure_nlbwmon_runtime" in source
 
 
 def test_agent_version_file_matches_entrypoint():
@@ -473,6 +537,9 @@ def test_management_capabilities_cover_full_router_foundation():
         "dhcp.delete_lease",
         "dhcp.configure",
         "dns.configure",
+        "dns.encrypted.install",
+        "dns.dot.configure",
+        "dns.doh.configure",
         "firewall.port_forward",
         "wifi.guest",
         "telemetry.wifi.stations",
@@ -514,6 +581,10 @@ def test_management_commands_have_openwrt_handlers():
         "network.set_lan",
         "dhcp.set_pool",
         "dns.set_servers",
+        "dns.install_dot",
+        "dns.install_doh",
+        "dns.set_dot",
+        "dns.set_doh",
         "firewall.set_port_forward",
         "firewall.delete_port_forward",
         "client.set_blocked",
@@ -551,3 +622,4 @@ def test_management_commands_have_openwrt_handlers():
     ):
         assert f"{command})" in source
     assert 'backup_config sqm "$command_id" "$command_type"' in source
+    assert "dhcp.@dnsmasq[0].server=127.0.0.1#5053" in source

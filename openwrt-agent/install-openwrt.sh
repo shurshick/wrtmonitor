@@ -90,14 +90,6 @@ ensure_dependencies() {
 ensure_optional_dependencies() {
     package_manager_name >/dev/null 2>&1 || return 0
     refresh_package_indexes >/dev/null 2>&1 || true
-    if ! command -v nlbw >/dev/null 2>&1; then
-        echo "Installing optional per-client traffic dependency: nlbwmon"
-        install_packages nlbwmon >/dev/null 2>&1 || echo "Optional package nlbwmon is unavailable; per-client traffic counters are disabled" >&2
-    fi
-    if command -v nlbw >/dev/null 2>&1 && [ -x /etc/init.d/nlbwmon ]; then
-        /etc/init.d/nlbwmon enable >/dev/null 2>&1 || true
-        /etc/init.d/nlbwmon restart >/dev/null 2>&1 || /etc/init.d/nlbwmon start >/dev/null 2>&1 || true
-    fi
     if ! command -v wg >/dev/null 2>&1; then
         echo "Installing optional VPN dependency: wireguard-tools"
         install_packages wireguard-tools >/dev/null 2>&1 || echo "Optional package wireguard-tools is unavailable; WireGuard management is disabled" >&2
@@ -344,6 +336,11 @@ fi
 
 install_payload
 write_config_if_needed
+
+if ! /usr/bin/wrtmonitor-agent ensure-dependencies; then
+    echo "Agent installation stopped: required runtime dependencies are unavailable" >&2
+    exit 1
+fi
 
 /etc/init.d/wrtmonitor enable
 /etc/init.d/wrtmonitor restart

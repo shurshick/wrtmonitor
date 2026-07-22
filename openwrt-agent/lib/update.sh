@@ -325,6 +325,12 @@ check_for_update() {
         release_update_lock
         return 1
     fi
+    if ! /usr/bin/wrtmonitor-agent ensure-dependencies; then
+        perform_rollback "internal" "required dependency installation failed" || true
+        rm -rf "$tmp_dir"
+        release_update_lock
+        return 1
+    fi
     if ! verify_installed_agent "$remote_version"; then
         perform_rollback "internal" "installed agent validation failed" || true
         rm -rf "$tmp_dir"

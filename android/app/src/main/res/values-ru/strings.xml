@@ -280,6 +280,17 @@
     <string name="router_ip">IPv4-адрес роутера</string>
     <string name="save_lan">Сохранить LAN</string>
     <string name="apply_dns">Применить DNS</string>
+    <string name="physical_network_devices">Физические сетевые устройства</string>
+    <string name="link_up">Связь есть</string>
+    <string name="link_down">Нет связи</string>
+    <string name="encrypted_dns">Шифрованный DNS</string>
+    <string name="encrypted_dns_summary">DNS over TLS и DNS over HTTPS</string>
+    <string name="dns_provider">Провайдер</string>
+    <string name="enabled">Включено</string>
+    <string name="apply_dot">Применить DoT</string>
+    <string name="apply_doh">Применить DoH</string>
+    <string name="install_dot">Установить Stubby</string>
+    <string name="install_doh">Установить DoH-прокси</string>
     <string name="time_settings">Настройки времени</string>
     <string name="timezone_region">Часовой пояс</string>
     <string name="save_time_settings">Сохранить время</string>

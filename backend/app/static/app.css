@@ -669,3 +669,11 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .profile-create { width: 100%; }
   .profile-create > summary { margin-left: 0; }
 }
+.device-port-list--detailed { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.device-port { border: 1px solid var(--border); padding: 14px; background: var(--surface-muted); }
+.device-port > div { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.device-port dl { display: grid; grid-template-columns: minmax(80px, .7fr) 1.3fr; gap: 6px 12px; margin: 12px 0 0; }
+.device-port dt { color: var(--muted); }
+.device-port dd { margin: 0; overflow-wrap: anywhere; }
+.encrypted-dns-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.encrypted-dns-grid > section { border: 1px solid var(--border); padding: 16px; }

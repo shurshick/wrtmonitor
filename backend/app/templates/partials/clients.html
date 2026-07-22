@@ -47,7 +47,9 @@
     {% endfor %}
     <div class="client-list-empty" data-client-empty hidden>По этому фильтру устройств нет.</div>
   </div>
-  {% if supports.client_traffic and not client_traffic_available %}<p class="notice notice--compact">{{ 'nlbwmon установлен, но запрос счётчиков завершился ошибкой. Перезапустите службу nlbwmon или обновите агент.' if client_traffic_status == 'query_failed' else 'nlbwmon установлен, но источник счётчиков ещё не готов. Агент повторит запрос автоматически.' }}</p>{% elif not supports.client_traffic %}<p class="notice notice--compact">Учёт трафика по клиентам недоступен: агент не подтвердил работающий nlbwmon.</p>{% endif %}
+  {% if not client_traffic_available %}
+  <p class="notice notice--compact">{% if client_traffic_status == 'not_installed' %}Пакет nlbwmon не установлен. Обновите агент: обязательная зависимость будет установлена автоматически.{% elif client_traffic_status == 'service_missing' %}Пакет nlbwmon установлен некорректно: служба отсутствует. Переустановите пакет или обновите агент.{% elif client_traffic_status == 'service_stopped' %}Служба nlbwmon остановлена. Агент попытается запустить её при следующей telemetry.{% elif client_traffic_status == 'query_failed' %}Служба nlbwmon работает, но локальный сокет не отвечает. Агент автоматически перезапустит службу и повторит запрос.{% else %}Счётчики клиентов ещё не получены. Агент повторит запрос автоматически.{% endif %}</p>
+  {% endif %}
   {% else %}<div class="empty-state"><h2>Устройств пока нет</h2><p>Список появится после следующего опроса роутера.</p></div>{% endif %}
 </section>
 

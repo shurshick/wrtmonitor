@@ -14,6 +14,8 @@ transaction_configs_for_command() {
         vpn.openvpn.set_client|vpn.openvpn.delete_client) printf 'openvpn' ;;
         vpn.policy.set|vpn.policy.delete) printf 'pbr' ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.set_pool|dns.set_servers) printf 'dhcp' ;;
+        dns.set_dot) printf 'dhcp stubby' ;;
+        dns.set_doh) printf 'dhcp https-dns-proxy' ;;
         firewall.set_port_forward|firewall.delete_port_forward|client.set_blocked|client.set_policy) printf 'firewall' ;;
         firewall.set_zone|firewall.delete_zone|firewall.set_forwarding|firewall.delete_forwarding|firewall.set_rule|firewall.delete_rule) printf 'firewall' ;;
         qos.set_sqm) printf 'sqm' ;;
@@ -32,7 +34,7 @@ transaction_service() {
 
 transaction_is_connectivity_sensitive() {
     case "$1" in
-        wifi.*|network.set_*|dhcp.*|dns.set_servers|firewall.*|client.set_blocked|client.set_policy|qos.set_sqm) return 0 ;;
+        wifi.*|network.set_*|dhcp.*|dns.set_*|firewall.*|client.set_blocked|client.set_policy|qos.set_sqm) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -113,6 +115,8 @@ transaction_restore() {
     if printf '%s' "$configs" | grep -qw wireless; then wifi reload >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw network; then "$(transaction_service network)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw dhcp; then "$(transaction_service dnsmasq)" restart >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw stubby; then "$(transaction_service stubby)" restart >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw https-dns-proxy; then "$(transaction_service https-dns-proxy)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw firewall; then "$(transaction_service firewall)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw sqm; then "$(transaction_service sqm)" restart >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw mwan3; then "$(transaction_service mwan3)" restart >/dev/null 2>&1 || restore_status=1; fi

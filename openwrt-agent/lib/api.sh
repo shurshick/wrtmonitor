@@ -138,6 +138,7 @@ main() {
         check-route) check_route_json; printf '\n' ;;
         check-wifi) check_wifi_json; printf '\n' ;;
         check-dependencies) dependencies_json; printf '\n' ;;
+        ensure-dependencies) ensure_agent_dependencies ;;
         diagnostics)
             diagnostics_json
             printf '\n'
@@ -164,7 +165,7 @@ main() {
         version) printf '%s\n' "$AGENT_VERSION" ;;
         support-bundle) support_bundle "${2:-}" ;;
         *)
-            echo "Usage: wrtmonitor-agent capabilities [--json]|check-server|check-dns|check-route|check-wifi|check-dependencies|diagnostics [--json]|list-config-backups|register|send-now|daemon|apply-wifi-schedules|update [--force] [--allow-downgrade]|rollback|update-status [--json]|debug|debug-telemetry|debug-api|version|support-bundle [--public]" >&2
+            echo "Usage: wrtmonitor-agent capabilities [--json]|check-server|check-dns|check-route|check-wifi|check-dependencies|ensure-dependencies|diagnostics [--json]|list-config-backups|register|send-now|daemon|apply-wifi-schedules|update [--force] [--allow-downgrade]|rollback|update-status [--json]|debug|debug-telemetry|debug-api|version|support-bundle [--public]" >&2
             exit 1
             ;;
     esac

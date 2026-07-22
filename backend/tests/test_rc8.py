@@ -147,6 +147,28 @@ def test_wan_and_lan_management_payloads_are_normalized():
     )
 
 
+def test_encrypted_dns_commands_are_validated():
+    assert validate_command_payload("dns.install_dot", {}) == {"mode": "dot"}
+    assert validate_command_payload("dns.install_doh", {}) == {"mode": "doh"}
+    assert validate_command_payload(
+        "dns.set_dot", {"provider": "quad9", "enabled": True}
+    ) == {"mode": "dot", "provider": "quad9", "enabled": True}
+    assert validate_command_payload(
+        "dns.set_doh", {"provider": "google", "enabled": False}
+    ) == {"mode": "doh", "provider": "google", "enabled": False}
+
+
+def test_encrypted_dns_rejects_unknown_provider():
+    try:
+        validate_command_payload(
+            "dns.set_dot", {"provider": "unknown", "enabled": True}
+        )
+    except Exception as exc:
+        assert exc.status_code == 400
+    else:
+        raise AssertionError("Expected unsupported DNS provider to be rejected")
+
+
 def test_router_management_rejects_invalid_high_risk_payloads():
     invalid = (
         ("network.set_wan", {"protocol": "shell"}),

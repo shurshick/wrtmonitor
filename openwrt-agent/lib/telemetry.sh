@@ -37,7 +37,7 @@ telemetry_payload() {
         "$(traffic_json)" \
         "$(ubus_json system board)" \
         "$(network_summary_json)" \
-        "$(ubus_json network.device status)" \
+        "$(network_devices_json)" \
         "$(wifi_status_json)" \
         "$(ubus_json network.wireless status)" \
         "$(clients_json)" \
@@ -319,7 +319,8 @@ dhcp_json() {
 clients_json() {
     neighbours=""
     traffic_available=false
-    traffic_status="unavailable"
+    traffic_status="$(nlbwmon_runtime_status)"
+    traffic_records=0
     if command -v ip >/dev/null 2>&1; then
         while IFS='|' read -r ip_address device mac state; do
             [ -n "$mac" ] || continue
@@ -338,10 +339,13 @@ $(ip neigh show 2>/dev/null | awk '
 }' || true)
 EOF
     fi
-    if command -v nlbw >/dev/null 2>&1; then
-        if [ -x /etc/init.d/nlbwmon ] && ! /etc/init.d/nlbwmon running >/dev/null 2>&1; then
-            /etc/init.d/nlbwmon start >/dev/null 2>&1 || true
-        fi
+    case "$traffic_status" in
+    service_stopped|query_failed)
+        ensure_nlbwmon_runtime >/dev/null 2>&1 || true
+        traffic_status="$(nlbwmon_runtime_status)"
+        ;;
+    esac
+    if [ "$traffic_status" = "ready" ]; then
         traffic_file="/tmp/wrtmonitor-nlbw-$$.csv"
         if nlbw -c csv -g mac -n -q -s ';' >"$traffic_file" 2>/dev/null; then
             traffic_available=true
@@ -372,6 +376,7 @@ EOF
                 case "$tx_bytes" in ""|*[!0-9]*) tx_bytes=0 ;; esac
                 [ -n "$neighbours" ] && neighbours="$neighbours,"
                 neighbours="$neighbours{\"mac\":\"$(json_escape "$mac")\",\"state\":\"traffic\",\"rx_bytes\":$rx_bytes,\"tx_bytes\":$tx_bytes}"
+                traffic_records=$((traffic_records + 1))
             done <"$traffic_rows"
             rm -f "$traffic_rows"
         else
@@ -379,7 +384,45 @@ EOF
         fi
         rm -f "$traffic_file"
     fi
-    printf '{"neighbours":[%s],"dhcp":%s,"traffic":{"available":%s,"status":"%s"}}' "$neighbours" "$(dhcp_json)" "$traffic_available" "$traffic_status"
+    printf '{"neighbours":[%s],"dhcp":%s,"traffic":{"available":%s,"status":"%s","records":%s}}' "$neighbours" "$(dhcp_json)" "$traffic_available" "$traffic_status" "$traffic_records"
+}
+
+network_devices_json() {
+    root="${WRTMONITOR_SYSTEM_ROOT:-}"
+    items=""
+    for path in "$root"/sys/class/net/*; do
+        [ -e "$path" ] || continue
+        name="$(basename "$path")"
+        read_value() { cat "$path/$1" 2>/dev/null || true; }
+        carrier="$(read_value carrier)"
+        mtu="$(read_value mtu)"
+        mac="$(read_value address)"
+        operstate="$(read_value operstate)"
+        speed="$(read_value speed)"
+        duplex="$(read_value duplex)"
+        [ "$speed" = "-1" ] && speed=""
+        if [ -z "$speed" ] && command -v ethtool >/dev/null 2>&1; then
+            speed="$(ethtool "$name" 2>/dev/null | sed -n 's/^[[:space:]]*Speed:[[:space:]]*\([0-9][0-9]*\)Mb\/s.*/\1/p' | head -n 1)"
+            duplex="$(ethtool "$name" 2>/dev/null | sed -n 's/^[[:space:]]*Duplex:[[:space:]]*//p' | tr '[:upper:]' '[:lower:]' | head -n 1)"
+        fi
+        rx_bytes="$(read_value statistics/rx_bytes)"; tx_bytes="$(read_value statistics/tx_bytes)"
+        rx_packets="$(read_value statistics/rx_packets)"; tx_packets="$(read_value statistics/tx_packets)"
+        rx_errors="$(read_value statistics/rx_errors)"; tx_errors="$(read_value statistics/tx_errors)"
+        rx_dropped="$(read_value statistics/rx_dropped)"; tx_dropped="$(read_value statistics/tx_dropped)"
+        case "$mtu" in ''|*[!0-9]*) mtu=null ;; esac
+        case "$speed" in ''|*[!0-9]*) speed=null ;; esac
+        case "$rx_bytes" in ''|*[!0-9]*) rx_bytes=null ;; esac
+        case "$tx_bytes" in ''|*[!0-9]*) tx_bytes=null ;; esac
+        case "$rx_packets" in ''|*[!0-9]*) rx_packets=null ;; esac
+        case "$tx_packets" in ''|*[!0-9]*) tx_packets=null ;; esac
+        case "$rx_errors" in ''|*[!0-9]*) rx_errors=null ;; esac
+        case "$tx_errors" in ''|*[!0-9]*) tx_errors=null ;; esac
+        case "$rx_dropped" in ''|*[!0-9]*) rx_dropped=null ;; esac
+        case "$tx_dropped" in ''|*[!0-9]*) tx_dropped=null ;; esac
+        [ -n "$items" ] && items="$items,"
+        items="$items\"$(json_escape "$name")\":{\"carrier\":$( [ "$carrier" = 1 ] && printf true || printf false ),\"operstate\":\"$(json_escape "$operstate")\",\"mtu\":$mtu,\"macaddr\":\"$(json_escape "$mac")\",\"speed_mbps\":$speed,\"duplex\":\"$(json_escape "$duplex")\",\"rx_bytes\":$rx_bytes,\"tx_bytes\":$tx_bytes,\"rx_packets\":$rx_packets,\"tx_packets\":$tx_packets,\"rx_errors\":$rx_errors,\"tx_errors\":$tx_errors,\"rx_dropped\":$rx_dropped,\"tx_dropped\":$tx_dropped}"
+    done
+    printf '{%s}' "$items"
 }
 
 network_summary_json() {
@@ -446,7 +489,19 @@ network_summary_json() {
         index=$((index + 1))
     done
     rm -f "$tmp"
-    printf '{"interfaces":[%s]}' "$items"
+    printf '{"interfaces":[%s],"dns_privacy":%s}' "$items" "$(dns_privacy_json)"
+}
+
+dns_privacy_json() {
+    dot_installed=false; dot_running=false; doh_installed=false; doh_running=false
+    [ -x /etc/init.d/stubby ] && dot_installed=true
+    [ -x /etc/init.d/stubby ] && /etc/init.d/stubby running >/dev/null 2>&1 && dot_running=true
+    [ -x /etc/init.d/https-dns-proxy ] && doh_installed=true
+    [ -x /etc/init.d/https-dns-proxy ] && /etc/init.d/https-dns-proxy running >/dev/null 2>&1 && doh_running=true
+    dot_provider="$(uci -q get 'stubby.@resolver[0].tls_auth_name' 2>/dev/null || true)"
+    doh_url="$(uci -q get 'https-dns-proxy.@https-dns-proxy[0].resolver_url' 2>/dev/null || true)"
+    printf '{"dot":{"installed":%s,"running":%s,"provider":"%s"},"doh":{"installed":%s,"running":%s,"resolver_url":"%s"}}' \
+        "$dot_installed" "$dot_running" "$(json_escape "$dot_provider")" "$doh_installed" "$doh_running" "$(json_escape "$doh_url")"
 }
 
 wireless_section_name() {

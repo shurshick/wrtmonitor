@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="13"
+CAPABILITIES_VERSION="14"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -6,7 +6,7 @@ capability_path() {
 
 capability_keys() {
     printf '%s\n' \
-        agent.status agent.update agent.set_interval agent.rollback agent.disable config.transaction \
+        agent.status agent.update agent.set_interval agent.rollback agent.disable agent.dependencies config.transaction \
         telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.wifi.stations telemetry.clients telemetry.clients.traffic telemetry.services \
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
@@ -16,7 +16,7 @@ capability_keys() {
         vpn.wireguard.read vpn.wireguard.configure vpn.openvpn.read vpn.openvpn.configure vpn.policy.read vpn.policy.configure telemetry.vpn \
         maintenance.packages.read maintenance.packages.write maintenance.backup maintenance.sysupgrade.check maintenance.sysupgrade.apply \
         maintenance.logs maintenance.processes maintenance.cron maintenance.diagnostics.bundle maintenance.recovery telemetry.maintenance \
-        clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure firewall.port_forward \
+        clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure dns.encrypted.install dns.dot.configure dns.doh.configure firewall.port_forward \
         system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
         diagnostics.check_server diagnostics.check_dependencies diagnostics.check_dns diagnostics.check_route diagnostics.check_wifi
 }
@@ -96,7 +96,9 @@ has_wifi_stations() {
 
 has_client_traffic() {
     has_commands nlbw || return 1
-    nlbw -c json -g mac -n >/dev/null 2>&1
+    [ -x "$(capability_path /etc/init.d/nlbwmon)" ] || return 1
+    "$(capability_path /etc/init.d/nlbwmon)" running >/dev/null 2>&1 || return 1
+    nlbw -c csv -g mac -n -q -s ';' >/dev/null 2>&1
 }
 
 has_wifi_roaming() {
@@ -138,6 +140,7 @@ has_config_transactions() {
 capability_supported() {
     case "$1" in
         agent.status) return 0 ;;
+        agent.dependencies) package_manager_name >/dev/null 2>&1 ;;
         agent.update) has_commands curl sha256sum cp mv ;;
         agent.set_interval) has_uci_config wrtmonitor ;;
         agent.rollback) has_commands cp mv && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
@@ -185,6 +188,9 @@ capability_supported() {
         clients.block|clients.policy|firewall.port_forward) has_firewall_write ;;
         qos.sqm) has_uci_config sqm && [ -x "$(capability_path /etc/init.d/sqm)" ] ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.configure|dns.configure) has_dhcp_write ;;
+        dns.encrypted.install) package_manager_name >/dev/null 2>&1 ;;
+        dns.dot.configure) has_dhcp_write && has_uci_config stubby && [ -x "$(capability_path /etc/init.d/stubby)" ] ;;
+        dns.doh.configure) has_dhcp_write && has_uci_config https-dns-proxy && [ -x "$(capability_path /etc/init.d/https-dns-proxy)" ] ;;
         system.reboot) has_commands reboot ;;
         system.set_hostname|system.set_timezone) has_system_write ;;
         system.restart_service) [ -d "$(capability_path /etc/init.d)" ] ;;
@@ -210,7 +216,7 @@ capability_unavailable_reason() {
         telemetry.wifi|wifi.*|diagnostics.check_wifi) printf 'wireless configuration, required radio features or wifi utility is unavailable' ;;
         telemetry.wifi.stations) printf 'hostapd ubus client telemetry is unavailable' ;;
         telemetry.clients|clients.read) printf 'neighbour and DHCP lease sources are unavailable' ;;
-        telemetry.clients.traffic) printf 'nlbwmon is not installed or its client is unavailable' ;;
+        telemetry.clients.traffic) printf 'nlbwmon is not installed, stopped or its query socket is unavailable' ;;
         telemetry.services|system.restart_service) printf 'OpenWrt init services are unavailable' ;;
         network.interface_restart) printf 'ubus network runtime, ifup or ifdown is unavailable' ;;
         network.*) printf 'network UCI configuration or init service is unavailable' ;;
@@ -228,6 +234,9 @@ capability_unavailable_reason() {
         clients.block|clients.policy|firewall.port_forward) printf 'firewall UCI configuration or service is unavailable' ;;
         qos.sqm) printf 'sqm-scripts package or SQM init service is unavailable' ;;
         dhcp.*|dns.configure) printf 'DHCP configuration or dnsmasq service is unavailable' ;;
+        dns.encrypted.install) printf 'package manager is unavailable' ;;
+        dns.dot.configure) printf 'stubby package or service is unavailable' ;;
+        dns.doh.configure) printf 'https-dns-proxy package or service is unavailable' ;;
         system.reboot) printf 'reboot utility is unavailable' ;;
         system.set_hostname|system.set_timezone) printf 'system UCI configuration is unavailable' ;;
         system.set_ntp) printf 'system UCI configuration or sysntpd is unavailable' ;;

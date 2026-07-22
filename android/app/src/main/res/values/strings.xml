@@ -280,6 +280,17 @@
     <string name="router_ip">Router IPv4 address</string>
     <string name="save_lan">Save LAN settings</string>
     <string name="apply_dns">Apply DNS</string>
+    <string name="physical_network_devices">Physical network devices</string>
+    <string name="link_up">Link up</string>
+    <string name="link_down">No link</string>
+    <string name="encrypted_dns">Encrypted DNS</string>
+    <string name="encrypted_dns_summary">DNS over TLS and DNS over HTTPS</string>
+    <string name="dns_provider">Provider</string>
+    <string name="enabled">Enabled</string>
+    <string name="apply_dot">Apply DoT</string>
+    <string name="apply_doh">Apply DoH</string>
+    <string name="install_dot">Install Stubby</string>
+    <string name="install_doh">Install DoH proxy</string>
     <string name="time_settings">Time settings</string>
     <string name="timezone_region">Time zone region</string>
     <string name="save_time_settings">Save time settings</string>

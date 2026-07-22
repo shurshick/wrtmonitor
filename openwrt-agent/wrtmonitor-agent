@@ -5,7 +5,7 @@ export PATH
 
 # Used by sourced libraries from lib/*.sh.
 # shellcheck disable=SC2034
-AGENT_VERSION="0.14.2"
+AGENT_VERSION="0.15.0"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
@@ -38,6 +38,7 @@ load_lib() {
 }
 
 load_lib common.sh
+load_lib dependencies.sh
 load_lib status.sh
 load_lib update.sh
 load_lib telemetry.sh

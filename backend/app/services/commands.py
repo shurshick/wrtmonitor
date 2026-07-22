@@ -341,6 +341,30 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "dns.install_dot": {
+        "risk_level": "level_2_safe_write",
+        "capability": "dns.encrypted.install",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "dns.install_doh": {
+        "risk_level": "level_2_safe_write",
+        "capability": "dns.encrypted.install",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "dns.set_dot": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "dns.dot.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "dns.set_doh": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "dns.doh.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "firewall.set_port_forward": {
         "risk_level": "level_4_disruptive",
         "capability": "firewall.port_forward",
@@ -1612,6 +1636,17 @@ def validate_command_payload(
         return _normalize_dhcp_pool_payload(normalized_payload)
     if command_type == "dns.set_servers":
         return _normalize_dns_payload(normalized_payload)
+    if command_type in {"dns.install_dot", "dns.install_doh"}:
+        return {"mode": command_type.rsplit("_", 1)[1]}
+    if command_type in {"dns.set_dot", "dns.set_doh"}:
+        provider = str(normalized_payload.get("provider") or "cloudflare").strip()
+        if provider not in {"cloudflare", "quad9", "google"}:
+            raise HTTPException(status_code=400, detail="Unsupported DNS provider")
+        return {
+            "mode": command_type.rsplit("_", 1)[1],
+            "provider": provider,
+            "enabled": _boolean(normalized_payload, "enabled", default=True),
+        }
     if command_type == "firewall.set_port_forward":
         return _normalize_port_forward_payload(normalized_payload)
     if command_type == "firewall.delete_port_forward":
@@ -1955,6 +1990,14 @@ def build_command_payload_from_web_form(
         }
     elif command_type == "dns.set_servers":
         payload = {"servers": servers}
+    elif command_type in {"dns.install_dot", "dns.install_doh"}:
+        payload = {"mode": command_type.rsplit("_", 1)[1]}
+    elif command_type in {"dns.set_dot", "dns.set_doh"}:
+        payload = {
+            "mode": command_type.rsplit("_", 1)[1],
+            "provider": name or "cloudflare",
+            "enabled": enabled.lower() == "true",
+        }
     elif command_type == "firewall.set_port_forward":
         payload = {
             "name": name,

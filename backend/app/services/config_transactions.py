@@ -47,6 +47,8 @@ CONFIG_TRANSACTION_SCOPES: dict[str, tuple[str, ...]] = {
     "dhcp.delete_lease": ("dhcp",),
     "dhcp.set_pool": ("dhcp",),
     "dns.set_servers": ("dhcp",),
+    "dns.set_dot": ("dhcp", "stubby"),
+    "dns.set_doh": ("dhcp", "https-dns-proxy"),
     "firewall.set_port_forward": ("firewall",),
     "firewall.delete_port_forward": ("firewall",),
     "firewall.set_zone": ("firewall",),

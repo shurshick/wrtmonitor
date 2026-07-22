@@ -67,6 +67,9 @@ def prepare_router() -> str:
             "dhcp.delete_lease": True,
             "dhcp.configure": True,
             "dns.configure": True,
+            "dns.encrypted.install": True,
+            "dns.dot.configure": True,
+            "dns.doh.configure": True,
             "firewall.port_forward": True,
             "system.reboot": True,
             "system.set_hostname": True,
@@ -233,6 +236,24 @@ def prepare_router() -> str:
                             }
                         ],
                     },
+                    "network_devices": {
+                        "eth0": {
+                            "carrier": True,
+                            "operstate": "up",
+                            "mtu": 1500,
+                            "macaddr": "02:00:00:00:00:01",
+                            "speed_mbps": 2500,
+                            "duplex": "full",
+                            "rx_bytes": 16000000,
+                            "tx_bytes": 4000000,
+                            "rx_packets": 12000,
+                            "tx_packets": 8000,
+                            "rx_errors": 0,
+                            "tx_errors": 0,
+                            "rx_dropped": 1,
+                            "tx_dropped": 0,
+                        }
+                    },
                     "network": {
                         "interfaces": [
                             {
@@ -251,7 +272,19 @@ def prepare_router() -> str:
                                 "proto": "dhcp",
                                 "device": "eth0",
                             },
-                        ]
+                        ],
+                        "dns_privacy": {
+                            "dot": {
+                                "installed": True,
+                                "running": True,
+                                "provider": "cloudflare-dns.com",
+                            },
+                            "doh": {
+                                "installed": True,
+                                "running": False,
+                                "resolver_url": "https://dns.quad9.net/dns-query",
+                            },
+                        },
                     },
                     "perimeter": {
                         "firewall_zones": [
@@ -463,6 +496,20 @@ def run() -> None:
                         path=str(ARTIFACTS / f"{name}-overview-24h-memory.png"),
                         full_page=True,
                     )
+                if section == "internet":
+                    assert (
+                        "2500 Мбит/с" in page.locator(".device-port-list").inner_text()
+                    )
+                    assert (
+                        "DNS over TLS"
+                        in page.locator(".encrypted-dns-grid").inner_text()
+                    )
+                    page.get_by_text("Подключение к интернету", exact=True).click()
+                    wan = page.locator("[data-wan-form]")
+                    wan.locator("[data-wan-protocol]").select_option("dhcp")
+                    assert wan.locator('[data-wan-fields="static"]').is_hidden()
+                    wan.locator("[data-wan-protocol]").select_option("pppoe")
+                    assert wan.locator('[data-wan-fields="pppoe"]').is_visible()
                 if section == "wifi":
                     selector = page.locator("[data-wifi-radio-select]")
                     assert selector.count() == 1

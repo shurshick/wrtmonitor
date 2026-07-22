@@ -35,14 +35,15 @@ OpenWrt agent собирает:
 
 - `system`: uptime, load 1/5/15, память, hostname, kernel, conntrack, сервисы, часовой пояс, NTP и `ubus system info`;
 - `board`: `ubus system board`;
-- `network`: интерфейсы, IPv4 с длиной префикса и маской, IPv6, gateway, DNS, устройства и traffic;
+- `network`: интерфейсы, IPv4 с длиной префикса и маской, IPv6, gateway, DNS, DoT/DoH и traffic;
+- `network_devices`: carrier, operstate, MAC, MTU, скорость, duplex, RX/TX, пакеты, ошибки и drops физических интерфейсов;
 - `wifi`: multi-radio snapshot, SSID, channel, country, htmode и параметры интерфейсов;
 - `clients`: DHCP leases, neighbour table и, при наличии `nlbwmon`, RX/TX по MAC;
 - `dhcp`: динамические и статические leases, реальные границы и срок аренды DHCP-пулов;
-- `agent`: версия, update status, interval и capabilities.
+- `agent`: версия, update status, interval, capabilities и статус обязательных зависимостей.
 - `vpn`: WireGuard-интерфейсы и peer, handshake/RX/TX, OpenVPN profiles и правила PBR без приватных ключей.
 
-`schema_version=2` остаётся форматом telemetry; capability report в `v0.14.2` имеет версию 13. Сервер принимает как текущий компактный формат агента, так и прежний ответ `ubus`. Активные Wi-Fi-станции содержат SSID, диапазон, интерфейс и параметры сигнала. LAN передаёт реальные `ip6assign`, `ip6hint`, RA, DHCPv6 и NDP, а источник клиентского трафика сообщает отдельный статус `ready`, `query_failed` или `unavailable`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество и ограниченные списки пакетов/обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки. Объекты firewall содержат безопасные UCI section для адресного редактирования и удаления.
+`schema_version=2` остаётся форматом telemetry; capability report в `v0.15.0` имеет версию 14. Сервер принимает как текущий компактный формат агента, так и прежний ответ `ubus`. Активные Wi-Fi-станции содержат SSID, диапазон, интерфейс и параметры сигнала. LAN передаёт реальные `ip6assign`, `ip6hint`, RA, DHCPv6 и NDP, а источник клиентского трафика сообщает статус `ready`, `not_installed`, `service_missing`, `service_stopped` или `query_failed`. Отсутствующие подсистемы возвращаются пустыми блоками и не ломают ingest. Блок `maintenance` содержит количество и ограниченные списки пакетов/обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки. Объекты firewall содержат безопасные UCI section для адресного редактирования и удаления.
 
 Retention разделён: последние 100 исходных JSON snapshots нужны для диагностики, а компактные метрики графиков хранятся 45 дней. Срок метрик задаётся `WRTMONITOR_TELEMETRY_METRIC_RETENTION_DAYS`.
 

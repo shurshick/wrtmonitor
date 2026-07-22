@@ -3,23 +3,11 @@ server_host() {
 }
 
 dependencies_json() {
-    missing=""
-    for tool in curl jsonfilter uci ubus sha256sum; do
-        if ! command -v "$tool" >/dev/null 2>&1; then
-            [ -n "$missing" ] && missing="$missing,"
-            missing="$missing\"$tool\""
-        fi
-    done
-    if ! [ -r /etc/ssl/certs/ca-certificates.crt ] \
-        && ! [ -r /etc/ssl/cert.pem ] \
-        && ! [ -r /etc/ssl/certs/ca-bundle.crt ]; then
-        [ -n "$missing" ] && missing="$missing,"
-        missing="$missing\"ca-bundle\""
-    fi
-    if [ -n "$missing" ]; then
-        printf '{"status":"failed","missing":[%s]}' "$missing"
+    manifest="$(dependency_manifest_json)"
+    if dependencies_healthy; then
+        printf '{"status":"ok","manifest":%s}' "$manifest"
     else
-        printf '{"status":"ok","missing":[]}'
+        printf '{"status":"failed","manifest":%s}' "$manifest"
     fi
 }
 
