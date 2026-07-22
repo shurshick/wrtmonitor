@@ -497,6 +497,9 @@ def run() -> None:
                         full_page=True,
                     )
                 if section == "internet":
+                    page.get_by_text(
+                        "Физические сетевые устройства", exact=True
+                    ).click()
                     assert (
                         "2500 Мбит/с" in page.locator(".device-port-list").inner_text()
                     )
