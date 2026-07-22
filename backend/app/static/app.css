@@ -107,6 +107,7 @@ ul { margin: 0 0 16px; padding-left: 20px; }
 .control-form--columns { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; padding-top: 16px; border-top: 1px solid var(--border); }
 .control-form__actions { grid-column: 1 / -1; }
 .form-grid, .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+[data-wan-fields][hidden] { display: none; }
 .settings-grid { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); align-items: start; }
 .service-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .service-pill { padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); font-size: 12px; }
