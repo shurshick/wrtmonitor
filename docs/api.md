@@ -17,6 +17,29 @@ Access-token владельца действует 15 минут. Refresh-token 
 
 Access token используется клиентами владельца. Device token агента не участвует в refresh flow.
 
+## Mobile pairing
+
+Android подключается только к WrtMonitor Server. Pairing не регистрирует OpenWrt-агент и не открывает прямой доступ к роутеру.
+
+- `POST /api/v1/mobile-pairing/tokens` — создать одноразовый token владельца;
+- `GET /api/v1/mobile-pairing/tokens/{id}` — получить состояние;
+- `DELETE /api/v1/mobile-pairing/tokens/{id}` — отозвать неиспользованный token;
+- `POST /api/v1/mobile-pairing/exchange` — однократно обменять token на access/refresh-сессию;
+- `GET /api/v1/auth/sessions?client_type=mobile_pairing&active_only=true` — список активных мобильных сессий;
+- `DELETE /api/v1/auth/sessions/{id}` — отозвать выбранную мобильную сессию.
+
+Создание, чтение и отзыв pairing token требуют bearer-сессию владельца. Exchange не требует авторизации, но защищён одноразовостью, 10-минутным TTL и PostgreSQL rate limiting.
+
+Формат QR v1 — компактный JSON:
+
+```json
+{"type":"wrtmonitor-mobile-setup","version":1,"server_url":"https://monitor.example.ru","pairing_token":"ONE_TIME_TOKEN"}
+```
+
+В базе сохраняется только SHA-256 hash. Исходный token возвращается один раз при создании и не попадает в аудит. Публичный URL берётся только из `WRTMONITOR_PUBLIC_SERVER_URL` или значения первичной настройки, поэтому заголовок reverse proxy не может подменить адрес QR.
+
+Отзыв «всех сессий кроме текущей» не реализован намеренно: stateless access token не содержит идентификатор refresh-сессии, поэтому сервер не может надёжно определить «текущую». Доступен точечный отзыв каждой сессии.
+
 ## Основные backend endpoints
 
 Сохраняются и поддерживаются:

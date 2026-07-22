@@ -16,6 +16,7 @@ from backend.app.models import (
     AppSetting,
     AuditLog,
     ClientTrafficSample,
+    MobilePairingAttempt,
     Device,
     DeviceCommand,
     DeviceTelemetry,
@@ -487,6 +488,7 @@ def clear_database():
     )
     with session_factory() as session:
         for model in (
+            MobilePairingAttempt,
             DeviceCommand,
             DeviceTelemetry,
             AuditLog,
@@ -560,10 +562,6 @@ def test_router_registration_telemetry_and_latest_api_e2e():
             "load": "0.01",
             "memory": {"total_kb": 256000, "free_kb": 128000},
         },
-        "wifi": {
-            "available": True,
-            "radios": [{"name": "radio0", "up": True, "channel": "6"}],
-        },
         "network": {"interfaces": [{"name": "lan", "up": True}]},
         "agent": {
             "version": APP_VERSION,
@@ -606,7 +604,7 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         },
         "wifi": {
             "available": True,
-            "radios": [{"name": "radio0", "up": True, "band": "5g"}],
+            "radios": [{"name": "radio0", "up": True, "band": "5g", "channel": "6"}],
             "stations": [
                 {
                     "interface": "phy0-ap0",

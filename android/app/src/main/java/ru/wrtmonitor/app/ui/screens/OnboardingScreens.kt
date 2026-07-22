@@ -2,6 +2,7 @@ package ru.wrtmonitor.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,9 +33,14 @@ import ru.wrtmonitor.app.ui.components.MessageBanner
 import ru.wrtmonitor.app.ui.components.PrimaryActionButton
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.SectionCard
+import ru.wrtmonitor.app.pairing.MobilePairingSetup
 
 @Composable
-fun ServerSetupScreen(onSave: (String) -> Unit) {
+fun ServerSetupScreen(
+    onSave: (String) -> Unit,
+    onScanQr: () -> Unit,
+    pairingError: String = "",
+) {
     var serverUrl by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
         OnboardingHeader()
@@ -42,13 +48,90 @@ fun ServerSetupScreen(onSave: (String) -> Unit) {
             title = stringResource(R.string.server_connection),
             subtitle = stringResource(R.string.first_run_server_prompt),
         ) {
+            SecondaryActionButton(
+                label = stringResource(R.string.scan_pairing_qr),
+                onClick = onScanQr,
+                modifier = Modifier.align(Alignment.End),
+            )
+            Text(
+                stringResource(R.string.or_enter_server_manually),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             OutlinedTextField(serverUrl, { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            MessageBanner(pairingError, error = true)
             PrimaryActionButton(
                 label = stringResource(R.string.save),
                 onClick = { onSave(serverUrl) },
                 enabled = serverUrl.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             )
+        }
+    }
+}
+
+@Composable
+fun PairingConfirmationScreen(
+    setup: MobilePairingSetup,
+    onConnected: (WrtMonitorApi.PairingResult) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var error by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val pairingMessages = mapOf(
+        "pairing_used" to stringResource(R.string.pairing_used),
+        "pairing_expired" to stringResource(R.string.pairing_expired),
+        "pairing_revoked" to stringResource(R.string.pairing_revoked),
+        "pairing_rate_limited" to stringResource(R.string.pairing_rate_limited),
+        "pairing_server_changed" to stringResource(R.string.pairing_server_changed),
+        "pairing_invalid" to stringResource(R.string.pairing_qr_invalid),
+    )
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+        OnboardingHeader()
+        SectionCard(
+            title = stringResource(R.string.confirm_server_connection),
+            subtitle = stringResource(R.string.confirm_server_connection_hint),
+        ) {
+            Text(setup.serverUrl, style = MaterialTheme.typography.titleMedium)
+            MessageBanner(
+                stringResource(if (setup.secure) R.string.secure_connection else R.string.local_http_warning),
+                error = !setup.secure,
+            )
+            MessageBanner(error, error = true)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SecondaryActionButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = onCancel,
+                    enabled = !loading,
+                )
+                PrimaryActionButton(
+                    label = stringResource(R.string.connect),
+                    onClick = {
+                        loading = true
+                        scope.launch {
+                            when (val result = withContext(Dispatchers.IO) {
+                                WrtMonitorApi(setup.serverUrl).exchangeMobilePairing(
+                                    setup.pairingToken,
+                                    "WrtMonitor Android",
+                                )
+                            }) {
+                                is ApiResult.Success -> onConnected(result.data)
+                                is ApiResult.Error -> {
+                                    error = pairingMessages[result.code] ?: result.message
+                                    loading = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = !loading,
+                    loading = loading,
+                )
+            }
         }
     }
 }

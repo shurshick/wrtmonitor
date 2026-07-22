@@ -8,6 +8,7 @@ from .requests import (
     LoginRequest,
     PasswordChangeRequest,
     RefreshTokenRequest,
+    MobilePairingExchangeRequest,
     SetupRequest,
     TelemetryRequest,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "LoginRequest",
     "PasswordChangeRequest",
     "RefreshTokenRequest",
+    "MobilePairingExchangeRequest",
     "SetupRequest",
     "TelemetryRequest",
 ]

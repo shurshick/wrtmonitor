@@ -54,6 +54,11 @@ import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.data.SessionStore
+import ru.wrtmonitor.app.data.persistSession
+import ru.wrtmonitor.app.pairing.MobilePairingPayloadException
+import ru.wrtmonitor.app.pairing.MobilePairingSetup
+import ru.wrtmonitor.app.pairing.normalizePairingServerUrl
+import ru.wrtmonitor.app.pairing.parseMobilePairingPayload
 import ru.wrtmonitor.app.ui.screens.AdminLoginScreen
 import ru.wrtmonitor.app.ui.screens.AppSettingsScreen
 import ru.wrtmonitor.app.ui.screens.DeviceDetailScreen
@@ -61,6 +66,8 @@ import ru.wrtmonitor.app.ui.screens.DeviceListScreen
 import ru.wrtmonitor.app.ui.screens.ClientsControlScreen
 import ru.wrtmonitor.app.ui.screens.NetworkControlScreen
 import ru.wrtmonitor.app.ui.screens.NetworkScreenMode
+import ru.wrtmonitor.app.ui.screens.PairingConfirmationScreen
+import ru.wrtmonitor.app.ui.screens.QrScannerScreen
 import ru.wrtmonitor.app.ui.screens.RouterSectionsScreen
 import ru.wrtmonitor.app.ui.screens.ServerSetupScreen
 import ru.wrtmonitor.app.ui.screens.SystemControlScreen
@@ -85,12 +92,23 @@ private enum class Tab {
 fun WrtMonitorApp() {
     val context = LocalContext.current
     val sessionStore = remember { SessionStore(context) }
-    var serverUrl by remember { mutableStateOf(sessionStore.serverUrl) }
+    val initialServerUrl = remember {
+        sessionStore.serverUrl.takeIf(String::isNotBlank)?.let { stored ->
+            runCatching { normalizePairingServerUrl(stored) }.getOrElse {
+                sessionStore.clearAll()
+                ""
+            }
+        }.orEmpty()
+    }
+    var serverUrl by remember { mutableStateOf(initialServerUrl) }
     var accessToken by remember { mutableStateOf(sessionStore.accessToken) }
     var refreshingSession by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(Tab.Routers) }
     var selectedDevice by remember { mutableStateOf<DeviceDto?>(null) }
     var deviceListRefreshNonce by remember { mutableStateOf(0) }
+    var qrScannerOpen by remember { mutableStateOf(false) }
+    var pendingPairing by remember { mutableStateOf<MobilePairingSetup?>(null) }
+    var pairingError by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
     val clearExpiredSession = {
@@ -144,13 +162,65 @@ fun WrtMonitorApp() {
         ),
     ) {
         when {
+            qrScannerOpen -> {
+                QrScannerScreen(
+                    onScanned = { raw ->
+                        try {
+                            pendingPairing = parseMobilePairingPayload(raw)
+                            pairingError = ""
+                        } catch (_: MobilePairingPayloadException) {
+                            pairingError = context.getString(R.string.pairing_qr_invalid)
+                        }
+                        qrScannerOpen = false
+                    },
+                    onCancel = { qrScannerOpen = false },
+                )
+                return@MaterialTheme
+            }
+
+            pendingPairing != null -> {
+                val setup = pendingPairing ?: return@MaterialTheme
+                PairingConfirmationScreen(
+                    setup = setup,
+                    onConnected = { result ->
+                        if (result.serverUrl != setup.serverUrl) {
+                            pairingError = context.getString(R.string.pairing_qr_invalid)
+                            pendingPairing = null
+                        } else {
+                            persistSession(
+                                sessionStore,
+                                result.serverUrl,
+                                result.tokens.accessToken,
+                                result.tokens.refreshToken,
+                            )
+                            serverUrl = result.serverUrl
+                            accessToken = result.tokens.accessToken
+                            pendingPairing = null
+                            pairingError = ""
+                        }
+                    },
+                    onCancel = { pendingPairing = null },
+                )
+                return@MaterialTheme
+            }
+
             serverUrl.isBlank() -> {
                 ServerSetupScreen(
                     onSave = { value ->
-                        val normalized = value.trim().trimEnd('/')
-                        sessionStore.serverUrl = normalized
-                        serverUrl = normalized
-                    }
+                        try {
+                            val normalized = normalizePairingServerUrl(value)
+                            sessionStore.serverUrl = normalized
+                            serverUrl = normalized
+                            pairingError = ""
+                        } catch (_: MobilePairingPayloadException) {
+                            pairingError = context.getString(R.string.server_url_invalid)
+                        }
+                    },
+                    onScanQr = {
+                        pairingError = ""
+                        qrScannerOpen = true
+                    },
+                    pairingError = pairingError,
                 )
                 return@MaterialTheme
             }
@@ -159,8 +229,12 @@ fun WrtMonitorApp() {
                 AdminLoginScreen(
                     serverUrl = serverUrl,
                     onLogin = { tokens ->
-                        sessionStore.accessToken = tokens.accessToken
-                        sessionStore.refreshToken = tokens.refreshToken
+                        persistSession(
+                            sessionStore,
+                            serverUrl,
+                            tokens.accessToken,
+                            tokens.refreshToken,
+                        )
                         accessToken = tokens.accessToken
                     },
                     onChangeServer = {
@@ -304,7 +378,7 @@ fun WrtMonitorApp() {
                             currentServerUrl = serverUrl,
                             accessToken = accessToken,
                             onSave = { value ->
-                                val normalized = value.trim().trimEnd('/')
+                                val normalized = normalizePairingServerUrl(value)
                                 sessionStore.serverUrl = normalized
                                 sessionStore.clearSession()
                                 serverUrl = normalized

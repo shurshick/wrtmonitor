@@ -3,7 +3,7 @@ from uuid import UUID
 import jwt
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -101,18 +101,27 @@ def refresh_access_token(
 
 @router.get("/sessions")
 def list_sessions(
-    user: User = Depends(current_user), db: Session = Depends(get_db)
+    client_type: str | None = Query(default=None, max_length=40),
+    active_only: bool = Query(default=False),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
 ) -> list[dict[str, str | None]]:
+    query = select(UserSession).where(UserSession.user_id == user.id)
+    if client_type:
+        query = query.where(UserSession.client_type == client_type)
+    if active_only:
+        query = query.where(
+            UserSession.revoked_at.is_(None),
+            UserSession.expires_at > datetime.now(UTC),
+        )
     sessions = db.scalars(
-        select(UserSession)
-        .where(UserSession.user_id == user.id)
-        .order_by(UserSession.last_used_at.desc())
-        .limit(100)
+        query.order_by(UserSession.last_used_at.desc()).limit(100)
     ).all()
     return [
         {
             "id": str(item.id),
             "client_name": item.client_name,
+            "client_type": item.client_type,
             "ip_address": item.ip_address,
             "created_at": item.created_at.isoformat(),
             "last_used_at": item.last_used_at.isoformat(),
@@ -134,6 +143,14 @@ def revoke_session(
         raise HTTPException(status_code=404, detail="Session not found")
     session.revoked_at = datetime.now(UTC)
     audit(db, user.id, "auth.session.revoke", "session", str(session.id))
+    if session.client_type == "mobile_pairing":
+        audit(
+            db,
+            user.id,
+            "mobile_pairing.session.revoked",
+            "session",
+            str(session.id),
+        )
     db.commit()
     return {"status": "revoked"}
 

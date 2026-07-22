@@ -60,18 +60,27 @@ def is_private_or_local_host(hostname: str | None) -> bool:
 def validate_server_url(value: str, allow_insecure_local: bool = False) -> str:
     normalized = value.strip().rstrip("/")
     parsed = urlparse(normalized)
-    if not parsed.scheme or not parsed.netloc:
+    if (
+        not parsed.scheme
+        or not parsed.netloc
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path.strip("/")
+    ):
         raise ValueError("server_url must be an absolute URL")
     local = is_private_or_local_host(parsed.hostname)
-    if allow_insecure_local:
-        if parsed.scheme not in {"http", "https"}:
-            raise ValueError("server_url must use http or https")
+    if parsed.scheme == "https":
+        if local and not allow_insecure_local:
+            raise ValueError("production server_url must be externally reachable")
         return normalized
-    if parsed.scheme != "https":
-        raise ValueError("production server_url must use https")
-    if local:
-        raise ValueError("production server_url must be externally reachable")
-    return normalized
+    if parsed.scheme == "http" and allow_insecure_local and local:
+        return normalized
+    if parsed.scheme == "http" and allow_insecure_local:
+        raise ValueError("insecure server_url must use a local address")
+    raise ValueError("production server_url must use https")
 
 
 def validate_database_url(value: str, allow_insecure_dev_defaults: bool = False) -> str:

@@ -13,12 +13,38 @@
   </div>
 </section>
 
+<section class="section pairing-panel">
+  <div class="section-heading section-heading--compact">
+    <div><p class="eyebrow">Android</p><h2>Подключить мобильное приложение</h2><p>Одноразовый QR действует 10 минут и подключает приложение только к этому серверу.</p></div>
+    {% if public_server_url %}<form method="post" action="/account/mobile-pairing"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Создать новый QR</button></form>{% endif %}
+  </div>
+  {% if not public_server_url %}
+  <div class="notice">Сначала задайте <code>WRTMONITOR_PUBLIC_SERVER_URL</code>. Сервер не формирует QR из заголовка Host или адреса reverse proxy.</div>
+  {% elif pairing %}
+  <div class="pairing-layout">
+    {% if pairing_qr_svg and pairing.status == 'active' %}<div class="pairing-qr" aria-label="QR-код подключения WrtMonitor">{{ pairing_qr_svg|safe }}</div>{% endif %}
+    <div class="pairing-details">
+      <dl class="summary-list">
+        <div><dt>Сервер</dt><dd>{{ pairing.server_url }}</dd></div>
+        <div><dt>Состояние</dt><dd><span class="status status--{{ 'online' if pairing.status == 'active' else 'offline' }}" data-pairing-status>{{ {'active':'активен','used':'использован','expired':'истёк','revoked':'отозван'}.get(pairing.status, pairing.status) }}</span></dd></div>
+        <div><dt>Действует до</dt><dd>{{ pairing.expires_at|timestamp }}</dd></div>
+        {% if pairing.status == 'active' %}<div><dt>Осталось</dt><dd data-pairing-countdown data-expires-at="{{ pairing.expires_at }}">—</dd></div>{% endif %}
+      </dl>
+      {% if pairing.status == 'active' %}
+      {% if not pairing_qr_svg %}<p class="notice notice--compact">Секрет QR уже не хранится сервером. Отзовите этот код и создайте новый, чтобы показать его снова.</p>{% endif %}
+      <form method="post" action="/account/mobile-pairing/{{ pairing.id }}/revoke"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--danger" type="submit">Отозвать QR</button></form>
+      {% else %}<p class="muted">Создайте новый QR для следующего подключения.</p>{% endif %}
+    </div>
+  </div>
+  {% else %}<div class="empty-state card"><h3>QR ещё не создавался</h3><p>После создания откройте сканер на экране подключения Android-приложения.</p></div>{% endif %}
+</section>
+
 <div class="settings-grid section">
   <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">Владелец</span><h2>Сменить пароль</h2></div></div><p class="muted">После смены пароля все мобильные refresh-сессии будут отозваны.</p>
     <form class="compact-form" method="post" action="/account/password"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Текущий пароль<input type="password" name="current_password" required autocomplete="current-password"></label><label>Новый пароль<input type="password" name="new_password" minlength="12" required autocomplete="new-password"></label><label>Повторите новый пароль<input type="password" name="new_password_confirm" minlength="12" required autocomplete="new-password"></label><button type="submit">Изменить пароль</button></form>
   </section>
   <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">Android и API</span><h2>Активные сессии</h2></div></div>
-    <div class="operations-list">{% for session in sessions %}<div class="operations-item"><div><strong>{{ session.client_name or 'Неизвестный клиент' }}</strong><small>{{ session.ip_address or 'IP не определён' }} · Последнее использование {{ session.last_used_at|timestamp }} · Истекает {{ session.expires_at|timestamp }}</small></div>{% if not session.revoked_at %}<form method="post" action="/account/sessions/{{ session.id }}/revoke"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--danger button--small" type="submit">Отозвать</button></form>{% else %}<span class="status status--offline">отозвана</span>{% endif %}</div>{% else %}<p class="muted">Мобильных сессий пока нет.</p>{% endfor %}</div>
+    <div class="operations-list">{% for session in sessions %}<div class="operations-item"><div><strong>{{ session.client_name or 'Неизвестный клиент' }}</strong><small>{{ 'QR-подключение' if session.client_type == 'mobile_pairing' else 'Вход по паролю' }} · {{ session.ip_address or 'IP не определён' }} · Создана {{ session.created_at|timestamp }} · Последнее использование {{ session.last_used_at|timestamp }} · Истекает {{ session.expires_at|timestamp }}</small></div>{% if not session.revoked_at %}<form method="post" action="/account/sessions/{{ session.id }}/revoke"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--danger button--small" type="submit">Отозвать</button></form>{% else %}<span class="status status--offline">отозвана</span>{% endif %}</div>{% else %}<p class="muted">Сессий пока нет.</p>{% endfor %}</div>
   </section>
   <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">PostgreSQL</span><h2>Резервные копии</h2></div></div><p class="muted">Архив проверяется через pg_restore до публикации. Для полного контроля восстановления используйте CLI-команду drill.</p>
     <form method="post" action="/account/backups"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Создать копию</button></form>
@@ -28,3 +54,4 @@
 
 <section class="section"><div class="section-heading section-heading--compact"><h2>Журнал аудита</h2><p>Последние 100 действий сервера и владельца.</p></div><div class="table-wrap"><table><thead><tr><th>Время</th><th>Действие</th><th>Объект</th><th>Детали</th></tr></thead><tbody>{% for item in audit_entries %}<tr><td>{{ item.created_at|timestamp }}</td><td>{{ item.action }}</td><td>{{ item.object_type or '-' }} {{ item.object_id or '' }}</td><td><code>{{ item.details or {} }}</code></td></tr>{% else %}<tr><td colspan="4">Записей пока нет.</td></tr>{% endfor %}</tbody></table></div></section>
 {% endblock %}
+{% block scripts %}<script src="/static/pairing.js" defer></script>{% endblock %}

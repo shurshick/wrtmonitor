@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.14.0
+
+- Добавлены одноразовые mobile pairing tokens: срок 10 минут, однократный обмен, ручной отзыв и PostgreSQL rate limiting.
+- В базе хранится только SHA-256 hash pairing token; исходные pairing/access/refresh tokens не попадают в аудит.
+- Web UI получил раздел подключения Android с QR, каноническим адресом сервера, обратным отсчётом и отзывом кода.
+- Сессии получили тип клиента; мобильные pairing-сессии видны владельцу и отзываются отдельно.
+- Android получил CameraX/ML Kit QR-сканер, строгую проверку формата v1, подтверждение домена и понятные состояния expired/used/revoked.
+- Удалён небезопасный plaintext fallback `SharedPreferences`; сессии сохраняются только через `EncryptedSharedPreferences`.
+- HTTP теперь разрешается только для локальных адресов при `WRTMONITOR_ALLOW_INSECURE_LOCAL=true`.
+- Добавлена миграция PostgreSQL `0007_mobile_pairing`; Android `versionCode` повышен до `56`.
+- Метаданные OpenWrt-агента синхронизированы с `0.14.0`, capability schema остаётся `13`.
+
 ## v0.13.7
 
 - Оперативные показатели считают только клиентов, которые действительно присутствуют в ARP/ND или hostapd; сохранённые DHCP-аренды остаются в истории, но больше не выдаются за подключённые устройства.

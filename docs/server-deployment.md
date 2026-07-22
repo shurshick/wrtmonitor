@@ -1,6 +1,6 @@
 # Развёртывание серверной части
 
-Документ актуален для `WrtMonitor v0.13.4`.
+Документ актуален для `WrtMonitor v0.14.0`.
 
 ## Перед первым запуском
 
@@ -17,6 +17,7 @@ openssl rand -base64 32
 ```
 
 `WRTMONITOR_PUBLIC_SERVER_URL` должен содержать внешний HTTPS-адрес сервера.
+Он же попадает в QR подключения Android. Значение не вычисляется из `Host` или заголовков reverse proxy. Локальный HTTP допускается только для private/loopback адреса при `WRTMONITOR_ALLOW_INSECURE_LOCAL=true`.
 
 Текущая серверная модель доступа: `single-owner`. Это ранний тестовый контур без ролей и мультиарендности. Один владелец управляет всеми устройствами этого сервера.
 
@@ -41,11 +42,11 @@ WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE=500
 
 ## TrueNAS Custom App
 
-1. Откройте релиз `v0.13.4`.
+1. Откройте релиз `v0.14.0`.
 2. Скачайте файл:
 
    ```text
-   wrtmonitor-truenas-v0.13.4.yaml
+   wrtmonitor-truenas-v0.14.0.yaml
    ```
 
 3. При необходимости скачайте и проверьте `SHA256SUMS.txt`.
@@ -59,6 +60,7 @@ WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE=500
 7. Откройте `https://monitor.example.ru/setup`.
 8. Создайте первого администратора.
 9. Проверьте `https://monitor.example.ru/health`.
+10. Для Android откройте **Аккаунт -> Подключить мобильное приложение** и создайте одноразовый QR.
 
 ## Docker Compose
 
@@ -71,6 +73,7 @@ WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE=500
 
 3. Настройте reverse proxy на `http://server-ip:8088`.
 4. Откройте `https://monitor.example.ru/setup`.
+5. После настройки подключите Android через одноразовый QR в разделе **Аккаунт**.
 
 ## Обновление TrueNAS через latest
 

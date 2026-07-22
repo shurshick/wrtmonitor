@@ -37,8 +37,11 @@ import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.domain.VersionComparator
+import ru.wrtmonitor.app.pairing.MobilePairingPayloadException
+import ru.wrtmonitor.app.pairing.normalizePairingServerUrl
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.ui.components.ActionRow
+import ru.wrtmonitor.app.ui.components.MessageBanner
 import ru.wrtmonitor.app.ui.components.PrimaryActionButton
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
@@ -46,6 +49,9 @@ import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.TonalActionButton
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private const val PROJECT_URL = "https://github.com/shurshick/wrtmonitor"
 private const val RELEASES_URL = "https://api.github.com/repos/shurshick/wrtmonitor/releases?per_page=10"
@@ -66,6 +72,7 @@ fun AppSettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var serverUrl by remember(currentServerUrl) { mutableStateOf(currentServerUrl) }
+    var serverUrlError by remember { mutableStateOf("") }
     var showAbout by remember { mutableStateOf(false) }
     var updateState by remember { mutableStateOf<UpdateState?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
@@ -115,8 +122,16 @@ fun AppSettingsScreen(
         )
         SectionCard(stringResource(R.string.server_connection), subtitle = currentServerUrl) {
             OutlinedTextField(serverUrl, { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            MessageBanner(serverUrlError, error = true)
             ActionRow {
-                PrimaryActionButton(stringResource(R.string.save), { onSave(serverUrl) })
+                PrimaryActionButton(stringResource(R.string.save), {
+                    try {
+                        onSave(normalizePairingServerUrl(serverUrl))
+                        serverUrlError = ""
+                    } catch (_: MobilePairingPayloadException) {
+                        serverUrlError = context.getString(R.string.server_url_invalid)
+                    }
+                })
                 SecondaryActionButton(stringResource(R.string.logout), onLogout)
             }
         }
@@ -138,7 +153,20 @@ fun AppSettingsScreen(
             subtitle = stringResource(R.string.active_sessions_summary),
         ) {
             sessions.filterNot { it.revoked }.forEach { session ->
-                InfoRow(session.clientName, session.ipAddress.ifBlank { session.lastUsedAt })
+                val sessionType = if (session.clientType == "mobile_pairing") {
+                    stringResource(R.string.session_type_qr)
+                } else {
+                    stringResource(R.string.session_type_password)
+                }
+                InfoRow(
+                    session.clientName,
+                    listOfNotNull(
+                        sessionType,
+                        session.ipAddress.ifBlank { null },
+                        formatSessionTimestamp(session.lastUsedAt)
+                            ?: formatSessionTimestamp(session.createdAt),
+                    ).joinToString(" · "),
+                )
                 SecondaryActionButton(stringResource(R.string.revoke_session), {
                     scope.launch {
                         withContext(Dispatchers.IO) { api.revokeSession(session.id) }
@@ -189,6 +217,11 @@ fun AppSettingsScreen(
         }
     }
 }
+
+private fun formatSessionTimestamp(value: String): String? = runCatching {
+    Instant.parse(value).atZone(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+}.getOrNull()
 
 @Composable
 private fun AboutScreen(updateState: UpdateState?, checkingUpdate: Boolean, onBack: () -> Unit, onOpenProject: () -> Unit, onCheckUpdates: () -> Unit, onOpenRelease: (String) -> Unit) {
