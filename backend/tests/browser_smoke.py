@@ -390,6 +390,25 @@ def run() -> None:
             page.wait_for_url("**/devices")
             assert_page(page, "/devices", f"{name}-devices.png")
             assert_page(page, "/account", f"{name}-account.png")
+            page.locator('form[action="/account/mobile-pairing"] button').click()
+            page.wait_for_load_state("networkidle")
+            assert page.locator(".pairing-qr svg").count() == 1
+            assert page.locator("[data-pairing-countdown]").count() == 1
+            assert "pairing_token" not in page.content()
+            overflow = page.evaluate(
+                "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+            )
+            assert overflow <= 1
+            page.screenshot(
+                path=str(ARTIFACTS / f"{name}-account-pairing.png"), full_page=True
+            )
+            page.locator(
+                'form[action$="/revoke"] button', has_text="Отозвать QR"
+            ).click()
+            page.wait_for_url("**/account")
+            assert page.locator(".pairing-qr svg").count() == 0
+            assert page.locator("[data-pairing-status]").inner_text() == "отозван"
+            assert "pairing_token" not in page.content()
             for section in (
                 "overview",
                 "internet",

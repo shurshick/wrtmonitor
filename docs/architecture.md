@@ -7,6 +7,22 @@
 3. OpenWrt agent работает на роутере как `init.d`-сервис.
 4. Android и Web UI подключаются только к серверу, а не напрямую к роутеру.
 
+## Подключение Android
+
+Владелец создаёт одноразовый QR в Web UI. Android проверяет формат v1 и адрес, затем обменивает pairing token на обычную access/refresh-сессию. Пароль владельца и секреты агента через QR не передаются.
+
+```mermaid
+sequenceDiagram
+  participant Owner as "Владелец / Web UI"
+  participant Server as "WrtMonitor Server"
+  participant Android
+  Owner->>Server: Создать QR (CSRF + owner session)
+  Server-->>Owner: server_url + одноразовый token
+  Android->>Server: Обмен token после подтверждения адреса
+  Server-->>Android: access + refresh session
+  Android->>Server: Обычный owner API
+```
+
 ## Пользовательские разделы
 
 Web UI и Android используют одну предметную структуру:

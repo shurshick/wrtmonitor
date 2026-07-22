@@ -15,7 +15,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class WrtMonitorApi(private val serverUrl: String, private val accessToken: String = "") {
-    private class ApiHttpException(val statusCode: Int, message: String) : IllegalStateException(message)
+    private class ApiHttpException(
+        val statusCode: Int,
+        message: String,
+        val code: String? = null,
+    ) : IllegalStateException(message)
 
     private fun request(path: String, method: String = "GET", body: JSONObject? = null): Pair<Int, String> {
         val connection = (URL("${serverUrl.trim().trimEnd('/')}$path").openConnection() as HttpURLConnection).apply {
@@ -38,10 +42,18 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
 
     data class AuthTokens(val accessToken: String, val refreshToken: String)
 
+    data class PairingResult(
+        val tokens: AuthTokens,
+        val serverUrl: String,
+        val ownerName: String,
+    )
+
     data class UserSessionDto(
         val id: String,
         val clientName: String,
+        val clientType: String,
         val ipAddress: String,
+        val createdAt: String,
         val lastUsedAt: String,
         val expiresAt: String,
         val revoked: Boolean,
@@ -61,6 +73,28 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         parseAuthTokens(JSONObject(response))
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun exchangeMobilePairing(pairingToken: String, clientName: String): ApiResult<PairingResult> = runCatching {
+        val (status, response) = request(
+            "/api/v1/mobile-pairing/exchange",
+            "POST",
+            JSONObject()
+                .put("pairing_token", pairingToken)
+                .put("client_name", clientName),
+        )
+        if (status !in 200..299) {
+            val code = runCatching {
+                JSONObject(response).optJSONObject("detail")?.optString("code")
+            }.getOrNull()
+            throw ApiHttpException(status, pairingErrorMessage(code, status), code)
+        }
+        val json = JSONObject(response)
+        PairingResult(
+            tokens = parseAuthTokens(json),
+            serverUrl = json.getString("server_url").trimEnd('/'),
+            ownerName = json.optJSONObject("owner")?.optString("username").orEmpty(),
+        )
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
     fun refresh(refreshToken: String): ApiResult<AuthTokens> = runCatching {
@@ -83,7 +117,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
     }.fold({ ApiResult.Success(Unit) }, ::toApiError)
 
     fun getSessions(): ApiResult<List<UserSessionDto>> = runCatching {
-        val (status, response) = request("/api/v1/auth/sessions")
+        val (status, response) = request("/api/v1/auth/sessions?active_only=true")
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         val array = JSONArray(response)
         (0 until array.length()).map { index ->
@@ -91,7 +125,9 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 UserSessionDto(
                     id = item.optString("id"),
                     clientName = item.optString("client_name", "Unknown client"),
+                    clientType = item.optString("client_type", "password"),
                     ipAddress = item.optString("ip_address"),
+                    createdAt = item.optString("created_at"),
                     lastUsedAt = item.optString("last_used_at"),
                     expiresAt = item.optString("expires_at"),
                     revoked = !item.isNull("revoked_at"),
@@ -415,6 +451,21 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
 
     private fun toApiError(error: Throwable): ApiResult.Error {
         val http = error as? ApiHttpException
-        return ApiResult.Error(error.message ?: "Network request failed", statusCode = http?.statusCode, cause = error)
+        return ApiResult.Error(
+            error.message ?: "Network request failed",
+            statusCode = http?.statusCode,
+            code = http?.code,
+            cause = error,
+        )
+    }
+
+    private fun pairingErrorMessage(code: String?, status: Int): String = when (code) {
+        "pairing_used" -> "This QR code has already been used"
+        "pairing_expired" -> "This QR code has expired"
+        "pairing_revoked" -> "This QR code was revoked"
+        "pairing_rate_limited" -> "Too many attempts. Try again later"
+        "pairing_server_changed" -> "The server address has changed. Create a new QR code"
+        "pairing_invalid" -> "Invalid QR code"
+        else -> "HTTP $status"
     }
 }

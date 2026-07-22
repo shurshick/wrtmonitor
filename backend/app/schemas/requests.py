@@ -13,6 +13,11 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=20)
 
 
+class MobilePairingExchangeRequest(BaseModel):
+    pairing_token: str = Field(min_length=32, max_length=256)
+    client_name: str = Field(default="WrtMonitor Android", min_length=1, max_length=160)
+
+
 class PasswordChangeRequest(BaseModel):
     current_password: str = Field(min_length=8, max_length=256)
     new_password: str = Field(min_length=12, max_length=256)

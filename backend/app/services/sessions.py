@@ -16,6 +16,7 @@ def create_user_session(
     *,
     client_name: str | None = None,
     ip_address: str | None = None,
+    client_type: str = "password",
 ) -> tuple[UserSession, str]:
     now = datetime.now(UTC)
     db.execute(
@@ -31,6 +32,7 @@ def create_user_session(
         id=uuid4(),
         user_id=user.id,
         refresh_token_hash="pending",
+        client_type=client_type,
         client_name=(client_name or "Unknown client")[:160],
         ip_address=(ip_address or "")[:64] or None,
         created_at=now,

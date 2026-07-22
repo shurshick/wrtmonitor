@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 import json
 from pathlib import Path
 import secrets
+import segno
 from uuid import UUID, uuid4
 
 from fastapi import (
@@ -44,6 +45,7 @@ from ..models import (
     NetworkClient,
     User,
     UserSession,
+    MobilePairingToken,
 )
 from ..security import create_web_session_token, hash_password, verify_password
 from ..schemas import SetupRequest
@@ -72,7 +74,13 @@ from ..services.audit import audit
 from ..services.auth import settings, web_user_from_session
 from ..services.operations import operational_notifications
 from ..services.sessions import revoke_all_user_sessions
-from ..services.setup import complete_setup, is_setup_required
+from ..services.mobile_pairing import (
+    create_pairing_token,
+    get_user_pairing_token,
+    pairing_response,
+    pairing_status,
+)
+from ..services.setup import complete_setup, get_public_server_url, is_setup_required
 from ..services.telemetry import (
     device_telemetry_history,
     normalize_clients_summary,
@@ -464,6 +472,21 @@ def account_page(
     user = web_user_from_session(wrtmonitor_session, config, db)
     if not user:
         return RedirectResponse("/login", status_code=303)
+    if user.role != "owner" or user.disabled:
+        raise HTTPException(status_code=403, detail="Owner access required")
+    return render_account_page(request, user, wrtmonitor_session or "", config, db)
+
+
+def render_account_page(
+    request: Request,
+    user: User,
+    session_token: str,
+    config: Settings,
+    db: Session,
+    *,
+    created_pairing: MobilePairingToken | None = None,
+    pairing_qr_svg: str | None = None,
+):
     sessions = db.scalars(
         select(UserSession)
         .where(UserSession.user_id == user.id)
@@ -478,7 +501,14 @@ def account_page(
         if BACKUP_DIRECTORY.is_dir()
         else []
     )
-    return templates.TemplateResponse(
+    public_server_url = get_public_server_url(db, config)
+    latest_pairing = created_pairing or db.scalar(
+        select(MobilePairingToken)
+        .where(MobilePairingToken.user_id == user.id)
+        .order_by(MobilePairingToken.created_at.desc())
+        .limit(1)
+    )
+    response = templates.TemplateResponse(
         request,
         "account.html",
         {
@@ -487,11 +517,84 @@ def account_page(
             "audit_entries": audit_entries,
             "notifications": operational_notifications(db),
             "backups": backups,
-            "csrf_token": generate_csrf_token(
-                wrtmonitor_session or "", config.jwt_secret
-            ),
+            "pairing": pairing_response(latest_pairing) if latest_pairing else None,
+            "pairing_qr_svg": pairing_qr_svg,
+            "public_server_url": public_server_url,
+            "csrf_token": generate_csrf_token(session_token, config.jwt_secret),
         },
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@router.post("/account/mobile-pairing", response_class=HTMLResponse)
+def web_create_mobile_pairing(
+    request: Request,
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+):
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    if user.role != "owner" or user.disabled:
+        raise HTTPException(status_code=403, detail="Owner access required")
+    try:
+        item, _, setup_payload = create_pairing_token(
+            db, user, config, get_public_server_url(db, config)
+        )
+    except ValueError as exc:
+        code = str(exc)
+        status = 429 if code == "pairing_rate_limited" else 503
+        raise HTTPException(status_code=status, detail=code) from exc
+    audit(db, user.id, "mobile_pairing.token.created", "mobile_pairing", str(item.id))
+    db.commit()
+    qr_svg = segno.make(setup_payload, error="m").svg_inline(
+        scale=5,
+        dark="#07111f",
+        light="#ffffff",
+    )
+    return render_account_page(
+        request,
+        user,
+        wrtmonitor_session or "",
+        config,
+        db,
+        created_pairing=item,
+        pairing_qr_svg=qr_svg,
+    )
+
+
+@router.post("/account/mobile-pairing/{pairing_id}/revoke")
+def web_revoke_mobile_pairing(
+    pairing_id: UUID,
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    if user.role != "owner" or user.disabled:
+        raise HTTPException(status_code=403, detail="Owner access required")
+    item = get_user_pairing_token(db, user.id, pairing_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="QR-код не найден")
+    if pairing_status(item) == "active":
+        item.revoked_at = datetime.now(UTC)
+        audit(
+            db,
+            user.id,
+            "mobile_pairing.token.revoked",
+            "mobile_pairing",
+            str(item.id),
+        )
+        db.commit()
+    return RedirectResponse("/account", status_code=303)
 
 
 @router.post("/account/backups")
@@ -581,6 +684,14 @@ def web_revoke_session(
         raise HTTPException(status_code=404, detail="Сессия не найдена")
     session.revoked_at = datetime.now(UTC)
     audit(db, user.id, "auth.session.revoke", "session", str(session.id))
+    if session.client_type == "mobile_pairing":
+        audit(
+            db,
+            user.id,
+            "mobile_pairing.session.revoked",
+            "session",
+            str(session.id),
+        )
     db.commit()
     return RedirectResponse("/account", status_code=303)
 

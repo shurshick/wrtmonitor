@@ -326,6 +326,12 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .maintenance-card__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .maintenance-card__heading .eyebrow { margin-bottom: 3px; }
 .maintenance-card__heading h2 { margin-bottom: 12px; }
+.pairing-panel { border-top: 1px solid var(--border); padding-top: 24px; }
+.pairing-layout { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.pairing-qr { background: #fff; border-radius: 8px; padding: 14px; line-height: 0; width: min(100%, 300px); }
+.pairing-qr svg { width: 100%; height: auto; }
+.pairing-details { display: grid; gap: 16px; min-width: 0; }
+.pairing-details dd { overflow-wrap: anywhere; }
 .maintenance-list { grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr); font-size: 13px; }
 .maintenance-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 18px; }
 .maintenance-actions form, .maintenance-actions form + form { margin: 0; padding: 0; border: 0; }
@@ -543,6 +549,7 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   h1 { font-size: 25px; }
   dl { grid-template-columns: 1fr; gap: 2px; }
   .control-form--columns, .form-grid, .settings-grid { grid-template-columns: 1fr; }
+  .pairing-layout { grid-template-columns: 1fr; }
   dd { margin-bottom: 8px; }
 }
 
