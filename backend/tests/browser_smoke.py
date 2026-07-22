@@ -503,6 +503,7 @@ def run() -> None:
                     assert (
                         "2500 Мбит/с" in page.locator(".device-port-list").inner_text()
                     )
+                    page.get_by_text("Шифрованный DNS", exact=True).click()
                     assert (
                         "DNS over TLS"
                         in page.locator(".encrypted-dns-grid").inner_text()
