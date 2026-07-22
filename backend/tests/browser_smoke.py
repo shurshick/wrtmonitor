@@ -407,7 +407,7 @@ def run() -> None:
                     'form[action$="/revoke"] button', has_text="Отозвать QR"
                 ).click()
             assert page.locator(".pairing-qr svg").count() == 0
-            assert page.locator("[data-pairing-status]").inner_text() == "отозван"
+            assert page.locator("[data-pairing-status]").text_content() == "отозван"
             assert "pairing_token" not in page.content()
             for section in (
                 "overview",
