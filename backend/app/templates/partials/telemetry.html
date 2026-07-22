@@ -10,5 +10,5 @@
   <div class="metric"><span class="metric__label">Накопитель</span><span class="metric__value">{{ storage.get('used_kb') or '-' }} / {{ storage.get('total_kb') or '-' }} KB</span></div>
   <div class="metric"><span class="metric__label">Температура</span><span class="metric__value">{% if thermal.get('available') %}{{ thermal.get('milli_celsius', 0) / 1000 }} °C{% else %}нет датчика{% endif %}</span></div>
   <div class="metric"><span class="metric__label">Процессы</span><span class="metric__value">{{ processes.get('count') or 'нет данных' }}</span></div>
-  <div class="metric"><span class="metric__label">Клиенты</span><span class="metric__value">{{ client_count }}</span></div>
+  <div class="metric"><span class="metric__label">Клиенты в сети</span><span class="metric__value">{{ online_client_count }}</span></div>
 </section>

@@ -94,6 +94,11 @@ has_wifi_stations() {
     [ -n "$(ubus list 'hostapd.*' 2>/dev/null | head -n 1)" ]
 }
 
+has_client_traffic() {
+    has_commands nlbw || return 1
+    nlbw -c json -g mac -n >/dev/null 2>&1
+}
+
 has_wifi_roaming() {
     has_wifi_iface || return 1
     package_list_installed 2>/dev/null \
@@ -144,7 +149,7 @@ capability_supported() {
         telemetry.wifi|wifi.read) has_wifi_radio ;;
         telemetry.wifi.stations) has_wifi_stations ;;
         telemetry.clients|clients.read) has_commands ip || [ -r "$(capability_path /tmp/dhcp.leases)" ] ;;
-        telemetry.clients.traffic) has_commands nlbw ;;
+        telemetry.clients.traffic) has_client_traffic ;;
         telemetry.services) [ -d "$(capability_path /etc/init.d)" ] ;;
         wifi.enable|wifi.disable|wifi.set_channel|wifi.set_country) has_wifi_radio && has_commands wifi ;;
         wifi.set_ssid|wifi.set_password) has_wifi_iface && has_commands wifi ;;

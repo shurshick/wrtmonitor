@@ -170,6 +170,11 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
         .order_by(ClientTrafficSample.created_at.desc())
         .limit(1)
     ).first()
+    traffic_is_current = bool(
+        latest_sample
+        and client.online
+        and abs((client.last_seen_at - latest_sample.created_at).total_seconds()) <= 1
+    )
     return {
         "id": str(client.id),
         "mac": client.mac,
@@ -190,6 +195,6 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
             "tx_bytes": latest_sample.tx_bytes,
             "created_at": latest_sample.created_at.isoformat(),
         }
-        if latest_sample
+        if traffic_is_current
         else None,
     }

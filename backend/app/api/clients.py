@@ -21,6 +21,7 @@ from ..services.devices import (
     get_user_device_or_404,
     latest_device_telemetry,
 )
+from ..services.telemetry import normalize_wifi_summary
 
 
 router = APIRouter(prefix="/api/v1/devices")
@@ -46,31 +47,20 @@ def _client_connection_details(payload: dict) -> dict[str, dict]:
         if interface:
             item["interface"] = interface
 
-    wifi = payload.get("wifi") or {}
-    for station_group in wifi.get("stations") or []:
-        if not isinstance(station_group, dict):
-            continue
-        station_clients = station_group.get("clients") or {}
-        if not isinstance(station_clients, dict):
-            continue
-        for mac, station in station_clients.items():
-            if not isinstance(station, dict):
-                continue
-            item = details.setdefault(str(mac).lower(), {"ipv4": "", "ipv6": []})
-            rx = station.get("rx") or station.get("rx_rate") or {}
-            tx = station.get("tx") or station.get("tx_rate") or {}
-            item.update(
-                {
-                    "connection_type": "wifi",
-                    "connection_name": station_group.get("ssid") or "",
-                    "wifi_ssid": station_group.get("ssid") or "",
-                    "wifi_band": station_group.get("band") or "",
-                    "wifi_interface": station_group.get("interface") or "",
-                    "signal_dbm": station.get("signal", station.get("avg_ack_signal")),
-                    "rx_bitrate": rx.get("rate") if isinstance(rx, dict) else rx,
-                    "tx_bitrate": tx.get("rate") if isinstance(tx, dict) else tx,
-                }
-            )
+    for station in normalize_wifi_summary(payload).get("stations") or []:
+        item = details.setdefault(station["mac"], {"ipv4": "", "ipv6": []})
+        item.update(
+            {
+                "connection_type": "wifi",
+                "connection_name": station.get("ssid") or "",
+                "wifi_ssid": station.get("ssid") or "",
+                "wifi_band": station.get("band") or "",
+                "wifi_interface": station.get("interface") or "",
+                "signal_dbm": station.get("signal"),
+                "rx_bitrate": station.get("rx_bitrate"),
+                "tx_bitrate": station.get("tx_bitrate"),
+            }
+        )
     return details
 
 

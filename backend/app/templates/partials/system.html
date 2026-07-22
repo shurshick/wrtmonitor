@@ -42,7 +42,7 @@
       <div class="resource-item"><div><span>Сетевые соединения</span><strong>{{ system_summary.conntrack_count or 0 }} из {{ system_summary.conntrack_max or 0 }}</strong></div><div class="progress"><span style="width: {{ system_view.conntrack_percent }}%"></span></div></div>
       <div class="resource-item"><div><span>Температура</span><strong>{% if thermal.get('available') %}{{ thermal.get('milli_celsius', 0) / 1000 }} °C{% else %}Датчик не найден{% endif %}</strong></div></div>
       <div class="resource-item"><div><span>Процессы</span><strong>{{ processes.get('count') or 'нет данных' }}</strong></div></div>
-      <div class="resource-item"><div><span>Подключённые устройства</span><strong>{{ client_count }}</strong></div></div>
+      <div class="resource-item"><div><span>Сейчас в сети</span><strong>{{ online_client_count }}</strong></div></div>
     </div>
   </section>
 </div>

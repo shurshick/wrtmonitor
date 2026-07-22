@@ -146,6 +146,31 @@ def format_duration(value: int | None) -> str:
     return " ".join(parts)
 
 
+def format_microseconds(value: int | float | None) -> str:
+    if value is None:
+        return "нет данных"
+    microseconds = max(0, int(value))
+    if microseconds < 1000:
+        return f"{microseconds} мкс"
+    milliseconds = microseconds / 1000
+    if milliseconds < 1000:
+        return f"{milliseconds:.0f} мс"
+    return f"{milliseconds / 1000:.1f} сек"
+
+
+def format_station_rate(value: int | float | str | None) -> str:
+    if value is None or value == "":
+        return "не передано"
+    if isinstance(value, str):
+        return value
+    rate = float(value)
+    if rate >= 1_000_000:
+        return f"{rate / 1_000_000:.1f} Гбит/с"
+    if rate >= 1_000:
+        return f"{rate / 1_000:.1f} Мбит/с"
+    return f"{rate:.0f} Кбит/с"
+
+
 def format_size_kb(value: int | float | None) -> str:
     if value is None:
         return "нет данных"
@@ -188,6 +213,8 @@ def format_device_status(value: str | None) -> str:
 
 templates.env.filters["timestamp"] = format_timestamp
 templates.env.filters["duration"] = format_duration
+templates.env.filters["microseconds"] = format_microseconds
+templates.env.filters["station_rate"] = format_station_rate
 templates.env.filters["size_kb"] = format_size_kb
 templates.env.filters["bytes"] = format_bytes
 templates.env.filters["status_label"] = format_device_status
@@ -601,6 +628,7 @@ def device_page(
         .order_by(NetworkClient.online.desc(), NetworkClient.last_seen_at.desc())
     ).all()
     clients = [client_response(db, item) for item in registry_clients]
+    online_client_count = sum(1 for item in clients if item.get("online"))
     lease_ipv4_by_mac = {
         str(item.get("mac") or "").lower(): str(item.get("ip") or "")
         for item in dhcp_config.get("leases") or []
@@ -718,6 +746,7 @@ def device_page(
         "wifi_roaming": has("wifi.roaming"),
         "wifi_mesh": has("wifi.mesh"),
         "wifi_stations": has("telemetry.wifi.stations"),
+        "client_traffic": has("telemetry.clients.traffic"),
         "system_timezone": has("system.set_timezone"),
         "system_ntp": has("system.set_ntp"),
         "maintenance_packages_read": has("maintenance.packages.read"),
@@ -873,6 +902,13 @@ def device_page(
             "client_count": len(clients)
             if clients
             else telemetry_clients.get("count", 0),
+            "online_client_count": online_client_count
+            if clients
+            else telemetry_clients.get("online_count", 0),
+            "client_traffic_available": bool(
+                supports["client_traffic"]
+                and any(item.get("online") and item.get("traffic") for item in clients)
+            ),
             "system_summary": system_summary,
             "system_view": system_view,
             "services": services,

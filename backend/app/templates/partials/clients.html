@@ -12,8 +12,8 @@
     {% if clients %}<div class="client-list-tools"><label class="client-search"><span class="visually-hidden">Найти устройство</span><input type="search" placeholder="Имя, IP или MAC" data-client-search></label><div class="client-filter" aria-label="Фильтр клиентов"><button class="is-active" type="button" data-client-filter="all" aria-pressed="true">Все</button><button type="button" data-client-filter="online" aria-pressed="false">В сети</button><button type="button" data-client-filter="offline" aria-pressed="false">Не в сети</button></div></div>{% endif %}
   </div>
   {% if clients %}
-  <div class="client-list" data-client-list>
-    <div class="client-list__header" aria-hidden="true"><span>Клиент</span><span>Адрес</span><span>Сегмент</span><span>Подключение</span><span>Трафик</span><span>Политика</span><span></span></div>
+  <div class="client-list {{ '' if client_traffic_available else 'client-list--without-traffic' }}" data-client-list>
+    <div class="client-list__header" aria-hidden="true"><span>Клиент</span><span>Адрес</span><span>Сегмент</span><span>Подключение</span>{% if client_traffic_available %}<span>Трафик</span>{% endif %}<span>Политика</span><span></span></div>
     {% for client in clients %}
     {% set assigned_profile = namespace(name='Без профиля') %}{% for profile in client_profiles %}{% if client.profile_id == profile.id|string %}{% set assigned_profile.name = profile.name %}{% endif %}{% endfor %}
     <details class="client-list-row" data-client-online="{{ 'true' if client.online else 'false' }}" data-client-search-value="{{ ((client.display_name or '') ~ ' ' ~ (client.hostname or '') ~ ' ' ~ (client.vendor or '') ~ ' ' ~ (client.ip_address or '') ~ ' ' ~ client.mac)|lower }}">
@@ -22,7 +22,7 @@
         <span class="client-list-cell"><strong>{{ client.current_ipv4 or client.ip_address or 'Адрес не определён' }}</strong><small>{{ client.mac }}{% if client.static_ipv4 %} · постоянный{% endif %}</small></span>
         <span class="client-list-cell"><strong>{{ client.interface or 'Домашняя сеть' }}</strong><small>{{ 'Постоянный IP' if client.static_ipv4 else 'Автоматический IP' }}</small></span>
         <span class="client-list-cell"><span class="status status--{{ 'online' if client.online else 'offline' }}">{{ 'В сети' if client.online else 'Нет связи' }}</span><small>{{ client.last_seen_at|timestamp }}</small></span>
-        <span class="client-list-cell"><strong>{% if client.traffic %}{{ client.traffic.rx_bytes|bytes }} / {{ client.traffic.tx_bytes|bytes }}{% else %}Нет данных{% endif %}</strong><small>получено / отправлено</small></span>
+        {% if client_traffic_available %}<span class="client-list-cell"><strong>{% if client.online and client.traffic %}{{ client.traffic.rx_bytes|bytes }} / {{ client.traffic.tx_bytes|bytes }}{% else %}Нет текущих данных{% endif %}</strong><small>счётчики nlbwmon</small></span>{% endif %}
         <span class="client-list-cell"><strong>{{ 'Интернет заблокирован' if client.effective_policy.blocked else assigned_profile.name }}</strong><small>Приоритет: {{ {'low':'низкий','normal':'обычный','high':'высокий','realtime':'реальное время'}.get(client.effective_policy.qos.priority, 'обычный') }}</small></span>
         <span class="client-list-row__chevron" aria-hidden="true"></span>
       </summary>
@@ -45,6 +45,7 @@
     {% endfor %}
     <div class="client-list-empty" data-client-empty hidden>По этому фильтру устройств нет.</div>
   </div>
+  {% if supports.client_traffic and not client_traffic_available %}<p class="notice notice--compact">Счётчики клиентов пока не получены от nlbwmon. Колонка трафика появится после первой успешной выборки.</p>{% elif not supports.client_traffic %}<p class="notice notice--compact">Учёт трафика по клиентам недоступен: агент не подтвердил работающий nlbwmon.</p>{% endif %}
   {% else %}<div class="empty-state"><h2>Устройств пока нет</h2><p>Список появится после следующего опроса роутера.</p></div>{% endif %}
 </section>
 

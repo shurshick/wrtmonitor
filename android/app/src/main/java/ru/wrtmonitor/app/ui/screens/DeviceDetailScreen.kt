@@ -223,7 +223,7 @@ private fun RouterOverview(
     val wanUp = wan?.optBoolean("up", false) == true
     val wanAddress = wan?.optJSONArray("ipv4")?.optString(0).orEmpty().ifBlank { stringResource(R.string.no_ip_address) }
     val clients = telemetry.clients ?: payload?.optJSONObject("clients")
-    val clientCount = clients?.optInt("count", 0) ?: 0
+    val clientCount = clients?.optInt("online_count", clients.optInt("count", 0)) ?: 0
     val wifi = telemetry.wifi ?: payload?.optJSONObject("wifi")
     val radios = wifi?.optJSONArray("radios")
     val firstRadio = radios?.optJSONObject(0)

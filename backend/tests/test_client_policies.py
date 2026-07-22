@@ -116,6 +116,7 @@ def test_client_normalization_marks_wifi_station_online_and_keeps_ipv4():
     assert item["state"] == "wifi"
     assert item["ssid"] == "HomeNET"
     assert item["band"] == "5g"
+    assert summary["online_count"] == 1
 
 
 def test_client_normalization_does_not_let_failed_ipv6_hide_reachable_ipv4():
@@ -138,6 +139,27 @@ def test_client_normalization_does_not_let_failed_ipv6_hide_reachable_ipv4():
         }
     )
     assert summary["items"][0]["state"] == "REACHABLE"
+    assert summary["online_count"] == 1
+
+
+def test_client_normalization_does_not_count_saved_dhcp_lease_as_online():
+    summary = normalize_clients_summary(
+        {
+            "clients": {
+                "dhcp": {
+                    "leases": [
+                        {
+                            "mac": "00:11:22:33:44:55",
+                            "ip": "192.168.31.42",
+                            "hostname": "offline-phone",
+                        }
+                    ]
+                }
+            }
+        }
+    )
+    assert summary["count"] == 1
+    assert summary["online_count"] == 0
 
 
 def test_vendor_lookup_uses_bundled_oui_database_and_handles_private_macs():

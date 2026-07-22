@@ -50,14 +50,14 @@
     </section>
 
     <a class="dashboard-card dashboard-card--network" href="/devices/{{ device.id }}?section=clients">
-      <header class="dashboard-card__header"><div><span class="eyebrow">Домашняя сеть</span><h2>Подключённые устройства</h2></div><span class="dashboard-number" data-live-clients>{{ client_count }}</span></header>
-      <p>Ethernet и Wi‑Fi-клиенты, профили доступа и постоянные DHCP-адреса.</p>
+      <header class="dashboard-card__header"><div><span class="eyebrow">Домашняя сеть</span><h2>Сейчас в сети</h2></div><span class="dashboard-number" data-live-clients>{{ online_client_count }}</span></header>
+      <p>Активные Ethernet и Wi‑Fi-клиенты. Всего сохранено: {{ client_count }}.</p>
       <span class="dashboard-card__link">Открыть список <span>&rarr;</span></span>
     </a>
 
     <a class="dashboard-card dashboard-card--wifi" href="/devices/{{ device.id }}?section=wifi">
       <header class="dashboard-card__header"><div><span class="eyebrow">Беспроводная сеть</span><h2>Wi‑Fi</h2></div><span class="radio-count">{{ radios|length }} мод.</span></header>
-      {% if radios %}{% set radio = radios[0] %}<strong>{{ radio.band or radio.name or 'Wi‑Fi' }}{% if radio.channel %} · канал {{ radio.channel }}{% endif %}</strong><p>{% if radio.interfaces %}{{ radio.interfaces|map(attribute='ssid')|select|join(', ') }}{% else %}SSID не получен{% endif %}</p>{% else %}<strong>Радиомодуль не обнаружен</strong><p>Управление Wi‑Fi недоступно.</p>{% endif %}
+      {% if radios %}{% set radio = radios[0] %}<strong>{{ radio.band or radio.name or 'Wi‑Fi' }}{% if radio.channel %} · канал {{ radio.channel }}{% endif %}</strong><p>{{ wifi.station_count }} {{ 'клиент' if wifi.station_count == 1 else 'клиентов' }} в эфире{% if radio.interfaces %} · {{ radio.interfaces|map(attribute='ssid')|select|join(', ') }}{% endif %}</p>{% else %}<strong>Радиомодуль не обнаружен</strong><p>Управление Wi‑Fi недоступно.</p>{% endif %}
       <span class="dashboard-card__link">Управление сетями <span>&rarr;</span></span>
     </a>
   </div>

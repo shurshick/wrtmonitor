@@ -110,3 +110,51 @@ def test_wifi_station_telemetry_is_flattened():
     assert summary["stations"][0]["signal"] == -48
     assert summary["stations"][0]["ssid"] == "HomeNET"
     assert summary["stations"][0]["band"] == "5g"
+
+
+def test_wifi_station_airtime_is_split_and_raw_object_is_not_exposed():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "available": True,
+                "stations": [
+                    {
+                        "interface": "phy1-ap0",
+                        "clients": {
+                            "02:A3:B0:9B:7E:0A": {
+                                "signal": -63,
+                                "airtime": {"rx": 707019, "tx": 609153},
+                            }
+                        },
+                    }
+                ],
+            }
+        }
+    )
+    station = summary["stations"][0]
+    assert station["airtime_rx_us"] == 707019
+    assert station["airtime_tx_us"] == 609153
+    assert summary["has_station_airtime"] is True
+    assert summary["has_station_rates"] is False
+
+
+def test_wifi_station_numeric_rates_are_preserved_when_driver_reports_them():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "stations": [
+                    {
+                        "clients": {
+                            "00:11:22:33:44:55": {
+                                "rx": {"rate": 650000},
+                                "tx": {"bitrate": 866700},
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    )
+    assert summary["stations"][0]["rx_bitrate"] == 650000
+    assert summary["stations"][0]["tx_bitrate"] == 866700
+    assert summary["has_station_rates"] is True

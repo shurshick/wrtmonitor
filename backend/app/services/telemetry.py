@@ -383,8 +383,11 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
         for mac, details in clients.items():
             if not isinstance(details, dict):
                 continue
-            rx = details.get("rx") or details.get("rx_rate") or {}
-            tx = details.get("tx") or details.get("tx_rate") or {}
+            rx = details.get("rx_rate") or details.get("rx") or {}
+            tx = details.get("tx_rate") or details.get("tx") or {}
+            airtime = details.get("airtime") or {}
+            airtime_rx_us = airtime.get("rx") if isinstance(airtime, dict) else None
+            airtime_tx_us = airtime.get("tx") if isinstance(airtime, dict) else None
             normalized_stations.append(
                 {
                     "mac": str(mac).lower(),
@@ -393,10 +396,12 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                     "band": station_group.get("band"),
                     "signal": details.get("signal", details.get("avg_ack_signal")),
                     "noise": details.get("noise"),
-                    "rx_bitrate": rx.get("rate") if isinstance(rx, dict) else rx,
-                    "tx_bitrate": tx.get("rate") if isinstance(tx, dict) else tx,
+                    "rx_bitrate": _station_rate(rx),
+                    "tx_bitrate": _station_rate(tx),
                     "connected_seconds": details.get("connected_time"),
-                    "airtime": details.get("airtime", details.get("airtime_weight")),
+                    "airtime_rx_us": _optional_nonnegative_int(airtime_rx_us),
+                    "airtime_tx_us": _optional_nonnegative_int(airtime_tx_us),
+                    "airtime_weight": details.get("airtime_weight"),
                 }
             )
     normalized_radios: list[dict[str, Any]] = []
@@ -458,12 +463,41 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "schedule": radio.get("schedule") or {"enabled": False},
             }
         )
+    has_station_rates = any(
+        item.get("rx_bitrate") is not None or item.get("tx_bitrate") is not None
+        for item in normalized_stations
+    )
+    has_station_airtime = any(
+        item.get("airtime_rx_us") is not None or item.get("airtime_tx_us") is not None
+        for item in normalized_stations
+    )
     return {
         "available": bool(wifi.get("available", False)),
         "radios": normalized_radios,
         "stations": normalized_stations,
         "station_count": len(normalized_stations),
+        "has_station_rates": has_station_rates,
+        "has_station_airtime": has_station_airtime,
     }
+
+
+def _optional_nonnegative_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _station_rate(value: Any) -> int | float | str | None:
+    if isinstance(value, dict):
+        value = value.get("rate", value.get("bitrate", value.get("bitrate_kbps")))
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return value if value > 0 else None
+    return str(value)
 
 
 def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
@@ -742,7 +776,21 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
         by_mac.values(),
         key=lambda item: (str(item.get("hostname") or "~"), str(item.get("ip") or "")),
     )
-    return {"count": len(items), "items": items}
+    online_count = sum(
+        1
+        for item in items
+        if str(item.get("state") or "").upper() in (active_neighbour_states | {"WIFI"})
+    )
+    traffic_available = any(
+        item.get("rx_bytes") is not None or item.get("tx_bytes") is not None
+        for item in items
+    )
+    return {
+        "count": len(items),
+        "online_count": online_count,
+        "traffic_available": traffic_available,
+        "items": items,
+    }
 
 
 def normalize_services_summary(payload: dict[str, Any]) -> dict[str, str]:
@@ -807,7 +855,7 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "wifi_radio_count": len(radios),
         "network_interface_count": len(interfaces),
         "agent_capability_count": len(extract_agent_capabilities(payload)),
-        "client_count": clients["count"],
+        "client_count": clients["online_count"],
         "hostname": system_summary.get("hostname"),
         "kernel": system_summary.get("kernel"),
         "conntrack_count": system_summary.get("conntrack_count"),

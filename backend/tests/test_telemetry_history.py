@@ -19,7 +19,10 @@ def test_build_telemetry_history_calculates_rates_and_resources():
                     "memory": {"total_kb": 262144, "available_kb": 196608},
                 },
                 "traffic": {"rx_bytes": 1_000, "tx_bytes": 2_000},
-                "clients": {"dhcp": {"leases": [{"mac": "00:11:22:33:44:55"}]}},
+                "clients": {
+                    "dhcp": {"leases": [{"mac": "00:11:22:33:44:55"}]},
+                    "neighbours": [{"mac": "00:11:22:33:44:55", "state": "REACHABLE"}],
+                },
             },
         ),
         SimpleNamespace(
@@ -36,7 +39,11 @@ def test_build_telemetry_history_calculates_rates_and_resources():
                             {"mac": "00:11:22:33:44:55"},
                             {"mac": "00:11:22:33:44:66"},
                         ]
-                    }
+                    },
+                    "neighbours": [
+                        {"mac": "00:11:22:33:44:55", "state": "REACHABLE"},
+                        {"mac": "00:11:22:33:44:66", "state": "STALE"},
+                    ],
                 },
             },
         ),

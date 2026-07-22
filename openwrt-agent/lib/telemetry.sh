@@ -314,14 +314,21 @@ dhcp_json() {
 clients_json() {
     neighbours=""
     if command -v ip >/dev/null 2>&1; then
-        while IFS=' ' read -r ip_address dev_word device lladdr_word mac state; do
-            [ "$dev_word" = "dev" ] || continue
-            [ "$lladdr_word" = "lladdr" ] || continue
+        while IFS='|' read -r ip_address device mac state; do
             [ -n "$mac" ] || continue
             [ -n "$neighbours" ] && neighbours="$neighbours,"
             neighbours="$neighbours{\"ip\":\"$(json_escape "$ip_address")\",\"mac\":\"$(json_escape "$mac")\",\"interface\":\"$(json_escape "$device")\",\"state\":\"$(json_escape "$state")\"}"
         done <<EOF
-$(ip neigh show 2>/dev/null || true)
+$(ip neigh show 2>/dev/null | awk '
+{
+    ip_address=$1; device=""; mac=""; state=""
+    for (i=2; i<=NF; i++) {
+        if ($i == "dev" && i < NF) device=$(i+1)
+        if ($i == "lladdr" && i < NF) mac=$(i+1)
+        if ($i ~ /^(INCOMPLETE|REACHABLE|STALE|DELAY|PROBE|FAILED|NOARP|PERMANENT)$/) state=$i
+    }
+    if (device != "" && mac != "") print ip_address "|" device "|" mac "|" state
+}' || true)
 EOF
     fi
     if command -v nlbw >/dev/null 2>&1; then
