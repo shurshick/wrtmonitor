@@ -408,6 +408,17 @@ def test_installer_bootstraps_runtime_dependencies():
     assert "ensure_optional_dependencies()" in source
     for package in ("nlbwmon", "wireguard-tools", "openvpn-openssl", "pbr"):
         assert package in source
+    assert "/etc/init.d/nlbwmon enable" in source
+    assert "/etc/init.d/nlbwmon restart" in source
+
+
+def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
+    source = read_text(ROOT / "lib" / "telemetry.sh")
+    assert 'column["mac"]' in source
+    assert 'column["rx_bytes"]' in source
+    assert 'column["tx_bytes"]' in source
+    assert '"traffic":{"available":%s,"status":"%s"}' in source
+    assert "/etc/init.d/nlbwmon start" in source
 
 
 def test_agent_version_file_matches_entrypoint():

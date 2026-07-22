@@ -811,6 +811,16 @@ def device_page(
         ),
         {},
     )
+    lan_ipv6 = {
+        "enabled": bool(lan_interface.get("ip6assign")),
+        "assignment_length": str(lan_interface.get("ip6assign") or "64"),
+        "hint": str(lan_interface.get("ip6hint") or ""),
+        "addresses": lan_interface.get("ipv6") or [],
+        "ra": str(lan_dhcp_pool.get("ra") or "disabled"),
+        "dhcpv6": str(lan_dhcp_pool.get("dhcpv6") or "disabled"),
+        "ndp": str(lan_dhcp_pool.get("ndp") or "disabled"),
+        "ra_management": str(lan_dhcp_pool.get("ra_management") or "0"),
+    }
     capabilities = agent.get("capabilities") or {}
     capability_details = agent.get("capability_details") or {}
     capabilities_summary = capability_summary(capabilities)
@@ -1009,6 +1019,7 @@ def device_page(
             "interface_options": interface_options,
             "network_options": network_options,
             "lan_dhcp_pool": lan_dhcp_pool,
+            "lan_ipv6": lan_ipv6,
             "firewall_zone_options": firewall_zone_options,
             "netmask_options": NETMASK_OPTIONS,
             "timezone_options": TIMEZONE_OPTIONS,
@@ -1031,8 +1042,9 @@ def device_page(
             else telemetry_clients.get("recent_count", 0),
             "client_traffic_available": bool(
                 supports["client_traffic"]
-                and any(item.get("online") and item.get("traffic") for item in clients)
+                and telemetry_clients.get("traffic_available")
             ),
+            "client_traffic_status": telemetry_clients.get("traffic_status"),
             "system_summary": system_summary,
             "system_view": system_view,
             "services": services,

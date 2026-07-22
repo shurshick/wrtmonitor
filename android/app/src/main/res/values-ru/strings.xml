@@ -375,6 +375,14 @@
     <string name="save">Сохранить</string>
     <string name="ipv6_settings">IPv6, RA и DHCPv6</string>
     <string name="prefix_length">Длина префикса</string>
+    <string name="ipv6_lan_enabled">IPv6 в домашней сети</string>
+    <string name="ipv6_ra_mode">Объявления маршрутизатора (RA)</string>
+    <string name="ipv6_dhcp_mode">Выдача адресов DHCPv6</string>
+    <string name="ipv6_ndp_mode">Прокси NDP</string>
+    <string name="ipv6_mode_server">Сервер</string>
+    <string name="ipv6_mode_relay">Ретранслятор</string>
+    <string name="ipv6_mode_hybrid">Гибридный</string>
+    <string name="save_ipv6">Сохранить IPv6</string>
     <string name="multiwan_settings">Multi-WAN и failover</string>
     <string name="primary_wan">Основной WAN</string>
     <string name="secondary_wan">Резервный WAN</string>

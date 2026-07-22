@@ -134,7 +134,6 @@ private fun wifiChannelOptionsForBand(band: String): List<SelectOption> {
 }
 private val wifiModeOptions = listOf("HE80", "HE40", "HE20", "VHT160", "VHT80", "VHT40", "VHT20", "HT40", "HT20").map { SelectOption(it, it) }
 private val wifiEncryptionOptions = listOf("sae-mixed", "sae", "psk2", "none").map { SelectOption(it, it) }
-private val ipv6PrefixOptions = listOf("48", "52", "56", "60", "64").map { SelectOption(it, "/$it") }
 private val processSignalOptions = listOf("TERM", "HUP", "INT", "KILL").map { SelectOption(it, it) }
 private val firewallPolicyOptions = listOf("ACCEPT", "REJECT", "DROP").map { SelectOption(it, it) }
 private val firewallProtocolOptions = listOf("tcpudp", "tcp", "udp", "icmp", "all").map { SelectOption(it, it.uppercase()) }
@@ -997,8 +996,6 @@ fun NetworkControlScreen(
     var sqmInterface by remember { mutableStateOf("") }
     var sqmDownload by remember { mutableStateOf("") }
     var sqmUpload by remember { mutableStateOf("") }
-    var ipv6Enabled by remember { mutableStateOf(true) }
-    var ipv6Prefix by remember { mutableStateOf("64") }
     var multiWanEnabled by remember { mutableStateOf(true) }
     var primaryWan by remember { mutableStateOf("") }
     var secondaryWan by remember { mutableStateOf("") }
@@ -1285,13 +1282,6 @@ fun NetworkControlScreen(
                     Text(stringResource(R.string.delete_port_forward))
                 }
             }
-        }
-    }
-    if (mode == NetworkScreenMode.Internet && capabilities["network.ipv6.configure"] == true) {
-        ExpandableSettingsCard(stringResource(R.string.ipv6_settings), "/$ipv6Prefix") {
-            SwitchSettingRow(stringResource(R.string.ipv6_settings), checked = ipv6Enabled, onCheckedChange = { ipv6Enabled = it })
-            OptionSelector(stringResource(R.string.prefix_length), ipv6Prefix, ipv6PrefixOptions, { ipv6Prefix = it })
-            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_ipv6", JSONObject().put("interface", "lan").put("enabled", ipv6Enabled).put("assignment_length", ipv6Prefix.toIntOrNull() ?: 64).put("ra", "server").put("dhcpv6", "server").put("ndp", "server"), genericCommandQueued) }, Modifier.align(Alignment.End))
         }
     }
     if (mode == NetworkScreenMode.Internet && capabilities["network.multiwan.configure"] == true) {

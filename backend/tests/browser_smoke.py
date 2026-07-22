@@ -241,6 +241,9 @@ def prepare_router() -> str:
                                 "proto": "static",
                                 "device": "br-lan",
                                 "ipv4-address": [{"address": "192.168.1.1"}],
+                                "ipv6": ["fd42:1234::1/64"],
+                                "ip6assign": "64",
+                                "ip6hint": "0",
                             },
                             {
                                 "interface": "wan",
@@ -331,8 +334,22 @@ def prepare_router() -> str:
                                     "rx_bytes": 1048576,
                                     "tx_bytes": 524288,
                                 }
-                            ]
-                        }
+                            ],
+                            "pools": [
+                                {
+                                    "interface": "lan",
+                                    "start": 100,
+                                    "limit": 150,
+                                    "leasetime": "12h",
+                                    "enabled": True,
+                                    "ra": "server",
+                                    "dhcpv6": "server",
+                                    "ndp": "disabled",
+                                    "ra_management": "1",
+                                }
+                            ],
+                        },
+                        "traffic": {"available": True, "status": "ready"},
                     },
                 },
             },
@@ -482,6 +499,25 @@ def run() -> None:
                     client_row.locator("summary").click()
                     assert client_row.get_attribute("open") is not None
                     assert page.locator(".client-address-panel").count() == 1
+                    ipv6_panel = (
+                        page.locator("details.settings-panel")
+                        .filter(has_text="IPv6, RA и DHCPv6")
+                        .first
+                    )
+                    assert ipv6_panel.count() == 1
+                    ipv6_panel.locator(":scope > summary").click()
+                    assert (
+                        ipv6_panel.locator('select[name="limit"]').input_value() == "64"
+                    )
+                    assert (
+                        ipv6_panel.locator('select[name="protocol"]').input_value()
+                        == "server"
+                    )
+                    assert (
+                        ipv6_panel.locator('select[name="gateway"]').input_value()
+                        == "server"
+                    )
+                    assert "fd42:1234::1/64" in ipv6_panel.inner_text()
                     page.screenshot(
                         path=str(ARTIFACTS / f"{name}-clients-expanded.png"),
                         full_page=True,
@@ -521,6 +557,18 @@ def run() -> None:
                         page.get_by_text("Создать резервную копию", exact=True).count()
                         == 1
                     )
+                    installed = page.locator("details.inline-details").filter(
+                        has_text="Установленные пакеты"
+                    )
+                    installed.locator(":scope > summary").click()
+                    package_search = installed.locator("[data-package-search]")
+                    package_search.fill("tcpdump")
+                    assert installed.locator(
+                        '[data-package-name="tcpdump-mini"]'
+                    ).is_visible()
+                    assert installed.locator(
+                        '[data-package-name="busybox"]'
+                    ).is_hidden()
                     journal = page.locator("[data-command-journal]")
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")

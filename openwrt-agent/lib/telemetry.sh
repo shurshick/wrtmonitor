@@ -306,13 +306,20 @@ dhcp_json() {
         case "$pool_start" in ""|*[!0-9]*) pool_start=0 ;; esac
         case "$pool_limit" in ""|*[!0-9]*) pool_limit=0 ;; esac
         [ -n "$pools" ] && pools="$pools,"
-        pools="$pools{\"interface\":\"$(json_escape "$pool_name")\",\"start\":$pool_start,\"limit\":$pool_limit,\"leasetime\":\"$(json_escape "$pool_leasetime")\"}"
+        pool_ignore="$(uci -q get "dhcp.$pool_name.ignore" 2>/dev/null || echo 0)"
+        pool_ra="$(uci -q get "dhcp.$pool_name.ra" 2>/dev/null || true)"
+        pool_dhcpv6="$(uci -q get "dhcp.$pool_name.dhcpv6" 2>/dev/null || true)"
+        pool_ndp="$(uci -q get "dhcp.$pool_name.ndp" 2>/dev/null || true)"
+        pool_ra_management="$(uci -q get "dhcp.$pool_name.ra_management" 2>/dev/null || true)"
+        pools="$pools{\"interface\":\"$(json_escape "$pool_name")\",\"start\":$pool_start,\"limit\":$pool_limit,\"leasetime\":\"$(json_escape "$pool_leasetime")\",\"enabled\":$( [ "$pool_ignore" = 1 ] && printf false || printf true ),\"ra\":\"$(json_escape "$pool_ra")\",\"dhcpv6\":\"$(json_escape "$pool_dhcpv6")\",\"ndp\":\"$(json_escape "$pool_ndp")\",\"ra_management\":\"$(json_escape "$pool_ra_management")\"}"
     done
     printf '{"leases":[%s],"static_leases":[%s],"pools":[%s]}' "$leases" "$static_leases" "$pools"
 }
 
 clients_json() {
     neighbours=""
+    traffic_available=false
+    traffic_status="unavailable"
     if command -v ip >/dev/null 2>&1; then
         while IFS='|' read -r ip_address device mac state; do
             [ -n "$mac" ] || continue
@@ -332,20 +339,47 @@ $(ip neigh show 2>/dev/null | awk '
 EOF
     fi
     if command -v nlbw >/dev/null 2>&1; then
+        if [ -x /etc/init.d/nlbwmon ] && ! /etc/init.d/nlbwmon running >/dev/null 2>&1; then
+            /etc/init.d/nlbwmon start >/dev/null 2>&1 || true
+        fi
         traffic_file="/tmp/wrtmonitor-nlbw-$$.csv"
         if nlbw -c csv -g mac -n -q -s ';' >"$traffic_file" 2>/dev/null; then
-            while IFS=';' read -r mac _ rx_bytes _ tx_bytes _; do
-                [ "$mac" = "mac" ] && continue
+            traffic_available=true
+            traffic_status="ready"
+            traffic_rows="/tmp/wrtmonitor-nlbw-$$.rows"
+            awk -F';' '
+                NR == 1 {
+                    for (i = 1; i <= NF; i++) {
+                        name = $i
+                        gsub(/^[[:space:]\"]+|[[:space:]\"\r]+$/, "", name)
+                        column[name] = i
+                    }
+                    next
+                }
+                column["mac"] && column["rx_bytes"] && column["tx_bytes"] {
+                    mac = $(column["mac"])
+                    rx = $(column["rx_bytes"])
+                    tx = $(column["tx_bytes"])
+                    gsub(/^[[:space:]\"]+|[[:space:]\"\r]+$/, "", mac)
+                    gsub(/[^0-9]/, "", rx)
+                    gsub(/[^0-9]/, "", tx)
+                    print mac "|" (rx == "" ? 0 : rx) "|" (tx == "" ? 0 : tx)
+                }
+            ' "$traffic_file" >"$traffic_rows"
+            while IFS='|' read -r mac rx_bytes tx_bytes; do
                 case "$mac" in ""|00:00:00:00:00:00) continue ;; esac
                 case "$rx_bytes" in ""|*[!0-9]*) rx_bytes=0 ;; esac
                 case "$tx_bytes" in ""|*[!0-9]*) tx_bytes=0 ;; esac
                 [ -n "$neighbours" ] && neighbours="$neighbours,"
                 neighbours="$neighbours{\"mac\":\"$(json_escape "$mac")\",\"state\":\"traffic\",\"rx_bytes\":$rx_bytes,\"tx_bytes\":$tx_bytes}"
-            done <"$traffic_file"
+            done <"$traffic_rows"
+            rm -f "$traffic_rows"
+        else
+            traffic_status="query_failed"
         fi
         rm -f "$traffic_file"
     fi
-    printf '{"neighbours":[%s],"dhcp":%s}' "$neighbours" "$(dhcp_json)"
+    printf '{"neighbours":[%s],"dhcp":%s,"traffic":{"available":%s,"status":"%s"}}' "$neighbours" "$(dhcp_json)" "$traffic_available" "$traffic_status"
 }
 
 network_summary_json() {
@@ -406,7 +440,9 @@ network_summary_json() {
         IFS="$old_ifs"
         [ -n "$items" ] && items="$items,"
         configured_netmask="$(uci -q get "network.$name.netmask" 2>/dev/null || true)"
-        items="$items{\"interface\":\"$(json_escape "$name")\",\"up\":$( [ "$up" = "true" ] && printf true || printf false ),\"proto\":\"$(json_escape "$proto")\",\"device\":\"$(json_escape "$device_name")\",\"ipv4\":[${ipv4_json}],\"ipv4_details\":[${ipv4_details_json}],\"netmask\":\"$(json_escape "$configured_netmask")\",\"ipv6\":[${ipv6_json}],\"gateway\":\"$(json_escape "$gateway")\",\"dns\":[${dns_json}],\"errors\":[]}"
+        configured_ip6assign="$(uci -q get "network.$name.ip6assign" 2>/dev/null || true)"
+        configured_ip6hint="$(uci -q get "network.$name.ip6hint" 2>/dev/null || true)"
+        items="$items{\"interface\":\"$(json_escape "$name")\",\"up\":$( [ "$up" = "true" ] && printf true || printf false ),\"proto\":\"$(json_escape "$proto")\",\"device\":\"$(json_escape "$device_name")\",\"ipv4\":[${ipv4_json}],\"ipv4_details\":[${ipv4_details_json}],\"netmask\":\"$(json_escape "$configured_netmask")\",\"ipv6\":[${ipv6_json}],\"ip6assign\":\"$(json_escape "$configured_ip6assign")\",\"ip6hint\":\"$(json_escape "$configured_ip6hint")\",\"gateway\":\"$(json_escape "$gateway")\",\"dns\":[${dns_json}],\"errors\":[]}"
         index=$((index + 1))
     done
     rm -f "$tmp"

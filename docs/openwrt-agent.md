@@ -17,7 +17,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.14.1` использует capability schema 13, поддерживает `apk` и `opkg` и передаёт SSID, диапазон, интерфейс и доступные метрики активных Wi-Fi-клиентов. В `0.14.1` протокол агента не менялся: обновлены единые release metadata. После обновления сервера агент обновляется обычной кнопкой; переустановка не нужна.
+Версия `0.14.2` использует capability schema 13, поддерживает `apk` и `opkg`, передаёт реальные параметры IPv6 LAN и устойчиво получает счётчики клиентов из `nlbwmon`. После установки `nlbwmon` агент включает и запускает службу автоматически. Обновление с `0.14.1` выполняется обычной кнопкой; переустановка не нужна.
 
 ## Требования
 
@@ -78,7 +78,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.14.1/wrtmonitor-openwrt-agent-v0.14.1.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.14.2/wrtmonitor-openwrt-agent-v0.14.2.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -183,7 +183,7 @@ wrtmonitor-agent diagnostics --json
 
 ## Обслуживание роутера
 
-Команды `v0.14.1` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
+Команды `v0.14.2` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
 
 - обновление каталога, установка и удаление пакетов через `apk` или `opkg`;
 - создание и восстановление штатного backup OpenWrt;

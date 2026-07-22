@@ -87,6 +87,8 @@ private val clientPriorityOptions = listOf("low", "normal", "high", "realtime")
     .map { SelectOption(it, it) }
 private val clientLeaseTimeOptions = listOf("30m", "1h", "6h", "12h", "24h", "72h", "168h")
     .map { SelectOption(it, it) }
+private val clientIpv6PrefixOptions = listOf("48", "52", "56", "60", "64")
+    .map { SelectOption(it, "/$it") }
 
 @Composable
 fun ClientsControlScreen(
@@ -109,6 +111,11 @@ fun ClientsControlScreen(
     var poolLimit by remember(device.id) { mutableStateOf("") }
     var leaseTime by remember(device.id) { mutableStateOf("") }
     var dhcpInitialized by remember(device.id) { mutableStateOf(false) }
+    var ipv6Enabled by remember(device.id) { mutableStateOf(false) }
+    var ipv6Prefix by remember(device.id) { mutableStateOf("64") }
+    var ipv6Ra by remember(device.id) { mutableStateOf("disabled") }
+    var ipv6Dhcp by remember(device.id) { mutableStateOf("disabled") }
+    var ipv6Ndp by remember(device.id) { mutableStateOf("disabled") }
     var loading by remember(device.id) { mutableStateOf(false) }
     var message by remember(device.id) { mutableStateOf("") }
     var messageIsError by remember(device.id) { mutableStateOf(false) }
@@ -133,7 +140,18 @@ fun ClientsControlScreen(
                             poolStart = lanPool.optInt("start").takeIf { it > 0 }?.toString().orEmpty()
                             poolLimit = lanPool.optInt("limit").takeIf { it > 0 }?.toString().orEmpty()
                             leaseTime = lanPool.optString("leasetime")
+                            ipv6Ra = lanPool.optString("ra", "disabled")
+                            ipv6Dhcp = lanPool.optString("dhcpv6", "disabled")
+                            ipv6Ndp = lanPool.optString("ndp", "disabled")
                         }
+                        val interfaces = result.data.network?.optJSONArray("interfaces")
+                        val lan = interfaces?.let { array ->
+                            (0 until array.length()).mapNotNull(array::optJSONObject)
+                                .firstOrNull { it.optString("interface") == "lan" }
+                        }
+                        val configuredPrefix = lan?.optString("ip6assign").orEmpty()
+                        ipv6Enabled = configuredPrefix.isNotBlank()
+                        if (configuredPrefix.isNotBlank()) ipv6Prefix = configuredPrefix
                         dhcpInitialized = true
                     }
                 }
@@ -245,6 +263,7 @@ fun ClientsControlScreen(
             profiles = profiles,
             canManageProfiles = capabilities["clients.policy"] == true,
             canConfigureDhcp = capabilities["dhcp.configure"] == true,
+            canConfigureIpv6 = capabilities["network.ipv6.configure"] == true,
             profileName = profileName,
             onProfileNameChange = { profileName = it },
             profileBlocked = profileBlocked,
@@ -255,6 +274,16 @@ fun ClientsControlScreen(
             onPoolLimitChange = { poolLimit = it.filter(Char::isDigit) },
             leaseTime = leaseTime,
             onLeaseTimeChange = { leaseTime = it },
+            ipv6Enabled = ipv6Enabled,
+            onIpv6EnabledChange = { ipv6Enabled = it },
+            ipv6Prefix = ipv6Prefix,
+            onIpv6PrefixChange = { ipv6Prefix = it },
+            ipv6Ra = ipv6Ra,
+            onIpv6RaChange = { ipv6Ra = it },
+            ipv6Dhcp = ipv6Dhcp,
+            onIpv6DhcpChange = { ipv6Dhcp = it },
+            ipv6Ndp = ipv6Ndp,
+            onIpv6NdpChange = { ipv6Ndp = it },
             onBack = { view = ClientsView.List },
             onCreateProfile = {
                 scope.launch {
@@ -291,6 +320,15 @@ fun ClientsControlScreen(
                     "dhcp.set_pool",
                     JSONObject().put("interface", "lan").put("start", poolStart)
                         .put("limit", poolLimit).put("leasetime", leaseTime),
+                    commandQueued,
+                )
+            },
+            onSaveIpv6 = {
+                pendingCommand = PendingSafeCommand(
+                    "network.set_ipv6",
+                    JSONObject().put("interface", "lan").put("enabled", ipv6Enabled)
+                        .put("assignment_length", ipv6Prefix.toIntOrNull() ?: 64)
+                        .put("ra", ipv6Ra).put("dhcpv6", ipv6Dhcp).put("ndp", ipv6Ndp),
                     commandQueued,
                 )
             },
@@ -760,6 +798,7 @@ private fun ClientsSettings(
     profiles: List<ClientProfileDto>,
     canManageProfiles: Boolean,
     canConfigureDhcp: Boolean,
+    canConfigureIpv6: Boolean,
     profileName: String,
     onProfileNameChange: (String) -> Unit,
     profileBlocked: Boolean,
@@ -770,10 +809,21 @@ private fun ClientsSettings(
     onPoolLimitChange: (String) -> Unit,
     leaseTime: String,
     onLeaseTimeChange: (String) -> Unit,
+    ipv6Enabled: Boolean,
+    onIpv6EnabledChange: (Boolean) -> Unit,
+    ipv6Prefix: String,
+    onIpv6PrefixChange: (String) -> Unit,
+    ipv6Ra: String,
+    onIpv6RaChange: (String) -> Unit,
+    ipv6Dhcp: String,
+    onIpv6DhcpChange: (String) -> Unit,
+    ipv6Ndp: String,
+    onIpv6NdpChange: (String) -> Unit,
     onBack: () -> Unit,
     onCreateProfile: () -> Unit,
     onDeleteProfile: (String) -> Unit,
     onSaveDhcp: () -> Unit,
+    onSaveIpv6: () -> Unit,
 ) {
     ClientBackRow(onBack, stringResource(R.string.back_to_clients))
     RouterPageHeader(
@@ -831,6 +881,25 @@ private fun ClientsSettings(
                 onClick = onSaveDhcp,
                 enabled = poolStart.isNotBlank() && poolLimit.isNotBlank() && leaseTime.isNotBlank(),
             )
+        }
+    }
+    if (canConfigureIpv6) {
+        val ipv6ModeOptions = listOf(
+            SelectOption("server", stringResource(R.string.ipv6_mode_server)),
+            SelectOption("relay", stringResource(R.string.ipv6_mode_relay)),
+            SelectOption("hybrid", stringResource(R.string.ipv6_mode_hybrid)),
+            SelectOption("disabled", stringResource(R.string.disabled_value)),
+        )
+        ExpandableSettingsCard(
+            title = stringResource(R.string.ipv6_settings),
+            summary = if (ipv6Enabled) "/$ipv6Prefix · RA $ipv6Ra · DHCPv6 $ipv6Dhcp" else stringResource(R.string.disabled_value),
+        ) {
+            SwitchSettingRow(stringResource(R.string.ipv6_lan_enabled), checked = ipv6Enabled, onCheckedChange = onIpv6EnabledChange)
+            OptionSelector(stringResource(R.string.prefix_length), ipv6Prefix, clientIpv6PrefixOptions, onIpv6PrefixChange)
+            OptionSelector(stringResource(R.string.ipv6_ra_mode), ipv6Ra, ipv6ModeOptions, onIpv6RaChange)
+            OptionSelector(stringResource(R.string.ipv6_dhcp_mode), ipv6Dhcp, ipv6ModeOptions, onIpv6DhcpChange)
+            OptionSelector(stringResource(R.string.ipv6_ndp_mode), ipv6Ndp, ipv6ModeOptions.filter { it.value != "server" }, onIpv6NdpChange)
+            PrimaryActionButton(stringResource(R.string.save_ipv6), onSaveIpv6)
         }
     }
 }

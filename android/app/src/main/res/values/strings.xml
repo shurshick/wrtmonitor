@@ -374,6 +374,14 @@
     <string name="save">Save</string>
     <string name="ipv6_settings">IPv6, RA and DHCPv6</string>
     <string name="prefix_length">Prefix length</string>
+    <string name="ipv6_lan_enabled">IPv6 on the home network</string>
+    <string name="ipv6_ra_mode">Router advertisements (RA)</string>
+    <string name="ipv6_dhcp_mode">DHCPv6 address assignment</string>
+    <string name="ipv6_ndp_mode">NDP proxy</string>
+    <string name="ipv6_mode_server">Server</string>
+    <string name="ipv6_mode_relay">Relay</string>
+    <string name="ipv6_mode_hybrid">Hybrid</string>
+    <string name="save_ipv6">Save IPv6</string>
     <string name="multiwan_settings">Multi-WAN and failover</string>
     <string name="primary_wan">Primary WAN</string>
     <string name="secondary_wan">Backup WAN</string>

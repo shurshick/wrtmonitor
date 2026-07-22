@@ -1,5 +1,6 @@
 from backend.app.services.commands import validate_command_payload
 from backend.app.services.telemetry import (
+    normalize_clients_summary,
     normalize_network_summary,
     normalize_system_summary,
 )
@@ -20,6 +21,8 @@ def test_current_agent_network_format_preserves_real_lan_configuration():
                             {"address": "192.168.31.1", "prefix_length": 24}
                         ],
                         "ipv6": ["fd00::1"],
+                        "ip6assign": "64",
+                        "ip6hint": "a",
                         "gateway": "192.168.31.254",
                         "dns": ["192.168.31.1"],
                     }
@@ -39,6 +42,8 @@ def test_current_agent_network_format_preserves_real_lan_configuration():
         }
     ]
     assert lan["ipv6"] == ["fd00::1"]
+    assert lan["ip6assign"] == "64"
+    assert lan["ip6hint"] == "a"
     assert lan["gateway"] == "192.168.31.254"
     assert lan["dns"] == ["192.168.31.1"]
 
@@ -58,6 +63,21 @@ def test_legacy_ubus_network_format_still_derives_netmask():
     )
 
     assert summary["interfaces"][0]["netmask"] == "255.255.255.0"
+
+
+def test_nlbw_source_can_be_ready_before_first_non_zero_counter():
+    summary = normalize_clients_summary(
+        {
+            "clients": {
+                "traffic": {"available": True, "status": "ready"},
+                "neighbours": [],
+                "dhcp": {"leases": [], "static_leases": []},
+            }
+        }
+    )
+
+    assert summary["traffic_available"] is True
+    assert summary["traffic_status"] == "ready"
 
 
 def test_time_configuration_is_normalized_without_ui_defaults():

@@ -522,6 +522,9 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .package-list { display: grid; gap: 7px; margin-top: 16px; }
 .package-list h3 { margin: 0; font-size: 15px; }
 .package-list--installed { max-height: 360px; overflow: auto; margin-top: 10px; padding-right: 3px; }
+.package-search { display: grid; gap: 6px; margin-top: 12px; }
+.package-search label { color: var(--muted); font-size: 13px; }
+.package-search input { width: 100%; }
 .package-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-muted); }
 .package-row > span { display: grid; min-width: 0; }
 .package-row strong, .package-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

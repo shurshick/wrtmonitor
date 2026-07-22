@@ -94,6 +94,10 @@ ensure_optional_dependencies() {
         echo "Installing optional per-client traffic dependency: nlbwmon"
         install_packages nlbwmon >/dev/null 2>&1 || echo "Optional package nlbwmon is unavailable; per-client traffic counters are disabled" >&2
     fi
+    if command -v nlbw >/dev/null 2>&1 && [ -x /etc/init.d/nlbwmon ]; then
+        /etc/init.d/nlbwmon enable >/dev/null 2>&1 || true
+        /etc/init.d/nlbwmon restart >/dev/null 2>&1 || /etc/init.d/nlbwmon start >/dev/null 2>&1 || true
+    fi
     if ! command -v wg >/dev/null 2>&1; then
         echo "Installing optional VPN dependency: wireguard-tools"
         install_packages wireguard-tools >/dev/null 2>&1 || echo "Optional package wireguard-tools is unavailable; WireGuard management is disabled" >&2

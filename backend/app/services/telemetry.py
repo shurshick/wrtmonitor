@@ -569,6 +569,8 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
                     if (isinstance(address, dict) and address.get("address"))
                     or (not isinstance(address, dict) and address)
                 ],
+                "ip6assign": str(item.get("ip6assign") or ""),
+                "ip6hint": str(item.get("ip6hint") or ""),
                 "gateway": item.get("gateway")
                 or next(
                     (
@@ -637,6 +639,7 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
     offline_neighbour_states = {"FAILED", "INCOMPLETE"}
     preferred_neighbour_states = confirmed_neighbour_states | recent_neighbour_states
     clients = payload.get("clients") or {}
+    traffic_source = clients.get("traffic") or {}
     dhcp = clients.get("dhcp") or payload.get("dhcp") or {}
     leases = dhcp.get("leases") or []
     static_leases = dhcp.get("static_leases") or []
@@ -794,7 +797,7 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
         1 for item in items if item.get("presence_evidence") == "confirmed"
     )
     recent_count = sum(1 for item in items if item.get("presence_evidence") == "recent")
-    traffic_available = any(
+    traffic_available = bool(traffic_source.get("available")) or any(
         item.get("rx_bytes") is not None or item.get("tx_bytes") is not None
         for item in items
     )
@@ -803,6 +806,7 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "online_count": online_count,
         "recent_count": recent_count,
         "traffic_available": traffic_available,
+        "traffic_status": str(traffic_source.get("status") or "unknown"),
         "items": items,
     }
 

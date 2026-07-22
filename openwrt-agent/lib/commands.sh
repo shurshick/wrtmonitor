@@ -536,7 +536,7 @@ execute_command() {
         network.set_ipv6)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ipv6_iface="$(json_get_string "$payload_file" '@.interface')"; ipv6_enabled="$(json_get_bool "$payload_file" '@.enabled')"; assignment="$(json_get_number "$payload_file" '@.assignment_length')"; ra_mode="$(json_get_string "$payload_file" '@.ra')"; dhcpv6_mode="$(json_get_string "$payload_file" '@.dhcpv6')"; ndp_mode="$(json_get_string "$payload_file" '@.ndp')"; rm -f "$payload_file"
             if [ "$ipv6_enabled" = true ]; then uci set "network.$ipv6_iface.ip6assign=$assignment"; uci set "dhcp.$ipv6_iface.ra=$ra_mode"; uci set "dhcp.$ipv6_iface.dhcpv6=$dhcpv6_mode"; uci set "dhcp.$ipv6_iface.ndp=$ndp_mode"; else uci -q delete "network.$ipv6_iface.ip6assign" || true; uci set "dhcp.$ipv6_iface.ra=disabled"; uci set "dhcp.$ipv6_iface.dhcpv6=disabled"; uci set "dhcp.$ipv6_iface.ndp=disabled"; fi
-            if uci commit network && uci commit dhcp && /etc/init.d/odhcpd restart >/dev/null 2>&1; then result="$(command_success_result "IPv6 configuration updated")"; else status=failed; result="$(command_failed_result "failed to update IPv6")"; fi
+            if uci commit network && uci commit dhcp && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/odhcpd restart >/dev/null 2>&1; then result="$(command_success_result "IPv6 configuration updated")"; else status=failed; result="$(command_failed_result "failed to update IPv6")"; fi
             ;;
         network.set_multiwan)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; multi_enabled="$(json_get_bool "$payload_file" '@.enabled')"; primary="$(json_get_string "$payload_file" '@.primary_interface')"; secondary="$(json_get_string "$payload_file" '@.secondary_interface')"; primary_metric="$(json_get_number "$payload_file" '@.primary_metric')"; secondary_metric="$(json_get_number "$payload_file" '@.secondary_metric')"; rm -f "$payload_file"
@@ -884,7 +884,13 @@ execute_command() {
                     status=failed; result="$(command_failed_result "system package removal is not allowed")"
                     ;;
                 *)
-                    if package_output="$(package_apply "$package_action" "$package" 2>&1)"; then result="$(command_success_result "package operation completed" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"output\":\"$(json_escape "$package_output")\"")"; else status=failed; result="$(command_failed_result "$package_output")"; fi
+                    if package_output="$(package_apply "$package_action" "$package" 2>&1)"; then
+                        if [ "$package_action" = install ] && [ "$package" = nlbwmon ] && [ -x /etc/init.d/nlbwmon ]; then
+                            /etc/init.d/nlbwmon enable >/dev/null 2>&1 || true
+                            /etc/init.d/nlbwmon restart >/dev/null 2>&1 || /etc/init.d/nlbwmon start >/dev/null 2>&1 || true
+                        fi
+                        result="$(command_success_result "package operation completed" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"output\":\"$(json_escape "$package_output")\"")"
+                    else status=failed; result="$(command_failed_result "$package_output")"; fi
                     ;;
             esac
             ;;

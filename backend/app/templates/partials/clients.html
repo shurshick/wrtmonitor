@@ -47,7 +47,7 @@
     {% endfor %}
     <div class="client-list-empty" data-client-empty hidden>По этому фильтру устройств нет.</div>
   </div>
-  {% if supports.client_traffic and not client_traffic_available %}<p class="notice notice--compact">Счётчики клиентов пока не получены от nlbwmon. Колонка трафика появится после первой успешной выборки.</p>{% elif not supports.client_traffic %}<p class="notice notice--compact">Учёт трафика по клиентам недоступен: агент не подтвердил работающий nlbwmon.</p>{% endif %}
+  {% if supports.client_traffic and not client_traffic_available %}<p class="notice notice--compact">{{ 'nlbwmon установлен, но запрос счётчиков завершился ошибкой. Перезапустите службу nlbwmon или обновите агент.' if client_traffic_status == 'query_failed' else 'nlbwmon установлен, но источник счётчиков ещё не готов. Агент повторит запрос автоматически.' }}</p>{% elif not supports.client_traffic %}<p class="notice notice--compact">Учёт трафика по клиентам недоступен: агент не подтвердил работающий nlbwmon.</p>{% endif %}
   {% else %}<div class="empty-state"><h2>Устройств пока нет</h2><p>Список появится после следующего опроса роутера.</p></div>{% endif %}
 </section>
 
@@ -77,4 +77,25 @@
   </details>
   {% endif %}
 </div>
+{% endif %}
+
+{% if supports.network_ipv6 %}
+<section class="workspace-section section">
+  <div class="card__heading"><div><p class="eyebrow">IPv6</p><h2>IPv6 в домашней сети</h2><p class="muted">Префикс LAN, объявления маршрутизатора и выдача адресов клиентам.</p></div></div>
+  <details class="settings-panel card">
+    <summary><span><strong>IPv6, RA и DHCPv6</strong><small>{% if lan_ipv6.enabled %}/{{ lan_ipv6.assignment_length }} · RA {{ lan_ipv6.ra }} · DHCPv6 {{ lan_ipv6.dhcpv6 }}{% else %}выключено{% endif %}</small></span><span>Настроить</span></summary>
+    <form class="compact-form settings-panel__body" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="network.set_ipv6"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="interface" value="lan">
+      {% if lan_ipv6.addresses %}<p class="notice notice--compact">Текущие адреса LAN: {{ lan_ipv6.addresses|join(', ') }}</p>{% endif %}
+      <div class="form-grid">
+        <label>Состояние<select name="enabled"><option value="true" {% if lan_ipv6.enabled %}selected{% endif %}>Включено</option><option value="false" {% if not lan_ipv6.enabled %}selected{% endif %}>Выключено</option></select></label>
+        <label>Длина назначаемого префикса<select name="limit">{% for value in [48,52,56,60,64] %}<option value="{{ value }}" {% if lan_ipv6.assignment_length == value|string %}selected{% endif %}>/{{ value }}</option>{% endfor %}</select></label>
+        <label>Router Advertisement<select name="protocol">{% for value, label in [('server','Сервер'),('relay','Ретранслятор'),('hybrid','Гибридный'),('disabled','Выключено')] %}<option value="{{ value }}" {% if lan_ipv6.ra == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>DHCPv6<select name="gateway">{% for value, label in [('server','Сервер'),('relay','Ретранслятор'),('hybrid','Гибридный'),('disabled','Выключено')] %}<option value="{{ value }}" {% if lan_ipv6.dhcpv6 == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>NDP proxy<select name="dns">{% for value, label in [('relay','Ретранслятор'),('hybrid','Гибридный'),('disabled','Выключено')] %}<option value="{{ value }}" {% if lan_ipv6.ndp == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      </div>
+      <div class="form-actions"><button type="submit">Сохранить IPv6</button></div>
+    </form>
+  </details>
+</section>
 {% endif %}
