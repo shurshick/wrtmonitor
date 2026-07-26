@@ -77,6 +77,9 @@ daemon() {
         apply_wifi_schedules || log_notice "wifi schedule check failed"
         telemetry || log_notice "telemetry failed"
         poll_commands || log_notice "command polling failed"
+        if [ "$PENDING_AGENT_EXEC" = "1" ]; then
+            handoff_to_updated_agent
+        fi
         sleep "$(telemetry_interval_seconds)"
     done
 }

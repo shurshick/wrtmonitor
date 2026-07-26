@@ -161,6 +161,38 @@ def test_agent_uses_explicit_load_order():
     assert "load_lib *.sh" not in source
 
 
+def test_installer_replaces_stale_connection_identity_and_probes_server():
+    source = read_text(INSTALLER)
+    for assignment in (
+        'uci set "wrtmonitor.main.server_url=$SERVER_URL"',
+        'uci set "wrtmonitor.main.device_token=$DEVICE_TOKEN"',
+        'uci set "wrtmonitor.main.device_id=$DEVICE_ID"',
+        'uci set "wrtmonitor.main.name=$NAME"',
+    ):
+        assert assignment in source
+    assert "write_connection_config" in source
+    assert "/usr/bin/wrtmonitor-agent send-now" in source
+    assert source.index("stop_existing_agent") < source.index("install_payload\n")
+    assert source.index("/usr/bin/wrtmonitor-agent send-now") < source.index(
+        "/etc/init.d/wrtmonitor start"
+    )
+
+
+def test_daemon_handoffs_after_command_driven_update():
+    source = read_text(LIB_DIR / "api.sh")
+    polling = source.index('poll_commands || log_notice "command polling failed"')
+    handoff = source.index('if [ "$PENDING_AGENT_EXEC" = "1" ]; then', polling)
+    sleeping = source.index('sleep "$(telemetry_interval_seconds)"', polling)
+    assert polling < handoff < sleeping
+
+
+def test_legacy_six_hour_update_interval_is_migrated():
+    source = read_text(LIB_DIR / "update.sh")
+    assert 'DEFAULT_UPDATE_INTERVAL_HOURS="1"' in source
+    assert 'if [ "$hours" = "6" ]; then' in source
+    assert 'hours="$DEFAULT_UPDATE_INTERVAL_HOURS"' in source
+
+
 def test_no_basic_bashisms_in_agent_libs():
     forbidden = ("[[ ", '[["', "\nsource ", "mapfile", "pipefail")
     for path in [AGENT, INSTALLER, *sorted(LIB_DIR.glob("*.sh"))]:

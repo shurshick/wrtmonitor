@@ -1,6 +1,6 @@
 # Эксплуатация и восстановление сервера
 
-Документ актуален для `WrtMonitor v0.16.0-stability`.
+Документ актуален для `WrtMonitor v0.16.1-agent-recovery`.
 
 Для оркестратора используйте `/live` как liveness и `/ready` как readiness. `/health` сохранён для совместимости. Prometheus endpoint `/metrics` выключен по умолчанию и включается через `WRTMONITOR_ENABLE_METRICS=true`.
 

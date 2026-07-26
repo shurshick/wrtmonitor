@@ -1,4 +1,4 @@
-DEFAULT_UPDATE_INTERVAL_HOURS="6"
+DEFAULT_UPDATE_INTERVAL_HOURS="1"
 
 parse_version_parts() {
     normalized="$(printf '%s' "$1" | sed 's/^v//; s/+.*$//')"
@@ -76,6 +76,11 @@ update_interval_seconds() {
     case "$hours" in
         ""|*[!0-9]*) hours="$DEFAULT_UPDATE_INTERVAL_HOURS" ;;
     esac
+    # Six hours was the historical default. Migrate that value without
+    # overriding deliberate custom schedules.
+    if [ "$hours" = "6" ]; then
+        hours="$DEFAULT_UPDATE_INTERVAL_HOURS"
+    fi
     if [ "$hours" -le 0 ]; then
         hours="$DEFAULT_UPDATE_INTERVAL_HOURS"
     fi

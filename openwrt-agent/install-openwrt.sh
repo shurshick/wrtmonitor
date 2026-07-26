@@ -260,10 +260,7 @@ clean_install_targets() {
     fi
 }
 
-write_config_if_needed() {
-    if [ -r /etc/config/wrtmonitor ] && [ "$KEEP_CONFIG" = "1" ]; then
-        return
-    fi
+write_default_config() {
     cat > /etc/config/wrtmonitor <<EOF
 config wrtmonitor 'main'
     option enabled '1'
@@ -274,13 +271,65 @@ config wrtmonitor 'main'
     option name '$NAME'
     option interval '60'
     option auto_update '1'
-    option update_interval_hours '6'
+    option update_interval_hours '1'
     option update_channel 'stable'
     option allow_downgrade '0'
     option recovery_mode '0'
     option staged_firmware_sha256 ''
     option staged_firmware_preserve '1'
 EOF
+}
+
+set_config_default() {
+    option="$1"
+    value="$2"
+    [ -n "$(uci -q get "wrtmonitor.main.$option" 2>/dev/null || true)" ] \
+        || uci set "wrtmonitor.main.$option=$value"
+}
+
+write_connection_config() {
+    if [ ! -r /etc/config/wrtmonitor ] || [ "$KEEP_CONFIG" != "1" ]; then
+        write_default_config
+    fi
+
+    # A reinstall can provision a new database row while an old UCI file is
+    # still present. Connection identity must always follow the new provision.
+    uci set "wrtmonitor.main=wrtmonitor"
+    uci set "wrtmonitor.main.enabled=1"
+    uci set "wrtmonitor.main.server_url=$SERVER_URL"
+    uci set "wrtmonitor.main.update_source=$DOWNLOAD_BASE"
+    uci set "wrtmonitor.main.device_token=$DEVICE_TOKEN"
+    if [ -n "$DEVICE_ID" ]; then
+        uci set "wrtmonitor.main.device_id=$DEVICE_ID"
+    else
+        uci -q delete wrtmonitor.main.device_id 2>/dev/null || true
+    fi
+    uci set "wrtmonitor.main.name=$NAME"
+    set_config_default interval 60
+    set_config_default auto_update 1
+    set_config_default update_interval_hours 1
+    set_config_default update_channel stable
+    set_config_default allow_downgrade 0
+    set_config_default recovery_mode 0
+    set_config_default staged_firmware_sha256 ''
+    set_config_default staged_firmware_preserve 1
+    uci commit wrtmonitor
+}
+
+stop_existing_agent() {
+    old_pid=""
+    [ ! -r /var/run/wrtmonitor-agent.pid ] \
+        || old_pid="$(cat /var/run/wrtmonitor-agent.pid 2>/dev/null || true)"
+    /etc/init.d/wrtmonitor stop 2>/dev/null || true
+    wait_count=0
+    while [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null && [ "$wait_count" -lt 5 ]; do
+        wait_count=$((wait_count + 1))
+        sleep 1
+    done
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+        kill -9 "$old_pid" 2>/dev/null || true
+    fi
+    rmdir /tmp/wrtmonitor-agent.lock 2>/dev/null || true
 }
 
 install_payload() {
@@ -356,14 +405,28 @@ if [ "$CLEAN_MODE" = "1" ]; then
     clean_install_targets
 fi
 
+stop_existing_agent
 install_payload
-write_config_if_needed
+write_connection_config
 
 if ! /usr/bin/wrtmonitor-agent ensure-dependencies; then
     echo "Agent installation stopped: required runtime dependencies are unavailable" >&2
     exit 1
 fi
 
+if ! /usr/bin/wrtmonitor-agent send-now; then
+    echo "Agent installation failed: server rejected initial telemetry or command polling" >&2
+    /etc/init.d/wrtmonitor enable
+    /etc/init.d/wrtmonitor start || true
+    exit 1
+fi
+echo "Initial telemetry accepted by WrtMonitor server"
+
 /etc/init.d/wrtmonitor enable
-/etc/init.d/wrtmonitor restart
-echo "wrtmonitor agent installed"
+/etc/init.d/wrtmonitor start
+sleep 1
+if ! /etc/init.d/wrtmonitor status >/dev/null 2>&1; then
+    echo "Agent installation failed: wrtmonitor service did not start" >&2
+    exit 1
+fi
+echo "wrtmonitor agent $(/usr/bin/wrtmonitor-agent version) installed and running"

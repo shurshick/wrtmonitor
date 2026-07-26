@@ -718,6 +718,26 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert traffic_response.status_code == 200
     assert len(traffic_response.json()) == 96
 
+    outdated_agent = {
+        **telemetry["agent"],
+        "version": "0.15.0",
+        "available_version": APP_VERSION,
+        "auto_update_enabled": True,
+    }
+    outdated_response = client.post(
+        "/api/v1/agent/telemetry",
+        headers=agent_headers,
+        json={
+            "device_id": device_id,
+            "telemetry": telemetry | {"agent": outdated_agent},
+        },
+    )
+    assert outdated_response.status_code == 200
+    pending_commands = client.get(
+        "/api/v1/agent/commands", headers=agent_headers
+    ).json()
+    assert any(command["type"] == "agent.update" for command in pending_commands)
+
     session_factory = sessionmaker(
         bind=get_engine(), autoflush=False, expire_on_commit=False
     )

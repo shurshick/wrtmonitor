@@ -13,6 +13,8 @@ from backend.app.config import load_settings
 from backend.app.models import Device
 from backend.app.schemas import TelemetryRequest
 from backend.app.security import hash_token
+from backend.app.services import agent_updates
+from backend.app.services.agent_updates import agent_update_required
 from backend.app.services.commands import create_device_command
 
 
@@ -80,6 +82,53 @@ def test_idempotency_key_returns_the_existing_command() -> None:
             idempotency_key=key,
         )
     assert exc.value.status_code == 409
+
+
+def test_agent_version_comparison_never_schedules_a_downgrade() -> None:
+    assert agent_update_required("0.15.0", "0.16.0")
+    assert agent_update_required("0.16.0-rc1", "0.16.0")
+    assert not agent_update_required("0.16.0", "0.16.0")
+    assert not agent_update_required("0.17.0", "0.16.0")
+    assert not agent_update_required("development", "0.16.0")
+
+
+def test_old_agent_with_auto_update_is_queued_immediately(monkeypatch) -> None:
+    captured = {}
+
+    def fake_create(_db, **kwargs):
+        captured.update(kwargs)
+        return "command"
+
+    monkeypatch.setattr(agent_updates, "create_device_command", fake_create)
+    now = datetime(2026, 7, 26, 18, 5, tzinfo=UTC)
+    result = agent_updates.queue_automatic_agent_update(
+        object(),
+        device_id=uuid4(),
+        telemetry={"agent": {"version": "0.15.0", "auto_update_enabled": True}},
+        now=now,
+    )
+
+    assert result == "command"
+    assert captured["command_type"] == "agent.update"
+    assert captured["source"] == "auto-update"
+    assert captured["idempotency_key"].endswith(":2026072618")
+
+
+def test_disabled_auto_update_does_not_queue_a_command(monkeypatch) -> None:
+    monkeypatch.setattr(
+        agent_updates,
+        "create_device_command",
+        lambda *_args, **_kwargs: pytest.fail("command must not be created"),
+    )
+    assert (
+        agent_updates.queue_automatic_agent_update(
+            object(),
+            device_id=uuid4(),
+            telemetry={"agent": {"version": "0.15.0", "auto_update_enabled": False}},
+            now=datetime.now(UTC),
+        )
+        is None
+    )
 
 
 def test_liveness_contracts_and_metrics_are_exposed() -> None:

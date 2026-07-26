@@ -10,6 +10,7 @@ from ..db import get_db
 from ..models import DeviceTelemetry, User
 from ..schemas import TelemetryRequest
 from ..services.auth import current_user, device_from_token, settings
+from ..services.agent_updates import queue_automatic_agent_update
 from ..services.client_registry import client_inventory_summary, sync_client_inventory
 from ..services.devices import get_latest_agent_status, get_user_device_or_404
 from ..services.telemetry import (
@@ -125,6 +126,9 @@ def agent_telemetry(
     db.flush()
     record_device_telemetry_metric(db, device.id, payload.telemetry, now)
     sync_client_inventory(db, device.id, payload.telemetry, now)
+    queue_automatic_agent_update(
+        db, device_id=device.id, telemetry=payload.telemetry, now=now
+    )
     cleanup_device_telemetry(db, device.id, settings().telemetry_retention_per_device)
     cleanup_device_telemetry_metrics(
         db, device.id, settings().telemetry_metric_retention_days
