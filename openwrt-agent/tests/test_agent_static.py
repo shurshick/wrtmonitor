@@ -78,11 +78,30 @@ def test_manifest_lists_required_files():
         "install-openwrt.sh",
         "agent-version.txt",
         "openwrt-agent-files.txt",
-        "SHA256SUMS.sig",
     ):
         assert name in entries
     for name in REQUIRED_LIBS:
         assert f"lib/{name}" in entries
+
+
+def test_manifest_remains_compatible_with_legacy_updater():
+    entries = [
+        line.strip()
+        for line in read_text(MANIFEST).splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+    sums_text = read_text(SUMS)
+
+    # Agents before signed manifests verify every listed payload file against
+    # SHA256SUMS. The detached signature is downloaded separately by current
+    # agents and cannot checksum itself without creating a circular manifest.
+    assert "SHA256SUMS.sig" not in entries
+    assert 'download_file "$base/SHA256SUMS.sig"' in read_text(LIB_DIR / "update.sh")
+    assert 'download_file "$base/SHA256SUMS.sig"' in read_text(INSTALLER)
+    for name in entries:
+        if name == "SHA256SUMS.txt":
+            continue
+        assert f"  {name}" in sums_text or f" *{name}" in sums_text
 
 
 def test_nlbwmon_runtime_repairs_empty_config_and_starts_service(tmp_path: Path):
