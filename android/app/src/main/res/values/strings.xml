@@ -540,4 +540,25 @@
     <string name="traffic_received">Received</string>
     <string name="traffic_sent">Sent</string>
     <string name="dhcp_pool_summary">Home network address range and lease time</string>
+    <string name="network_segments">Network segments</string>
+    <string name="network_segments_summary">%1$d interfaces, bridges and DHCP scopes</string>
+    <string name="network_segment">Segment</string>
+    <string name="network_segment_new">New segment</string>
+    <string name="system_name">System name</string>
+    <string name="ipv4_address">IPv4 address</string>
+    <string name="bridge_name">Bridge</string>
+    <string name="bridge_ports">Physical ports</string>
+    <string name="bridge_ports_hint">Comma-separated, for example lan3, lan4</string>
+    <string name="create_bridge">Create bridge</string>
+    <string name="dhcp_server">DHCP server</string>
+    <string name="segment_policy">Access policy</string>
+    <string name="segment_policy_trusted">Trusted network</string>
+    <string name="segment_policy_guest">Guest with internet access</string>
+    <string name="segment_policy_isolated">Isolated network</string>
+    <string name="bridge_vlan">Bridge VLAN 802.1Q</string>
+    <string name="bridge_vlan_summary">%1$d VLAN entries</string>
+    <string name="vlan">VLAN</string>
+    <string name="vlan_new">New VLAN</string>
+    <string name="vlan_id">VLAN ID</string>
+    <string name="vlan_ports_hint">Use lan1:u* for untagged/PVID and lan2:t for tagged</string>
 </resources>

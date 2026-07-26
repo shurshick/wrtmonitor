@@ -20,7 +20,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.16.1` использует capability schema 15 и единый манифест обязательных runtime-зависимостей. Installer и обновление агента применяют этот манифест автоматически, поэтому новые зависимости будущих релизов устанавливаются без переустановки агента. Перед установкой каждый файл проверяется по SHA-256, а сам манифест — по встроенному Ed25519 public key.
+Версия `0.17.0` использует capability schema 16 и единый манифест обязательных runtime-зависимостей. Installer и обновление агента применяют этот манифест автоматически, поэтому новые зависимости будущих релизов устанавливаются без переустановки агента. Перед установкой каждый файл проверяется по SHA-256, а сам манифест — по встроенному Ed25519 public key.
 
 ## Требования
 
@@ -93,7 +93,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.16.1-agent-recovery/wrtmonitor-openwrt-agent-v0.16.1.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.17.0-network-segments/wrtmonitor-openwrt-agent-v0.17.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -131,7 +131,7 @@ Installer считает установку успешной только пос
 
 ```text
 Initial telemetry accepted by WrtMonitor server
-wrtmonitor agent 0.16.1 installed and running
+wrtmonitor agent 0.17.0 installed and running
 ```
 
 ## Проверка после установки
@@ -211,7 +211,21 @@ wrtmonitor-agent diagnostics --json
 
 ## Обслуживание роутера
 
-Команды `v0.16.1` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера. Повторная доставка команды не запускает действие второй раз: агент возвращает сохранённый terminal result по command id.
+Команды `v0.17.0` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера. Повторная доставка команды не запускает действие второй раз: агент возвращает сохранённый terminal result по command id.
+
+### Сегменты и VLAN
+
+Агент передаёт фактические UCI-секции локальных интерфейсов, мостов и `bridge-vlan`. Web UI и Android не используют шаблонные адреса: после очередной telemetry показываются реальные IPv4, маска, DHCP-пул, bridge section, порты, STP, IGMP snooping и VLAN.
+
+Из интерфейсов можно:
+
+- создать отдельный LAN, Guest или IoT-сегмент;
+- назначить физические порты в bridge;
+- включить DHCP и выбрать политику доступа;
+- создать или изменить Bridge VLAN 802.1Q;
+- удалить только пользовательский сегмент; `lan`, `wan`, `wan6` и `loopback` защищены.
+
+Перед применением сервер проверяет конфликты подсетей, DHCP-пулов, портов и VLAN. Агент создаёт UCI backup и откатывает изменение, если связь с сервером не восстановилась за контрольный интервал.
 
 - обновление каталога, установка и удаление пакетов через `apk` или `opkg`;
 - создание и восстановление штатного backup OpenWrt;

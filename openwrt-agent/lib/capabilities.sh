@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="15"
+CAPABILITIES_VERSION="16"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -11,7 +11,7 @@ capability_keys() {
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
-        network.ipv6.configure network.multiwan.configure network.routes.configure network.ddns.configure \
+        network.ipv6.configure network.segments.configure network.vlan.configure network.multiwan.configure network.routes.configure network.ddns.configure \
         firewall.zones.configure firewall.rules.configure firewall.upnp.configure telemetry.perimeter \
         vpn.wireguard.read vpn.wireguard.configure vpn.openvpn.read vpn.openvpn.configure vpn.policy.read vpn.policy.configure telemetry.vpn \
         maintenance.packages.read maintenance.packages.write maintenance.backup maintenance.sysupgrade.check maintenance.sysupgrade.apply \
@@ -165,6 +165,8 @@ capability_supported() {
         network.restart) [ -x "$(capability_path /etc/init.d/network)" ] ;;
         network.write|network.wan.configure|network.lan.configure) has_network_write && has_commands ifup ifdown ;;
         network.ipv6.configure|network.routes.configure) has_network_write && has_dhcp_write ;;
+        network.segments.configure) has_network_write && has_dhcp_write && has_firewall_write ;;
+        network.vlan.configure) has_network_write ;;
         network.multiwan.configure) has_uci_config mwan3 && [ -x "$(capability_path /etc/init.d/mwan3)" ] ;;
         network.ddns.configure) has_uci_config ddns && [ -x "$(capability_path /etc/init.d/ddns)" ] ;;
         firewall.zones.configure|firewall.rules.configure) has_firewall_write ;;

@@ -540,4 +540,25 @@
     <string name="traffic_received">Получено</string>
     <string name="traffic_sent">Отправлено</string>
     <string name="dhcp_pool_summary">Диапазон и срок аренды адресов домашней сети</string>
+    <string name="network_segments">Сетевые сегменты</string>
+    <string name="network_segments_summary">Интерфейсов: %1$d · мосты и DHCP</string>
+    <string name="network_segment">Сегмент</string>
+    <string name="network_segment_new">Новый сегмент</string>
+    <string name="system_name">Системное имя</string>
+    <string name="ipv4_address">IPv4-адрес</string>
+    <string name="bridge_name">Мост</string>
+    <string name="bridge_ports">Физические порты</string>
+    <string name="bridge_ports_hint">Через запятую, например lan3, lan4</string>
+    <string name="create_bridge">Создать мост</string>
+    <string name="dhcp_server">DHCP-сервер</string>
+    <string name="segment_policy">Политика доступа</string>
+    <string name="segment_policy_trusted">Доверенная сеть</string>
+    <string name="segment_policy_guest">Гостевая, с интернетом</string>
+    <string name="segment_policy_isolated">Изолированная сеть</string>
+    <string name="bridge_vlan">Bridge VLAN 802.1Q</string>
+    <string name="bridge_vlan_summary">Записей VLAN: %1$d</string>
+    <string name="vlan">VLAN</string>
+    <string name="vlan_new">Новый VLAN</string>
+    <string name="vlan_id">VLAN ID</string>
+    <string name="vlan_ports_hint">lan1:u* — untagged/PVID, lan2:t — tagged</string>
 </resources>

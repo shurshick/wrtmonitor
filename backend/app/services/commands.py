@@ -667,6 +667,87 @@ def _normalize_ipv6_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _network_port(value: str, *, vlan: bool = False) -> str:
+    pattern = r"[A-Za-z0-9_.@-]+(?::[ut](?:\*)?)?" if vlan else r"[A-Za-z0-9_.@-]+"
+    return _safe_identifier(value, "ports", pattern)
+
+
+def _normalize_segment_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    name = _safe_identifier(
+        _require_string(payload, "name", max_length=32),
+        "name",
+        r"[A-Za-z0-9_][A-Za-z0-9_-]*",
+    )
+    protocol = str(payload.get("protocol") or "static").lower()
+    if protocol not in {"static", "dhcp", "none"}:
+        raise HTTPException(status_code=400, detail="Invalid segment protocol")
+    ports = [_network_port(value) for value in _string_list(payload, "ports")]
+    if len(ports) > 16:
+        raise HTTPException(
+            status_code=400, detail="A segment supports at most 16 ports"
+        )
+    bridge = _boolean(payload, "bridge", default=bool(ports))
+    device = _optional_string(payload, "device") or (f"br-{name}" if bridge else "")
+    if device:
+        device = _safe_identifier(device, "device", r"[A-Za-z0-9_.@:-]+")
+    result: dict[str, Any] = {
+        "name": name,
+        "protocol": protocol,
+        "device": device,
+        "bridge_section": _uci_section({"section": payload.get("bridge_section")}),
+        "enabled": _boolean(payload, "enabled", default=True),
+        "bridge": bridge,
+        "ports": ports,
+        "stp": _boolean(payload, "stp", default=False),
+        "igmp_snooping": _boolean(payload, "igmp_snooping", default=True),
+        "dhcp_enabled": _boolean(payload, "dhcp_enabled", default=False),
+        "policy": str(payload.get("policy") or "guest").lower(),
+    }
+    if result["policy"] not in {"trusted", "guest", "isolated"}:
+        raise HTTPException(status_code=400, detail="Invalid segment policy")
+    if protocol == "static":
+        result["ip_address"] = _ipv4(payload, "ip_address")
+        result["netmask"] = _ipv4(payload, "netmask")
+    if result["dhcp_enabled"]:
+        if protocol != "static":
+            raise HTTPException(
+                status_code=400, detail="DHCP server requires a static segment address"
+            )
+        result["dhcp_start"] = _integer(payload, "dhcp_start", 1, 254)
+        result["dhcp_limit"] = _integer(payload, "dhcp_limit", 1, 253)
+        leasetime = _require_string(payload, "dhcp_leasetime", max_length=12).lower()
+        result["dhcp_leasetime"] = _safe_identifier(
+            leasetime, "dhcp_leasetime", r"[1-9][0-9]*[mh]"
+        )
+    return result
+
+
+def _normalize_vlan_payload(
+    payload: dict[str, Any], *, delete: bool = False
+) -> dict[str, Any]:
+    section = _uci_section(payload)
+    if delete:
+        if not section:
+            raise HTTPException(status_code=400, detail="VLAN section is required")
+        return {"section": section}
+    ports = [
+        _network_port(value, vlan=True)
+        for value in _string_list(payload, "ports", required=True)
+    ]
+    if len(ports) > 16:
+        raise HTTPException(status_code=400, detail="A VLAN supports at most 16 ports")
+    return {
+        "section": section,
+        "device": _safe_identifier(
+            _require_string(payload, "device", max_length=32),
+            "device",
+            r"[A-Za-z0-9_.@:-]+",
+        ),
+        "vlan_id": _integer(payload, "vlan_id", 1, 4094),
+        "ports": ports,
+    }
+
+
 def _normalize_multiwan_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "enabled": _boolean(payload, "enabled"),
@@ -1080,6 +1161,19 @@ def validate_command_payload(
         return _normalize_lan_payload(normalized_payload)
     if command_type == "network.set_ipv6":
         return _normalize_ipv6_payload(normalized_payload)
+    if command_type == "network.set_segment":
+        return _normalize_segment_payload(normalized_payload)
+    if command_type == "network.delete_segment":
+        name = _name(normalized_payload)
+        if name in {"lan", "wan", "wan6", "loopback"}:
+            raise HTTPException(
+                status_code=400, detail="Core network segment cannot be deleted"
+            )
+        return {"name": name}
+    if command_type == "network.set_vlan":
+        return _normalize_vlan_payload(normalized_payload)
+    if command_type == "network.delete_vlan":
+        return _normalize_vlan_payload(normalized_payload, delete=True)
     if command_type == "network.set_multiwan":
         return _normalize_multiwan_payload(normalized_payload)
     if command_type == "network.set_route":
@@ -1285,6 +1379,16 @@ def build_command_payload_from_web_form(
     pid: str = "",
     signal: str = "",
     uci_section: str = "",
+    ports: str = "",
+    bridge: str = "false",
+    stp: str = "false",
+    igmp_snooping: str = "true",
+    dhcp_enabled: str = "false",
+    dhcp_start: str = "",
+    dhcp_limit: str = "",
+    dhcp_leasetime: str = "",
+    policy: str = "guest",
+    vlan_id: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -1380,6 +1484,36 @@ def build_command_payload_from_web_form(
             "dhcpv6": gateway or "server",
             "ndp": dns or "server",
         }
+    elif command_type == "network.set_segment":
+        payload = {
+            "name": name,
+            "protocol": protocol or "static",
+            "device": interface,
+            "bridge_section": uci_section,
+            "ip_address": ip_address,
+            "netmask": netmask,
+            "enabled": enabled.lower() == "true",
+            "bridge": bridge.lower() == "true",
+            "ports": ports,
+            "stp": stp.lower() == "true",
+            "igmp_snooping": igmp_snooping.lower() == "true",
+            "dhcp_enabled": dhcp_enabled.lower() == "true",
+            "dhcp_start": dhcp_start,
+            "dhcp_limit": dhcp_limit,
+            "dhcp_leasetime": dhcp_leasetime,
+            "policy": policy,
+        }
+    elif command_type == "network.delete_segment":
+        payload = {"name": name}
+    elif command_type == "network.set_vlan":
+        payload = {
+            "section": uci_section,
+            "device": interface,
+            "vlan_id": vlan_id,
+            "ports": ports,
+        }
+    elif command_type == "network.delete_vlan":
+        payload = {"section": uci_section}
     elif command_type == "network.set_multiwan":
         payload = {
             "enabled": enabled.lower() == "true",

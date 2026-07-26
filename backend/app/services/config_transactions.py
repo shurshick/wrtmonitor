@@ -31,6 +31,10 @@ CONFIG_TRANSACTION_SCOPES: dict[str, tuple[str, ...]] = {
     "network.set_wan": ("network",),
     "network.set_lan": ("network",),
     "network.set_ipv6": ("network", "dhcp"),
+    "network.set_segment": ("network", "dhcp", "firewall"),
+    "network.delete_segment": ("network", "dhcp", "firewall"),
+    "network.set_vlan": ("network",),
+    "network.delete_vlan": ("network",),
     "network.set_multiwan": ("network", "mwan3"),
     "network.set_route": ("network",),
     "network.delete_route": ("network",),
@@ -205,6 +209,84 @@ def preflight_errors(
             address = ip_address(str(payload["ip_address"]))
             if address in {network.network_address, network.broadcast_address}:
                 errors.append("LAN address cannot be a network or broadcast address")
+        elif (
+            command_type == "network.set_segment"
+            and payload.get("protocol") == "static"
+        ):
+            network = ip_network(
+                f"{payload['ip_address']}/{payload['netmask']}", strict=False
+            )
+            address = ip_address(str(payload["ip_address"]))
+            if address in {network.network_address, network.broadcast_address}:
+                errors.append(
+                    "Segment address cannot be a network or broadcast address"
+                )
+            topology = normalize_network_summary(telemetry).get("topology") or {}
+            for segment in topology.get("segments") or []:
+                if segment.get("name") == payload.get("name"):
+                    continue
+                other_address = segment.get("ip_address")
+                other_netmask = segment.get("netmask")
+                if not other_address or not other_netmask:
+                    continue
+                other_network = ip_network(
+                    f"{other_address}/{other_netmask}", strict=False
+                )
+                if network.overlaps(other_network):
+                    errors.append(
+                        f"Segment subnet overlaps existing segment '{segment.get('name')}'"
+                    )
+                    break
+            if payload.get("dhcp_enabled"):
+                first_offset = int(payload["dhcp_start"])
+                last_offset = first_offset + int(payload["dhcp_limit"]) - 1
+                if last_offset >= network.num_addresses - 1:
+                    errors.append("DHCP pool exceeds the segment subnet")
+                else:
+                    first_address = network.network_address + first_offset
+                    last_address = network.network_address + last_offset
+                    if first_address <= address <= last_address:
+                        errors.append("DHCP pool cannot contain the router address")
+            selected_bridge = str(payload.get("bridge_section") or "")
+            requested_ports = set(payload.get("ports") or [])
+            for bridge in topology.get("bridges") or []:
+                if bridge.get("section") == selected_bridge:
+                    continue
+                conflicts = requested_ports.intersection(bridge.get("ports") or [])
+                if conflicts:
+                    errors.append(
+                        "Ports already belong to another bridge: "
+                        + ", ".join(sorted(conflicts))
+                    )
+                    break
+        elif command_type == "network.set_vlan":
+            topology = normalize_network_summary(telemetry).get("topology") or {}
+            bridges = topology.get("bridges") or []
+            bridge = next(
+                (item for item in bridges if item.get("name") == payload.get("device")),
+                None,
+            )
+            if bridges and bridge is None:
+                errors.append("VLAN device must be an existing bridge")
+            for vlan in topology.get("vlans") or []:
+                if vlan.get("section") == payload.get("section"):
+                    continue
+                if vlan.get("device") == payload.get("device") and int(
+                    vlan.get("vlan_id") or 0
+                ) == int(payload.get("vlan_id") or 0):
+                    errors.append("This VLAN ID already exists on the selected bridge")
+                    break
+            if bridge:
+                bridge_ports = set(bridge.get("ports") or [])
+                requested_ports = {
+                    str(port).split(":", 1)[0] for port in payload.get("ports") or []
+                }
+                unknown_ports = requested_ports - bridge_ports
+                if unknown_ports:
+                    errors.append(
+                        "VLAN ports are not members of the selected bridge: "
+                        + ", ".join(sorted(unknown_ports))
+                    )
         elif command_type == "dhcp.set_pool":
             if int(payload["start"]) + int(payload["limit"]) > 255:
                 errors.append("DHCP pool exceeds the IPv4 /24 host range")

@@ -65,6 +65,40 @@ def test_legacy_ubus_network_format_still_derives_netmask():
     assert summary["interfaces"][0]["netmask"] == "255.255.255.0"
 
 
+def test_network_topology_is_preserved_for_management_clients():
+    topology = {
+        "segments": [
+            {
+                "name": "lan",
+                "proto": "static",
+                "device": "br-lan",
+                "bridge_section": "@device[0]",
+                "ip_address": "192.168.31.1",
+                "netmask": "255.255.255.0",
+                "policy": "trusted",
+                "enabled": True,
+                "dhcp": {"enabled": True, "start": "100", "limit": "100"},
+            }
+        ],
+        "bridges": [
+            {"section": "@device[0]", "name": "br-lan", "ports": ["lan1", "lan2"]}
+        ],
+        "vlans": [
+            {
+                "section": "@bridge-vlan[0]",
+                "device": "br-lan",
+                "vlan_id": 10,
+                "ports": ["lan1:u*", "lan2:t"],
+            }
+        ],
+    }
+
+    summary = normalize_network_summary({"network": {"topology": topology}})
+
+    assert summary["topology"] == topology
+    assert summary["topology"]["segments"][0]["bridge_section"] == "@device[0]"
+
+
 def test_nlbw_source_can_be_ready_before_first_non_zero_counter():
     summary = normalize_clients_summary(
         {

@@ -238,6 +238,18 @@
       "requires_confirmation": true,
       "secret_fields": []
     },
+    "network.delete_segment": {
+      "risk_level": "level_4_disruptive",
+      "capability": "network.segments.configure",
+      "requires_confirmation": true,
+      "secret_fields": []
+    },
+    "network.delete_vlan": {
+      "risk_level": "level_4_disruptive",
+      "capability": "network.vlan.configure",
+      "requires_confirmation": true,
+      "secret_fields": []
+    },
     "network.interface_restart": {
       "risk_level": "level_3_reversible_config",
       "capability": "network.interface_restart",
@@ -288,9 +300,21 @@
       "requires_confirmation": true,
       "secret_fields": []
     },
+    "network.set_segment": {
+      "risk_level": "level_4_disruptive",
+      "capability": "network.segments.configure",
+      "requires_confirmation": true,
+      "secret_fields": []
+    },
     "network.set_upnp": {
       "risk_level": "level_3_reversible_config",
       "capability": "firewall.upnp.configure",
+      "requires_confirmation": true,
+      "secret_fields": []
+    },
+    "network.set_vlan": {
+      "risk_level": "level_4_disruptive",
+      "capability": "network.vlan.configure",
       "requires_confirmation": true,
       "secret_fields": []
     },

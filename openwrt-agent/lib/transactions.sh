@@ -5,6 +5,8 @@ transaction_configs_for_command() {
         wifi.set_guest) printf 'wireless network dhcp firewall' ;;
         network.set_wan|network.set_lan) printf 'network' ;;
         network.set_ipv6) printf 'network dhcp' ;;
+        network.set_segment|network.delete_segment) printf 'network dhcp firewall' ;;
+        network.set_vlan|network.delete_vlan) printf 'network' ;;
         network.set_multiwan) printf 'network mwan3' ;;
         network.set_route|network.delete_route) printf 'network' ;;
         network.set_ddns) printf 'ddns' ;;

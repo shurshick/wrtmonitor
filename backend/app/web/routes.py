@@ -816,6 +816,22 @@ def device_page(
             if value
         }
     )
+    topology = network.get("topology") or {}
+    network_segments = [
+        item
+        for item in (topology.get("segments") or [])
+        if item.get("name") not in {"wan", "wan6", "loopback"}
+    ]
+    network_bridges = topology.get("bridges") or []
+    network_vlans = topology.get("vlans") or []
+    physical_port_options = sorted(
+        name
+        for name in network_devices
+        if name != "lo" and not name.startswith(("br-", "phy", "wlan"))
+    )
+    bridge_options = sorted(
+        {str(item.get("name")) for item in network_bridges if item.get("name")}
+    )
     network_options = sorted(
         {str(item.get("interface")) for item in interfaces if item.get("interface")}
     )
@@ -865,6 +881,8 @@ def device_page(
         "network_wan_configure": has("network.wan.configure"),
         "network_lan_configure": has("network.lan.configure"),
         "network_ipv6": has("network.ipv6.configure"),
+        "network_segments": has("network.segments.configure"),
+        "network_vlan": has("network.vlan.configure"),
         "network_multiwan": has("network.multiwan.configure"),
         "network_routes": has("network.routes.configure"),
         "network_ddns": has("network.ddns.configure"),
@@ -1045,6 +1063,11 @@ def device_page(
             "wan_interface": wan_interface,
             "interface_options": interface_options,
             "network_options": network_options,
+            "network_segments": network_segments,
+            "network_bridges": network_bridges,
+            "network_vlans": network_vlans,
+            "physical_port_options": physical_port_options,
+            "bridge_options": bridge_options,
             "lan_dhcp_pool": lan_dhcp_pool,
             "lan_ipv6": lan_ipv6,
             "firewall_zone_options": firewall_zone_options,
@@ -1397,6 +1420,16 @@ def web_device_command(
     pid: str = Form(default=""),
     signal: str = Form(default=""),
     uci_section: str = Form(default=""),
+    ports: str = Form(default=""),
+    bridge: str = Form(default="false"),
+    stp: str = Form(default="false"),
+    igmp_snooping: str = Form(default="true"),
+    dhcp_enabled: str = Form(default="false"),
+    dhcp_start: str = Form(default=""),
+    dhcp_limit: str = Form(default=""),
+    dhcp_leasetime: str = Form(default=""),
+    policy: str = Form(default="guest"),
+    vlan_id: str = Form(default=""),
     confirmed: bool = Form(default=False),
     diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
@@ -1477,6 +1510,16 @@ def web_device_command(
             pid=pid,
             signal=signal,
             uci_section=uci_section,
+            ports=ports,
+            bridge=bridge,
+            stp=stp,
+            igmp_snooping=igmp_snooping,
+            dhcp_enabled=dhcp_enabled,
+            dhcp_start=dhcp_start,
+            dhcp_limit=dhcp_limit,
+            dhcp_leasetime=dhcp_leasetime,
+            policy=policy,
+            vlan_id=vlan_id,
             diagnostics_checks=diagnostics_checks,
         )
         payload = validate_command_request(

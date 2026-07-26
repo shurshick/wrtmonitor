@@ -2,15 +2,15 @@
 
 Android-приложение - основной пользовательский интерфейс `WrtMonitor`.
 
-Текущая версия: `v0.16.1-agent-recovery`.
+Текущая версия: `v0.17.0-network-segments`.
 
 ## Установка
 
-1. Откройте релиз `v0.16.1-agent-recovery`.
+1. Откройте релиз `v0.17.0-network-segments`.
 2. Скачайте APK:
 
    ```text
-   wrtmonitor-android-v0.16.1.apk
+   wrtmonitor-android-v0.17.0.apk
    ```
 
 3. Установите APK на Android-устройство.

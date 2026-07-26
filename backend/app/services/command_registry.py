@@ -116,6 +116,30 @@ COMMAND_REGISTRY: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "network.set_segment": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.segments.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.delete_segment": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.segments.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.set_vlan": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.vlan.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "network.delete_vlan": {
+        "risk_level": "level_4_disruptive",
+        "capability": "network.vlan.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "network.set_multiwan": {
         "risk_level": "level_4_disruptive",
         "capability": "network.multiwan.configure",

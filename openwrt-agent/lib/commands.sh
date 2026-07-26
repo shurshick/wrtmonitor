@@ -661,6 +661,61 @@ execute_command() {
             if [ "$ipv6_enabled" = true ]; then uci set "network.$ipv6_iface.ip6assign=$assignment"; uci set "dhcp.$ipv6_iface.ra=$ra_mode"; uci set "dhcp.$ipv6_iface.dhcpv6=$dhcpv6_mode"; uci set "dhcp.$ipv6_iface.ndp=$ndp_mode"; else uci -q delete "network.$ipv6_iface.ip6assign" || true; uci set "dhcp.$ipv6_iface.ra=disabled"; uci set "dhcp.$ipv6_iface.dhcpv6=disabled"; uci set "dhcp.$ipv6_iface.ndp=disabled"; fi
             if uci commit network && uci commit dhcp && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/odhcpd restart >/dev/null 2>&1; then result="$(command_success_result "IPv6 configuration updated")"; else status=failed; result="$(command_failed_result "failed to update IPv6")"; fi
             ;;
+        network.set_segment)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"
+            segment_name="$(json_get_string "$payload_file" '@.name')"; segment_proto="$(json_get_string "$payload_file" '@.protocol')"; segment_device="$(json_get_string "$payload_file" '@.device')"; segment_bridge_ref="$(json_get_string "$payload_file" '@.bridge_section')"; segment_ip="$(json_get_string "$payload_file" '@.ip_address')"; segment_netmask="$(json_get_string "$payload_file" '@.netmask')"; segment_enabled="$(json_get_bool "$payload_file" '@.enabled')"; segment_bridge="$(json_get_bool "$payload_file" '@.bridge')"; segment_stp="$(json_get_bool "$payload_file" '@.stp')"; segment_igmp="$(json_get_bool "$payload_file" '@.igmp_snooping')"; segment_dhcp="$(json_get_bool "$payload_file" '@.dhcp_enabled')"; segment_dhcp_start="$(json_get_number "$payload_file" '@.dhcp_start')"; segment_dhcp_limit="$(json_get_number "$payload_file" '@.dhcp_limit')"; segment_dhcp_lease="$(json_get_string "$payload_file" '@.dhcp_leasetime')"; segment_policy="$(json_get_string "$payload_file" '@.policy')"; segment_ports="$(jsonfilter -i "$payload_file" -e '@.ports[*]' 2>/dev/null || true)"; rm -f "$payload_file"
+            case "$segment_name:$segment_proto:$segment_policy" in
+                *[!A-Za-z0-9_:-]*|:*|*:|*::*) status=failed; result="$(command_failed_result "invalid segment configuration")" ;;
+                *)
+                    [ -n "$segment_bridge_ref" ] || segment_bridge_ref="wrtmonitor_bridge_$segment_name"; [ -n "$segment_device" ] || segment_device="br-$segment_name"
+                    if [ "$segment_bridge" = true ]; then
+                        uci set "network.$segment_bridge_ref=device"; uci set "network.$segment_bridge_ref.name=$segment_device"; uci set "network.$segment_bridge_ref.type=bridge"; uci set "network.$segment_bridge_ref.stp=$( [ "$segment_stp" = true ] && printf 1 || printf 0 )"; uci set "network.$segment_bridge_ref.igmp_snooping=$( [ "$segment_igmp" = true ] && printf 1 || printf 0 )"; uci -q delete "network.$segment_bridge_ref.ports" || true
+                        printf '%s\n' "$segment_ports" | while IFS= read -r port; do case "$port" in ''|*[!A-Za-z0-9_.@-]*) exit 1 ;; esac; uci add_list "network.$segment_bridge_ref.ports=$port"; done || status=failed
+                    else
+                        case "$segment_bridge_ref" in wrtmonitor_bridge_*) uci -q delete "network.$segment_bridge_ref" || true ;; esac
+                    fi
+                    uci set "network.$segment_name=interface"; uci set "network.$segment_name.proto=$segment_proto"; uci set "network.$segment_name.disabled=$( [ "$segment_enabled" = true ] && printf 0 || printf 1 )"; uci -q delete "network.$segment_name.ipaddr" || true; uci -q delete "network.$segment_name.netmask" || true; uci -q delete "network.$segment_name.device" || true
+                    [ -z "$segment_device" ] || uci set "network.$segment_name.device=$segment_device"
+                    if [ "$segment_proto" = static ]; then uci set "network.$segment_name.ipaddr=$segment_ip"; uci set "network.$segment_name.netmask=$segment_netmask"; fi
+                    uci set "dhcp.$segment_name=dhcp"; uci set "dhcp.$segment_name.interface=$segment_name"
+                    if [ "$segment_dhcp" = true ]; then uci set "dhcp.$segment_name.ignore=0"; uci set "dhcp.$segment_name.start=$segment_dhcp_start"; uci set "dhcp.$segment_name.limit=$segment_dhcp_limit"; uci set "dhcp.$segment_name.leasetime=$segment_dhcp_lease"; else uci set "dhcp.$segment_name.ignore=1"; fi
+                    case "$segment_name" in
+                        lan|wan|wan6|loopback) ;;
+                        *)
+                            segment_zone="wrtmonitor_zone_$segment_name"; segment_forward="wrtmonitor_forward_$segment_name"; segment_dns_rule="wrtmonitor_dns_$segment_name"; segment_dhcp_rule="wrtmonitor_dhcp_$segment_name"
+                            uci set "firewall.$segment_zone=zone"; uci set "firewall.$segment_zone.name=$segment_name"; uci -q delete "firewall.$segment_zone.network" || true; uci add_list "firewall.$segment_zone.network=$segment_name"; uci set "firewall.$segment_zone.output=ACCEPT"; uci set "firewall.$segment_zone.forward=REJECT"; uci set "firewall.$segment_zone.input=$( [ "$segment_policy" = trusted ] && printf ACCEPT || printf REJECT )"
+                            uci set "firewall.$segment_dns_rule=rule"; uci set "firewall.$segment_dns_rule.name=WrtMonitor DNS $segment_name"; uci set "firewall.$segment_dns_rule.src=$segment_name"; uci set "firewall.$segment_dns_rule.dest_port=53"; uci set "firewall.$segment_dns_rule.proto=tcp udp"; uci set "firewall.$segment_dns_rule.target=ACCEPT"
+                            uci set "firewall.$segment_dhcp_rule=rule"; uci set "firewall.$segment_dhcp_rule.name=WrtMonitor DHCP $segment_name"; uci set "firewall.$segment_dhcp_rule.src=$segment_name"; uci set "firewall.$segment_dhcp_rule.dest_port=67-68"; uci set "firewall.$segment_dhcp_rule.proto=udp"; uci set "firewall.$segment_dhcp_rule.family=ipv4"; uci set "firewall.$segment_dhcp_rule.target=ACCEPT"
+                            if [ "$segment_policy" = isolated ]; then uci -q delete "firewall.$segment_forward" || true; else uci set "firewall.$segment_forward=forwarding"; uci set "firewall.$segment_forward.src=$segment_name"; uci set "firewall.$segment_forward.dest=wan"; fi
+                            ;;
+                    esac
+                    if [ "$status" = "done" ] && uci commit network && uci commit dhcp && uci commit firewall && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/dnsmasq restart >/dev/null 2>&1 && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "network segment updated" "\"segment\":\"$(json_escape "$segment_name")\"")"; else status=failed; result="$(command_failed_result "failed to update network segment")"; fi
+                    ;;
+            esac
+            ;;
+        network.delete_segment)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; segment_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"
+            case "$segment_name" in ''|lan|wan|wan6|loopback|*[!A-Za-z0-9_-]*) status=failed; result="$(command_failed_result "core or invalid segment cannot be deleted")" ;; *) uci -q delete "network.$segment_name" || true; uci -q delete "network.wrtmonitor_bridge_$segment_name" || true; uci -q delete "dhcp.$segment_name" || true; uci -q delete "firewall.wrtmonitor_zone_$segment_name" || true; uci -q delete "firewall.wrtmonitor_forward_$segment_name" || true; uci -q delete "firewall.wrtmonitor_dns_$segment_name" || true; uci -q delete "firewall.wrtmonitor_dhcp_$segment_name" || true; if uci commit network && uci commit dhcp && uci commit firewall && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/dnsmasq restart >/dev/null 2>&1 && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "network segment deleted")"; else status=failed; result="$(command_failed_result "failed to delete network segment")"; fi ;; esac
+            ;;
+        network.set_vlan)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; vlan_section="$(json_get_string "$payload_file" '@.section')"; vlan_device="$(json_get_string "$payload_file" '@.device')"; vlan_id="$(json_get_number "$payload_file" '@.vlan_id')"; vlan_ports="$(jsonfilter -i "$payload_file" -e '@.ports[*]' 2>/dev/null || true)"; rm -f "$payload_file"
+            if [ -z "$vlan_section" ]; then vlan_key="$(printf '%s' "$vlan_device" | tr -c 'A-Za-z0-9_' '_')"; vlan_section="wrtmonitor_vlan_${vlan_key}_$vlan_id"; fi
+            case "$vlan_section" in ''|*[!A-Za-z0-9_.@\[\]-]*) status=failed ;; esac
+            case "$vlan_device" in ''|*[!A-Za-z0-9_.@:-]*) status=failed ;; esac
+            case "$vlan_id" in ''|*[!0-9]*|0) status=failed ;; esac
+            if [ "$status" = failed ]; then
+                result="$(command_failed_result "invalid VLAN configuration")"
+            else
+                uci set "network.$vlan_section=bridge-vlan"; uci set "network.$vlan_section.device=$vlan_device"; uci set "network.$vlan_section.vlan=$vlan_id"; uci -q delete "network.$vlan_section.ports" || true
+                printf '%s\n' "$vlan_ports" | while IFS= read -r port; do case "$port" in ''|*[!A-Za-z0-9_.@:\*-]*) exit 1 ;; esac; uci add_list "network.$vlan_section.ports=$port"; done || status=failed
+                for device_ref in $(uci -q show network 2>/dev/null | sed -n 's/^network\.\([^.=]*\)=device$/\1/p'); do [ "$(uci -q get "network.$device_ref.name" 2>/dev/null || true)" != "$vlan_device" ] || uci set "network.$device_ref.vlan_filtering=1"; done
+                if [ "$status" = "done" ] && uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "bridge VLAN updated" "\"section\":\"$(json_escape "$vlan_section")\",\"vlan_id\":$vlan_id")"; else status=failed; result="$(command_failed_result "failed to update bridge VLAN")"; fi
+            fi
+            ;;
+        network.delete_vlan)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; vlan_section="$(json_get_string "$payload_file" '@.section')"; rm -f "$payload_file"
+            case "$vlan_section" in ''|*[!A-Za-z0-9_.@\[\]-]*) status=failed; result="$(command_failed_result "invalid VLAN section")" ;; *) if uci -q delete "network.$vlan_section" && uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "bridge VLAN deleted")"; else status=failed; result="$(command_failed_result "VLAN section not found")"; fi ;; esac
+            ;;
         network.set_multiwan)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; multi_enabled="$(json_get_bool "$payload_file" '@.enabled')"; primary="$(json_get_string "$payload_file" '@.primary_interface')"; secondary="$(json_get_string "$payload_file" '@.secondary_interface')"; primary_metric="$(json_get_number "$payload_file" '@.primary_metric')"; secondary_metric="$(json_get_number "$payload_file" '@.secondary_metric')"; rm -f "$payload_file"
             uci set mwan3.wrtmonitor_primary=member; uci set "mwan3.wrtmonitor_primary.interface=$primary"; uci set "mwan3.wrtmonitor_primary.metric=$primary_metric"; uci set mwan3.wrtmonitor_primary.weight=1

@@ -394,7 +394,7 @@ def test_apk_package_operations_use_native_commands(tmp_path: Path):
     apk_log = tmp_path / "apk.log"
     apk = command_dir / "apk"
     apk.write_text(
-        "#!/bin/sh\nprintf '%s\\n' \"$*\" >>\"$APK_LOG\"\n",
+        '#!/bin/sh\nprintf \'%s\\n\' "$*" >>"$APK_LOG"\n',
         encoding="utf-8",
     )
     apk.chmod(0o755)
@@ -639,6 +639,8 @@ def test_management_capabilities_cover_full_router_foundation():
         "system.set_timezone",
         "system.set_ntp",
         "network.ipv6.configure",
+        "network.segments.configure",
+        "network.vlan.configure",
         "network.multiwan.configure",
         "network.routes.configure",
         "network.ddns.configure",
@@ -686,6 +688,10 @@ def test_management_commands_have_openwrt_handlers():
         "system.set_timezone",
         "system.set_ntp",
         "network.set_ipv6",
+        "network.set_segment",
+        "network.delete_segment",
+        "network.set_vlan",
+        "network.delete_vlan",
         "network.set_multiwan",
         "network.set_route",
         "network.delete_route",
@@ -709,3 +715,72 @@ def test_management_commands_have_openwrt_handlers():
         assert f"{command})" in source
     assert 'backup_config sqm "$command_id" "$command_type"' in source
     assert "dhcp.@dnsmasq[0].server=127.0.0.1#5053" in source
+
+
+def test_network_topology_telemetry_reads_live_uci_sections():
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "common.sh").as_posix()}"
+        . "{(LIB_DIR / "telemetry.sh").as_posix()}"
+        uci() {{
+            [ "$1" = "-q" ] && shift
+            action="$1"; key="${{2:-}}"
+            if [ "$action" = show ] && [ "$key" = network ]; then
+                printf '%s\n' \
+                    'network.lan=interface' \
+                    'network.br_lan=device' \
+                    'network.vlan10=bridge-vlan'
+                return 0
+            fi
+            if [ "$action" = show ] && [ "$key" = firewall ]; then
+                printf '%s\n' 'firewall.lan=zone'
+                return 0
+            fi
+            [ "$action" = get ] || return 1
+            case "$key" in
+                network.lan.proto) printf static ;;
+                network.lan.device) printf br-lan ;;
+                network.lan.ipaddr) printf 192.168.31.1 ;;
+                network.lan.netmask) printf 255.255.255.0 ;;
+                network.br_lan.type) printf bridge ;;
+                network.br_lan.name) printf br-lan ;;
+                network.br_lan.ports) printf 'lan1 lan2' ;;
+                network.br_lan.stp) printf 1 ;;
+                network.br_lan.igmp_snooping) printf 1 ;;
+                network.br_lan.vlan_filtering) printf 1 ;;
+                network.vlan10.device) printf br-lan ;;
+                network.vlan10.vlan) printf 10 ;;
+                network.vlan10.ports) printf 'lan1:u* lan2:t' ;;
+                dhcp.lan.start) printf 100 ;;
+                dhcp.lan.limit) printf 100 ;;
+                dhcp.lan.leasetime) printf 12h ;;
+                dhcp.lan.ignore) printf 0 ;;
+                firewall.lan.name) printf lan ;;
+                firewall.lan.network) printf lan ;;
+                firewall.lan.input) printf ACCEPT ;;
+                *) return 1 ;;
+            esac
+        }}
+        network_topology_json
+    '''
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=shell_env(),
+    )
+    topology = json.loads(completed.stdout)
+    assert topology["segments"][0]["ip_address"] == "192.168.31.1"
+    assert topology["segments"][0]["bridge_section"] == "br_lan"
+    assert topology["segments"][0]["policy"] == "trusted"
+    assert topology["bridges"][0]["ports"] == ["lan1", "lan2"]
+    assert topology["vlans"][0] == {
+        "section": "vlan10",
+        "device": "br-lan",
+        "vlan_id": 10,
+        "ports": ["lan1:u*", "lan2:t"],
+    }

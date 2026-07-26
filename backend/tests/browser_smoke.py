@@ -90,6 +90,8 @@ def prepare_router() -> str:
             "wifi.roaming": True,
             "wifi.mesh": True,
             "network.ipv6.configure": True,
+            "network.segments.configure": True,
+            "network.vlan.configure": True,
             "network.multiwan.configure": True,
             "network.routes.configure": True,
             "network.ddns.configure": True,
@@ -273,6 +275,44 @@ def prepare_router() -> str:
                                 "device": "eth0",
                             },
                         ],
+                        "topology": {
+                            "segments": [
+                                {
+                                    "name": "lan",
+                                    "proto": "static",
+                                    "device": "br-lan",
+                                    "bridge_section": "br_lan",
+                                    "ip_address": "192.168.1.1",
+                                    "netmask": "255.255.255.0",
+                                    "policy": "trusted",
+                                    "enabled": True,
+                                    "dhcp": {
+                                        "enabled": True,
+                                        "start": "100",
+                                        "limit": "150",
+                                        "leasetime": "12h",
+                                    },
+                                }
+                            ],
+                            "bridges": [
+                                {
+                                    "section": "br_lan",
+                                    "name": "br-lan",
+                                    "ports": ["lan1", "lan2"],
+                                    "stp": False,
+                                    "igmp_snooping": True,
+                                    "vlan_filtering": True,
+                                }
+                            ],
+                            "vlans": [
+                                {
+                                    "section": "vlan10",
+                                    "device": "br-lan",
+                                    "vlan_id": 10,
+                                    "ports": ["lan1:u*", "lan2:t"],
+                                }
+                            ],
+                        },
                         "dns_privacy": {
                             "dot": {
                                 "installed": True,

@@ -264,6 +264,9 @@ fun ClientsControlScreen(
             canManageProfiles = capabilities["clients.policy"] == true,
             canConfigureDhcp = capabilities["dhcp.configure"] == true,
             canConfigureIpv6 = capabilities["network.ipv6.configure"] == true,
+            topology = telemetry?.network?.optJSONObject("topology"),
+            canConfigureSegments = capabilities["network.segments.configure"] == true,
+            canConfigureVlans = capabilities["network.vlan.configure"] == true,
             profileName = profileName,
             onProfileNameChange = { profileName = it },
             profileBlocked = profileBlocked,
@@ -332,6 +335,7 @@ fun ClientsControlScreen(
                     commandQueued,
                 )
             },
+            onPrepareCommand = { pendingCommand = it },
         )
         else -> ClientsList(
             clients = clients,
@@ -799,6 +803,9 @@ private fun ClientsSettings(
     canManageProfiles: Boolean,
     canConfigureDhcp: Boolean,
     canConfigureIpv6: Boolean,
+    topology: JSONObject?,
+    canConfigureSegments: Boolean,
+    canConfigureVlans: Boolean,
     profileName: String,
     onProfileNameChange: (String) -> Unit,
     profileBlocked: Boolean,
@@ -824,6 +831,7 @@ private fun ClientsSettings(
     onDeleteProfile: (String) -> Unit,
     onSaveDhcp: () -> Unit,
     onSaveIpv6: () -> Unit,
+    onPrepareCommand: (PendingSafeCommand) -> Unit,
 ) {
     ClientBackRow(onBack, stringResource(R.string.back_to_clients))
     RouterPageHeader(
@@ -902,6 +910,171 @@ private fun ClientsSettings(
             PrimaryActionButton(stringResource(R.string.save_ipv6), onSaveIpv6)
         }
     }
+    if (canConfigureSegments || canConfigureVlans) {
+        NetworkTopologySettings(
+            topology = topology,
+            canConfigureSegments = canConfigureSegments,
+            canConfigureVlans = canConfigureVlans,
+            onPrepareCommand = onPrepareCommand,
+        )
+    }
+}
+
+@Composable
+private fun NetworkTopologySettings(
+    topology: JSONObject?,
+    canConfigureSegments: Boolean,
+    canConfigureVlans: Boolean,
+    onPrepareCommand: (PendingSafeCommand) -> Unit,
+) {
+    val topologyKey = topology?.toString().orEmpty()
+    val segments = remember(topologyKey) {
+        topology?.optJSONArray("segments").jsonObjects()
+            .filterNot { it.optString("name") in setOf("wan", "wan6", "loopback") }
+    }
+    val bridges = remember(topologyKey) { topology?.optJSONArray("bridges").jsonObjects() }
+    val vlans = remember(topologyKey) { topology?.optJSONArray("vlans").jsonObjects() }
+    val queued = stringResource(R.string.command_queued)
+
+    if (canConfigureSegments) {
+        val segmentChoices = listOf(SelectOption("__new__", stringResource(R.string.network_segment_new))) +
+            segments.map { SelectOption(it.optString("name"), it.optString("name")) }
+        var selectedName by remember(topologyKey) { mutableStateOf(segments.firstOrNull()?.optString("name") ?: "__new__") }
+        val selected = segments.firstOrNull { it.optString("name") == selectedName }
+        val selectedBridge = bridges.firstOrNull { it.optString("name") == selected?.optString("device") }
+        var name by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("name").orEmpty()) }
+        var address by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("ip_address").orEmpty()) }
+        var netmask by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("netmask").orEmpty().ifBlank { "255.255.255.0" }) }
+        var deviceName by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("device").orEmpty()) }
+        var ports by remember(selectedName, topologyKey) { mutableStateOf(selectedBridge?.optJSONArray("ports").jsonStrings().joinToString(", ")) }
+        var enabled by remember(selectedName, topologyKey) { mutableStateOf(selected?.optBoolean("enabled", true) ?: true) }
+        var bridgeEnabled by remember(selectedName, topologyKey) { mutableStateOf(selectedBridge != null || selected == null) }
+        var dhcpEnabled by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optBoolean("enabled", false) ?: true) }
+        var dhcpStart by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optString("start").orEmpty().ifBlank { "100" }) }
+        var dhcpLimit by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optString("limit").orEmpty().ifBlank { "150" }) }
+        var leaseTime by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optString("leasetime").orEmpty().ifBlank { "12h" }) }
+        var policy by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("policy").orEmpty().ifBlank { if (selectedName == "lan") "trusted" else "guest" }) }
+
+        ExpandableSettingsCard(
+            title = stringResource(R.string.network_segments),
+            summary = stringResource(R.string.network_segments_summary, segments.size),
+        ) {
+            OptionSelector(
+                label = stringResource(R.string.network_segment),
+                value = selectedName,
+                options = segmentChoices,
+                onValueChange = { selectedName = it },
+            )
+            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.system_name)) }, modifier = Modifier.fillMaxWidth(), enabled = selected == null, singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(address, { address = it }, label = { Text(stringResource(R.string.ipv4_address)) }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(netmask, { netmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            OutlinedTextField(deviceName, { deviceName = it }, label = { Text(stringResource(R.string.bridge_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(ports, { ports = it }, label = { Text(stringResource(R.string.bridge_ports)) }, modifier = Modifier.fillMaxWidth(), supportingText = { Text(stringResource(R.string.bridge_ports_hint)) }, singleLine = true)
+            SwitchSettingRow(stringResource(R.string.enabled_value), checked = enabled, onCheckedChange = { enabled = it })
+            SwitchSettingRow(stringResource(R.string.create_bridge), checked = bridgeEnabled, onCheckedChange = { bridgeEnabled = it })
+            SwitchSettingRow(stringResource(R.string.dhcp_server), checked = dhcpEnabled, onCheckedChange = { dhcpEnabled = it })
+            if (dhcpEnabled) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(dhcpStart, { dhcpStart = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.pool_start)) }, modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(dhcpLimit, { dhcpLimit = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.pool_size)) }, modifier = Modifier.weight(1f), singleLine = true)
+                }
+                OptionSelector(
+                    label = stringResource(R.string.lease_time),
+                    value = leaseTime,
+                    options = clientLeaseTimeOptions,
+                    onValueChange = { leaseTime = it },
+                )
+            }
+            OptionSelector(
+                stringResource(R.string.segment_policy),
+                policy,
+                listOf(
+                    SelectOption("trusted", stringResource(R.string.segment_policy_trusted)),
+                    SelectOption("guest", stringResource(R.string.segment_policy_guest)),
+                    SelectOption("isolated", stringResource(R.string.segment_policy_isolated)),
+                ),
+                onValueChange = { policy = it },
+            )
+            ActionRow {
+                PrimaryActionButton(
+                    stringResource(R.string.save),
+                    onClick = {
+                        onPrepareCommand(PendingSafeCommand(
+                            "network.set_segment",
+                            JSONObject()
+                                .put("name", name).put("protocol", "static").put("device", deviceName)
+                                .put("bridge_section", selectedBridge?.optString("section").orEmpty())
+                                .put("ip_address", address).put("netmask", netmask).put("enabled", enabled)
+                                .put("bridge", bridgeEnabled).put("ports", ports.toJsonArray())
+                                .put("stp", selectedBridge?.optBoolean("stp", false) ?: false)
+                                .put("igmp_snooping", selectedBridge?.optBoolean("igmp_snooping", true) ?: true)
+                                .put("dhcp_enabled", dhcpEnabled).put("dhcp_start", dhcpStart.toIntOrNull() ?: 100)
+                                .put("dhcp_limit", dhcpLimit.toIntOrNull() ?: 150).put("dhcp_leasetime", leaseTime)
+                                .put("policy", policy),
+                            queued,
+                        ))
+                    },
+                    enabled = name.isNotBlank() && address.isNotBlank() && netmask.isNotBlank(),
+                )
+                if (selected != null && selectedName !in setOf("lan", "wan", "wan6", "loopback")) {
+                    TextButton(onClick = { onPrepareCommand(PendingSafeCommand("network.delete_segment", JSONObject().put("name", selectedName), queued)) }) { Text(stringResource(R.string.delete)) }
+                }
+            }
+        }
+    }
+
+    if (canConfigureVlans) {
+        val vlanChoices = listOf(SelectOption("__new__", stringResource(R.string.vlan_new))) +
+            vlans.map { SelectOption(it.optString("section"), "VLAN ${it.optInt("vlan_id")} · ${it.optString("device")}") }
+        var selectedSection by remember(topologyKey) { mutableStateOf(vlans.firstOrNull()?.optString("section") ?: "__new__") }
+        val selected = vlans.firstOrNull { it.optString("section") == selectedSection }
+        var bridgeName by remember(selectedSection, topologyKey) { mutableStateOf(selected?.optString("device").orEmpty()) }
+        var vlanId by remember(selectedSection, topologyKey) { mutableStateOf(selected?.optInt("vlan_id")?.toString().orEmpty()) }
+        var vlanPorts by remember(selectedSection, topologyKey) { mutableStateOf(selected?.optJSONArray("ports").jsonStrings().joinToString(", ")) }
+        ExpandableSettingsCard(
+            title = stringResource(R.string.bridge_vlan),
+            summary = stringResource(R.string.bridge_vlan_summary, vlans.size),
+        ) {
+            OptionSelector(
+                label = stringResource(R.string.vlan),
+                value = selectedSection,
+                options = vlanChoices,
+                onValueChange = { selectedSection = it },
+            )
+            val bridgeChoices = bridges.map { SelectOption(it.optString("name"), it.optString("name")) }
+            if (bridgeChoices.isNotEmpty()) OptionSelector(
+                label = stringResource(R.string.bridge_name),
+                value = bridgeName,
+                options = bridgeChoices,
+                onValueChange = { bridgeName = it },
+            )
+            else OutlinedTextField(bridgeName, { bridgeName = it }, label = { Text(stringResource(R.string.bridge_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(vlanId, { vlanId = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.vlan_id)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(vlanPorts, { vlanPorts = it }, label = { Text(stringResource(R.string.bridge_ports)) }, modifier = Modifier.fillMaxWidth(), supportingText = { Text(stringResource(R.string.vlan_ports_hint)) }, singleLine = true)
+            ActionRow {
+                PrimaryActionButton(
+                    stringResource(R.string.save),
+                    onClick = { onPrepareCommand(PendingSafeCommand("network.set_vlan", JSONObject().put("section", selected?.optString("section").orEmpty()).put("device", bridgeName).put("vlan_id", vlanId.toIntOrNull() ?: 1).put("ports", vlanPorts.toJsonArray()), queued)) },
+                    enabled = bridgeName.isNotBlank() && vlanId.toIntOrNull() in 1..4094 && vlanPorts.isNotBlank(),
+                )
+                if (selected != null) TextButton(onClick = { onPrepareCommand(PendingSafeCommand("network.delete_vlan", JSONObject().put("section", selectedSection), queued)) }) { Text(stringResource(R.string.delete)) }
+            }
+        }
+    }
+}
+
+private fun JSONArray?.jsonObjects(): List<JSONObject> = this?.let { array ->
+    (0 until array.length()).mapNotNull(array::optJSONObject)
+}.orEmpty()
+
+private fun JSONArray?.jsonStrings(): List<String> = this?.let { array ->
+    (0 until array.length()).mapNotNull { index -> array.optString(index).takeIf(String::isNotBlank) }
+}.orEmpty()
+
+private fun String.toJsonArray(): JSONArray = JSONArray().also { array ->
+    split(',').map(String::trim).filter(String::isNotBlank).forEach(array::put)
 }
 
 @Composable
