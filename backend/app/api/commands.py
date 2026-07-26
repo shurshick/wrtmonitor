@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import Settings
@@ -82,6 +83,7 @@ def create_command(
         payload=normalized_payload,
         created_by=user.id,
         source="api",
+        idempotency_key=payload.idempotency_key,
     )
     audit(
         db,
@@ -91,7 +93,20 @@ def create_command(
         str(command.id),
         {"command_type": payload.command_type, "confirmed": payload.confirmed},
     )
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        if not payload.idempotency_key:
+            raise
+        command = db.scalars(
+            select(DeviceCommand).where(
+                DeviceCommand.device_id == device_id,
+                DeviceCommand.idempotency_key == payload.idempotency_key,
+            )
+        ).first()
+        if command is None or command.command_type != payload.command_type:
+            raise HTTPException(status_code=409, detail="Idempotency key conflict")
     return {"command_id": str(command.id), "status": command.status}
 
 

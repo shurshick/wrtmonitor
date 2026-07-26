@@ -7,6 +7,7 @@ STATUS_DIR="${WRTMONITOR_STATUS_DIR:-/etc/wrtmonitor}"
 BACKUP_DIR="$STATUS_DIR/backup"
 CONFIG_BACKUP_DIR="$STATUS_DIR/config-backups"
 CONFIG_TRANSACTION_DIR="$STATUS_DIR/config-transactions"
+COMMAND_RESULT_DIR="$STATUS_DIR/command-results"
 STATUS_FILE="$STATUS_DIR/update-status.env"
 STATE_FILE="$STATUS_DIR/agent-state.env"
 LIB_INSTALL_DIR="${WRTMONITOR_LIB_INSTALL_DIR:-/usr/lib/wrtmonitor}"
@@ -84,7 +85,7 @@ shell_escape_single() {
 }
 
 ensure_state_dirs() {
-    mkdir -p "$STATUS_DIR" "$BACKUP_DIR" "$CONFIG_BACKUP_DIR" "$CONFIG_TRANSACTION_DIR"
+    mkdir -p "$STATUS_DIR" "$BACKUP_DIR" "$CONFIG_BACKUP_DIR" "$CONFIG_TRANSACTION_DIR" "$COMMAND_RESULT_DIR"
 }
 
 acquire_lock() {

@@ -5,8 +5,11 @@ on:
   pull_request:
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   backend:
@@ -32,10 +35,13 @@ jobs:
           python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y shellcheck postgresql-client
       - run: pip install -r backend/requirements.txt
+      - run: pip install pip-audit
+      - run: pip-audit -r backend/requirements.txt
       - run: pip install -r backend/requirements-browser.txt
       - run: python -m playwright install --with-deps chromium
       - run: ruff check backend --select E9,F63,F7,F82
       - run: ruff format --check backend
+      - run: python scripts/validate_contracts.py
       - run: pytest backend/tests openwrt-agent/tests
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -60,6 +66,10 @@ jobs:
       - run: shellcheck --shell=sh openwrt-agent/install-openwrt.sh openwrt-agent/lib/*.sh
       - run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
       - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
+      - name: Verify agent update signature
+        run: |
+          base64 --decode openwrt-agent/SHA256SUMS.sig > /tmp/wrtmonitor-agent.sig
+          openssl pkeyutl -verify -pubin -inkey <(sed -n '/BEGIN PUBLIC KEY/,/END PUBLIC KEY/p' openwrt-agent/lib/update.sh) -rawin -in openwrt-agent/SHA256SUMS.txt -sigfile /tmp/wrtmonitor-agent.sig
       - name: Browser smoke test
         env:
           WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:change-me-db-password@localhost:5432/wrtmonitor_test
@@ -82,6 +92,9 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wrtmonitor
     steps:
@@ -101,14 +114,24 @@ jobs:
             -e WRTMONITOR_JWT_SECRET=ci-test-secret-value-with-more-than-32-characters \
             "$IMAGE_NAME:$RELEASE_VERSION" \
             python -c "from pathlib import Path; from backend.app.main import app; from backend.app.config import APP_VERSION; expected = Path('/app/VERSION').read_text().strip(); assert APP_VERSION == expected == '$RELEASE_VERSION'; assert app.version == expected; print(expected)"
-      - name: Login to GHCR
+      - uses: docker/setup-buildx-action@v3
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-      - name: Publish image tags
+      - uses: docker/login-action@v3
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker push "$IMAGE_NAME:$RELEASE_VERSION"
-          docker push "$IMAGE_NAME:latest"
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+            ${{ env.IMAGE_NAME }}:latest
+          provenance: mode=max
+          sbom: true
 
   android:
     runs-on: ubuntu-latest
@@ -124,6 +147,8 @@ jobs:
       - run: chmod +x ./gradlew
       - run: ./gradlew :android:app:assembleDebug
       - run: ./gradlew :android:app:testDebugUnitTest
+      - run: ./gradlew :android:app:lintDebug
+      - run: ./gradlew :android:app:assembleDebugAndroidTest
       - uses: actions/upload-artifact@v7
         with:
           name: wrtmonitor-android-debug
@@ -132,6 +157,8 @@ jobs:
   release-artifacts:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
       - name: Read release metadata
@@ -154,6 +181,15 @@ jobs:
       - run: chmod +x ./gradlew
       - run: pip install -r backend/requirements.txt
       - run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
+      - name: Sign agent update manifest
+        env:
+          OPENWRT_UPDATE_SIGNING_KEY_BASE64: ${{ secrets.OPENWRT_UPDATE_SIGNING_KEY_BASE64 }}
+        run: |
+          test -n "$OPENWRT_UPDATE_SIGNING_KEY_BASE64"
+          echo "$OPENWRT_UPDATE_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/openwrt-update-private.pem"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/openwrt-update-private.pem" -rawin -in openwrt-agent/SHA256SUMS.txt -out "$RUNNER_TEMP/SHA256SUMS.sig"
+          base64 -w 0 "$RUNNER_TEMP/SHA256SUMS.sig" > openwrt-agent/SHA256SUMS.sig
+          echo >> openwrt-agent/SHA256SUMS.sig
       - name: Restore Android release signing key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -182,6 +218,7 @@ jobs:
             wrtmonitor-android-v${{ env.RELEASE_VERSION }}.apk
             wrtmonitor-truenas-v${{ env.RELEASE_VERSION }}.yaml
             openwrt-agent/SHA256SUMS.txt
+            openwrt-agent/SHA256SUMS.sig
             openwrt-agent/agent-version.txt
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/')
@@ -193,6 +230,7 @@ jobs:
             "wrtmonitor-android-v$RELEASE_VERSION.apk" \
             "wrtmonitor-truenas-v$RELEASE_VERSION.yaml" \
             "openwrt-agent/SHA256SUMS.txt" \
+            "openwrt-agent/SHA256SUMS.sig" \
             "openwrt-agent/agent-version.txt" \
             --title "$RELEASE_TAG" \
             --notes-file RELEASE_NOTES.md \

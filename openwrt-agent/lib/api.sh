@@ -1,17 +1,22 @@
-api() {
+api_using_token() {
     method="$1"
     path="$2"
-    body="${3:-}"
+    authorization_token="$3"
+    body="${4:-}"
     [ -n "$body" ] || body="{}"
     if [ "$method" = "GET" ]; then
         curl -fsS --connect-timeout 5 --max-time 15 -X "$method" "$(server_url)$path" \
-            -H "Authorization: Bearer $(device_token)"
+            -H "Authorization: Bearer $authorization_token"
     else
         curl -fsS --connect-timeout 10 --max-time 30 -X "$method" "$(server_url)$path" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $(device_token)" \
+            -H "Authorization: Bearer $authorization_token" \
             -d "$body"
     fi
+}
+
+api() {
+    api_using_token "$1" "$2" "$(device_token)" "${3:-}"
 }
 
 register_device() {
@@ -40,9 +45,14 @@ poll_commands() {
         command_id="$(json_get_string /tmp/wrtmonitor-commands "@[$index].id")"
         command_type="$(json_get_string /tmp/wrtmonitor-commands "@[$index].type")"
         command_payload="$(json_get_object /tmp/wrtmonitor-commands "@[$index].payload")"
+        contract_version="$(json_get_number /tmp/wrtmonitor-commands "@[$index].contract_version")"
         [ -n "$command_id" ] || break
         [ -n "$command_payload" ] || command_payload="{}"
-        if api POST "/api/v1/agent/commands/$command_id/result" '{"status":"running","result":{}}' >/dev/null; then
+        if cached="$(cached_command_result "$command_id" 2>/dev/null)"; then
+            api POST "/api/v1/agent/commands/$command_id/result" "$cached" >/dev/null || true
+        elif [ "$contract_version" != "1" ]; then
+            report_command_result "$command_id" failed '{"error":"unsupported command contract version"}' >/dev/null || true
+        elif api POST "/api/v1/agent/commands/$command_id/result" '{"status":"running","result":{}}' >/dev/null; then
             execute_command "$command_id" "$command_type" "$command_payload"
         else
             log_notice "failed to acknowledge command $command_id"

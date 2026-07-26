@@ -143,7 +143,9 @@
     <string name="capabilities_missing_reinstall">Агент ещё не передал capabilities. Обновите или переустановите агент.</string>
     <string name="rollback_confirm_title">Вернуть предыдущую версию агента?</string>
     <string name="rollback_confirm_message">Агент попробует восстановить предыдущую рабочую версию и перезапуститься.</string>
-    <string name="rollback_action">Rollback</string>
+    <string name="rollback_action">Вернуть версию</string>
+    <string name="rotate_agent_token">Сменить ключ агента</string>
+    <string name="token_rotation_queued">Смена ключа агента поставлена в очередь</string>
     <string name="rollback_queued">Команда rollback добавлена.</string>
     <string name="update_check_queued">Команда проверки обновления добавлена.</string>
     <string name="interval_change_queued">Новый интервал telemetry будет применён при следующем цикле агента.</string>
@@ -317,7 +319,6 @@
     <string name="client_profile">Профиль доступа</string>
     <string name="no_profile">Без профиля</string>
     <string name="no_profile_selected">Без профиля · выбран</string>
-    <string name="selected">выбран</string>
     <string name="access_profiles">Профили доступа</string>
     <string name="profiles_count">Профилей: %1$d</string>
     <string name="profile_name">Название профиля</string>

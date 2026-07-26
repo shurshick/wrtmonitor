@@ -79,7 +79,7 @@ flowchart LR
 
 ## Capabilities
 
-Начиная с `v0.6.0`, agent публикует capability report schema v7:
+В `v0.16.0` agent публикует capability report schema v15:
 
 - версию;
 - платформу;

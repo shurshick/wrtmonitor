@@ -82,8 +82,12 @@ def test_web_login_sets_secure_cookie_and_checks_it_after_redirect(monkeypatch):
             return None
 
     monkeypatch.setattr(routes, "is_setup_required", lambda db, current: False)
-    monkeypatch.setattr(routes, "verify_password", lambda password, hashed: True)
+    monkeypatch.setattr(routes, "verify_user_password", lambda password, hashed: True)
     monkeypatch.setattr(routes, "audit", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        routes, "enforce_login_rate_limit", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(routes, "record_login_attempt", lambda *args, **kwargs: None)
 
     response = routes.login_form(
         make_request(forwarded_proto="https"),

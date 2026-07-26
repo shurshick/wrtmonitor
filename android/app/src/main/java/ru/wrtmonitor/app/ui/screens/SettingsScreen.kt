@@ -36,6 +36,7 @@ import org.json.JSONArray
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
+import ru.wrtmonitor.app.api.SharedHttpClient
 import ru.wrtmonitor.app.domain.VersionComparator
 import ru.wrtmonitor.app.pairing.MobilePairingPayloadException
 import ru.wrtmonitor.app.pairing.normalizePairingServerUrl
@@ -47,8 +48,6 @@ import ru.wrtmonitor.app.ui.components.RouterPageHeader
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.TonalActionButton
-import java.net.HttpURLConnection
-import java.net.URL
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -256,10 +255,15 @@ private fun AboutScreen(updateState: UpdateState?, checkingUpdate: Boolean, onBa
 private fun appVersionName(context: android.content.Context): String = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
 private fun openUrl(context: android.content.Context, url: String) = context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 private fun checkForUpdate(currentVersion: String): UpdateState {
-    val connection = (URL(RELEASES_URL).openConnection() as HttpURLConnection).apply { requestMethod = "GET"; connectTimeout = 10_000; readTimeout = 10_000; setRequestProperty("Accept", "application/vnd.github+json"); setRequestProperty("User-Agent", "wrtmonitor-android") }
-    val status = connection.responseCode
+    val (status, response) = SharedHttpClient.request(
+        RELEASES_URL,
+        headers = mapOf(
+            "Accept" to "application/vnd.github+json",
+            "User-Agent" to "wrtmonitor-android",
+        ),
+    )
     if (status !in 200..299) throw IllegalStateException("HTTP $status")
-    val releases = JSONArray(connection.inputStream.bufferedReader().use { it.readText() })
+    val releases = JSONArray(response)
     val release = (0 until releases.length()).mapNotNull { releases.optJSONObject(it) }.firstOrNull { !it.optBoolean("draft", false) } ?: throw IllegalStateException("No published releases")
     val latestVersion = release.optString("tag_name").removePrefix("v")
     return if (VersionComparator.compare(latestVersion, currentVersion) > 0) UpdateState.Available(latestVersion, release.optString("html_url")) else UpdateState.UpToDate(latestVersion)

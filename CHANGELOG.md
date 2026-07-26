@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.16.0-stability
+
+- Добавлены версионированные контракты команд и telemetry, генерация manifest и обязательная проверка их согласованности в CI.
+- Очередь команд получила idempotency key, PostgreSQL row locking, кэш terminal result на агенте и post-condition verification.
+- Android использует общий HTTP-клиент и синхронизированный refresh сессии без гонки параллельных запросов.
+- Rate limiting входа хранится в PostgreSQL и применяется к API и Web UI; проверка неизвестного пользователя выполняется за постоянное время.
+- Добавлена ротация ключа агента с коротким grace period для текущих запросов.
+- Манифест обновления агента подписывается Ed25519; installer и updater проверяют подпись до установки.
+- Миграции получили advisory lock и строгую проверку unversioned schema.
+- Добавлены `/live`, `/ready`, request ID, структурированные HTTP-логи и опциональные Prometheus-метрики.
+- Docker runtime запускается без root; образ публикуется с SBOM и provenance.
+- Обновлены уязвимые зависимости, добавлены pip-audit, CodeQL, dependency review и Dependabot.
+- Android и backend дополнены регрессионными, E2E и instrumentation-проверками.
+
 ## v0.15.0
 
 - Добавлен единый манифест обязательных зависимостей агента для `apk` и `opkg`; он применяется после установки и каждого обновления.

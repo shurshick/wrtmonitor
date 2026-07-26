@@ -1,0 +1,12 @@
+.git
+.github
+.gradle
+.pytest_cache
+.ruff_cache
+.venv
+android
+docs
+outputs
+work
+**/__pycache__
+**/*.pyc

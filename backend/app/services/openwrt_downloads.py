@@ -7,6 +7,7 @@ from pathlib import Path
 DOWNLOADS_DIR = Path("openwrt-agent")
 MANIFEST_FILE = "openwrt-agent-files.txt"
 CHECKSUMS_FILE = "SHA256SUMS.txt"
+SIGNATURE_FILE = "SHA256SUMS.sig"
 
 
 def _sha256_for(path: Path) -> str:
@@ -43,7 +44,7 @@ def ensure_openwrt_download_metadata() -> None:
         handle.write(f"{version}\n")
     checksums = []
     for filename in manifest_entries():
-        if filename == CHECKSUMS_FILE:
+        if filename in {CHECKSUMS_FILE, SIGNATURE_FILE}:
             continue
         path = DOWNLOADS_DIR / filename
         checksums.append(f"{_sha256_for(path)}  {filename}")

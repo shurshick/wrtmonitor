@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="14"
+CAPABILITIES_VERSION="15"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -6,7 +6,7 @@ capability_path() {
 
 capability_keys() {
     printf '%s\n' \
-        agent.status agent.update agent.set_interval agent.rollback agent.disable agent.dependencies config.transaction \
+        agent.status agent.update agent.set_interval agent.rotate_token agent.rollback agent.disable agent.dependencies config.transaction \
         telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.wifi.stations telemetry.clients telemetry.clients.traffic telemetry.services \
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
@@ -143,6 +143,7 @@ capability_supported() {
         agent.dependencies) package_manager_name >/dev/null 2>&1 ;;
         agent.update) has_commands curl sha256sum cp mv ;;
         agent.set_interval) has_uci_config wrtmonitor ;;
+        agent.rotate_token) has_uci_config wrtmonitor && has_commands curl jsonfilter ;;
         agent.rollback) has_commands cp mv && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
         agent.disable) has_uci_config wrtmonitor && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
         config.transaction) has_config_transactions ;;
@@ -207,7 +208,7 @@ capability_supported() {
 capability_unavailable_reason() {
     case "$1" in
         agent.update) printf 'curl, sha256sum or file tools are unavailable' ;;
-        agent.set_interval|agent.disable) printf 'wrtmonitor UCI configuration is unavailable' ;;
+        agent.set_interval|agent.rotate_token|agent.disable) printf 'wrtmonitor UCI configuration or required API tools are unavailable' ;;
         agent.rollback) printf 'agent init service or file tools are unavailable' ;;
         config.transaction) printf 'UCI configuration, connectivity or backup tools are unavailable' ;;
         telemetry.system) printf 'required procfs metrics are unavailable' ;;

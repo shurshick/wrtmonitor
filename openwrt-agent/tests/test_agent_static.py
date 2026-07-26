@@ -14,6 +14,7 @@ INSTALLER = ROOT / "install-openwrt.sh"
 LIB_DIR = ROOT / "lib"
 MANIFEST = ROOT / "openwrt-agent-files.txt"
 SUMS = ROOT / "SHA256SUMS.txt"
+SIGNATURE = ROOT / "SHA256SUMS.sig"
 AGENT_VERSION = ROOT / "agent-version.txt"
 REQUIRED_LIBS = [
     "common.sh",
@@ -25,6 +26,8 @@ REQUIRED_LIBS = [
     "diagnostics.sh",
     "transactions.sh",
     "commands.sh",
+    "idempotency.sh",
+    "verification.sh",
     "api.sh",
 ]
 
@@ -75,6 +78,7 @@ def test_manifest_lists_required_files():
         "install-openwrt.sh",
         "agent-version.txt",
         "openwrt-agent-files.txt",
+        "SHA256SUMS.sig",
     ):
         assert name in entries
     for name in REQUIRED_LIBS:
@@ -451,6 +455,7 @@ def test_installer_bootstraps_runtime_dependencies():
         "ubus",
         "coreutils-sha256sum",
         "coreutils-base64",
+        "openssl-util",
     ):
         assert dependency in source
     assert "ensure_optional_dependencies()" in source
@@ -466,6 +471,7 @@ def test_required_dependency_manifest_covers_runtime_features():
         "sysupgrade|base-files",
         "tar|tar",
         "base64|coreutils-base64",
+        "openssl|openssl-util",
         "ethtool|ethtool",
         "iwinfo|iwinfo",
         "ip|ip-full",
@@ -474,6 +480,54 @@ def test_required_dependency_manifest_covers_runtime_features():
         assert dependency in source
     assert "ensure_nlbwmon_runtime" in source
     assert "nlbwmon_runtime_status" in source
+
+
+def test_update_manifest_signature_is_required_and_valid(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    sums = tmp_path / "SHA256SUMS.txt"
+    signature = tmp_path / "SHA256SUMS.sig"
+    shutil.copy2(SUMS, sums)
+    shutil.copy2(SIGNATURE, signature)
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "update.sh").as_posix()}"
+        verify_manifest_signature "{tmp_path.as_posix()}"
+    '''
+    subprocess.run([shell, "-c", script], check=True, env=shell_env())
+    sums.write_text(sums.read_text(encoding="utf-8") + "tampered\n", encoding="utf-8")
+    completed = subprocess.run([shell, "-c", script], env=shell_env())
+    assert completed.returncode != 0
+
+
+def test_terminal_command_result_is_cached_for_replay(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    status_dir = tmp_path / "status"
+    command_id = "12345678-1234-1234-1234-123456789abc"
+    script = f'''
+        set -eu
+        export WRTMONITOR_STATUS_DIR="{status_dir.as_posix()}"
+        . "{(LIB_DIR / "common.sh").as_posix()}"
+        . "{(LIB_DIR / "idempotency.sh").as_posix()}"
+        api() {{ return 0; }}
+        ensure_state_dirs
+        report_command_result "{command_id}" success '{{"changed":true}}'
+        cached_command_result "{command_id}"
+    '''
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=shell_env(),
+    )
+    assert json.loads(completed.stdout) == {
+        "status": "success",
+        "result": {"message": "command already completed; duplicate suppressed"},
+    }
 
 
 def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():

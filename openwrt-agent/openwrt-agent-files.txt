@@ -4,6 +4,7 @@ install-openwrt.sh
 agent-version.txt
 openwrt-agent-files.txt
 SHA256SUMS.txt
+SHA256SUMS.sig
 lib/common.sh
 lib/dependencies.sh
 lib/status.sh
@@ -13,4 +14,6 @@ lib/capabilities.sh
 lib/diagnostics.sh
 lib/transactions.sh
 lib/commands.sh
+lib/idempotency.sh
+lib/verification.sh
 lib/api.sh

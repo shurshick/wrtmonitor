@@ -159,7 +159,7 @@ verify_transaction() {
         if curl -fsS --connect-timeout 5 --max-time 10 "$(server_url)/health" >/dev/null 2>&1; then
             transaction_set_state "$command_id" "confirmed"
             result="$(transaction_success_result "$command_id")"
-            api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"success\",\"result\":$result}" >/dev/null || true
+            report_command_result "$command_id" success "$result" >/dev/null || true
             return 0
         fi
         now_epoch="$(date +%s 2>/dev/null || echo 0)"
@@ -169,6 +169,6 @@ verify_transaction() {
     if transaction_restore "$command_id"; then rollback_state="rolled_back"; else rollback_state="rollback_failed"; fi
     sleep 8
     result="$(transaction_failure_result "$command_id" "connectivity verification timed out" "$rollback_state")"
-    api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"failed\",\"result\":$result}" >/dev/null || true
+    report_command_result "$command_id" failed "$result" >/dev/null || true
     return 1
 }

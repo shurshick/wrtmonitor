@@ -33,13 +33,16 @@ services:
       WRTMONITOR_ALLOW_INSECURE_LOCAL: "false"
       WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "false"
       WRTMONITOR_ENABLE_API_DOCS: "false"
+      WRTMONITOR_ENABLE_METRICS: "false"
+      WRTMONITOR_LOGIN_RATE_LIMIT_ATTEMPTS: 10
+      WRTMONITOR_LOGIN_RATE_LIMIT_WINDOW_SECONDS: 900
       WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS: 30
       WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE: 500
       WRTMONITOR_TELEMETRY_METRIC_RETENTION_DAYS: 45
     volumes:
       - wrtmonitor_backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5).read()\nPY"]
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=5).read()\nPY"]
       interval: 30s
       timeout: 10s
       retries: 5

@@ -1,7 +1,9 @@
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from ..contracts import telemetry_schema_version
 
 
 class LoginRequest(BaseModel):
@@ -39,6 +41,10 @@ class AgentRegisterRequest(BaseModel):
     firmware: str | None = None
 
 
+class AgentTokenRollbackRequest(BaseModel):
+    rollback_token: str = Field(min_length=32, max_length=256)
+
+
 class DeviceProvisionRequest(BaseModel):
     name: str | None = None
     hostname: str
@@ -50,11 +56,17 @@ class TelemetryRequest(BaseModel):
     device_id: UUID
     telemetry: dict[str, Any]
 
+    @model_validator(mode="after")
+    def validate_schema_version(self):
+        telemetry_schema_version(self.telemetry)
+        return self
+
 
 class CommandCreateRequest(BaseModel):
     command_type: str
     payload: dict[str, Any] = Field(default_factory=dict)
     confirmed: bool = False
+    idempotency_key: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class CommandResultRequest(BaseModel):

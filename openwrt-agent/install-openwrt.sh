@@ -62,6 +62,7 @@ ensure_dependencies() {
     add_missing_package ubus ubus
     add_missing_package sha256sum coreutils-sha256sum
     add_missing_package base64 coreutils-base64
+    add_missing_package openssl openssl-util
     if ! has_ca_bundle; then
         missing_packages="$missing_packages ca-bundle"
     fi
@@ -75,7 +76,7 @@ ensure_dependencies() {
         # shellcheck disable=SC2086
         install_packages $missing_packages
     fi
-    for command_name in curl jsonfilter uci ubus sha256sum base64; do
+    for command_name in curl jsonfilter uci ubus sha256sum base64 openssl; do
         if ! command -v "$command_name" >/dev/null 2>&1; then
             echo "Required dependency is unavailable after installation: $command_name" >&2
             exit 1
@@ -162,14 +163,34 @@ verify_checksum() {
     [ "$actual" = "$expected" ]
 }
 
+write_update_public_key() {
+    cat >"$1" <<'EOF'
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAbXo+FQit+3CFcc6Dwnww2gtXN5wOMlwxDdx/UIDth4A=
+-----END PUBLIC KEY-----
+EOF
+}
+
+verify_manifest_signature() {
+    tree="$1"
+    public_key="$tree/update-public-key.pem"
+    signature="$tree/SHA256SUMS.sig.bin"
+    write_update_public_key "$public_key"
+    base64 -d <"$tree/SHA256SUMS.sig" >"$signature" 2>/dev/null || return 1
+    openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin \
+        -in "$tree/SHA256SUMS.txt" -sigfile "$signature" >/dev/null 2>&1
+}
+
 validate_tree() {
     tree="$1"
     manifest="$tree/openwrt-agent-files.txt"
     sums="$tree/SHA256SUMS.txt"
     [ -r "$manifest" ] || { echo "Manifest not found: $manifest" >&2; exit 1; }
     [ -r "$sums" ] || { echo "SHA256SUMS not found: $sums" >&2; exit 1; }
+    [ -r "$tree/SHA256SUMS.sig" ] || { echo "SHA256SUMS signature not found" >&2; exit 1; }
+    verify_manifest_signature "$tree" || { echo "Invalid update signature" >&2; exit 1; }
     for filename in $(manifest_entries "$manifest"); do
-        [ "$filename" = "SHA256SUMS.txt" ] && continue
+        case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig) continue ;; esac
         [ -r "$tree/$filename" ] || { echo "Missing file in payload: $filename" >&2; exit 1; }
         verify_checksum "$sums" "$tree/$filename" "$filename" || { echo "Checksum mismatch: $filename" >&2; exit 1; }
     done
@@ -194,8 +215,9 @@ prepare_work_dir() {
         base="$(printf '%s' "$DOWNLOAD_BASE" | sed 's#/$##')"
         download_file "$base/openwrt-agent-files.txt" "$WORK_DIR/openwrt-agent-files.txt"
         download_file "$base/SHA256SUMS.txt" "$WORK_DIR/SHA256SUMS.txt"
+        download_file "$base/SHA256SUMS.sig" "$WORK_DIR/SHA256SUMS.sig"
         for filename in $(manifest_entries "$WORK_DIR/openwrt-agent-files.txt"); do
-            [ "$filename" = "SHA256SUMS.txt" ] && continue
+            case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig) continue ;; esac
             target="$WORK_DIR/$filename"
             mkdir -p "$(dirname "$target")"
             download_file "$base/$filename" "$target"

@@ -10,6 +10,7 @@ from .config import Settings
 
 
 _hasher = PasswordHasher()
+_dummy_password_hash = _hasher.hash("wrtmonitor-dummy-password-verification")
 
 
 def hash_password(password: str) -> str:
@@ -21,6 +22,12 @@ def verify_password(password: str, password_hash: str) -> bool:
         return _hasher.verify(password_hash, password)
     except Exception:
         return False
+
+
+def verify_user_password(password: str, password_hash: str | None) -> bool:
+    """Verify every login attempt to avoid exposing known usernames by timing."""
+    valid = verify_password(password, password_hash or _dummy_password_hash)
+    return password_hash is not None and valid
 
 
 def hash_token(token: str) -> str:

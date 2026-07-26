@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+import secrets
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -6,11 +7,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import Settings
+from ..contracts import COMMAND_CONTRACT_VERSION
 from ..db import get_db
 from ..models import Device, DeviceCommand
 from ..services.audit import audit
-from ..services.auth import device_from_token, settings
-from ..schemas import AgentRegisterRequest, CommandResultRequest
+from ..services.auth import bearer_token, device_from_token, settings
+from ..schemas import (
+    AgentRegisterRequest,
+    AgentTokenRollbackRequest,
+    CommandResultRequest,
+)
 from ..security import hash_token
 from ..services.commands import (
     TERMINAL_STATUSES,
@@ -21,6 +27,73 @@ from ..services.commands import (
 
 
 router = APIRouter(prefix="/api/v1/agent")
+
+
+@router.post("/token/rotate")
+def rotate_device_token(
+    authorization: str | None = Header(default=None), db: Session = Depends(get_db)
+) -> dict[str, str | int]:
+    device = device_from_token(authorization, db, for_update=True)
+    new_token = secrets.token_urlsafe(32)
+    rollback_token = secrets.token_urlsafe(32)
+    device.previous_token_hash = device.token_hash
+    device.previous_token_expires_at = datetime.now(UTC) + timedelta(minutes=10)
+    device.token_rollback_hash = hash_token(rollback_token)
+    device.token_hash = hash_token(new_token)
+    device.updated_at = datetime.now(UTC)
+    audit(db, None, "agent.token.rotate", "device", str(device.id))
+    db.commit()
+    return {
+        "device_token": new_token,
+        "rollback_token": rollback_token,
+        "grace_seconds": 600,
+    }
+
+
+@router.post("/token/rollback")
+def rollback_device_token(
+    payload: AgentTokenRollbackRequest,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    previous_token_hash = hash_token(bearer_token(authorization))
+    device = db.scalars(
+        select(Device)
+        .where(
+            Device.previous_token_hash == previous_token_hash,
+            Device.token_rollback_hash == hash_token(payload.rollback_token),
+            Device.previous_token_expires_at > datetime.now(UTC),
+            Device.archived_at.is_(None),
+        )
+        .with_for_update()
+    ).first()
+    if device is None:
+        raise HTTPException(status_code=401, detail="Token rollback is not available")
+    device.token_hash = previous_token_hash
+    device.previous_token_hash = None
+    device.previous_token_expires_at = None
+    device.token_rollback_hash = None
+    device.updated_at = datetime.now(UTC)
+    audit(db, None, "agent.token.rollback", "device", str(device.id))
+    db.commit()
+    return {"status": "rolled_back"}
+
+
+@router.post("/token/confirm")
+def confirm_device_token(
+    authorization: str | None = Header(default=None), db: Session = Depends(get_db)
+) -> dict[str, str]:
+    provided_hash = hash_token(bearer_token(authorization))
+    device = device_from_token(authorization, db, for_update=True)
+    if device.token_hash != provided_hash:
+        raise HTTPException(status_code=409, detail="Current device token required")
+    device.previous_token_hash = None
+    device.previous_token_expires_at = None
+    device.token_rollback_hash = None
+    device.updated_at = datetime.now(UTC)
+    audit(db, None, "agent.token.confirm", "device", str(device.id))
+    db.commit()
+    return {"status": "confirmed"}
 
 
 @router.post("/register")
@@ -50,6 +123,7 @@ def poll_commands(
         .where(DeviceCommand.device_id == device.id, DeviceCommand.status == "queued")
         .order_by(DeviceCommand.created_at.asc())
         .limit(5)
+        .with_for_update(skip_locked=True)
     ).all()
     now = datetime.now(UTC)
     for command in commands:
@@ -65,6 +139,7 @@ def poll_commands(
             "id": str(command.id),
             "type": command.command_type,
             "payload": command.payload,
+            "contract_version": COMMAND_CONTRACT_VERSION,
         }
         for command in commands
     ]

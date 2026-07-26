@@ -256,7 +256,7 @@ private fun RouterOverview(
     SectionCard(title = stringResource(R.string.live_resources)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricTile(stringResource(R.string.uptime), formatDuration(uptime), Modifier.weight(1f))
-            MetricTile(stringResource(R.string.load_1m), String.format("%.2f", load), Modifier.weight(1f), MaterialTheme.colorScheme.tertiary)
+            MetricTile(stringResource(R.string.load_1m), String.format(Locale.getDefault(), "%.2f", load), Modifier.weight(1f), MaterialTheme.colorScheme.tertiary)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricTile(stringResource(R.string.memory_used), "${memoryPercent.toInt()}%", Modifier.weight(1f), MaterialTheme.colorScheme.primary)
@@ -613,9 +613,9 @@ private fun formatChartTimestamp(value: String): String = runCatching {
 }.getOrDefault("—")
 
 private fun formatTrafficRate(value: Long): String = when {
-    value >= 1_000_000_000 -> String.format("%.2f Gbit/s", value / 1_000_000_000.0)
-    value >= 1_000_000 -> String.format("%.2f Mbit/s", value / 1_000_000.0)
-    value >= 1_000 -> String.format("%.1f kbit/s", value / 1_000.0)
+    value >= 1_000_000_000 -> String.format(Locale.getDefault(), "%.2f Gbit/s", value / 1_000_000_000.0)
+    value >= 1_000_000 -> String.format(Locale.getDefault(), "%.2f Mbit/s", value / 1_000_000.0)
+    value >= 1_000 -> String.format(Locale.getDefault(), "%.1f kbit/s", value / 1_000.0)
     else -> "$value bit/s"
 }
 
@@ -628,6 +628,7 @@ internal fun AgentSection(
     onEnableAutoUpdate: () -> Unit,
     onDisableAutoUpdate: () -> Unit,
     onRollback: () -> Unit,
+    onRotateToken: () -> Unit,
 ) {
     val capabilities = agent?.capabilities ?: emptyMap()
     val autoUpdateEnabled = agent?.autoUpdateEnabled == true
@@ -660,7 +661,7 @@ internal fun AgentSection(
         agent?.lastUpdateError?.takeIf(String::isNotBlank)?.let { MessageBanner(it, error = true) }
         if (capabilities.isEmpty()) MessageBanner(stringResource(R.string.capabilities_missing_reinstall))
     }
-    if (capabilities["agent.update"] == true || capabilities["agent.set_interval"] == true || capabilities["agent.rollback"] == true) {
+    if (capabilities["agent.update"] == true || capabilities["agent.set_interval"] == true || capabilities["agent.rollback"] == true || capabilities["agent.rotate_token"] == true) {
         ExpandableSettingsCard(
             title = stringResource(R.string.agent_management),
             summary = if (autoUpdateEnabled) stringResource(R.string.auto_update_enabled_summary) else stringResource(R.string.auto_update_disabled_summary),
@@ -694,6 +695,9 @@ internal fun AgentSection(
             }
             if (capabilities["agent.rollback"] == true) {
                 SecondaryActionButton(stringResource(R.string.rollback_action), onRollback, Modifier.align(Alignment.End))
+            }
+            if (capabilities["agent.rotate_token"] == true) {
+                SecondaryActionButton(stringResource(R.string.rotate_agent_token), onRotateToken, Modifier.align(Alignment.End))
             }
         }
     }

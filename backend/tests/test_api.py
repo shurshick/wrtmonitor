@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
+from sqlalchemy import delete, inspect
 from sqlalchemy.orm import sessionmaker
 
 import backend.app.web.routes as main
@@ -14,6 +14,7 @@ from backend.app.config import Settings, load_settings
 from backend.app.db import get_db, get_engine, init_db
 from backend.app.models import (
     AppSetting,
+    AuthAttempt,
     AuditLog,
     ClientTrafficSample,
     MobilePairingAttempt,
@@ -488,6 +489,7 @@ def clear_database():
     )
     with session_factory() as session:
         for model in (
+            AuthAttempt,
             MobilePairingAttempt,
             DeviceCommand,
             DeviceTelemetry,
@@ -498,6 +500,26 @@ def clear_database():
         ):
             session.execute(delete(model))
         session.commit()
+
+
+def test_stability_migration_schema_e2e():
+    if not postgres_e2e_enabled():
+        pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
+    init_db()
+    database = inspect(get_engine())
+    assert database.has_table("auth_attempts")
+    device_columns = {item["name"] for item in database.get_columns("devices")}
+    assert {
+        "previous_token_hash",
+        "previous_token_expires_at",
+        "token_rollback_hash",
+    } <= device_columns
+    command_columns = {item["name"] for item in database.get_columns("device_commands")}
+    assert "idempotency_key" in command_columns
+    command_indexes = {
+        item["name"]: item for item in database.get_indexes("device_commands")
+    }
+    assert command_indexes["uq_device_commands_device_idempotency"]["unique"]
 
 
 def test_router_registration_telemetry_and_latest_api_e2e():

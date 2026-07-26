@@ -1000,7 +1000,7 @@ private fun clientIcon(client: NetworkClientDto): ImageVector {
     }
 }
 
-private fun formatClientBytes(value: Long): String = when {
+internal fun formatClientBytes(value: Long): String = when {
     value >= 1024L * 1024 * 1024 -> String.format(Locale.getDefault(), "%.1f GB", value / (1024.0 * 1024 * 1024))
     value >= 1024L * 1024 -> String.format(Locale.getDefault(), "%.1f MB", value / (1024.0 * 1024))
     value >= 1024L -> String.format(Locale.getDefault(), "%.1f KB", value / 1024.0)

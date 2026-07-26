@@ -17,6 +17,7 @@ from ..services.sessions import (
     revoke_all_user_sessions,
     rotate_user_session,
 )
+from ..services.login_guard import enforce_login_rate_limit, record_login_attempt
 from ..services.setup import is_setup_required
 from ..schemas import LoginRequest, PasswordChangeRequest, RefreshTokenRequest
 from ..security import (
@@ -24,6 +25,7 @@ from ..security import (
     decode_refresh_token,
     hash_password,
     verify_password,
+    verify_user_password,
 )
 
 
@@ -39,19 +41,27 @@ def login(
 ) -> dict[str, str | int]:
     if is_setup_required(db, config):
         raise HTTPException(status_code=403, detail="Setup required")
+    request_host = request.client.host if request.client else None
+    try:
+        enforce_login_rate_limit(db, config, payload.username, request_host)
+    except PermissionError as exc:
+        raise HTTPException(status_code=429, detail="Too many login attempts") from exc
     user = db.scalars(
         select(User).where(
             User.username == payload.username.strip(), User.disabled.is_(False)
         )
     ).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+    if not verify_user_password(payload.password, user.password_hash if user else None):
+        record_login_attempt(db, config, payload.username, request_host, accepted=False)
+        db.commit()
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    record_login_attempt(db, config, payload.username, request_host, accepted=True)
     _, refresh_token = create_user_session(
         db,
         user,
         config,
         client_name=request.headers.get("user-agent"),
-        ip_address=request.client.host if request.client else None,
+        ip_address=request_host,
     )
     audit(db, user.id, "auth.login", "user", str(user.id))
     db.commit()

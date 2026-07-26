@@ -34,6 +34,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +55,7 @@ import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.data.SessionStore
+import ru.wrtmonitor.app.data.SessionRefreshCoordinator
 import ru.wrtmonitor.app.data.persistSession
 import ru.wrtmonitor.app.pairing.MobilePairingPayloadException
 import ru.wrtmonitor.app.pairing.MobilePairingSetup
@@ -102,7 +104,7 @@ fun WrtMonitorApp() {
     }
     var serverUrl by remember { mutableStateOf(initialServerUrl) }
     var accessToken by remember { mutableStateOf(sessionStore.accessToken) }
-    var refreshingSession by remember { mutableStateOf(false) }
+    val refreshCoordinator = remember { SessionRefreshCoordinator() }
     var tab by remember { mutableStateOf(Tab.Routers) }
     var selectedDevice by remember { mutableStateOf<DeviceDto?>(null) }
     var deviceListRefreshNonce by remember { mutableStateOf(0) }
@@ -120,23 +122,34 @@ fun WrtMonitorApp() {
     }
     val expireSession: () -> Unit = {
         val refreshToken = sessionStore.refreshToken
+        val failedAccessToken = accessToken
         if (refreshToken.isBlank()) {
             clearExpiredSession()
-        } else if (!refreshingSession) {
-            refreshingSession = true
+        } else {
             scope.launch {
-                when (val result = withContext(Dispatchers.IO) {
-                    WrtMonitorApi(serverUrl).refresh(refreshToken)
-                }) {
-                    is ApiResult.Success -> {
-                        sessionStore.accessToken = result.data.accessToken
-                        sessionStore.refreshToken = result.data.refreshToken
-                        accessToken = result.data.accessToken
+                val tokens = refreshCoordinator.refresh(
+                    failedAccessToken = failedAccessToken,
+                    currentAccessToken = { sessionStore.accessToken },
+                    refreshRequest = {
+                        when (val result = withContext(Dispatchers.IO) {
+                            WrtMonitorApi(serverUrl).refresh(refreshToken)
+                        }) {
+                            is ApiResult.Success -> result.data
+                            is ApiResult.Error -> null
+                        }
+                    },
+                    persistTokens = { refreshed ->
+                        sessionStore.accessToken = refreshed.accessToken
+                        if (refreshed.refreshToken.isNotBlank()) {
+                            sessionStore.refreshToken = refreshed.refreshToken
+                        }
+                        accessToken = refreshed.accessToken
                         deviceListRefreshNonce += 1
-                    }
-                    is ApiResult.Error -> clearExpiredSession()
+                    },
+                )
+                if (tokens == null) {
+                    clearExpiredSession()
                 }
-                refreshingSession = false
             }
         }
     }
@@ -348,7 +361,7 @@ fun WrtMonitorApp() {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    when (tab) {
+                    key(accessToken) { when (tab) {
                         Tab.Routers -> DeviceDetailScreen(
                             serverUrl,
                             accessToken,
@@ -399,7 +412,7 @@ fun WrtMonitorApp() {
                                 }
                             },
                         )
-                    }
+                    } }
                 }
             }
         }

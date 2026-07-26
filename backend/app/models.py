@@ -109,6 +109,18 @@ class MobilePairingAttempt(Base):
     )
 
 
+class AuthAttempt(Base):
+    __tablename__ = "auth_attempts"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    ip_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    accepted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
 class Device(Base):
     __tablename__ = "devices"
 
@@ -118,6 +130,11 @@ class Device(Base):
     model: Mapped[str | None] = mapped_column(String(160))
     firmware: Mapped[str | None] = mapped_column(String(160))
     token_hash: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    previous_token_hash: Mapped[str | None] = mapped_column(Text)
+    previous_token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    token_rollback_hash: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="offline")
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
@@ -195,6 +212,7 @@ class DeviceCommand(Base):
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(40), nullable=False, default="api")
+    idempotency_key: Mapped[str | None] = mapped_column(String(128))
 
 
 class ClientProfile(Base):
@@ -315,6 +333,13 @@ Index(
 )
 Index("ix_mobile_pairing_attempts_created", MobilePairingAttempt.created_at)
 Index(
+    "ix_auth_attempts_identity_created",
+    AuthAttempt.identity_hash,
+    AuthAttempt.created_at,
+)
+Index("ix_auth_attempts_ip_created", AuthAttempt.ip_hash, AuthAttempt.created_at)
+Index("ix_devices_previous_token_hash", Device.previous_token_hash)
+Index(
     "ix_device_telemetry_device_created",
     DeviceTelemetry.device_id,
     DeviceTelemetry.created_at.desc(),
@@ -325,6 +350,13 @@ Index(
     DeviceTelemetryMetric.created_at.desc(),
 )
 Index("ix_device_commands_device_status", DeviceCommand.device_id, DeviceCommand.status)
+Index(
+    "uq_device_commands_device_idempotency",
+    DeviceCommand.device_id,
+    DeviceCommand.idempotency_key,
+    unique=True,
+    postgresql_where=DeviceCommand.idempotency_key.is_not(None),
+)
 Index("ix_network_clients_device_online", NetworkClient.device_id, NetworkClient.online)
 Index(
     "ix_network_clients_device_presence",

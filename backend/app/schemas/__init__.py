@@ -1,5 +1,6 @@
 from .requests import (
     AgentRegisterRequest,
+    AgentTokenRollbackRequest,
     CommandCreateRequest,
     CommandResultRequest,
     ClientProfileRequest,
@@ -15,6 +16,7 @@ from .requests import (
 
 __all__ = [
     "AgentRegisterRequest",
+    "AgentTokenRollbackRequest",
     "CommandCreateRequest",
     "CommandResultRequest",
     "ClientProfileRequest",

@@ -12,6 +12,10 @@
 - Попытки pairing ограничиваются по hash источника и token; исходные pairing/access/refresh tokens не записываются в аудит.
 - OpenWrt agent использует отдельный device token.
 - Device token хранится на сервере только как hash.
+- Device token можно сменить из Web UI или Android; агент подтверждает запись нового ключа и сразу закрывает старый. Десятиминутный grace и отдельный одноразовый rollback nonce страхуют только ошибку записи UCI.
+- Манифест обновления агента подписывается Ed25519 и проверяется до SHA-256 файлов и установки.
+- Повторно доставленная команда не выполняется второй раз: агент хранит ограниченный кэш terminal result.
+- Неудачные входы в API и Web UI ограничиваются общей PostgreSQL-моделью rate limit.
 - Web UI `/devices` требует вход через `/login`.
 - Production cookies имеют `HttpOnly`, `Secure` и `SameSite=Lax`.
 - Все Web UI POST-формы защищены CSRF-токеном; детали описаны в [security-web-ui.md](security-web-ui.md).

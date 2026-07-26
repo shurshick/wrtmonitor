@@ -144,6 +144,8 @@
     <string name="rollback_confirm_title">Restore previous agent version?</string>
     <string name="rollback_confirm_message">The agent will try to restore the previous working version and restart itself.</string>
     <string name="rollback_action">Rollback</string>
+    <string name="rotate_agent_token">Rotate agent key</string>
+    <string name="token_rotation_queued">Agent key rotation queued</string>
     <string name="rollback_queued">Rollback command queued.</string>
     <string name="update_check_queued">Update check command queued.</string>
     <string name="interval_change_queued">The new telemetry interval will be applied on the next agent cycle.</string>
@@ -317,7 +319,6 @@
     <string name="client_profile">Access profile</string>
     <string name="no_profile">No profile</string>
     <string name="no_profile_selected">No profile · selected</string>
-    <string name="selected">selected</string>
     <string name="access_profiles">Access profiles</string>
     <string name="profiles_count">Profiles: %1$d</string>
     <string name="create_profile">Create profile</string>

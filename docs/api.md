@@ -60,8 +60,12 @@ Android подключается только к WrtMonitor Server. Pairing не
 - `GET|POST /api/v1/devices/{device_id}/client-profiles`
 - `PUT|DELETE /api/v1/devices/{device_id}/client-profiles/{profile_id}`
 - `POST /api/v1/agent/register`
+- `POST /api/v1/agent/token/rotate`
+- `POST /api/v1/agent/token/confirm` — завершить ротацию после записи UCI;
+- `POST /api/v1/agent/token/rollback` — аварийный откат по одноразовому rollback nonce при ошибке записи UCI
 - `GET /api/v1/agent/commands`
 - `POST /api/v1/agent/commands/{command_id}/result`
+- `GET /api/v1/meta/contracts`
 
 ## Latest telemetry
 
@@ -128,9 +132,12 @@ Body:
     "ssid": "HomeWiFi",
     "iface": "@wifi-iface[0]"
   },
-  "confirmed": true
+  "confirmed": true,
+  "idempotency_key": "android-550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+`idempotency_key` необязателен для старых клиентов, но обязателен для новых интеграций. Повторный запрос с тем же ключом и типом команды возвращает существующую команду; использование ключа для другого типа даёт `409`.
 
 Для изменения интервала telemetry:
 
@@ -170,7 +177,7 @@ Content-Type: application/json
 
 Тело совпадает с созданием команды. Ответ содержит `changes`, `warnings`, `errors`, `can_apply`, список UCI-конфигураций и timeout автоматического rollback.
 
-### Управляющие команды v0.6.0
+### Управляющие команды v0.16.0
 
 Расширенный Wi-Fi: `wifi.set_radio`, `wifi.add_ssid`, `wifi.update_ssid`, `wifi.delete_ssid`, `wifi.set_schedule`, `wifi.set_mesh`. Сервер валидирует radio/iface, режим защиты, длину ключа, channel/htmode/txpower, дни и время расписания до постановки команды в очередь.
 
@@ -182,7 +189,7 @@ Content-Type: application/json
 - `qos.set_sqm`
 - `wifi.set_guest`
 - `system.set_hostname`, `system.restart_service`, `system.set_timezone`, `system.set_ntp`, `router.reboot`
-- `agent.update`, `agent.rollback`, `agent.set_auto_update`, `agent.set_interval`, `agent.disconnect`
+- `agent.update`, `agent.rollback`, `agent.set_auto_update`, `agent.set_interval`, `agent.rotate_token`, `agent.disconnect`
 - `diagnostics.run`
 
 `client.set_policy` принимает MAC, признак блокировки, расписание и приоритет. `qos.set_sqm` задаёт общие download/upload в Кбит/с для выбранного WAN-интерфейса. Точный per-client shaping в `v0.5.0` не обещается.
@@ -211,3 +218,12 @@ Content-Type: application/json
 ```
 
 `checks` можно опустить: тогда agent выполнит полный набор проверок.
+
+## Служебные endpoints
+
+- `GET /live` — процесс отвечает, PostgreSQL не проверяется;
+- `GET /ready` — приложение и PostgreSQL готовы принимать трафик;
+- `GET /health` — совместимый healthcheck с проверкой PostgreSQL;
+- `GET /metrics` — Prometheus text format, только при `WRTMONITOR_ENABLE_METRICS=true`.
+
+Каждый HTTP-ответ содержит `X-Request-ID` и `Server-Timing`. Клиентский `X-Request-ID` принимается только в безопасном формате длиной до 128 символов.

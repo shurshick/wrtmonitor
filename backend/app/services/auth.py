@@ -1,8 +1,9 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 import jwt
 from fastapi import Depends, Header, HTTPException
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from ..config import Settings, load_settings
@@ -47,14 +48,24 @@ def current_user(
     return ensure_single_owner_access(user)
 
 
-def device_from_token(authorization: str | None, db: Session) -> Device:
+def device_from_token(
+    authorization: str | None, db: Session, *, for_update: bool = False
+) -> Device:
     token = bearer_token(authorization)
-    device = db.scalars(
-        select(Device).where(
-            Device.token_hash == hash_token(token),
-            Device.archived_at.is_(None),
-        )
-    ).first()
+    token_hash = hash_token(token)
+    query = select(Device).where(
+        or_(
+            Device.token_hash == token_hash,
+            and_(
+                Device.previous_token_hash == token_hash,
+                Device.previous_token_expires_at > datetime.now(UTC),
+            ),
+        ),
+        Device.archived_at.is_(None),
+    )
+    if for_update:
+        query = query.with_for_update()
+    device = db.scalars(query).first()
     if not device:
         raise HTTPException(status_code=401, detail="Invalid device token")
     return device

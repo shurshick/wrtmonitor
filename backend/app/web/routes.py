@@ -47,7 +47,12 @@ from ..models import (
     UserSession,
     MobilePairingToken,
 )
-from ..security import create_web_session_token, hash_password, verify_password
+from ..security import (
+    create_web_session_token,
+    hash_password,
+    verify_password,
+    verify_user_password,
+)
 from ..schemas import SetupRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
@@ -80,6 +85,7 @@ from ..services.mobile_pairing import (
     pairing_response,
     pairing_status,
 )
+from ..services.login_guard import enforce_login_rate_limit, record_login_attempt
 from ..services.setup import complete_setup, get_public_server_url, is_setup_required
 from ..services.telemetry import (
     device_telemetry_history,
@@ -384,10 +390,26 @@ def login_form(
             status_code=400,
         )
     username = username.strip()
+    request_host = request.client.host if request.client else None
+    try:
+        enforce_login_rate_limit(db, config, username, request_host)
+    except PermissionError:
+        return templates.TemplateResponse(
+            request,
+            "message.html",
+            {
+                "title": "Вход временно ограничен",
+                "message": "Слишком много неудачных попыток. Повторите вход позднее.",
+                "link": "/login",
+            },
+            status_code=429,
+        )
     user = db.scalars(
         select(User).where(User.username == username, User.disabled.is_(False))
     ).first()
-    if not user or not verify_password(password, user.password_hash):
+    if not verify_user_password(password, user.password_hash if user else None):
+        record_login_attempt(db, config, username, request_host, accepted=False)
+        db.commit()
         return templates.TemplateResponse(
             request,
             "message.html",
@@ -398,6 +420,7 @@ def login_form(
             },
             status_code=401,
         )
+    record_login_attempt(db, config, username, request_host, accepted=True)
     response = RedirectResponse("/devices?login=1", status_code=303)
     response.set_cookie(
         "wrtmonitor_session",
@@ -833,6 +856,7 @@ def device_page(
     supports = {
         "agent_update": has("agent.update"),
         "agent_set_interval": has("agent.set_interval"),
+        "agent_rotate_token": has("agent.rotate_token"),
         "agent_rollback": has("agent.rollback"),
         "diagnostics": has("diagnostics.check_server"),
         "network_read": has("network.read"),

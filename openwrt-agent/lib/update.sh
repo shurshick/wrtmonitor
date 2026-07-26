@@ -110,6 +110,24 @@ verify_checksum() {
     [ "$actual" = "$expected" ]
 }
 
+write_update_public_key() {
+    cat >"$1" <<'EOF'
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAbXo+FQit+3CFcc6Dwnww2gtXN5wOMlwxDdx/UIDth4A=
+-----END PUBLIC KEY-----
+EOF
+}
+
+verify_manifest_signature() {
+    tmp_dir="$1"
+    public_key="$tmp_dir/update-public-key.pem"
+    signature="$tmp_dir/SHA256SUMS.sig.bin"
+    write_update_public_key "$public_key"
+    base64 -d <"$tmp_dir/SHA256SUMS.sig" >"$signature" 2>/dev/null || return 1
+    openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin \
+        -in "$tmp_dir/SHA256SUMS.txt" -sigfile "$signature" >/dev/null 2>&1
+}
+
 remote_version_from_tmp() {
     tr -d '\r\n' <"$1/agent-version.txt"
 }
@@ -182,9 +200,11 @@ validate_download_set() {
     sums="$tmp_dir/SHA256SUMS.txt"
     [ -r "$manifest" ] || return 1
     [ -r "$sums" ] || return 1
+    [ -r "$tmp_dir/SHA256SUMS.sig" ] || return 1
+    verify_manifest_signature "$tmp_dir" || return 1
 
     for filename in $(manifest_entries "$manifest"); do
-        [ "$filename" = "SHA256SUMS.txt" ] && continue
+        case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig) continue ;; esac
         [ -r "$tmp_dir/$filename" ] || return 1
         verify_checksum "$sums" "$tmp_dir/$filename" "$filename" || return 1
     done
@@ -209,8 +229,9 @@ stage_update_downloads() {
     base="$(update_source)"
     download_file "$base/openwrt-agent-files.txt" "$tmp_dir/openwrt-agent-files.txt"
     download_file "$base/SHA256SUMS.txt" "$tmp_dir/SHA256SUMS.txt"
+    download_file "$base/SHA256SUMS.sig" "$tmp_dir/SHA256SUMS.sig"
     for filename in $(manifest_entries "$tmp_dir/openwrt-agent-files.txt"); do
-        [ "$filename" = "SHA256SUMS.txt" ] && continue
+        case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig) continue ;; esac
         target="$tmp_dir/$filename"
         target_dir="$(dirname "$target")"
         mkdir -p "$target_dir"

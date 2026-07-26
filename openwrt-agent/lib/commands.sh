@@ -377,7 +377,7 @@ execute_command() {
             wifi.status|network.interfaces|diagnostics.run|maintenance.packages.refresh|maintenance.backup.create|maintenance.logs.read|maintenance.diagnostics.bundle|maintenance.recovery.disable|agent.status) ;;
             *)
                 result="$(command_failed_result "recovery mode blocks configuration changes")"
-                api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"failed\",\"result\":$result}" >/dev/null || true
+                report_command_result "$command_id" failed "$result" >/dev/null || true
                 return 1
                 ;;
         esac
@@ -388,7 +388,7 @@ execute_command() {
             transaction_active=1
         else
             result="$(transaction_failure_result "$command_id" "configuration preflight or backup failed" "not_applied")"
-            api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"failed\",\"result\":$result}" >/dev/null || true
+            report_command_result "$command_id" failed "$result" >/dev/null || true
             return 1
         fi
     fi
@@ -1152,11 +1152,42 @@ execute_command() {
                     ;;
             esac
             ;;
+        agent.rotate_token)
+            old_device_token="$(device_token)"
+            if token_response="$(api POST /api/v1/agent/token/rotate '{}')"; then
+                printf '%s' "$token_response" >/tmp/wrtmonitor-token-rotate
+                new_device_token="$(json_get_string /tmp/wrtmonitor-token-rotate '@.device_token')"
+                rollback_token="$(json_get_string /tmp/wrtmonitor-token-rotate '@.rollback_token')"
+                rm -f /tmp/wrtmonitor-token-rotate
+            else
+                new_device_token=""
+                rollback_token=""
+            fi
+            if [ -n "$new_device_token" ] && [ -n "$rollback_token" ] \
+                    && uci set "$CONFIG.device_token=$new_device_token" \
+                    && uci commit wrtmonitor; then
+                api POST /api/v1/agent/token/confirm '{}' >/dev/null 2>&1 || true
+                result="$(command_success_result "device token rotated")"
+            else
+                uci set "$CONFIG.device_token=$old_device_token" >/dev/null 2>&1 || true
+                uci commit wrtmonitor >/dev/null 2>&1 || true
+                if [ -n "$rollback_token" ]; then
+                    rollback_body="{\"rollback_token\":\"$(json_escape "$rollback_token")\"}"
+                    api_using_token POST /api/v1/agent/token/rollback "$old_device_token" "$rollback_body" >/dev/null 2>&1 || true
+                fi
+                status="failed"
+                result="$(command_failed_result "failed to persist rotated device token")"
+            fi
+            ;;
         *)
             status="failed"
             result='{"error":"unsupported command"}'
             ;;
     esac
+    if [ "$status" = "done" ] && ! verify_command_postcondition "$command_type" "$command_payload"; then
+        status="failed"
+        result="$(command_failed_result "post-condition verification failed")"
+    fi
     if [ "$transaction_active" = "1" ]; then
         if [ "$status" = "done" ] && transaction_is_connectivity_sensitive "$command_type"; then
             result="{\"message\":\"configuration applied; connectivity verification is running\",\"transaction\":{\"id\":\"$(json_escape "$command_id")\",\"state\":\"verifying\",\"rollback_timeout_seconds\":$transaction_timeout}}"
@@ -1173,7 +1204,7 @@ execute_command() {
             result="$(transaction_failure_result "$command_id" "configuration command failed and rollback failed" "rollback_failed")"
         fi
     fi
-    api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"$status\",\"result\":$result}" >/dev/null || true
+    report_command_result "$command_id" "$status" "$result" >/dev/null || true
     if [ "$disconnect_after" = "1" ] && [ "$status" = "done" ]; then
         uci set "$CONFIG.enabled=0"
         uci commit wrtmonitor

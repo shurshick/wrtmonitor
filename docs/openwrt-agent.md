@@ -14,11 +14,13 @@ lib/telemetry.sh
 lib/capabilities.sh
 lib/diagnostics.sh
 lib/transactions.sh
+lib/idempotency.sh
+lib/verification.sh
 lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.15.0` использует capability schema 14 и единый манифест обязательных runtime-зависимостей. Installer и обновление агента применяют этот манифест автоматически, поэтому новые зависимости будущих релизов устанавливаются без переустановки агента.
+Версия `0.16.0` использует capability schema 15 и единый манифест обязательных runtime-зависимостей. Installer и обновление агента применяют этот манифест автоматически, поэтому новые зависимости будущих релизов устанавливаются без переустановки агента. Перед установкой каждый файл проверяется по SHA-256, а сам манифест — по встроенному Ed25519 public key.
 
 ## Требования
 
@@ -39,6 +41,7 @@ Installer определяет пакетный менеджер и сам по�
 - `ca-bundle`
 - `coreutils-sha256sum`
 - `coreutils-base64`
+- `openssl-util`
 - `tar`
 - `gzip`
 - `base-files` с `sysupgrade`
@@ -76,6 +79,7 @@ Installer сам скачает:
 
 - `openwrt-agent-files.txt`
 - `SHA256SUMS.txt`
+- `SHA256SUMS.sig`
 - `wrtmonitor-agent`
 - `wrtmonitor.init`
 - `install-openwrt.sh`
@@ -89,7 +93,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.15.0/wrtmonitor-openwrt-agent-v0.15.0.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/download/v0.16.0-stability/wrtmonitor-openwrt-agent-v0.16.0.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -153,12 +157,15 @@ wrtmonitor-agent update-status --json
 
 1. скачивает `openwrt-agent-files.txt`;
 2. скачивает все файлы из manifest;
-3. проверяет `SHA256SUMS.txt`;
-4. выполняет `sh -n` для `wrtmonitor-agent`, `wrtmonitor.init`, `install-openwrt.sh`, `lib/*.sh`;
-5. сохраняет backup;
-6. заменяет файлы;
-7. при ошибке выполняет rollback.
-8. запускает `ensure-dependencies` по манифесту новой версии и при ошибке также выполняет rollback.
+3. проверяет Ed25519-подпись `SHA256SUMS.sig` встроенным public key;
+4. проверяет SHA-256 каждого файла из `SHA256SUMS.txt`;
+5. выполняет `sh -n` для `wrtmonitor-agent`, `wrtmonitor.init`, `install-openwrt.sh`, `lib/*.sh`;
+6. сохраняет backup;
+7. заменяет файлы;
+8. при ошибке выполняет rollback;
+9. запускает `ensure-dependencies` по манифесту новой версии и при ошибке также выполняет rollback.
+
+Ключ авторизации агента меняется из раздела **Обслуживание** в Web UI или Android. Новый token сохраняется в UCI, а прежний hash принимается сервером ещё 10 минут только для завершения запросов, начатых до ротации.
 
 ## Rollback
 
@@ -195,7 +202,7 @@ wrtmonitor-agent diagnostics --json
 
 ## Обслуживание роутера
 
-Команды `v0.15.0` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера:
+Команды `v0.16.0` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера. Повторная доставка команды не запускает действие второй раз: агент возвращает сохранённый terminal result по command id.
 
 - обновление каталога, установка и удаление пакетов через `apk` или `opkg`;
 - создание и восстановление штатного backup OpenWrt;

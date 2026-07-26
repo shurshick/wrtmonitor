@@ -36,6 +36,9 @@ class Settings:
     telemetry_metric_retention_days: int = 45
     command_history_retention_days: int = 30
     command_history_max_per_device: int = 500
+    login_rate_limit_attempts: int = 10
+    login_rate_limit_window_seconds: int = 15 * 60
+    enable_metrics: bool = False
 
 
 def bool_from_env(value: str | None, default: bool = False) -> bool:
@@ -154,4 +157,11 @@ def load_settings() -> Settings:
         command_history_max_per_device=max(
             10, int(os.getenv("WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE", "500"))
         ),
+        login_rate_limit_attempts=max(
+            3, int(os.getenv("WRTMONITOR_LOGIN_RATE_LIMIT_ATTEMPTS", "10"))
+        ),
+        login_rate_limit_window_seconds=max(
+            60, int(os.getenv("WRTMONITOR_LOGIN_RATE_LIMIT_WINDOW_SECONDS", "900"))
+        ),
+        enable_metrics=bool_from_env(os.getenv("WRTMONITOR_ENABLE_METRICS"), False),
     )

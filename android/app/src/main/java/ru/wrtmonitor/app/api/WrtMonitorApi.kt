@@ -11,8 +11,7 @@ import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.UUID
 
 class WrtMonitorApi(private val serverUrl: String, private val accessToken: String = "") {
     private class ApiHttpException(
@@ -22,22 +21,15 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
     ) : IllegalStateException(message)
 
     private fun request(path: String, method: String = "GET", body: JSONObject? = null): Pair<Int, String> {
-        val connection = (URL("${serverUrl.trim().trimEnd('/')}$path").openConnection() as HttpURLConnection).apply {
-            requestMethod = method
-            connectTimeout = 10_000
-            readTimeout = 10_000
-            if (accessToken.isNotBlank()) setRequestProperty("Authorization", "Bearer $accessToken")
-            if (body != null) {
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-            }
-        }
-        if (body != null) {
-            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-        }
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        return status to (stream?.bufferedReader()?.use { it.readText() }.orEmpty())
+        val headers = if (accessToken.isBlank()) emptyMap() else mapOf(
+            "Authorization" to "Bearer $accessToken",
+        )
+        return SharedHttpClient.request(
+            "${serverUrl.trim().trimEnd('/')}$path",
+            method,
+            body,
+            headers,
+        )
     }
 
     data class AuthTokens(val accessToken: String, val refreshToken: String)
@@ -353,7 +345,11 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         val (status, response) = request(
             "/api/v1/devices/$deviceId/commands",
             "POST",
-            JSONObject().put("command_type", type).put("payload", payload).put("confirmed", confirmed),
+            JSONObject()
+                .put("command_type", type)
+                .put("payload", payload)
+                .put("confirmed", confirmed)
+                .put("idempotency_key", UUID.randomUUID().toString()),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         JSONObject(response).optString("status", "queued")

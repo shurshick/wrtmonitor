@@ -9,6 +9,7 @@ iw|iw
 iwinfo|iwinfo
 sha256sum|coreutils-sha256sum
 base64|coreutils-base64
+openssl|openssl-util
 tar|tar
 gzip|gzip
 sysupgrade|base-files
