@@ -589,12 +589,13 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
     perimeter = payload.get("perimeter") or {}
     return {
         "interfaces": normalized_interfaces,
-        "topology": network.get("topology"),
+        "topology": network.get("topology")
+        or {"segments": [], "bridges": [], "vlans": []},
         "dns_privacy": network.get("dns_privacy"),
-        "routes": perimeter.get("routes"),
-        "firewall_zones": perimeter.get("firewall_zones"),
-        "firewall_forwardings": perimeter.get("firewall_forwardings"),
-        "firewall_rules": perimeter.get("firewall_rules"),
+        "routes": perimeter.get("routes") or [],
+        "firewall_zones": perimeter.get("firewall_zones") or [],
+        "firewall_forwardings": perimeter.get("firewall_forwardings") or [],
+        "firewall_rules": perimeter.get("firewall_rules") or [],
         "mwan3": perimeter.get("mwan3"),
         "ddns": perimeter.get("ddns"),
         "upnp": perimeter.get("upnp"),
