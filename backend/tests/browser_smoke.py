@@ -510,6 +510,9 @@ def run() -> None:
             page.locator('button[type="submit"]').click()
             page.wait_for_url("**/devices")
             assert_page(page, "/devices", f"{name}-devices.png")
+            page.evaluate("localStorage.setItem('wrtmonitor-theme', 'dark')")
+            page.reload(wait_until="networkidle")
+            assert page.locator("html").get_attribute("data-theme") == "dark"
             page.locator("[data-theme-toggle]").click()
             assert page.locator("html").get_attribute("data-theme") == "light"
             page.screenshot(
