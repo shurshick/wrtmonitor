@@ -1017,6 +1017,19 @@ def device_page(
     storage_used = int(storage.get("used_kb", 0) or 0)
     conntrack_count = int(system_summary.get("conntrack_count", 0) or 0)
     conntrack_max = int(system_summary.get("conntrack_max", 0) or 0)
+    try:
+        load_1m = float(system.get("load"))
+    except (TypeError, ValueError):
+        load_1m = None
+    try:
+        cpu_cores = max(1, int(cpu.get("cores")))
+    except (TypeError, ValueError):
+        cpu_cores = None
+    load_capacity_percent = (
+        max(0, round(load_1m / cpu_cores * 100))
+        if load_1m is not None and cpu_cores
+        else None
+    )
     system_view = {
         "memory_total": memory_total,
         "memory_available": memory_available,
@@ -1026,6 +1039,18 @@ def device_page(
         "storage_used": storage_used,
         "storage_percent": percent(storage_used, storage_total),
         "conntrack_percent": percent(conntrack_count, conntrack_max),
+        "load_1m": load_1m,
+        "cpu_cores": cpu_cores,
+        "load_capacity_percent": load_capacity_percent,
+        "load_level": (
+            "низкая"
+            if load_capacity_percent is not None and load_capacity_percent < 50
+            else "умеренная"
+            if load_capacity_percent is not None and load_capacity_percent < 100
+            else "высокая"
+            if load_capacity_percent is not None
+            else None
+        ),
         "telemetry_state": "Актуальные данные"
         if age is not None and age <= 120
         else "Данные устарели",

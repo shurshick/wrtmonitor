@@ -4,15 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}WrtMonitor{% endblock %}</title>
-  <script>
-    (() => {
-      const saved = localStorage.getItem("wrtmonitor-theme");
-      const theme = saved === "light" || saved === "dark"
-        ? saved
-        : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-      document.documentElement.dataset.theme = theme;
-    })();
-  </script>
+  <script src="/static/theme-bootstrap.js"></script>
   <link rel="stylesheet" href="/static/app.css">
   <script defer src="/static/theme.js"></script>
 </head>

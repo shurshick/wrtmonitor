@@ -10,10 +10,13 @@ def read(relative_path: str) -> str:
 
 def test_web_theme_is_explicit_and_persisted() -> None:
     base = read("backend/app/templates/base.html")
+    bootstrap = read("backend/app/static/theme-bootstrap.js")
     theme_script = read("backend/app/static/theme.js")
 
     assert "data-theme-toggle" in base
-    assert "wrtmonitor-theme" in base
+    assert '<script src="/static/theme-bootstrap.js"></script>' in base
+    assert "wrtmonitor-theme" in bootstrap
+    assert "<script>" not in base
     assert 'localStorage.setItem("wrtmonitor-theme"' in theme_script
     assert "data-theme" in theme_script
 
@@ -33,7 +36,8 @@ def test_router_list_exposes_reboot_action() -> None:
     template = read("backend/app/templates/devices.html")
 
     assert 'command_type" value="router.reboot"' in template
-    assert "Перезагрузить" in template
+    assert 'aria-label="Перезагрузить роутер"' in template
+    assert "router-card__action-label" not in template
     assert "router-card__actions" in template
 
 

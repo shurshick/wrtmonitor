@@ -518,6 +518,11 @@
     <string name="collecting_data">Collecting data…</string>
     <string name="live_resources">Router resources</string>
     <string name="load_1m">Load 1 min</string>
+    <string name="system_load">System load</string>
+    <string name="load_low">low</string>
+    <string name="load_moderate">moderate</string>
+    <string name="load_high">high</string>
+    <string name="load_capacity_value">%1$d%% · %2$s\nload %3$.2f / %4$d cores</string>
     <string name="memory_used">Memory used</string>
     <string name="clients_online">Online clients</string>
     <string name="telemetry_range_live">2 h</string>

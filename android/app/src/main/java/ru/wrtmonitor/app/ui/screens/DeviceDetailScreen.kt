@@ -234,6 +234,19 @@ private fun RouterOverview(
     val totalMb = memory?.optLong("total_kb", 0)?.div(1024) ?: 0
     val memoryPercent = if (totalMb > 0) ((totalMb - availableMb).toDouble() / totalMb * 100).coerceIn(0.0, 100.0) else 0.0
     val load = system?.optString("load")?.toDoubleOrNull() ?: history.lastOrNull()?.load1m
+    val cpuCores = payload?.optJSONObject("cpu")?.optInt("cores", 0)?.takeIf { it > 0 }
+    val loadCapacityPercent = if (load != null && cpuCores != null) {
+        (load / cpuCores * 100).coerceAtLeast(0.0).toInt()
+    } else null
+    val loadLevel = when {
+        loadCapacityPercent == null -> null
+        loadCapacityPercent < 50 -> stringResource(R.string.load_low)
+        loadCapacityPercent < 100 -> stringResource(R.string.load_moderate)
+        else -> stringResource(R.string.load_high)
+    }
+    val loadDisplay = if (load != null && cpuCores != null && loadCapacityPercent != null && loadLevel != null) {
+        stringResource(R.string.load_capacity_value, loadCapacityPercent, loadLevel, load, cpuCores)
+    } else stringResource(R.string.no_data)
 
     val healthy = device.status == "online" && !telemetry.isStale
     SectionCard(
@@ -256,7 +269,7 @@ private fun RouterOverview(
     SectionCard(title = stringResource(R.string.live_resources)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricTile(stringResource(R.string.uptime), formatDuration(uptime), Modifier.weight(1f))
-            MetricTile(stringResource(R.string.load_1m), String.format(Locale.getDefault(), "%.2f", load), Modifier.weight(1f), MaterialTheme.colorScheme.tertiary)
+            MetricTile(stringResource(R.string.system_load), loadDisplay, Modifier.weight(1f), MaterialTheme.colorScheme.tertiary)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricTile(stringResource(R.string.memory_used), "${memoryPercent.toInt()}%", Modifier.weight(1f), MaterialTheme.colorScheme.primary)

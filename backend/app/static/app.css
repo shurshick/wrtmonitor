@@ -334,7 +334,7 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .router-card__arrow { color: var(--primary); font-size: 20px; }
 .router-card__actions { display: flex; align-items: center; gap: 6px; padding: 10px; border-left: 1px solid var(--border); }
 .router-card__actions form { margin: 0; }
-.router-card__reboot { white-space: nowrap; }
+.router-card__reboot { color: var(--primary); font-size: 18px; }
 
 .command-list { display: grid; gap: 8px; }
 .command-item { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
@@ -702,7 +702,6 @@ html[data-theme="light"] .resource-gauge { background: conic-gradient(var(--gaug
   .router-card__main { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; }
   .router-card__firmware, .router-card__seen, .router-card__main > .status { display: none; }
   .router-card__actions { padding: 8px; }
-  .router-card__action-label { display: none; }
   .system-stat-grid, .workspace-grid, .network-summary { grid-template-columns: 1fr; }
   .network-summary > div { border-right: 0; border-bottom: 1px solid var(--border); }
   .network-summary > div:last-child { border-bottom: 0; }

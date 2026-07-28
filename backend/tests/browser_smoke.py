@@ -515,9 +515,10 @@ def run() -> None:
             page.screenshot(
                 path=str(ARTIFACTS / f"{name}-devices-light.png"), full_page=True
             )
+            assert_page(page, "/account", f"{name}-account.png")
+            assert page.locator("html").get_attribute("data-theme") == "light"
             page.locator("[data-theme-toggle]").click()
             assert page.locator("html").get_attribute("data-theme") == "dark"
-            assert_page(page, "/account", f"{name}-account.png")
             page.locator('form[action="/account/mobile-pairing"] button').click()
             page.wait_for_load_state("networkidle")
             assert page.locator(".pairing-qr svg").count() == 1
@@ -681,6 +682,23 @@ def run() -> None:
                         panel.locator(":scope > summary").click()
                         assert panel.get_attribute("open") is not None
                 if section == "management":
+                    if name == "desktop":
+                        compact_cards = [
+                            page.locator(".maintenance-card")
+                            .filter(has_text=title)
+                            .first.bounding_box()
+                            for title in (
+                                "Журналы и процессы",
+                                "Автоматизация",
+                                "Диагностический архив",
+                            )
+                        ]
+                        assert all(box is not None for box in compact_cards)
+                        assert (
+                            max(box["y"] for box in compact_cards)
+                            - min(box["y"] for box in compact_cards)
+                            < 30
+                        )
                     services = page.locator(".service-list-scroll")
                     assert services.count() == 1
                     assert (

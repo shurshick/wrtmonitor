@@ -16,9 +16,14 @@
     <small>использовано {{ system_view.memory_percent }}%</small>
   </article>
   <article class="stat-card">
-    <span class="stat-card__label">Нагрузка</span>
-    <strong>{{ system.get('load') or 'нет данных' }}</strong>
-    <small>за 1 минуту{% if cpu.get('cores') %} · {{ cpu.get('cores') }} ядер{% endif %}</small>
+    <span class="stat-card__label">Нагрузка системы</span>
+    {% if system_view.load_capacity_percent is not none %}
+    <strong>{{ system_view.load_capacity_percent }}% · {{ system_view.load_level }}</strong>
+    <small>очередь задач {{ '%.2f'|format(system_view.load_1m) }} за 1 минуту{% if system_view.cpu_cores %} · {{ system_view.cpu_cores }} {{ 'ядро' if system_view.cpu_cores == 1 else 'ядра' if system_view.cpu_cores in [2, 3, 4] else 'ядер' }}{% endif %}</small>
+    {% else %}
+    <strong>нет данных</strong>
+    <small>агент не передал load average</small>
+    {% endif %}
   </article>
 </div>
 

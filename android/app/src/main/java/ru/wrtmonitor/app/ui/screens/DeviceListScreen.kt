@@ -23,6 +23,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +49,7 @@ import ru.wrtmonitor.app.ui.components.RouterPageHeader
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.viewmodel.DevicesUiState
+import org.json.JSONObject
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -65,6 +67,7 @@ fun DeviceListScreen(
     var state by remember { mutableStateOf(DevicesUiState(loading = true)) }
     var disconnectTarget by remember { mutableStateOf<DeviceDto?>(null) }
     var deleteTarget by remember { mutableStateOf<DeviceDto?>(null) }
+    var rebootTarget by remember { mutableStateOf<DeviceDto?>(null) }
     var actionError by remember { mutableStateOf("") }
 
     fun refresh() {
@@ -105,6 +108,22 @@ fun DeviceListScreen(
         }
     }
 
+    fun reboot(device: DeviceDto) {
+        scope.launch {
+            when (val result = withContext(Dispatchers.IO) {
+                WrtMonitorApi(serverUrl, accessToken).createCommand(
+                    device.id,
+                    "router.reboot",
+                    JSONObject(),
+                    confirmed = true,
+                )
+            }) {
+                is ApiResult.Success -> Unit
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else actionError = result.message
+            }
+        }
+    }
+
     LaunchedEffect(serverUrl, accessToken, refreshNonce) { refresh() }
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -140,6 +159,7 @@ fun DeviceListScreen(
                     DeviceListCard(
                         device = device,
                         onOpenDevice = onOpenDevice,
+                        onReboot = { rebootTarget = device },
                         onDisconnect = { disconnectTarget = device },
                         onDelete = { deleteTarget = device },
                     )
@@ -163,6 +183,23 @@ fun DeviceListScreen(
                 TextButton(onClick = { disconnectTarget = null }) {
                     Text(stringResource(R.string.cancel))
                 }
+            },
+        )
+    }
+
+    rebootTarget?.let { device ->
+        AlertDialog(
+            onDismissRequest = { rebootTarget = null },
+            title = { Text(stringResource(R.string.reboot_confirm_title)) },
+            text = { Text(stringResource(R.string.reboot_confirm_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    rebootTarget = null
+                    reboot(device)
+                }) { Text(stringResource(R.string.reboot)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { rebootTarget = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -191,6 +228,7 @@ fun DeviceListScreen(
 private fun DeviceListCard(
     device: DeviceDto,
     onOpenDevice: (DeviceDto) -> Unit,
+    onReboot: () -> Unit,
     onDisconnect: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -236,6 +274,9 @@ private fun DeviceListCard(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(20.dp))
+                    IconButton(onClick = onReboot, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.RestartAlt, stringResource(R.string.reboot))
+                    }
                     IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(36.dp)) {
                         Icon(Icons.Default.MoreVert, stringResource(R.string.router_actions))
                     }

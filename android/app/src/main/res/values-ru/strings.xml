@@ -518,6 +518,11 @@
     <string name="collecting_data">Накопление данных…</string>
     <string name="live_resources">Ресурсы роутера</string>
     <string name="load_1m">Нагрузка 1 мин</string>
+    <string name="system_load">Нагрузка системы</string>
+    <string name="load_low">низкая</string>
+    <string name="load_moderate">умеренная</string>
+    <string name="load_high">высокая</string>
+    <string name="load_capacity_value">%1$d%% · %2$s\nload %3$.2f / %4$d ядр.</string>
     <string name="memory_used">Память занята</string>
     <string name="clients_online">Клиенты в сети</string>
     <string name="telemetry_range_live">2 ч</string>
