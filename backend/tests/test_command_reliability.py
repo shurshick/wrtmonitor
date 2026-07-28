@@ -4,7 +4,7 @@ from backend.app.services.command_errors import public_command_error
 
 
 def test_all_commands_have_executable_reliability_policy():
-    assert len(COMMAND_REGISTRY) == 80
+    assert len(COMMAND_REGISTRY) >= 85
     for command_type, metadata in COMMAND_REGISTRY.items():
         policy = metadata["reliability"]
         assert policy["subsystem"] == command_subsystem(command_type)

@@ -504,20 +504,57 @@ def _normalize_port_forward_payload(
     name = _safe_identifier(
         _require_string(payload, "name", max_length=40), "name", r"[A-Za-z0-9_.-]+"
     )
+    section = _uci_section(payload)
     if delete:
-        return {"name": name}
+        return {"section": section, "name": name}
     protocol = str(payload.get("protocol") or "tcp").lower()
     if protocol not in {"tcp", "udp", "tcpudp"}:
         raise HTTPException(
             status_code=400, detail="Protocol must be tcp, udp or tcpudp"
         )
     return {
+        "section": section,
         "name": name,
         "protocol": protocol,
         "external_port": _integer(payload, "external_port", 1, 65535),
         "internal_ip": _ipv4(payload, "internal_ip"),
         "internal_port": _integer(payload, "internal_port", 1, 65535),
     }
+
+
+def _normalize_redirect_payload(
+    payload: dict[str, Any], *, delete: bool = False
+) -> dict[str, Any]:
+    section = _uci_section(payload)
+    name = _name(payload)
+    if delete:
+        if not section:
+            raise HTTPException(status_code=400, detail="Redirect section is required")
+        return {"section": section, "name": name}
+    protocol = str(payload.get("protocol") or "tcp").lower()
+    if protocol not in {"tcp", "udp", "tcpudp", "all"}:
+        raise HTTPException(status_code=400, detail="Invalid redirect protocol")
+    target = str(payload.get("target") or "DNAT").upper()
+    if target not in {"DNAT", "SNAT"}:
+        raise HTTPException(status_code=400, detail="Invalid redirect target")
+    result: dict[str, Any] = {
+        "section": section,
+        "name": name,
+        "enabled": _boolean(payload, "enabled", default=True),
+        "src": _optional_string(payload, "src") or "wan",
+        "dest": _optional_string(payload, "dest") or "lan",
+        "protocol": protocol,
+        "src_ip": _optional_string(payload, "src_ip") or "",
+        "src_port": _optional_string(payload, "src_port") or "",
+        "dest_ip": _optional_string(payload, "dest_ip") or "",
+        "dest_port": _optional_string(payload, "dest_port") or "",
+        "target": target,
+    }
+    if target == "DNAT" and not result["dest_ip"]:
+        raise HTTPException(
+            status_code=400, detail="DNAT destination address is required"
+        )
+    return result
 
 
 def _normalize_client_block_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -798,6 +835,7 @@ def _normalize_route_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 status_code=400, detail="Invalid route gateway"
             ) from exc
     return {
+        "section": _uci_section(payload),
         "name": _name(payload),
         "interface": _safe_identifier(
             str(payload.get("interface") or "wan"), "interface", r"[A-Za-z0-9_.-]+"
@@ -1000,6 +1038,7 @@ def _normalize_vpn_policy_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if value and not re.fullmatch(r"[A-Za-z0-9_.:/,-]+", value):
             raise HTTPException(status_code=400, detail=f"Invalid VPN policy {field}")
     return {
+        "section": _uci_section(payload),
         "name": _name(payload),
         "enabled": _boolean(payload, "enabled"),
         "interface": _safe_identifier(
@@ -1196,7 +1235,10 @@ def validate_command_payload(
     if command_type == "network.set_route":
         return _normalize_route_payload(normalized_payload)
     if command_type == "network.delete_route":
-        return {"name": _name(normalized_payload)}
+        return {
+            "section": _uci_section(normalized_payload),
+            "name": _name(normalized_payload),
+        }
     if command_type == "network.set_ddns":
         return _normalize_ddns_payload(normalized_payload)
     if command_type == "network.set_upnp":
@@ -1208,6 +1250,8 @@ def validate_command_payload(
         return _normalize_wireguard_interface_payload(normalized_payload)
     if command_type == "vpn.wireguard.set_peer":
         return _normalize_wireguard_peer_payload(normalized_payload)
+    if command_type == "vpn.wireguard.delete_interface":
+        return {"name": _name(normalized_payload)}
     if command_type in {"vpn.wireguard.delete_peer", "vpn.wireguard.export_peer"}:
         return {
             "interface": _safe_identifier(
@@ -1220,6 +1264,13 @@ def validate_command_payload(
     if command_type == "vpn.openvpn.set_client":
         return _normalize_openvpn_payload(normalized_payload)
     if command_type == "vpn.openvpn.delete_client":
+        return {"name": _name(normalized_payload)}
+    if command_type == "vpn.openvpn.set_enabled":
+        return {
+            "name": _name(normalized_payload),
+            "enabled": _boolean(normalized_payload, "enabled"),
+        }
+    if command_type == "vpn.openvpn.export_client":
         return {"name": _name(normalized_payload)}
     if command_type == "vpn.policy.set":
         return _normalize_vpn_policy_payload(normalized_payload)
@@ -1283,6 +1334,10 @@ def validate_command_payload(
             "section": _uci_section(normalized_payload),
             "name": _name(normalized_payload),
         }
+    if command_type == "firewall.set_redirect":
+        return _normalize_redirect_payload(normalized_payload)
+    if command_type == "firewall.delete_redirect":
+        return _normalize_redirect_payload(normalized_payload, delete=True)
     if command_type == "system.set_hostname":
         return _normalize_hostname_payload(normalized_payload)
     if command_type == "system.restart_service":
@@ -1549,6 +1604,7 @@ def build_command_payload_from_web_form(
         }
     elif command_type == "network.set_route":
         payload = {
+            "section": uci_section,
             "name": name,
             "interface": interface or "wan",
             "target": ip_address,
@@ -1556,7 +1612,7 @@ def build_command_payload_from_web_form(
             "metric": mtu or "0",
         }
     elif command_type == "network.delete_route":
-        payload = {"name": name}
+        payload = {"section": uci_section, "name": name}
     elif command_type == "network.set_ddns":
         payload = {
             "name": name,
@@ -1631,16 +1687,21 @@ def build_command_payload_from_web_form(
         }
     elif command_type in {"vpn.wireguard.delete_peer", "vpn.wireguard.export_peer"}:
         payload = {"interface": interface, "name": name}
+    elif command_type == "vpn.wireguard.delete_interface":
+        payload = {"name": name or interface}
     elif command_type == "vpn.openvpn.set_client":
         payload = {
             "name": name,
             "enabled": enabled.lower() == "true",
             "config": config_text or protocol,
         }
-    elif command_type == "vpn.openvpn.delete_client":
+    elif command_type in {"vpn.openvpn.delete_client", "vpn.openvpn.export_client"}:
         payload = {"name": name}
+    elif command_type == "vpn.openvpn.set_enabled":
+        payload = {"name": name, "enabled": enabled.lower() == "true"}
     elif command_type == "vpn.policy.set":
         payload = {
+            "section": uci_section,
             "name": name,
             "enabled": enabled.lower() == "true",
             "interface": interface,
@@ -1649,7 +1710,7 @@ def build_command_payload_from_web_form(
             "protocol": protocol or "all",
         }
     elif command_type == "vpn.policy.delete":
-        payload = {"name": name}
+        payload = {"section": uci_section, "name": name}
     elif command_type in {"maintenance.package.install", "maintenance.package.remove"}:
         payload = {"package": name}
     elif command_type == "maintenance.backup.restore":
@@ -1707,6 +1768,7 @@ def build_command_payload_from_web_form(
         }
     elif command_type == "firewall.set_port_forward":
         payload = {
+            "section": uci_section,
             "name": name,
             "protocol": protocol,
             "external_port": external_port,
@@ -1714,7 +1776,23 @@ def build_command_payload_from_web_form(
             "internal_port": internal_port,
         }
     elif command_type == "firewall.delete_port_forward":
-        payload = {"name": name}
+        payload = {"section": uci_section, "name": name}
+    elif command_type == "firewall.set_redirect":
+        payload = {
+            "section": uci_section,
+            "name": name,
+            "enabled": enabled.lower() == "true",
+            "src": interface or "wan",
+            "dest": network or "lan",
+            "protocol": protocol or "tcpudp",
+            "src_ip": source,
+            "src_port": external_port,
+            "dest_ip": internal_ip or destination,
+            "dest_port": internal_port,
+            "target": hostname or "DNAT",
+        }
+    elif command_type == "firewall.delete_redirect":
+        payload = {"section": uci_section, "name": name}
     elif command_type == "client.set_blocked":
         payload = {"mac": mac, "blocked": blocked.lower() == "true"}
     elif command_type == "qos.set_sqm":

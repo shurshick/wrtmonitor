@@ -105,10 +105,14 @@ EOF
 
 vpn_json() {
     wg_interfaces=""
-    if command -v wg >/dev/null 2>&1; then
-        for wg_iface in $(wg show interfaces 2>/dev/null || true); do
+    if uci -q show network >/dev/null 2>&1; then
+        for wg_iface in $(uci -q show network 2>/dev/null | sed -n 's/^network\.\([^.=]*\)=interface$/\1/p'); do
+            [ "$(uci -q get "network.$wg_iface.proto" 2>/dev/null || true)" = wireguard ] || continue
             wg_public="$(wg show "$wg_iface" public-key 2>/dev/null || true)"
-            wg_port="$(wg show "$wg_iface" listen-port 2>/dev/null || echo 0)"
+            wg_port="$(wg show "$wg_iface" listen-port 2>/dev/null || uci -q get "network.$wg_iface.listen_port" 2>/dev/null || echo 0)"
+            wg_addresses="$(uci -q get "network.$wg_iface.addresses" 2>/dev/null || true)"
+            wg_disabled="$(uci -q get "network.$wg_iface.disabled" 2>/dev/null || echo 0)"
+            wg_runtime=false; wg show "$wg_iface" >/dev/null 2>&1 && wg_runtime=true
             wg_peers=""
             wg_dump="$(wg show "$wg_iface" dump 2>/dev/null | sed '1d' || true)"
             while IFS="$(printf '\t')" read -r peer_public _ peer_endpoint peer_allowed peer_handshake peer_rx peer_tx peer_keepalive; do
@@ -119,7 +123,7 @@ vpn_json() {
 $wg_dump
 EOF
             [ -n "$wg_interfaces" ] && wg_interfaces="$wg_interfaces,"
-            wg_interfaces="$wg_interfaces{\"name\":\"$(json_escape "$wg_iface")\",\"public_key\":\"$(json_escape "$wg_public")\",\"listen_port\":${wg_port:-0},\"peers\":[${wg_peers}]}"
+            wg_interfaces="$wg_interfaces{\"section\":\"$(json_escape "$wg_iface")\",\"name\":\"$(json_escape "$wg_iface")\",\"configured\":true,\"enabled\":$( [ "$wg_disabled" = 1 ] && printf false || printf true ),\"runtime\":$wg_runtime,\"addresses\":$(json_word_list "$wg_addresses"),\"public_key\":\"$(json_escape "$wg_public")\",\"listen_port\":${wg_port:-0},\"peers\":[${wg_peers}]}"
         done
     fi
     openvpn_clients=""
@@ -128,14 +132,14 @@ EOF
             ovpn_name="$(uci -q get "openvpn.$ovpn_ref.wrtmonitor_name" 2>/dev/null || echo "$ovpn_ref")"
             ovpn_enabled="$(uci -q get "openvpn.$ovpn_ref.enabled" 2>/dev/null || echo 0)"
             [ -n "$openvpn_clients" ] && openvpn_clients="$openvpn_clients,"
-            openvpn_clients="$openvpn_clients{\"name\":\"$(json_escape "$ovpn_name")\",\"enabled\":$( [ "$ovpn_enabled" = 1 ] && printf true || printf false )}"
+            openvpn_clients="$openvpn_clients{\"section\":\"$(json_escape "$ovpn_ref")\",\"name\":\"$(json_escape "$ovpn_name")\",\"enabled\":$( [ "$ovpn_enabled" = 1 ] && printf true || printf false ),\"runtime\":$(pgrep -f "wrtmonitor-$ovpn_ref.conf" >/dev/null 2>&1 && printf true || printf false),\"export_available\":$( [ -n "$(uci -q get "openvpn.$ovpn_ref.wrtmonitor_config_b64" 2>/dev/null || true)" ] && printf true || printf false )}"
         done
     fi
     policies=""
     if uci -q show pbr >/dev/null 2>&1; then
-        for policy_ref in $(uci -q show pbr 2>/dev/null | sed -n 's/^pbr\.\(wrtmonitor_[^.=]*\)=policy$/\1/p'); do
+        for policy_ref in $(uci -q show pbr 2>/dev/null | sed -n 's/^pbr\.\([^.=]*\)=policy$/\1/p'); do
             [ -n "$policies" ] && policies="$policies,"
-            policies="$policies{\"name\":\"$(json_escape "${policy_ref#wrtmonitor_}")\",\"enabled\":$( [ "$(uci -q get "pbr.$policy_ref.enabled" 2>/dev/null || echo 0)" = 1 ] && printf true || printf false ),\"interface\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.interface" 2>/dev/null || true)")\",\"source\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.src_addr" 2>/dev/null || true)")\",\"destination\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.dest_addr" 2>/dev/null || true)")\"}"
+            policies="$policies{\"section\":\"$(json_escape "$policy_ref")\",\"name\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.name" 2>/dev/null || echo "${policy_ref#wrtmonitor_}")")\",\"enabled\":$( [ "$(uci -q get "pbr.$policy_ref.enabled" 2>/dev/null || echo 0)" = 1 ] && printf true || printf false ),\"interface\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.interface" 2>/dev/null || true)")\",\"source\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.src_addr" 2>/dev/null || true)")\",\"destination\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.dest_addr" 2>/dev/null || true)")\",\"protocol\":\"$(json_escape "$(uci -q get "pbr.$policy_ref.proto" 2>/dev/null || echo all)")\"}"
         done
     fi
     printf '{"wireguard":{"interfaces":[%s]},"openvpn":{"service":"%s","clients":[%s]},"policy":{"service":"%s","policies":[%s]}}' "$wg_interfaces" "$(service_state openvpn)" "$openvpn_clients" "$(service_state pbr)" "$policies"
@@ -176,7 +180,7 @@ perimeter_json() {
         index=0
         while uci -q get "network.@${route_type}[$index]" >/dev/null 2>&1; do
             ref="@${route_type}[$index]"; [ -n "$routes" ] && routes="$routes,"
-            routes="$routes{\"name\":\"$(json_escape "$(uci -q get "network.$ref.wrtmonitor_name" 2>/dev/null || echo $route_type$index)")\",\"family\":\"$( [ "$route_type" = route6 ] && printf ipv6 || printf ipv4 )\",\"interface\":\"$(json_escape "$(uci -q get "network.$ref.interface" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "network.$ref.target" 2>/dev/null || true)")\",\"gateway\":\"$(json_escape "$(uci -q get "network.$ref.gateway" 2>/dev/null || true)")\",\"metric\":\"$(json_escape "$(uci -q get "network.$ref.metric" 2>/dev/null || true)")\"}"
+            routes="$routes{\"section\":\"$(json_escape "$ref")\",\"name\":\"$(json_escape "$(uci -q get "network.$ref.wrtmonitor_name" 2>/dev/null || echo $route_type$index)")\",\"family\":\"$( [ "$route_type" = route6 ] && printf ipv6 || printf ipv4 )\",\"interface\":\"$(json_escape "$(uci -q get "network.$ref.interface" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "network.$ref.target" 2>/dev/null || true)")\",\"gateway\":\"$(json_escape "$(uci -q get "network.$ref.gateway" 2>/dev/null || true)")\",\"metric\":\"$(json_escape "$(uci -q get "network.$ref.metric" 2>/dev/null || true)")\"}"
             index=$((index + 1))
         done
     done
@@ -198,6 +202,12 @@ perimeter_json() {
         rules="$rules{\"section\":\"$(json_escape "$ref")\",\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || echo rule$index)")\",\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\",\"protocol\":\"$(json_escape "$(uci -q get "firewall.$ref.proto" 2>/dev/null || true)")\",\"src_ip\":\"$(json_escape "$(uci -q get "firewall.$ref.src_ip" 2>/dev/null || true)")\",\"dest_ip\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_ip" 2>/dev/null || true)")\",\"src_port\":\"$(json_escape "$(uci -q get "firewall.$ref.src_port" 2>/dev/null || true)")\",\"dest_port\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_port" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "firewall.$ref.target" 2>/dev/null || true)")\"}"
         index=$((index + 1))
     done
+    redirects=""; index=0
+    while uci -q get "firewall.@redirect[$index]" >/dev/null 2>&1; do
+        ref="@redirect[$index]"; [ -n "$redirects" ] && redirects="$redirects,"
+        redirects="$redirects{\"section\":\"$(json_escape "$ref")\",\"name\":\"$(json_escape "$(uci -q get "firewall.$ref.name" 2>/dev/null || echo redirect$index)")\",\"enabled\":$( [ "$(uci -q get "firewall.$ref.enabled" 2>/dev/null || echo 1)" = 0 ] && printf false || printf true ),\"src\":\"$(json_escape "$(uci -q get "firewall.$ref.src" 2>/dev/null || true)")\",\"dest\":\"$(json_escape "$(uci -q get "firewall.$ref.dest" 2>/dev/null || true)")\",\"protocol\":\"$(json_escape "$(uci -q get "firewall.$ref.proto" 2>/dev/null || true)")\",\"src_ip\":\"$(json_escape "$(uci -q get "firewall.$ref.src_ip" 2>/dev/null || true)")\",\"src_port\":\"$(json_escape "$(uci -q get "firewall.$ref.src_dport" 2>/dev/null || uci -q get "firewall.$ref.src_port" 2>/dev/null || true)")\",\"dest_ip\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_ip" 2>/dev/null || true)")\",\"dest_port\":\"$(json_escape "$(uci -q get "firewall.$ref.dest_port" 2>/dev/null || true)")\",\"target\":\"$(json_escape "$(uci -q get "firewall.$ref.target" 2>/dev/null || echo DNAT)")\"}"
+        index=$((index + 1))
+    done
     ddns_services=""; index=0
     while uci -q get "ddns.@service[$index]" >/dev/null 2>&1; do
         ref="@service[$index]"; [ -n "$ddns_services" ] && ddns_services="$ddns_services,"
@@ -209,7 +219,7 @@ perimeter_json() {
     if [ -n "$leases_file" ]; then
         while IFS= read -r mapping; do [ -n "$mapping" ] || continue; [ -n "$upnp_mappings" ] && upnp_mappings="$upnp_mappings,"; upnp_mappings="$upnp_mappings\"$(json_escape "$mapping")\""; done <"$leases_file"
     fi
-    printf '{"routes":[%s],"firewall_zones":[%s],"firewall_forwardings":[%s],"firewall_rules":[%s],"mwan3":%s,"ddns":{"service":"%s","services":[%s]},"upnp":{"service":"%s","mappings":[%s]}}' "$routes" "$zones" "$forwardings" "$rules" "$(mwan3_json)" "$(service_state ddns)" "$ddns_services" "$(service_state miniupnpd)" "$upnp_mappings"
+    printf '{"routes":[%s],"firewall_zones":[%s],"firewall_forwardings":[%s],"firewall_rules":[%s],"firewall_redirects":[%s],"mwan3":%s,"ddns":{"service":"%s","services":[%s]},"upnp":{"service":"%s","mappings":[%s]}}' "$routes" "$zones" "$forwardings" "$rules" "$redirects" "$(mwan3_json)" "$(service_state ddns)" "$ddns_services" "$(service_state miniupnpd)" "$upnp_mappings"
 }
 
 memory_json() {

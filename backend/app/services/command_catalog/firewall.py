@@ -50,4 +50,16 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "firewall.set_redirect": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.port_forward",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "firewall.delete_redirect": {
+        "risk_level": "level_4_disruptive",
+        "capability": "firewall.port_forward",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
 }

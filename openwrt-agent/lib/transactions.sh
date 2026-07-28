@@ -11,15 +11,15 @@ transaction_configs_for_command() {
         network.set_route|network.delete_route) printf 'network' ;;
         network.set_ddns) printf 'ddns' ;;
         network.set_upnp) printf 'upnpd firewall' ;;
-        vpn.wireguard.set_interface) printf 'network' ;;
+        vpn.wireguard.set_interface|vpn.wireguard.delete_interface) printf 'network' ;;
         vpn.wireguard.set_peer|vpn.wireguard.delete_peer) printf 'network' ;;
-        vpn.openvpn.set_client|vpn.openvpn.delete_client) printf 'openvpn' ;;
+        vpn.openvpn.set_client|vpn.openvpn.delete_client|vpn.openvpn.set_enabled) printf 'openvpn' ;;
         vpn.policy.set|vpn.policy.delete) printf 'pbr' ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.set_pool|dns.set_servers) printf 'dhcp' ;;
         dns.set_dot) printf 'dhcp stubby' ;;
         dns.set_doh) printf 'dhcp https-dns-proxy' ;;
         firewall.set_port_forward|firewall.delete_port_forward|client.set_blocked|client.set_policy) printf 'firewall' ;;
-        firewall.set_zone|firewall.delete_zone|firewall.set_forwarding|firewall.delete_forwarding|firewall.set_rule|firewall.delete_rule) printf 'firewall' ;;
+        firewall.set_zone|firewall.delete_zone|firewall.set_forwarding|firewall.delete_forwarding|firewall.set_rule|firewall.delete_rule|firewall.set_redirect|firewall.delete_redirect) printf 'firewall' ;;
         qos.set_sqm) printf 'sqm' ;;
         system.set_hostname|system.set_timezone|system.set_ntp) printf 'system' ;;
         *) return 1 ;;
@@ -36,7 +36,7 @@ transaction_service() {
 
 transaction_is_connectivity_sensitive() {
     case "$1" in
-        wifi.*|network.set_*|dhcp.*|dns.set_*|firewall.*|client.set_blocked|client.set_policy|qos.set_sqm) return 0 ;;
+        wifi.*|network.set_*|network.delete_*|dhcp.*|dns.set_*|firewall.*|vpn.*|client.set_blocked|client.set_policy|qos.set_sqm) return 0 ;;
         *) return 1 ;;
     esac
 }

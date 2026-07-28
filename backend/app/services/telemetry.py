@@ -643,6 +643,7 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "firewall_zones": perimeter.get("firewall_zones") or [],
         "firewall_forwardings": perimeter.get("firewall_forwardings") or [],
         "firewall_rules": perimeter.get("firewall_rules") or [],
+        "firewall_redirects": perimeter.get("firewall_redirects") or [],
         "mwan3": {
             "installed": bool(mwan3.get("installed", False)),
             "service": str(mwan3.get("service") or "unavailable"),
@@ -668,6 +669,11 @@ def normalize_vpn_summary(payload: dict[str, Any]) -> dict[str, Any]:
         interfaces.append(
             {
                 "name": interface.get("name"),
+                "section": interface.get("section") or interface.get("name"),
+                "configured": bool(interface.get("configured", False)),
+                "enabled": bool(interface.get("enabled", False)),
+                "runtime": bool(interface.get("runtime", False)),
+                "addresses": interface.get("addresses") or [],
                 "public_key": interface.get("public_key"),
                 "listen_port": interface.get("listen_port"),
                 "peers": peers,

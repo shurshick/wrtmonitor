@@ -14,6 +14,12 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": ["preshared_key"],
     },
+    "vpn.wireguard.delete_interface": {
+        "risk_level": "level_4_disruptive",
+        "capability": "vpn.wireguard.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "vpn.wireguard.delete_peer": {
         "risk_level": "level_3_reversible_config",
         "capability": "vpn.wireguard.configure",
@@ -36,6 +42,18 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "risk_level": "level_3_reversible_config",
         "capability": "vpn.openvpn.configure",
         "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "vpn.openvpn.set_enabled": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "vpn.openvpn.configure",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "vpn.openvpn.export_client": {
+        "risk_level": "level_1_readonly",
+        "capability": "vpn.openvpn.read",
+        "requires_confirmation": False,
         "secret_fields": [],
     },
     "vpn.policy.set": {

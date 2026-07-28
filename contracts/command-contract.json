@@ -382,6 +382,26 @@
         "rollback": "configuration_backup"
       }
     },
+    "firewall.delete_redirect": {
+      "risk_level": "level_4_disruptive",
+      "capability": "firewall.port_forward",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
+    },
     "firewall.delete_rule": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.rules.configure",
@@ -443,6 +463,26 @@
       }
     },
     "firewall.set_port_forward": {
+      "risk_level": "level_4_disruptive",
+      "capability": "firewall.port_forward",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
+    },
+    "firewall.set_redirect": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.port_forward",
       "requires_confirmation": true,
@@ -1208,6 +1248,26 @@
         "rollback": "configuration_backup"
       }
     },
+    "vpn.openvpn.export_client": {
+      "risk_level": "level_1_readonly",
+      "capability": "vpn.openvpn.read",
+      "requires_confirmation": false,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
+    },
     "vpn.openvpn.set_client": {
       "risk_level": "level_4_disruptive",
       "capability": "vpn.openvpn.configure",
@@ -1223,6 +1283,26 @@
         },
         "delivery": {
           "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
+    },
+    "vpn.openvpn.set_enabled": {
+      "risk_level": "level_3_reversible_config",
+      "capability": "vpn.openvpn.configure",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
           "lease_seconds": 45,
           "max_deliveries": 2
         },
@@ -1253,6 +1333,26 @@
     "vpn.policy.set": {
       "risk_level": "level_4_disruptive",
       "capability": "vpn.policy.configure",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
+    },
+    "vpn.wireguard.delete_interface": {
+      "risk_level": "level_4_disruptive",
+      "capability": "vpn.wireguard.configure",
       "requires_confirmation": true,
       "secret_fields": [],
       "reliability": {
