@@ -53,6 +53,17 @@
     <string name="firmware">Прошивка</string>
     <string name="last_seen">Последняя связь</string>
     <string name="no_data">Нет данных</string>
+    <string name="loading_data">Загрузка данных</string>
+    <string name="unsupported_data">Функция не поддерживается этим роутером</string>
+    <string name="data_error">Роутер вернул ошибку</string>
+    <string name="package_updates_available">Доступно обновлений: %1$d</string>
+    <string name="update_package">Обновить</string>
+    <string name="refresh_processes">Обновить процессы</string>
+    <string name="reload_schedule">Перечитать расписание</string>
+    <string name="refresh_services">Обновить службы</string>
+    <string name="empty_services">Список служб ещё не получен</string>
+    <string name="service_running">Работает</string>
+    <string name="service_stopped">Остановлена</string>
     <string name="available">Доступно</string>
     <string name="open">Открыть</string>
     <string name="telemetry">Телеметрия</string>
@@ -121,6 +132,8 @@
     <string name="auto_update">Автообновление</string>
     <string name="enabled_value">Включено</string>
     <string name="disabled_value">Выключено</string>
+    <string name="enable_action">Включить</string>
+    <string name="disable_action">Выключить</string>
     <string name="telemetry_interval">Интервал telemetry</string>
     <string name="telemetry_interval_label">Интервал telemetry, сек</string>
     <string name="available_version">Доступная версия</string>

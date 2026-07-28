@@ -39,6 +39,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -89,6 +91,35 @@ private enum class Tab {
     Settings,
 }
 
+private val deviceStateSaver = Saver<androidx.compose.runtime.MutableState<DeviceDto?>, List<String>>(
+    save = { state ->
+        state.value?.let { device ->
+            listOf(
+                device.id,
+                device.name,
+                device.hostname,
+                device.model,
+                device.firmware,
+                device.status,
+                device.lastSeenAt.orEmpty(),
+            )
+        } ?: emptyList()
+    },
+    restore = { values ->
+        mutableStateOf(
+            if (values.isEmpty()) null else DeviceDto(
+                id = values[0],
+                name = values[1],
+                hostname = values[2],
+                model = values[3],
+                firmware = values[4],
+                status = values[5],
+                lastSeenAt = values[6].ifBlank { null },
+            ),
+        )
+    },
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WrtMonitorApp() {
@@ -105,8 +136,8 @@ fun WrtMonitorApp() {
     var serverUrl by remember { mutableStateOf(initialServerUrl) }
     var accessToken by remember { mutableStateOf(sessionStore.accessToken) }
     val refreshCoordinator = remember { SessionRefreshCoordinator() }
-    var tab by remember { mutableStateOf(Tab.Routers) }
-    var selectedDevice by remember { mutableStateOf<DeviceDto?>(null) }
+    var tab by rememberSaveable { mutableStateOf(Tab.Routers) }
+    var selectedDevice by rememberSaveable(saver = deviceStateSaver) { mutableStateOf<DeviceDto?>(null) }
     var deviceListRefreshNonce by remember { mutableStateOf(0) }
     var qrScannerOpen by remember { mutableStateOf(false) }
     var pendingPairing by remember { mutableStateOf<MobilePairingSetup?>(null) }

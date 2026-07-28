@@ -211,6 +211,7 @@ internal fun SafeCommandDialog(
 fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
     val scope = rememberCoroutineScope()
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
+    var loading by remember { mutableStateOf(true) }
     var ssid by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var enabled by remember { mutableStateOf(true) }
@@ -248,6 +249,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
 
     val refresh: () -> Unit = {
         scope.launch {
+            loading = true
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
                 is ApiResult.Success -> {
                     telemetry = result.data
@@ -258,6 +260,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                     messageIsError = true
                 }
             }
+            loading = false
         }
         Unit
     }
@@ -366,6 +369,12 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         title = stringResource(R.string.wifi_status),
         subtitle = stringResource(R.string.radio_count_value, radios.length()),
     ) {
+        when {
+            loading && telemetry == null -> CircularProgressIndicator(Modifier.size(24.dp))
+            telemetry?.dataState?.kind == "unsupported" -> Text(stringResource(R.string.unsupported_data), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            telemetry?.dataState?.kind == "error" -> Text(telemetry?.dataState?.reason ?: stringResource(R.string.data_error), color = MaterialTheme.colorScheme.error)
+            telemetry?.isStale == true -> Text(stringResource(R.string.stale_telemetry), color = MaterialTheme.colorScheme.tertiary)
+        }
         if (wifi?.optBoolean("available", false) != true || radios.length() == 0) {
             Text(stringResource(R.string.wifi_unavailable), color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
@@ -392,6 +401,12 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 }
                 if (index < radios.length() - 1) HorizontalDivider()
             }
+        }
+        if (capabilities["wifi.read"] == true) {
+            TonalActionButton(
+                stringResource(R.string.refresh),
+                { pendingCommand = PendingSafeCommand("wifi.status", JSONObject(), wifiToggleQueued) },
+            )
         }
     }
 
@@ -633,6 +648,7 @@ fun NetworkControlScreen(
 ) {
     val scope = rememberCoroutineScope()
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
+    var loading by remember(device.id) { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
     var interfaceName by remember { mutableStateOf("") }
@@ -654,6 +670,7 @@ fun NetworkControlScreen(
     var forwardExternalPort by remember { mutableStateOf("") }
     var forwardInternalIp by remember { mutableStateOf("") }
     var forwardInternalPort by remember { mutableStateOf("") }
+    var redirectSection by remember { mutableStateOf("") }
     var sqmEnabled by remember { mutableStateOf(true) }
     var sqmInterface by remember { mutableStateOf("") }
     var sqmDownload by remember { mutableStateOf("") }
@@ -711,6 +728,7 @@ fun NetworkControlScreen(
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     var formInitialized by remember(device.id) { mutableStateOf(false) }
     val refresh: () -> Unit = {
+        loading = true
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
                 is ApiResult.Success -> {
@@ -769,6 +787,7 @@ fun NetworkControlScreen(
                     messageIsError = true
                 }
             }
+            loading = false
         }
         Unit
     }
@@ -799,6 +818,7 @@ fun NetworkControlScreen(
     val firewallZones = telemetry?.network?.optJSONArray("firewall_zones") ?: JSONArray()
     val firewallForwardings = telemetry?.network?.optJSONArray("firewall_forwardings") ?: JSONArray()
     val firewallRules = telemetry?.network?.optJSONArray("firewall_rules") ?: JSONArray()
+    val firewallRedirects = telemetry?.network?.optJSONArray("firewall_redirects") ?: JSONArray()
     val vpn = telemetry?.payload?.optJSONObject("vpn")
     val interfacesRequestQueued = stringResource(R.string.interfaces_request_queued)
     val interfaceRestartQueued = stringResource(R.string.interface_restart_queued)
@@ -833,6 +853,18 @@ fun NetworkControlScreen(
         ),
         onRefresh = refresh,
     )
+    if (loading && telemetry == null) {
+        SectionCard(stringResource(R.string.loading_data)) { CircularProgressIndicator(Modifier.size(24.dp)) }
+    } else if (telemetry?.isStale == true || telemetry?.dataState?.kind in setOf("stale", "error", "unsupported")) {
+        MessageBanner(
+            when (telemetry?.dataState?.kind) {
+                "unsupported" -> stringResource(R.string.unsupported_data)
+                "error" -> telemetry?.dataState?.reason ?: stringResource(R.string.data_error)
+                else -> stringResource(R.string.stale_telemetry)
+            },
+            error = telemetry?.dataState?.kind == "error",
+        )
+    }
     val sectionAvailable = when (mode) {
         NetworkScreenMode.Internet -> capabilities.keys.any {
             it.startsWith("network.") || it == "dns.configure" || it == "qos.sqm"
@@ -1035,7 +1067,35 @@ fun NetworkControlScreen(
         }
     }
     if (mode == NetworkScreenMode.Rules && capabilities["firewall.port_forward"] == true) {
-        ExpandableSettingsCard(stringResource(R.string.port_forwarding), stringResource(R.string.port_forward_summary)) {
+        ExpandableSettingsCard(stringResource(R.string.port_forwarding), stringResource(R.string.items_count, firewallRedirects.length())) {
+            for (index in 0 until firewallRedirects.length()) {
+                val item = firewallRedirects.optJSONObject(index) ?: continue
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(item.optString("name"), style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "${item.optString("src", "wan")}:${item.optString("src_port", "*")} → ${item.optString("dest_ip")}:${item.optString("dest_port", "*")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(onClick = {
+                        redirectSection = item.optString("section")
+                        forwardName = item.optString("name")
+                        forwardExternalPort = item.optString("src_port")
+                        forwardInternalIp = item.optString("dest_ip")
+                        forwardInternalPort = item.optString("dest_port")
+                    }) { Text(stringResource(R.string.edit)) }
+                    TextButton(onClick = {
+                        pendingCommand = PendingSafeCommand(
+                            "firewall.delete_redirect",
+                            JSONObject().put("section", item.optString("section")).put("name", item.optString("name")),
+                            genericCommandQueued,
+                        )
+                    }) { Text(stringResource(R.string.delete)) }
+                }
+                if (index < firewallRedirects.length() - 1) HorizontalDivider()
+            }
             OutlinedTextField(forwardName, { forwardName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(forwardExternalPort, { forwardExternalPort = it }, label = { Text(stringResource(R.string.external_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(forwardInternalIp, { forwardInternalIp = it }, label = { Text(stringResource(R.string.internal_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1043,10 +1103,10 @@ fun NetworkControlScreen(
             ActionRow {
                 PrimaryActionButton(
                     label = stringResource(R.string.add_port_forward),
-                    onClick = { pendingCommand = PendingSafeCommand("firewall.set_port_forward", JSONObject().put("name", forwardName).put("protocol", "tcp").put("external_port", forwardExternalPort).put("internal_ip", forwardInternalIp).put("internal_port", forwardInternalPort), genericCommandQueued) },
+                    onClick = { pendingCommand = PendingSafeCommand("firewall.set_redirect", JSONObject().put("section", redirectSection).put("name", forwardName).put("enabled", true).put("src", "wan").put("dest", "lan").put("protocol", "tcp").put("src_port", forwardExternalPort).put("dest_ip", forwardInternalIp).put("dest_port", forwardInternalPort).put("target", "DNAT"), genericCommandQueued) },
                     enabled = forwardName.isNotBlank() && forwardExternalPort.isNotBlank() && forwardInternalIp.isNotBlank() && forwardInternalPort.isNotBlank(),
                 )
-                TextButton(onClick = { pendingCommand = PendingSafeCommand("firewall.delete_port_forward", JSONObject().put("name", forwardName), genericCommandQueued) }, enabled = forwardName.isNotBlank()) {
+                TextButton(onClick = { pendingCommand = PendingSafeCommand("firewall.delete_redirect", JSONObject().put("section", redirectSection).put("name", forwardName), genericCommandQueued) }, enabled = forwardName.isNotBlank()) {
                     Text(stringResource(R.string.delete_port_forward))
                 }
             }
@@ -1241,7 +1301,10 @@ fun NetworkControlScreen(
             OutlinedTextField(wgAddress, { wgAddress = it }, label = { Text(stringResource(R.string.tunnel_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(wgPort, { wgPort = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.listen_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(wgPrivateKey, { wgPrivateKey = it }, label = { Text(stringResource(R.string.private_key_optional)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("vpn.wireguard.set_interface", JSONObject().put("name", wgName).put("enabled", true).put("mode", "server").put("addresses", JSONArray(listOf(wgAddress))).put("listen_port", wgPort.toIntOrNull() ?: 51820).put("private_key", wgPrivateKey).put("mtu", 1420), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = wgName.isNotBlank() && wgAddress.isNotBlank())
+            ActionRow {
+                PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("vpn.wireguard.set_interface", JSONObject().put("name", wgName).put("enabled", true).put("mode", "server").put("addresses", JSONArray(listOf(wgAddress))).put("listen_port", wgPort.toIntOrNull() ?: 51820).put("private_key", wgPrivateKey).put("mtu", 1420), genericCommandQueued) }, enabled = wgName.isNotBlank() && wgAddress.isNotBlank())
+                TextButton({ pendingCommand = PendingSafeCommand("vpn.wireguard.delete_interface", JSONObject().put("name", wgName), genericCommandQueued) }, enabled = wgName.isNotBlank()) { Text(stringResource(R.string.delete)) }
+            }
         }
         ExpandableSettingsCard(stringResource(R.string.wireguard_peer), wgPeerName) {
             OutlinedTextField(wgName, { wgName = it }, label = { Text(stringResource(R.string.interface_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -1259,6 +1322,29 @@ fun NetworkControlScreen(
     }
     if (mode == NetworkScreenMode.Vpn && capabilities["vpn.openvpn.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.openvpn_client), openVpnName) {
+            val openVpnClients = vpn?.optJSONObject("openvpn")?.optJSONArray("clients") ?: JSONArray()
+            for (index in 0 until openVpnClients.length()) {
+                val item = openVpnClients.optJSONObject(index) ?: continue
+                val name = item.optString("name")
+                val isEnabled = item.optBoolean("enabled")
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(name, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (item.optBoolean("runtime")) stringResource(R.string.connected) else if (isEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton({ pendingCommand = PendingSafeCommand("vpn.openvpn.set_enabled", JSONObject().put("name", name).put("enabled", !isEnabled), genericCommandQueued) }) {
+                        Text(stringResource(if (isEnabled) R.string.disable_action else R.string.enable_action))
+                    }
+                    if (item.optBoolean("export_available")) {
+                        TextButton({ pendingCommand = PendingSafeCommand("vpn.openvpn.export_client", JSONObject().put("name", name), genericCommandQueued) }) { Text(stringResource(R.string.export)) }
+                    }
+                }
+                if (index < openVpnClients.length() - 1) HorizontalDivider()
+            }
             OutlinedTextField(openVpnName, { openVpnName = it }, label = { Text(stringResource(R.string.profile_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(openVpnConfig, { openVpnConfig = it }, label = { Text(stringResource(R.string.openvpn_config)) }, modifier = Modifier.fillMaxWidth(), minLines = 6)
             ActionRow {
@@ -1324,6 +1410,7 @@ fun SystemControlScreen(
     val scope = rememberCoroutineScope()
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var commands by remember { mutableStateOf<List<CommandDto>>(emptyList()) }
+    var loading by remember(device.id) { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
     var confirmReboot by remember { mutableStateOf(false) }
@@ -1344,6 +1431,7 @@ fun SystemControlScreen(
     var pendingSystemCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     var formInitialized by remember(device.id) { mutableStateOf(false) }
     val refresh: () -> Unit = {
+        loading = true
         scope.launch {
             when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
                 is ApiResult.Success -> {
@@ -1357,6 +1445,7 @@ fun SystemControlScreen(
                         ntpServers = time?.optJSONArray("ntp_servers")?.let { array ->
                             (0 until array.length()).joinToString(", ") { array.optString(it) }
                         }.orEmpty()
+                        cronContent = result.data.payload?.optJSONObject("maintenance")?.optString("cron_content").orEmpty()
                         formInitialized = true
                     }
                 }
@@ -1372,6 +1461,7 @@ fun SystemControlScreen(
                     messageIsError = true
                 }
             }
+            loading = false
         }
         Unit
     }
@@ -1380,6 +1470,7 @@ fun SystemControlScreen(
     val memory = system?.optJSONObject("memory")
     val storage = telemetry?.payload?.optJSONObject("storage")
     val systemSummary = telemetry?.system
+    val maintenance = telemetry?.payload?.optJSONObject("maintenance")
     val services = telemetry?.services
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
     val latestDiagnostics = commands.firstOrNull { it.commandType == "diagnostics.run" }
@@ -1417,6 +1508,18 @@ fun SystemControlScreen(
         subtitle = stringResource(if (mode == SystemScreenMode.System) R.string.system_screen_summary else R.string.maintenance_summary),
         onRefresh = refresh,
     )
+    if (loading && telemetry == null) {
+        SectionCard(stringResource(R.string.loading_data)) { CircularProgressIndicator(Modifier.size(24.dp)) }
+    } else if (telemetry?.isStale == true || telemetry?.dataState?.kind in setOf("stale", "error", "unsupported")) {
+        MessageBanner(
+            when (telemetry?.dataState?.kind) {
+                "unsupported" -> stringResource(R.string.unsupported_data)
+                "error" -> telemetry?.dataState?.reason ?: stringResource(R.string.data_error)
+                else -> stringResource(R.string.stale_telemetry)
+            },
+            error = telemetry?.dataState?.kind == "error",
+        )
+    }
     if (mode == SystemScreenMode.System) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MetricTile(stringResource(R.string.uptime), uptimeLabel, Modifier.weight(1f))
@@ -1514,6 +1617,23 @@ fun SystemControlScreen(
                     TextButton({ pendingSystemCommand = PendingSafeCommand("maintenance.package.remove", JSONObject().put("package", packageName), systemCommandQueued) }, enabled = packageName.isNotBlank()) { Text(stringResource(R.string.remove_package)) }
                 }
             }
+            maintenance?.optJSONObject("packages")?.optJSONArray("upgradable_items")?.let { items ->
+                if (items.length() > 0) {
+                    HorizontalDivider()
+                    Text(stringResource(R.string.package_updates_available, items.length()), style = MaterialTheme.typography.titleSmall)
+                    (0 until items.length()).mapNotNull(items::optJSONObject).forEach { item ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(item.optString("name"), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("${item.optString("current_version")} → ${item.optString("available_version")}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            TextButton(onClick = { pendingSystemCommand = PendingSafeCommand("maintenance.package.upgrade", JSONObject().put("package", item.optString("name")), systemCommandQueued) }) {
+                                Text(stringResource(R.string.update_package))
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     if (mode == SystemScreenMode.Management && capabilities["maintenance.backup"] == true) {
@@ -1540,13 +1660,40 @@ fun SystemControlScreen(
                 TonalActionButton(stringResource(R.string.request_logs), { pendingSystemCommand = PendingSafeCommand("maintenance.logs.read", JSONObject().put("lines", logLines.toIntOrNull() ?: 100), systemCommandQueued) })
             }
             if (capabilities["maintenance.processes"] == true) {
+                maintenance?.optString("process_snapshot")?.takeIf(String::isNotBlank)?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 12, overflow = TextOverflow.Ellipsis)
+                }
+                TonalActionButton(stringResource(R.string.refresh_processes), { pendingSystemCommand = PendingSafeCommand("maintenance.processes.read", JSONObject(), systemCommandQueued) })
                 OutlinedTextField(processPid, { processPid = it.filter(Char::isDigit) }, label = { Text("PID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OptionSelector("Signal", processSignal, processSignalOptions, { processSignal = it })
                 SecondaryActionButton(stringResource(R.string.terminate_process), { pendingSystemCommand = PendingSafeCommand("maintenance.process.signal", JSONObject().put("pid", processPid.toIntOrNull() ?: 0).put("signal", processSignal), systemCommandQueued) }, enabled = (processPid.toIntOrNull() ?: 0) > 1)
             }
             if (capabilities["maintenance.cron"] == true) {
+                TonalActionButton(stringResource(R.string.reload_schedule), { pendingSystemCommand = PendingSafeCommand("maintenance.cron.read", JSONObject(), systemCommandQueued) })
                 OutlinedTextField(cronContent, { cronContent = it }, label = { Text(stringResource(R.string.root_crontab)) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
                 SecondaryActionButton(stringResource(R.string.save_schedule), { pendingSystemCommand = PendingSafeCommand("maintenance.cron.set", JSONObject().put("content", cronContent), systemCommandQueued) })
+            }
+        }
+    }
+    if (mode == SystemScreenMode.Management && capabilities["system.restart_service"] == true) {
+        val serviceItems = maintenance?.optJSONArray("services")
+        ExpandableSettingsCard(stringResource(R.string.service_management), stringResource(R.string.service_management_summary)) {
+            TonalActionButton(stringResource(R.string.refresh_services), { pendingSystemCommand = PendingSafeCommand("maintenance.services.read", JSONObject(), systemCommandQueued) })
+            if (serviceItems == null || serviceItems.length() == 0) {
+                Text(stringResource(R.string.empty_services), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                (0 until serviceItems.length()).mapNotNull(serviceItems::optJSONObject).forEach { item ->
+                    val serviceName = item.optString("name")
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(serviceName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(if (item.optBoolean("running")) stringResource(R.string.service_running) else stringResource(R.string.service_stopped), style = MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(onClick = { pendingSystemCommand = PendingSafeCommand("maintenance.service.set", JSONObject().put("service", serviceName).put("action", "restart"), serviceQueued) }) {
+                            Text(stringResource(R.string.restart_service))
+                        }
+                    }
+                }
             }
         }
     }

@@ -53,6 +53,17 @@
     <string name="firmware">Firmware</string>
     <string name="last_seen">Last seen</string>
     <string name="no_data">No data</string>
+    <string name="loading_data">Loading data</string>
+    <string name="unsupported_data">This feature is not supported by the router</string>
+    <string name="data_error">The router returned an error</string>
+    <string name="package_updates_available">Updates available: %1$d</string>
+    <string name="update_package">Update</string>
+    <string name="refresh_processes">Refresh processes</string>
+    <string name="reload_schedule">Reload schedule</string>
+    <string name="refresh_services">Refresh services</string>
+    <string name="empty_services">Service list has not been received yet</string>
+    <string name="service_running">Running</string>
+    <string name="service_stopped">Stopped</string>
     <string name="available">Available</string>
     <string name="open">Open</string>
     <string name="telemetry">Telemetry</string>
@@ -121,6 +132,8 @@
     <string name="auto_update">Auto-update</string>
     <string name="enabled_value">Enabled</string>
     <string name="disabled_value">Disabled</string>
+    <string name="enable_action">Enable</string>
+    <string name="disable_action">Disable</string>
     <string name="telemetry_interval">Telemetry interval</string>
     <string name="telemetry_interval_label">Telemetry interval, sec</string>
     <string name="available_version">Available version</string>
