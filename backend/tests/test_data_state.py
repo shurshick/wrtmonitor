@@ -23,8 +23,14 @@ def test_observed_unsupported_and_error_are_distinct() -> None:
         stale_after_seconds=300,
     )
     assert observed["kind"] == "observed"
-    assert subsystem_data_state({}, parent_state=observed, available=False)["kind"] == "unsupported"
-    assert subsystem_data_state({"error": "ubus failed"}, parent_state=observed)["kind"] == "error"
+    assert (
+        subsystem_data_state({}, parent_state=observed, available=False)["kind"]
+        == "unsupported"
+    )
+    assert (
+        subsystem_data_state({"error": "ubus failed"}, parent_state=observed)["kind"]
+        == "error"
+    )
 
 
 def test_stale_parent_wins_over_subsystem_payload() -> None:
@@ -34,4 +40,6 @@ def test_stale_parent_wins_over_subsystem_payload() -> None:
         age_seconds=301,
         stale_after_seconds=300,
     )
-    assert subsystem_data_state({"available": True}, parent_state=stale)["kind"] == "stale"
+    assert (
+        subsystem_data_state({"available": True}, parent_state=stale)["kind"] == "stale"
+    )

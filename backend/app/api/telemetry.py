@@ -106,7 +106,9 @@ def latest_device_telemetry(
         configured=bool(wifi.get("radios")),
     )
     network["data_state"] = subsystem_data_state(
-        telemetry.payload.get("network"), parent_state=state, configured=bool(network.get("interfaces"))
+        telemetry.payload.get("network"),
+        parent_state=state,
+        configured=bool(network.get("interfaces")),
     )
     clients["data_state"] = subsystem_data_state(
         telemetry.payload.get("clients"), parent_state=state

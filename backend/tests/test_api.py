@@ -871,7 +871,10 @@ def test_device_delete_removes_router_and_all_related_data():
     online_response = client.post(
         "/api/v1/agent/telemetry",
         headers=agent_headers,
-        json={"device_id": device_id, "telemetry": {"schema_version": 2, "system": {"uptime": 1}}},
+        json={
+            "device_id": device_id,
+            "telemetry": {"schema_version": 2, "system": {"uptime": 1}},
+        },
     )
     assert online_response.status_code == 200
     disconnect_response = client.post(
@@ -891,7 +894,10 @@ def test_device_delete_removes_router_and_all_related_data():
     deleted_telemetry_response = client.post(
         "/api/v1/agent/telemetry",
         headers=agent_headers,
-        json={"device_id": device_id, "telemetry": {"schema_version": 2, "system": {"uptime": 2}}},
+        json={
+            "device_id": device_id,
+            "telemetry": {"schema_version": 2, "system": {"uptime": 2}},
+        },
     )
     assert deleted_telemetry_response.status_code in {401, 403}
 

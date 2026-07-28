@@ -50,9 +50,17 @@ def record_device_telemetry_metric(
     if previous is not None:
         elapsed = (created_at - previous.created_at).total_seconds()
         if elapsed > 0:
-            if rx_bytes is not None and previous.rx_bytes is not None and rx_bytes >= previous.rx_bytes:
+            if (
+                rx_bytes is not None
+                and previous.rx_bytes is not None
+                and rx_bytes >= previous.rx_bytes
+            ):
                 rx_bps = round((rx_bytes - previous.rx_bytes) * 8 / elapsed)
-            if tx_bytes is not None and previous.tx_bytes is not None and tx_bytes >= previous.tx_bytes:
+            if (
+                tx_bytes is not None
+                and previous.tx_bytes is not None
+                and tx_bytes >= previous.tx_bytes
+            ):
                 tx_bps = round((tx_bytes - previous.tx_bytes) * 8 / elapsed)
     memory_total = _optional_int(summary.get("memory_total_mb"))
     memory_available = _optional_int(summary.get("memory_available_mb"))
@@ -150,7 +158,9 @@ def metric_history_point(row: DeviceTelemetryMetric) -> dict[str, Any]:
         "rx_bytes": row.rx_bytes,
         "tx_bytes": row.tx_bytes,
         "load_1m": round(row.load_1m, 2) if row.load_1m is not None else None,
-        "memory_percent": round(row.memory_percent, 1) if row.memory_percent is not None else None,
+        "memory_percent": round(row.memory_percent, 1)
+        if row.memory_percent is not None
+        else None,
         "client_count": row.client_count,
     }
 
@@ -180,7 +190,9 @@ def downsample_telemetry_metrics(
     return points
 
 
-def _average_optional(rows: list[DeviceTelemetryMetric], field: str, digits: int) -> int | float | None:
+def _average_optional(
+    rows: list[DeviceTelemetryMetric], field: str, digits: int
+) -> int | float | None:
     values = [value for row in rows if (value := getattr(row, field)) is not None]
     if not values:
         return None
@@ -849,7 +861,9 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "uptime_seconds": system.get("uptime"),
         "load_1m": system.get("load"),
         "memory_total_mb": _kb_to_mb(memory.get("total_kb")),
-        "memory_available_mb": _kb_to_mb(memory.get("available_kb", memory.get("free_kb"))),
+        "memory_available_mb": _kb_to_mb(
+            memory.get("available_kb", memory.get("free_kb"))
+        ),
         "cpu_cores": cpu.get("cores"),
         "storage_total_mb": _kb_to_mb(storage.get("total_kb")),
         "storage_available_mb": _kb_to_mb(storage.get("available_kb")),
@@ -860,7 +874,9 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "traffic_tx_bytes": traffic.get("tx_bytes"),
         "wifi_available": wifi.get("available"),
         "wifi_radio_count": len(radios) if payload.get("wifi") is not None else None,
-        "network_interface_count": len(interfaces) if payload.get("network") is not None else None,
+        "network_interface_count": len(interfaces)
+        if payload.get("network") is not None
+        else None,
         "agent_capability_count": len(extract_agent_capabilities(payload)),
         "client_count": clients["online_count"],
         "hostname": system_summary.get("hostname"),

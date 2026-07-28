@@ -5,7 +5,9 @@ from typing import Any, Literal
 
 
 DataStateKind = Literal["configured", "observed", "unsupported", "stale", "error"]
-DATA_STATE_KINDS = frozenset({"configured", "observed", "unsupported", "stale", "error"})
+DATA_STATE_KINDS = frozenset(
+    {"configured", "observed", "unsupported", "stale", "error"}
+)
 
 
 def data_state(
@@ -17,7 +19,9 @@ def data_state(
 ) -> dict[str, Any]:
     if kind not in DATA_STATE_KINDS:
         raise ValueError(f"invalid data state: {kind}")
-    timestamp = observed_at.isoformat() if isinstance(observed_at, datetime) else observed_at
+    timestamp = (
+        observed_at.isoformat() if isinstance(observed_at, datetime) else observed_at
+    )
     return {
         "kind": kind,
         "reason": reason,
@@ -64,8 +68,18 @@ def subsystem_data_state(
         return dict(parent_state)
     if available is False:
         return data_state("unsupported", reason="not_supported_by_router")
-    if isinstance(value, dict) and (value.get("error") or value.get("status") == "error"):
-        return data_state("error", reason=str(value.get("error") or "collection_failed"))
+    if isinstance(value, dict) and (
+        value.get("error") or value.get("status") == "error"
+    ):
+        return data_state(
+            "error", reason=str(value.get("error") or "collection_failed")
+        )
     if value is None:
-        return data_state("configured" if configured else "unsupported", reason="not_observed")
-    return data_state("observed", observed_at=parent_state.get("observed_at"), age_seconds=parent_state.get("age_seconds"))
+        return data_state(
+            "configured" if configured else "unsupported", reason="not_observed"
+        )
+    return data_state(
+        "observed",
+        observed_at=parent_state.get("observed_at"),
+        age_seconds=parent_state.get("age_seconds"),
+    )
