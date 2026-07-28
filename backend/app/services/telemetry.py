@@ -840,7 +840,7 @@ def normalize_system_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "zonename": time_config.get("zonename"),
         "timezone": time_config.get("timezone"),
         "ntp_enabled": time_config.get("ntp_enabled"),
-        "ntp_servers": time_config.get("ntp_servers"),
+        "ntp_servers": time_config.get("ntp_servers") or [],
         "services": normalize_services_summary(payload),
     }
 
