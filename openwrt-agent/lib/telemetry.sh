@@ -346,6 +346,16 @@ clients_json() {
     traffic_available=false
     traffic_status="$(nlbwmon_runtime_status)"
     traffic_records=0
+    traffic_installed=false
+    traffic_service="missing"
+    traffic_recovery_attempted=false
+    traffic_error=""
+    command -v nlbw >/dev/null 2>&1 && traffic_installed=true
+    nlbwmon_init="${WRTMONITOR_SYSTEM_ROOT:-}/etc/init.d/nlbwmon"
+    if [ -x "$nlbwmon_init" ]; then
+        traffic_service="stopped"
+        "$nlbwmon_init" running >/dev/null 2>&1 && traffic_service="running"
+    fi
     if command -v ip >/dev/null 2>&1; then
         while IFS='|' read -r ip_address device mac state; do
             [ -n "$mac" ] || continue
@@ -366,8 +376,13 @@ EOF
     fi
     case "$traffic_status" in
     service_stopped|query_failed)
+        traffic_recovery_attempted=true
         ensure_nlbwmon_runtime >/dev/null 2>&1 || true
         traffic_status="$(nlbwmon_runtime_status)"
+        if [ -x "$nlbwmon_init" ]; then
+            traffic_service="stopped"
+            "$nlbwmon_init" running >/dev/null 2>&1 && traffic_service="running"
+        fi
         ;;
     esac
     if [ "$traffic_status" = "ready" ]; then
@@ -409,7 +424,15 @@ EOF
         fi
         rm -f "$traffic_file"
     fi
-    printf '{"neighbours":[%s],"dhcp":%s,"traffic":{"available":%s,"status":"%s","records":%s}}' "$neighbours" "$(dhcp_json)" "$traffic_available" "$traffic_status" "$traffic_records"
+    case "$traffic_status" in
+        not_installed) traffic_error="nlbw executable is missing" ;;
+        service_missing) traffic_error="nlbwmon init service is missing" ;;
+        service_stopped) traffic_error="nlbwmon service did not start" ;;
+        query_failed) traffic_error="nlbwmon query failed after recovery" ;;
+    esac
+    printf '{"neighbours":[%s],"dhcp":%s,"traffic":{"available":%s,"status":"%s","records":%s,"installed":%s,"service":"%s","recovery_attempted":%s,"error":"%s"}}' \
+        "$neighbours" "$(dhcp_json)" "$traffic_available" "$traffic_status" "$traffic_records" \
+        "$traffic_installed" "$traffic_service" "$traffic_recovery_attempted" "$(json_escape "$traffic_error")"
 }
 
 network_devices_json() {
@@ -677,6 +700,73 @@ wifi_stations_json() {
     printf '[%s]' "$station_groups"
 }
 
+wifi_radio_ifname() {
+    requested_radio="$1"
+    radio_index="$2"
+    if command -v wifi >/dev/null 2>&1 && command -v jsonfilter >/dev/null 2>&1; then
+        status_file="/tmp/wrtmonitor-wifi-status-$$"
+        wifi status "$requested_radio" >"$status_file" 2>/dev/null || true
+        runtime_ifname="$(jsonfilter -i "$status_file" -e "@.$requested_radio.interfaces[0].ifname" 2>/dev/null || true)"
+        rm -f "$status_file"
+        [ -n "$runtime_ifname" ] && {
+            printf '%s' "$runtime_ifname"
+            return 0
+        }
+    fi
+    if command -v iw >/dev/null 2>&1; then
+        iw dev 2>/dev/null | awk '$1 == "Interface" {print $2}' | sed -n "$((radio_index + 1))p"
+    fi
+}
+
+wifi_survey_json() {
+    survey_interface="$1"
+    if ! command -v iw >/dev/null 2>&1; then
+        printf '{"state":"unsupported","reason":"iw_unavailable","interface":"","frequency_mhz":null,"noise_dbm":null,"active_ms":null,"busy_ms":null,"rx_ms":null,"tx_ms":null,"utilization_percent":null}'
+        return 0
+    fi
+    if [ -z "$survey_interface" ]; then
+        printf '{"state":"unsupported","reason":"interface_unavailable","interface":"","frequency_mhz":null,"noise_dbm":null,"active_ms":null,"busy_ms":null,"rx_ms":null,"tx_ms":null,"utilization_percent":null}'
+        return 0
+    fi
+    survey_values="$(iw dev "$survey_interface" survey dump 2>/dev/null | awk '
+        /frequency:/ {
+            capture = index($0, "[in use]") > 0
+            if (capture) {
+                frequency = $2; noise = ""; active = ""; busy = ""; receive = ""; transmit = ""
+            }
+            next
+        }
+        capture && /noise:/ { noise = $2; next }
+        capture && /channel active time:/ { active = $(NF-1); next }
+        capture && /channel busy time:/ { busy = $(NF-1); next }
+        capture && /channel receive time:/ { receive = $(NF-1); next }
+        capture && /channel transmit time:/ { transmit = $(NF-1); next }
+        END {
+            if (frequency != "") print frequency "|" noise "|" active "|" busy "|" receive "|" transmit
+        }
+    ' | head -n 1)"
+    if [ -z "$survey_values" ]; then
+        printf '{"state":"unsupported","reason":"driver_did_not_report_survey","interface":"%s","frequency_mhz":null,"noise_dbm":null,"active_ms":null,"busy_ms":null,"rx_ms":null,"tx_ms":null,"utilization_percent":null}' "$(json_escape "$survey_interface")"
+        return 0
+    fi
+    IFS='|' read -r survey_frequency survey_noise survey_active survey_busy survey_rx survey_tx <<EOF
+$survey_values
+EOF
+    case "$survey_frequency" in ''|*[!0-9]*) survey_frequency=null ;; esac
+    case "$survey_noise" in ''|'-'|*[!0-9-]*) survey_noise=null ;; esac
+    case "$survey_active" in ''|*[!0-9]*) survey_active=null ;; esac
+    case "$survey_busy" in ''|*[!0-9]*) survey_busy=null ;; esac
+    case "$survey_rx" in ''|*[!0-9]*) survey_rx=null ;; esac
+    case "$survey_tx" in ''|*[!0-9]*) survey_tx=null ;; esac
+    survey_utilization=null
+    if [ "$survey_active" != null ] && [ "$survey_busy" != null ] && [ "$survey_active" -gt 0 ]; then
+        survey_utilization=$((survey_busy * 100 / survey_active))
+        [ "$survey_utilization" -gt 100 ] && survey_utilization=100
+    fi
+    printf '{"state":"observed","reason":"","interface":"%s","frequency_mhz":%s,"noise_dbm":%s,"active_ms":%s,"busy_ms":%s,"rx_ms":%s,"tx_ms":%s,"utilization_percent":%s}' \
+        "$(json_escape "$survey_interface")" "$survey_frequency" "$survey_noise" "$survey_active" "$survey_busy" "$survey_rx" "$survey_tx" "$survey_utilization"
+}
+
 wifi_status_json() {
     radios=""
     index=0
@@ -729,6 +819,8 @@ wifi_status_json() {
         [ -n "$txpower" ] && radio="$radio,\"txpower\":\"$(json_escape "$txpower")\""
         [ -n "${encryption:-}" ] && radio="$radio,\"encryption\":\"$(json_escape "$encryption")\""
         radio="$radio,\"schedule\":$(wifi_schedule_json "$name")"
+        runtime_ifname="$(wifi_radio_ifname "$name" "$index")"
+        radio="$radio,\"survey\":$(wifi_survey_json "$runtime_ifname")"
         radio="$radio}"
         [ -n "$radios" ] && radios="$radios,"
         radios="$radios$radio"

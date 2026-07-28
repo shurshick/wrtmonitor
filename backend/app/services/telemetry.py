@@ -448,6 +448,7 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                     "mesh_id": iface.get("mesh_id"),
                 }
             )
+        survey = radio.get("survey") if isinstance(radio.get("survey"), dict) else {}
         normalized_radios.append(
             {
                 "id": radio.get("id") or radio.get("name"),
@@ -463,6 +464,22 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "ssid": radio.get("ssid"),
                 "encryption": radio.get("encryption"),
                 "schedule": radio.get("schedule"),
+                "survey": {
+                    "state": str(survey.get("state") or "unsupported"),
+                    "reason": str(survey.get("reason") or ""),
+                    "interface": survey.get("interface"),
+                    "frequency_mhz": _optional_nonnegative_int(
+                        survey.get("frequency_mhz")
+                    ),
+                    "noise_dbm": _optional_int(survey.get("noise_dbm")),
+                    "active_ms": _optional_nonnegative_int(survey.get("active_ms")),
+                    "busy_ms": _optional_nonnegative_int(survey.get("busy_ms")),
+                    "rx_ms": _optional_nonnegative_int(survey.get("rx_ms")),
+                    "tx_ms": _optional_nonnegative_int(survey.get("tx_ms")),
+                    "utilization_percent": _optional_percent(
+                        survey.get("utilization_percent")
+                    ),
+                },
             }
         )
     has_station_rates = any(
@@ -490,6 +507,20 @@ def _optional_nonnegative_int(value: Any) -> int | None:
         return max(0, int(value))
     except (TypeError, ValueError):
         return None
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_percent(value: Any) -> int | None:
+    parsed = _optional_nonnegative_int(value)
+    return min(parsed, 100) if parsed is not None else None
 
 
 def _station_rate(value: Any) -> int | float | str | None:
@@ -834,6 +865,13 @@ def normalize_clients_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "recent_count": recent_count,
         "traffic_available": traffic_available,
         "traffic_status": str(traffic_source.get("status") or "unknown"),
+        "traffic_diagnostics": {
+            "installed": bool(traffic_source.get("installed")),
+            "service": str(traffic_source.get("service") or "unknown"),
+            "records": _optional_nonnegative_int(traffic_source.get("records")),
+            "recovery_attempted": bool(traffic_source.get("recovery_attempted")),
+            "error": str(traffic_source.get("error") or ""),
+        },
         "items": items,
     }
 

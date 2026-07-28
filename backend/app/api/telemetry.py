@@ -19,6 +19,7 @@ from ..services.telemetry import (
     cleanup_device_telemetry,
     cleanup_device_telemetry_metrics,
     device_telemetry_history,
+    normalize_clients_summary,
     normalize_network_summary,
     normalize_services_summary,
     normalize_system_summary,
@@ -89,6 +90,10 @@ def latest_device_telemetry(
         0, int((datetime.now(UTC) - telemetry.created_at).total_seconds())
     )
     clients = client_inventory_summary(db, device_id)
+    observed_clients = normalize_clients_summary(telemetry.payload)
+    clients["traffic_available"] = observed_clients.get("traffic_available")
+    clients["traffic_status"] = observed_clients.get("traffic_status")
+    clients["traffic_diagnostics"] = observed_clients.get("traffic_diagnostics")
     state = telemetry_data_state(
         telemetry.payload,
         observed_at=telemetry.created_at,

@@ -601,8 +601,44 @@ def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
     assert 'column["mac"]' in source
     assert 'column["rx_bytes"]' in source
     assert 'column["tx_bytes"]' in source
-    assert '"traffic":{"available":%s,"status":"%s","records":%s}' in source
+    assert '"traffic":{"available":%s,"status":"%s","records":%s' in source
+    assert '"recovery_attempted":%s' in source
     assert "ensure_nlbwmon_runtime" in source
+
+
+def test_wifi_survey_reports_observed_driver_values():
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "telemetry.sh").as_posix()}'
+        iw() {{
+            cat <<'EOF'
+Survey data from phy1-ap0
+        frequency: 5180 MHz [in use]
+        noise: -95 dBm
+        channel active time: 1000 ms
+        channel busy time: 421 ms
+        channel receive time: 201 ms
+        channel transmit time: 111 ms
+EOF
+        }}
+        wifi_survey_json phy1-ap0
+    """
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=shell_env(),
+    )
+    survey = json.loads(completed.stdout)
+    assert survey["state"] == "observed"
+    assert survey["frequency_mhz"] == 5180
+    assert survey["noise_dbm"] == -95
+    assert survey["utilization_percent"] == 42
 
 
 def test_agent_version_file_matches_entrypoint():

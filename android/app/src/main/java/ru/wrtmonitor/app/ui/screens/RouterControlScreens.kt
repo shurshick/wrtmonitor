@@ -237,6 +237,14 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
     var selectedRadioId by remember(device.id) { mutableStateOf("") }
     var selectedInterfaceId by remember(device.id) { mutableStateOf("") }
+    var interfaceEnabled by remember { mutableStateOf(true) }
+    var interfaceHidden by remember { mutableStateOf(false) }
+    var interfaceIsolated by remember { mutableStateOf(false) }
+    var interfaceEncryption by remember { mutableStateOf("sae-mixed") }
+    var roamingR by remember { mutableStateOf(false) }
+    var roamingK by remember { mutableStateOf(false) }
+    var roamingV by remember { mutableStateOf(false) }
+    var mobilityDomain by remember { mutableStateOf("") }
 
     val refresh: () -> Unit = {
         scope.launch {
@@ -325,6 +333,14 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         val selected = findInterface(interfaces, selectedInterfaceId) ?: return@LaunchedEffect
         ssid = selected.optString("ssid")
         newNetwork = selected.optString("network")
+        interfaceEnabled = selected.optBoolean("enabled", true)
+        interfaceHidden = selected.optBoolean("hidden", false)
+        interfaceIsolated = selected.optBoolean("isolate", false)
+        interfaceEncryption = selected.optString("encryption").ifBlank { "sae-mixed" }
+        roamingR = selected.optBoolean("ieee80211r", false)
+        roamingK = selected.optBoolean("ieee80211k", false)
+        roamingV = selected.optBoolean("bss_transition", false)
+        mobilityDomain = selected.optString("mobility_domain")
     }
     RouterPageHeader(
         title = stringResource(R.string.wifi),
@@ -334,6 +350,16 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     if (radioOptions.isNotEmpty()) {
         SectionCard(title = stringResource(R.string.wifi_selected_radio), subtitle = radio?.optString("name").orEmpty()) {
             OptionSelector(stringResource(R.string.wifi_radio), selectedRadioId, radioOptions, { selectedRadioId = it })
+            val selectedSurvey = radio?.optJSONObject("survey")
+            if (selectedSurvey?.optString("state") == "observed") {
+                val surveyDetails = listOfNotNull(
+                    selectedSurvey.optInt("utilization_percent").takeIf { !selectedSurvey.isNull("utilization_percent") }?.let { stringResource(R.string.wifi_air_utilization, it) },
+                    selectedSurvey.optInt("noise_dbm").takeIf { !selectedSurvey.isNull("noise_dbm") }?.let { stringResource(R.string.wifi_noise, it) },
+                ).joinToString(" · ")
+                if (surveyDetails.isNotBlank()) Text(surveyDetails, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text(stringResource(R.string.wifi_survey_unsupported), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
     SectionCard(
@@ -346,10 +372,13 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             for (index in 0 until radios.length()) {
                 val item = radios.optJSONObject(index) ?: continue
                 val radioName = item.optString("id").ifBlank { "radio$index" }
+                val survey = item.optJSONObject("survey")
                 val details = listOfNotNull(
                     item.optString("band").takeIf(String::isNotBlank),
                     item.optString("channel").takeIf(String::isNotBlank)?.let { stringResource(R.string.channel_value, it) },
                     item.optString("country").takeIf(String::isNotBlank),
+                    survey?.optInt("utilization_percent")?.takeIf { !survey.isNull("utilization_percent") }?.let { stringResource(R.string.wifi_air_utilization, it) },
+                    survey?.optInt("noise_dbm")?.takeIf { !survey.isNull("noise_dbm") }?.let { stringResource(R.string.wifi_noise, it) },
                 ).joinToString(" · ")
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -437,7 +466,18 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             for (stationIndex in 0 until stationGroups.length()) {
                 val station = stationGroups.optJSONObject(stationIndex) ?: continue
                 val mac = station.optString("mac")
-                InfoRow(mac, listOfNotNull(station.optInt("signal").takeIf { station.has("signal") }?.let { "$it dBm" }, station.optString("tx_bitrate").takeIf(String::isNotBlank)).joinToString(" · "))
+                val rxRate = station.opt("rx_bitrate")?.toString()?.takeIf { it.isNotBlank() && it != "null" }
+                val txRate = station.opt("tx_bitrate")?.toString()?.takeIf { it.isNotBlank() && it != "null" }
+                val airtimeRx = station.optLong("airtime_rx_us").takeIf { !station.isNull("airtime_rx_us") }
+                val airtimeTx = station.optLong("airtime_tx_us").takeIf { !station.isNull("airtime_tx_us") }
+                InfoRow(
+                    mac,
+                    listOfNotNull(
+                        station.optInt("signal").takeIf { !station.isNull("signal") }?.let { "$it dBm" },
+                        if (rxRate != null || txRate != null) stringResource(R.string.wifi_station_rx_tx, rxRate ?: "—", txRate ?: "—") else null,
+                        if (airtimeRx != null || airtimeTx != null) stringResource(R.string.wifi_station_airtime, airtimeRx?.let(::formatMicroseconds) ?: "—", airtimeTx?.let(::formatMicroseconds) ?: "—") else null,
+                    ).joinToString(" · "),
+                )
             }
         }
     }
@@ -464,7 +504,41 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                     modifier = Modifier.align(Alignment.End),
                 )
             }
-            if (capabilities["wifi.set_ssid"] == true) {
+            if (capabilities["wifi.manage_ssid"] == true && ifaceId != null) {
+                HorizontalDivider()
+                OutlinedTextField(ssid, { ssid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                if (networkOptions.isNotEmpty()) OptionSelector(stringResource(R.string.wifi_network_name), newNetwork, networkOptions, { newNetwork = it })
+                OptionSelector(stringResource(R.string.wifi_encryption), interfaceEncryption, wifiEncryptionOptions, { interfaceEncryption = it })
+                OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.new_wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+                SwitchSettingRow(stringResource(R.string.wifi_state), checked = interfaceEnabled, onCheckedChange = { interfaceEnabled = it })
+                SwitchSettingRow(stringResource(R.string.wifi_hidden), checked = interfaceHidden, onCheckedChange = { interfaceHidden = it })
+                SwitchSettingRow(stringResource(R.string.wifi_isolation), checked = interfaceIsolated, onCheckedChange = { interfaceIsolated = it })
+                SwitchSettingRow(stringResource(R.string.wifi_roaming_r), checked = roamingR, onCheckedChange = { roamingR = it })
+                SwitchSettingRow(stringResource(R.string.wifi_roaming_k), checked = roamingK, onCheckedChange = { roamingK = it })
+                SwitchSettingRow(stringResource(R.string.wifi_roaming_v), checked = roamingV, onCheckedChange = { roamingV = it })
+                if (roamingR) OutlinedTextField(mobilityDomain, { mobilityDomain = it.filter { char -> char.isDigit() || char.lowercaseChar() in 'a'..'f' }.take(4) }, label = { Text(stringResource(R.string.wifi_mobility_domain)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                PrimaryActionButton(
+                    label = stringResource(R.string.wifi_save_network),
+                    onClick = {
+                        val payload = JSONObject()
+                            .put("iface", ifaceId)
+                            .put("ssid", ssid)
+                            .put("network", newNetwork)
+                            .put("encryption", interfaceEncryption)
+                            .put("enabled", interfaceEnabled)
+                            .put("hidden", interfaceHidden)
+                            .put("isolate", interfaceIsolated)
+                            .put("ieee80211r", roamingR)
+                            .put("ieee80211k", roamingK)
+                            .put("bss_transition", roamingV)
+                        if (password.isNotBlank()) payload.put("key", password)
+                        if (roamingR) payload.put("mobility_domain", mobilityDomain.ifBlank { "4f57" })
+                        pendingCommand = PendingSafeCommand("wifi.update_ssid", payload, wifiSsidQueued)
+                    },
+                    modifier = Modifier.align(Alignment.End),
+                    enabled = ssid.isNotBlank() && newNetwork.isNotBlank() && (interfaceEncryption == "none" || password.isBlank() || password.length >= 8) && (!roamingR || mobilityDomain.isBlank() || mobilityDomain.length == 4),
+                )
+            } else if (capabilities["wifi.set_ssid"] == true) {
                 HorizontalDivider()
                 OutlinedTextField(ssid, { ssid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 PrimaryActionButton(
@@ -474,7 +548,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                     enabled = ssid.isNotBlank(),
                 )
             }
-            if (capabilities["wifi.set_password"] == true) {
+            if (capabilities["wifi.manage_ssid"] != true && capabilities["wifi.set_password"] == true) {
                 HorizontalDivider()
                 OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.new_wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
                 PrimaryActionButton(
@@ -1596,6 +1670,12 @@ private fun findRadio(radios: JSONArray, radioId: String): JSONObject? =
 private fun findInterface(interfaces: JSONArray, interfaceId: String): JSONObject? =
     (0 until interfaces.length()).mapNotNull(interfaces::optJSONObject)
         .firstOrNull { it.optString("id") == interfaceId }
+
+private fun formatMicroseconds(value: Long): String = when {
+    value >= 1_000_000 -> String.format(Locale.getDefault(), "%.2f s", value / 1_000_000.0)
+    value >= 1_000 -> String.format(Locale.getDefault(), "%.1f ms", value / 1_000.0)
+    else -> "$value us"
+}
 
 @Composable
 private fun formatDuration(seconds: Long): String {

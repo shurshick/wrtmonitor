@@ -1,23 +1,23 @@
-# v0.20.0-internet-network — интернет и сеть
+# v0.21.0-wifi-clients — Wi-Fi и клиенты
 
-Тестовый релиз завершает единый контур управления WAN, IPv6, DNS, сегментами и резервным подключением.
+Тестовый релиз завершает единый контур управления беспроводными сетями и клиентскими политиками.
 
 ## Изменения
 
-- WAN-редакторы Web UI и Android показывают только поля выбранного протокола DHCP, static или PPPoE;
-- IPv4/IPv6, RA, DHCPv6, DNS, DoT и DoH управляются через проверяемые команды;
-- физические порты передают реальные carrier, speed, duplex, MTU, traffic, errors и dropped counters;
-- сегменты, bridge и VLAN 802.1Q используют реальные UCI-секции и read-after-write;
-- Multi-WAN создаёт monitor-интерфейсы mwan3, health-check, приоритеты, failover и возврат на основной канал;
-- Web UI и Android отображают фактическую конфигурацию и состояние Multi-WAN;
-- post-condition расширен на IPv6, VLAN и Multi-WAN.
+- состояния 2.4/5/6 ГГц и их SSID разделены по фактическим радиомодулям;
+- Web UI и Android управляют несколькими SSID, guest, isolation, расписанием, roaming 802.11r/k/v и mesh;
+- агент получает из `iw` загрузку эфира, noise, active/busy/RX/TX time и не подставляет нули при отсутствии поддержки драйвера;
+- Wi-Fi station telemetry содержит signal, noise, RX/TX bitrate, airtime и connected time;
+- `nlbwmon` сообщает установку, состояние службы, число записей, попытку восстановления и конкретную ошибку;
+- клиентские политики включают постоянный IP, блокировку, расписание, профиль и SQM;
+- Android получил единый редактор SSID вместо разрозненных старых действий.
 
 ## Проверка
 
-Автоматически проверены backend, Android, shell syntax, OpenWrt harness и контракты команд. Переключение физических WAN требует отдельного роутера с двумя подключёнными каналами.
+Автоматически проверены backend, Android, shell syntax, OpenWrt harness и контракты команд. Значения survey и station зависят от драйвера физического радиомодуля и показываются как недоступные, если драйвер их не передаёт.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.20.0.apk`
-- `wrtmonitor-openwrt-agent-v0.20.0.tar.gz`
-- `wrtmonitor-truenas-v0.20.0.yaml`
+- `wrtmonitor-android-v0.21.0.apk`
+- `wrtmonitor-openwrt-agent-v0.21.0.tar.gz`
+- `wrtmonitor-truenas-v0.21.0.yaml`

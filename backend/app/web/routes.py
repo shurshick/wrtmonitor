@@ -1095,6 +1095,8 @@ def device_page(
                 and telemetry_clients.get("traffic_available")
             ),
             "client_traffic_status": telemetry_clients.get("traffic_status"),
+            "client_traffic_diagnostics": telemetry_clients.get("traffic_diagnostics")
+            or {},
             "system_summary": system_summary,
             "system_view": system_view,
             "services": services,

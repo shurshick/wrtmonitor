@@ -158,3 +158,43 @@ def test_wifi_station_numeric_rates_are_preserved_when_driver_reports_them():
     assert summary["stations"][0]["rx_bitrate"] == 650000
     assert summary["stations"][0]["tx_bitrate"] == 866700
     assert summary["has_station_rates"] is True
+
+
+def test_wifi_radio_survey_is_normalized_without_inventing_metrics():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "radios": [
+                    {
+                        "id": "radio1",
+                        "band": "5g",
+                        "survey": {
+                            "state": "observed",
+                            "interface": "phy1-ap0",
+                            "frequency_mhz": 5180,
+                            "noise_dbm": -95,
+                            "active_ms": 1000,
+                            "busy_ms": 421,
+                            "utilization_percent": 42,
+                        },
+                    },
+                    {"id": "radio2", "band": "6g"},
+                ]
+            }
+        }
+    )
+
+    assert summary["radios"][0]["survey"] == {
+        "state": "observed",
+        "reason": "",
+        "interface": "phy1-ap0",
+        "frequency_mhz": 5180,
+        "noise_dbm": -95,
+        "active_ms": 1000,
+        "busy_ms": 421,
+        "rx_ms": None,
+        "tx_ms": None,
+        "utilization_percent": 42,
+    }
+    assert summary["radios"][1]["survey"]["state"] == "unsupported"
+    assert summary["radios"][1]["survey"]["utilization_percent"] is None

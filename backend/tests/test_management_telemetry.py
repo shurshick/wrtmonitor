@@ -103,7 +103,14 @@ def test_nlbw_source_can_be_ready_before_first_non_zero_counter():
     summary = normalize_clients_summary(
         {
             "clients": {
-                "traffic": {"available": True, "status": "ready"},
+                "traffic": {
+                    "available": True,
+                    "status": "ready",
+                    "installed": True,
+                    "service": "running",
+                    "records": 0,
+                    "recovery_attempted": True,
+                },
                 "neighbours": [],
                 "dhcp": {"leases": [], "static_leases": []},
             }
@@ -112,6 +119,13 @@ def test_nlbw_source_can_be_ready_before_first_non_zero_counter():
 
     assert summary["traffic_available"] is True
     assert summary["traffic_status"] == "ready"
+    assert summary["traffic_diagnostics"] == {
+        "installed": True,
+        "service": "running",
+        "records": 0,
+        "recovery_attempted": True,
+        "error": "",
+    }
 
 
 def test_time_configuration_is_normalized_without_ui_defaults():
