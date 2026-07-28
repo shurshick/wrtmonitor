@@ -166,6 +166,35 @@ def prepare_router() -> str:
                     },
                     "traffic": {"rx_bytes": 16_000_000, "tx_bytes": 4_000_000},
                     "maintenance": {
+                        "services": [
+                            {
+                                "name": name,
+                                "running": name not in {"dropbear", "uhttpd"},
+                                "enabled": name not in {"cron", "uhttpd"},
+                            }
+                            for name in (
+                                "boot",
+                                "cron",
+                                "dnsmasq",
+                                "done",
+                                "dropbear",
+                                "firewall",
+                                "gpio_switch",
+                                "led",
+                                "log",
+                                "network",
+                                "odhcpd",
+                                "rpcd",
+                                "sysctl",
+                                "sysfixtime",
+                                "sysntpd",
+                                "system",
+                                "uhttpd",
+                                "umount",
+                                "urandom_seed",
+                                "wrtmonitor",
+                            )
+                        ],
                         "packages": {
                             "manager": "apk",
                             "installed": 143,
@@ -661,6 +690,9 @@ def run() -> None:
                     assert (
                         services.evaluate("node => getComputedStyle(node).maxHeight")
                         == "430px"
+                    )
+                    assert services.evaluate(
+                        "node => node.scrollHeight > node.clientHeight"
                     )
                     assert page.get_by_text("Обновить каталог", exact=True).count() == 1
                     assert (
