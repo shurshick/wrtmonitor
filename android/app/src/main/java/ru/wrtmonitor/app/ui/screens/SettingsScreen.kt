@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,6 +66,8 @@ private sealed interface UpdateState {
 fun AppSettingsScreen(
     currentServerUrl: String,
     accessToken: String,
+    isDarkTheme: Boolean,
+    onThemeChange: (Boolean) -> Unit,
     onSave: (String) -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -119,6 +122,26 @@ fun AppSettingsScreen(
             title = stringResource(R.string.settings),
             subtitle = stringResource(R.string.settings_summary),
         )
+        SectionCard(stringResource(R.string.appearance), subtitle = stringResource(R.string.appearance_summary)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.dark_theme), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        stringResource(if (isDarkTheme) R.string.dark_theme_enabled else R.string.light_theme_enabled),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = isDarkTheme,
+                    onCheckedChange = onThemeChange,
+                )
+            }
+        }
         SectionCard(stringResource(R.string.server_connection), subtitle = currentServerUrl) {
             OutlinedTextField(serverUrl, { serverUrl = it }, label = { Text(stringResource(R.string.server_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             MessageBanner(serverUrlError, error = true)

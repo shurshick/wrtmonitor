@@ -481,6 +481,13 @@ def run() -> None:
             page.locator('button[type="submit"]').click()
             page.wait_for_url("**/devices")
             assert_page(page, "/devices", f"{name}-devices.png")
+            page.locator("[data-theme-toggle]").click()
+            assert page.locator("html").get_attribute("data-theme") == "light"
+            page.screenshot(
+                path=str(ARTIFACTS / f"{name}-devices-light.png"), full_page=True
+            )
+            page.locator("[data-theme-toggle]").click()
+            assert page.locator("html").get_attribute("data-theme") == "dark"
             assert_page(page, "/account", f"{name}-account.png")
             page.locator('form[action="/account/mobile-pairing"] button').click()
             page.wait_for_load_state("networkidle")
@@ -645,6 +652,16 @@ def run() -> None:
                         panel.locator(":scope > summary").click()
                         assert panel.get_attribute("open") is not None
                 if section == "management":
+                    services = page.locator(".service-list-scroll")
+                    assert services.count() == 1
+                    assert (
+                        services.evaluate("node => getComputedStyle(node).overflowY")
+                        == "auto"
+                    )
+                    assert (
+                        services.evaluate("node => getComputedStyle(node).maxHeight")
+                        == "430px"
+                    )
                     assert page.get_by_text("Обновить каталог", exact=True).count() == 1
                     assert (
                         page.get_by_text("Создать резервную копию", exact=True).count()

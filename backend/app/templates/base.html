@@ -1,16 +1,31 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}WrtMonitor{% endblock %}</title>
+  <script>
+    (() => {
+      const saved = localStorage.getItem("wrtmonitor-theme");
+      const theme = saved === "light" || saved === "dark"
+        ? saved
+        : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
   <link rel="stylesheet" href="/static/app.css">
+  <script defer src="/static/theme.js"></script>
 </head>
 <body>
   <header class="app-header">
     <div class="app-header__content">
       <a class="brand" href="/"><span class="brand__mark">W</span><span>WrtMonitor</span></a>
-      <span class="app-header__meta">Управление OpenWrt</span>
+      <div class="app-header__actions">
+        <span class="app-header__meta">Управление OpenWrt</span>
+        <button class="icon-button theme-toggle" type="button" data-theme-toggle title="Сменить тему" aria-label="Сменить тему">
+          <span aria-hidden="true" data-theme-icon>☀</span>
+        </button>
+      </div>
     </div>
   </header>
   <main class="page {% block page_class %}{% endblock %}">{% block content %}{% endblock %}</main>

@@ -27,6 +27,13 @@ class SessionStore(context: Context) : SessionStorage {
     var serverUrl: String get() = prefs.getString("server_url", "").orEmpty(); set(value) = prefs.edit().putString("server_url", value).apply()
     var accessToken: String get() = prefs.getString("access_token", "").orEmpty(); set(value) = prefs.edit().putString("access_token", value).apply()
     var refreshToken: String get() = prefs.getString("refresh_token", "").orEmpty(); set(value) = prefs.edit().putString("refresh_token", value).apply()
+    var darkTheme: Boolean?
+        get() = if (prefs.contains("dark_theme")) prefs.getBoolean("dark_theme", true) else null
+        set(value) {
+            val editor = prefs.edit()
+            if (value == null) editor.remove("dark_theme") else editor.putBoolean("dark_theme", value)
+            editor.apply()
+        }
     override fun saveSession(serverUrl: String, accessToken: String, refreshToken: String) {
         prefs.edit()
             .putString("server_url", serverUrl)

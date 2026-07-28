@@ -7,6 +7,11 @@
     <string name="system">Система</string>
     <string name="clients">Клиенты</string>
     <string name="settings">Настройки</string>
+    <string name="appearance">Оформление</string>
+    <string name="appearance_summary">Выбор цветовой темы приложения</string>
+    <string name="dark_theme">Тёмная тема</string>
+    <string name="dark_theme_enabled">Включено тёмное оформление</string>
+    <string name="light_theme_enabled">Включено светлое оформление</string>
     <string name="nav_settings">Ещё</string>
     <string name="more">Ещё</string>
     <string name="more_summary">Безопасность, VPN, система и служебные инструменты</string>

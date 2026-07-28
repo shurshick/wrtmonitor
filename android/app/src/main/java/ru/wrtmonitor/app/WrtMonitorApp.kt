@@ -2,6 +2,7 @@ package ru.wrtmonitor.app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -91,6 +93,36 @@ private enum class Tab {
     Settings,
 }
 
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFF35B9D5),
+    secondary = Color(0xFF73D596),
+    tertiary = Color(0xFFF5BD4F),
+    background = Color(0xFF0B1018),
+    surface = Color(0xFF121B28),
+    surfaceVariant = Color(0xFF172234),
+    onPrimary = Color(0xFF041116),
+    onBackground = Color(0xFFE8EEF7),
+    onSurface = Color(0xFFE8EEF7),
+    outline = Color(0xFF36506D),
+    outlineVariant = Color(0xFF263A51),
+)
+
+private val LightColors = lightColorScheme(
+    primary = Color(0xFF087F9D),
+    secondary = Color(0xFF278F59),
+    tertiary = Color(0xFFA76600),
+    background = Color(0xFFF3F6FA),
+    surface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFFEEF4F8),
+    onPrimary = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF162235),
+    onSurface = Color(0xFF162235),
+    onSurfaceVariant = Color(0xFF5D6F84),
+    outline = Color(0xFF8DA4B8),
+    outlineVariant = Color(0xFFCBD6E2),
+    error = Color(0xFFC33B45),
+)
+
 private val deviceStateSaver = Saver<androidx.compose.runtime.MutableState<DeviceDto?>, List<String>>(
     save = { state ->
         state.value?.let { device ->
@@ -125,6 +157,8 @@ private val deviceStateSaver = Saver<androidx.compose.runtime.MutableState<Devic
 fun WrtMonitorApp() {
     val context = LocalContext.current
     val sessionStore = remember { SessionStore(context) }
+    val systemDarkTheme = isSystemInDarkTheme()
+    var isDarkTheme by remember { mutableStateOf(sessionStore.darkTheme ?: systemDarkTheme) }
     val initialServerUrl = remember {
         sessionStore.serverUrl.takeIf(String::isNotBlank)?.let { stored ->
             runCatching { normalizePairingServerUrl(stored) }.getOrElse {
@@ -186,19 +220,7 @@ fun WrtMonitorApp() {
     }
 
     MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFF35B9D5),
-            secondary = Color(0xFF73D596),
-            tertiary = Color(0xFFF5BD4F),
-            background = Color(0xFF0B1018),
-            surface = Color(0xFF121B28),
-            surfaceVariant = Color(0xFF172234),
-            onPrimary = Color(0xFF041116),
-            onBackground = Color(0xFFE8EEF7),
-            onSurface = Color(0xFFE8EEF7),
-            outline = Color(0xFF36506D),
-            outlineVariant = Color(0xFF263A51),
-        ),
+        colorScheme = if (isDarkTheme) DarkColors else LightColors,
         shapes = Shapes(
             small = RoundedCornerShape(4.dp),
             medium = RoundedCornerShape(8.dp),
@@ -421,6 +443,11 @@ fun WrtMonitorApp() {
                         Tab.Settings -> AppSettingsScreen(
                             currentServerUrl = serverUrl,
                             accessToken = accessToken,
+                            isDarkTheme = isDarkTheme,
+                            onThemeChange = { enabled ->
+                                isDarkTheme = enabled
+                                sessionStore.darkTheme = enabled
+                            },
                             onSave = { value ->
                                 val normalized = normalizePairingServerUrl(value)
                                 sessionStore.serverUrl = normalized

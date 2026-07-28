@@ -23,10 +23,18 @@
       <span class="status status--{{ device.status|lower }}">{{ device.status|status_label }}</span>
       <span class="router-card__arrow">&rarr;</span>
     </a>
-    <form class="router-card__action" method="post" action="/devices/{{ device.id }}/delete" onsubmit="return confirm('Удалить роутер безвозвратно? Будут удалены устройство, telemetry, команды и связанная история. Агент потеряет доступ к серверу.');">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="icon-button icon-button--danger" type="submit" title="Удалить роутер и все его данные" aria-label="Удалить роутер">&#128465;</button>
-    </form>
+    <div class="router-card__actions">
+      <form method="post" action="/devices/{{ device.id }}/web-command?section=overview" onsubmit="return confirm('Перезагрузить роутер? Связь пропадёт на несколько минут.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="command_type" value="router.reboot">
+        <input type="hidden" name="confirmed" value="true">
+        <button class="button button--secondary button--small router-card__reboot" type="submit" title="Перезагрузить роутер"><span aria-hidden="true">↻</span><span class="router-card__action-label">Перезагрузить</span></button>
+      </form>
+      <form method="post" action="/devices/{{ device.id }}/delete" onsubmit="return confirm('Удалить роутер безвозвратно? Будут удалены устройство, telemetry, команды и связанная история. Агент потеряет доступ к серверу.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="icon-button icon-button--danger" type="submit" title="Удалить роутер и все его данные" aria-label="Удалить роутер">&#128465;</button>
+      </form>
+    </div>
   </article>
   {% else %}
   <div class="empty-state card"><h2>Роутеров пока нет</h2><p>Установите агент на OpenWrt и подключите его к этому серверу.</p></div>
