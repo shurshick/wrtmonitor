@@ -363,6 +363,23 @@ openvpn_render_configs() {
     uci commit openvpn
 }
 
+command_requires_state_refresh() {
+    case "$1" in
+        wifi.status|network.interfaces|diagnostics.run|maintenance.logs.read|maintenance.backup.create|maintenance.diagnostics.bundle|vpn.wireguard.export_peer|agent.status|agent.update|agent.rollback|agent.disconnect) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+refresh_state_after_command() {
+    command_requires_state_refresh "$1" || return 0
+    if telemetry >/dev/null 2>&1; then
+        log_notice "state refreshed after $1"
+        return 0
+    fi
+    log_notice "state refresh failed after $1"
+    return 1
+}
+
 execute_command() {
     command_id="$1"
     command_type="$2"
@@ -1258,6 +1275,9 @@ execute_command() {
         else
             result="$(transaction_failure_result "$command_id" "configuration command failed and rollback failed" "rollback_failed")"
         fi
+    fi
+    if [ "$status" = "done" ] || [ "$status" = "success" ]; then
+        refresh_state_after_command "$command_type" || true
     fi
     report_command_result "$command_id" "$status" "$result" >/dev/null || true
     if [ "$disconnect_after" = "1" ] && [ "$status" = "done" ]; then

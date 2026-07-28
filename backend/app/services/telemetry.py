@@ -38,24 +38,24 @@ def record_device_telemetry_metric(
     db: Session, device_id: UUID, payload: dict[str, Any], created_at: datetime
 ) -> DeviceTelemetryMetric:
     summary = build_telemetry_summary(payload)
-    rx_bytes = _safe_int(summary.get("traffic_rx_bytes"))
-    tx_bytes = _safe_int(summary.get("traffic_tx_bytes"))
+    rx_bytes = _optional_int(summary.get("traffic_rx_bytes"))
+    tx_bytes = _optional_int(summary.get("traffic_tx_bytes"))
     previous = db.scalars(
         select(DeviceTelemetryMetric)
         .where(DeviceTelemetryMetric.device_id == device_id)
         .order_by(DeviceTelemetryMetric.created_at.desc())
         .limit(1)
     ).first()
-    rx_bps = tx_bps = 0
+    rx_bps = tx_bps = None
     if previous is not None:
         elapsed = (created_at - previous.created_at).total_seconds()
         if elapsed > 0:
-            if rx_bytes >= previous.rx_bytes:
+            if rx_bytes is not None and previous.rx_bytes is not None and rx_bytes >= previous.rx_bytes:
                 rx_bps = round((rx_bytes - previous.rx_bytes) * 8 / elapsed)
-            if tx_bytes >= previous.tx_bytes:
+            if tx_bytes is not None and previous.tx_bytes is not None and tx_bytes >= previous.tx_bytes:
                 tx_bps = round((tx_bytes - previous.tx_bytes) * 8 / elapsed)
-    memory_total = _safe_int(summary.get("memory_total_mb"))
-    memory_available = _safe_int(summary.get("memory_available_mb"))
+    memory_total = _optional_int(summary.get("memory_total_mb"))
+    memory_available = _optional_int(summary.get("memory_available_mb"))
     network = normalize_network_summary(payload)
     wifi = normalize_wifi_summary(payload)
     metric = DeviceTelemetryMetric(
@@ -65,17 +65,17 @@ def record_device_telemetry_metric(
         tx_bps=tx_bps,
         rx_bytes=rx_bytes,
         tx_bytes=tx_bytes,
-        load_1m=_safe_float(summary.get("load_1m")),
+        load_1m=_optional_float(summary.get("load_1m")),
         memory_percent=round(
             100 * max(0, memory_total - memory_available) / memory_total, 1
         )
-        if memory_total
-        else 0,
-        client_count=_safe_int(summary.get("client_count")),
+        if memory_total and memory_available is not None
+        else None,
+        client_count=_optional_int(summary.get("client_count")),
         interfaces={"items": network.get("interfaces") or []},
         wifi={
             "radios": wifi.get("radios") or [],
-            "station_count": wifi.get("station_count") or 0,
+            "station_count": wifi.get("station_count"),
         },
         created_at=created_at,
     )
@@ -149,8 +149,8 @@ def metric_history_point(row: DeviceTelemetryMetric) -> dict[str, Any]:
         "tx_bps": row.tx_bps,
         "rx_bytes": row.rx_bytes,
         "tx_bytes": row.tx_bytes,
-        "load_1m": round(row.load_1m, 2),
-        "memory_percent": round(row.memory_percent, 1),
+        "load_1m": round(row.load_1m, 2) if row.load_1m is not None else None,
+        "memory_percent": round(row.memory_percent, 1) if row.memory_percent is not None else None,
         "client_count": row.client_count,
     }
 
@@ -165,22 +165,27 @@ def downsample_telemetry_metrics(
     for start in range(0, len(rows), bucket_size):
         bucket = rows[start : start + bucket_size]
         last = bucket[-1]
-        count = len(bucket)
         points.append(
             {
                 "created_at": last.created_at.isoformat(),
-                "rx_bps": round(sum(row.rx_bps for row in bucket) / count),
-                "tx_bps": round(sum(row.tx_bps for row in bucket) / count),
+                "rx_bps": _average_optional(bucket, "rx_bps", 0),
+                "tx_bps": _average_optional(bucket, "tx_bps", 0),
                 "rx_bytes": last.rx_bytes,
                 "tx_bytes": last.tx_bytes,
-                "load_1m": round(sum(row.load_1m for row in bucket) / count, 2),
-                "memory_percent": round(
-                    sum(row.memory_percent for row in bucket) / count, 1
-                ),
-                "client_count": round(sum(row.client_count for row in bucket) / count),
+                "load_1m": _average_optional(bucket, "load_1m", 2),
+                "memory_percent": _average_optional(bucket, "memory_percent", 1),
+                "client_count": _average_optional(bucket, "client_count", 0),
             }
         )
     return points
+
+
+def _average_optional(rows: list[DeviceTelemetryMetric], field: str, digits: int) -> int | float | None:
+    values = [value for row in rows if (value := getattr(row, field)) is not None]
+    if not values:
+        return None
+    result = round(sum(values) / len(values), digits)
+    return int(result) if digits == 0 else result
 
 
 def telemetry_alerts(
@@ -405,62 +410,47 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 }
             )
     normalized_radios: list[dict[str, Any]] = []
-    for index, radio in enumerate(radios):
+    for radio in radios:
         if not isinstance(radio, dict):
             continue
         interfaces = radio.get("interfaces") or []
         normalized_interfaces: list[dict[str, Any]] = []
-        for iface_index, iface in enumerate(interfaces):
+        for iface in interfaces:
             if not isinstance(iface, dict):
                 continue
             normalized_interfaces.append(
                 {
-                    "id": iface.get("id")
-                    or f"default_{radio.get('name', f'radio{index}')}_{iface_index}",
-                    "index": iface.get("index", iface_index),
+                    "id": iface.get("id"),
+                    "index": iface.get("index"),
                     "ssid": iface.get("ssid"),
-                    "enabled": bool(iface.get("enabled", True)),
+                    "enabled": iface.get("enabled"),
                     "encryption": iface.get("encryption"),
                     "mode": iface.get("mode"),
                     "network": iface.get("network"),
-                    "hidden": bool(iface.get("hidden", False)),
-                    "isolate": bool(iface.get("isolate", False)),
-                    "ieee80211r": bool(iface.get("ieee80211r", False)),
-                    "ieee80211k": bool(iface.get("ieee80211k", False)),
-                    "bss_transition": bool(iface.get("bss_transition", False)),
+                    "hidden": iface.get("hidden"),
+                    "isolate": iface.get("isolate"),
+                    "ieee80211r": iface.get("ieee80211r"),
+                    "ieee80211k": iface.get("ieee80211k"),
+                    "bss_transition": iface.get("bss_transition"),
                     "mobility_domain": iface.get("mobility_domain"),
                     "mesh_id": iface.get("mesh_id"),
                 }
             )
-        if not normalized_interfaces and radio.get("ssid"):
-            ssids = radio.get("ssid")
-            if not isinstance(ssids, list):
-                ssids = [ssids]
-            for iface_index, ssid in enumerate(ssids):
-                normalized_interfaces.append(
-                    {
-                        "id": f"default_{radio.get('name', f'radio{index}')}_{iface_index}",
-                        "index": iface_index,
-                        "ssid": ssid,
-                        "enabled": bool(radio.get("up", True)),
-                        "encryption": radio.get("encryption"),
-                    }
-                )
         normalized_radios.append(
             {
-                "id": radio.get("id") or radio.get("name") or f"radio{index}",
-                "name": radio.get("name") or f"radio{index}",
-                "up": bool(radio.get("up", False)),
-                "disabled": bool(radio.get("disabled", False)),
+                "id": radio.get("id") or radio.get("name"),
+                "name": radio.get("name"),
+                "up": radio.get("up"),
+                "disabled": radio.get("disabled"),
                 "band": radio.get("band"),
                 "channel": radio.get("channel"),
                 "country": radio.get("country"),
                 "htmode": radio.get("htmode"),
                 "txpower": radio.get("txpower"),
                 "interfaces": normalized_interfaces,
-                "ssid": radio.get("ssid") or [],
+                "ssid": radio.get("ssid"),
                 "encryption": radio.get("encryption"),
-                "schedule": radio.get("schedule") or {"enabled": False},
+                "schedule": radio.get("schedule"),
             }
         )
     has_station_rates = any(
@@ -472,12 +462,12 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
         for item in normalized_stations
     )
     return {
-        "available": bool(wifi.get("available", False)),
+        "available": wifi.get("available"),
         "radios": normalized_radios,
         "stations": normalized_stations,
-        "station_count": len(normalized_stations),
-        "has_station_rates": has_station_rates,
-        "has_station_airtime": has_station_airtime,
+        "station_count": len(normalized_stations) if "stations" in wifi else None,
+        "has_station_rates": has_station_rates if "stations" in wifi else None,
+        "has_station_airtime": has_station_airtime if "stations" in wifi else None,
     }
 
 
@@ -555,7 +545,7 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
         normalized_interfaces.append(
             {
                 "interface": item.get("interface") or item.get("name"),
-                "up": bool(item.get("up", False)),
+                "up": item.get("up"),
                 "proto": item.get("proto"),
                 "device": item.get("l3_device") or item.get("device"),
                 "ipv4": normalized_ipv4,
@@ -587,16 +577,15 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
     perimeter = payload.get("perimeter") or {}
     return {
         "interfaces": normalized_interfaces,
-        "topology": network.get("topology")
-        or {"segments": [], "bridges": [], "vlans": []},
-        "dns_privacy": network.get("dns_privacy") or {},
-        "routes": perimeter.get("routes") or [],
-        "firewall_zones": perimeter.get("firewall_zones") or [],
-        "firewall_forwardings": perimeter.get("firewall_forwardings") or [],
-        "firewall_rules": perimeter.get("firewall_rules") or [],
-        "mwan3": perimeter.get("mwan3") or {"service": "unavailable"},
-        "ddns": perimeter.get("ddns") or {"service": "unavailable", "services": []},
-        "upnp": perimeter.get("upnp") or {"service": "unavailable", "mappings": []},
+        "topology": network.get("topology"),
+        "dns_privacy": network.get("dns_privacy"),
+        "routes": perimeter.get("routes"),
+        "firewall_zones": perimeter.get("firewall_zones"),
+        "firewall_forwardings": perimeter.get("firewall_forwardings"),
+        "firewall_rules": perimeter.get("firewall_rules"),
+        "mwan3": perimeter.get("mwan3"),
+        "ddns": perimeter.get("ddns"),
+        "upnp": perimeter.get("upnp"),
     }
 
 
@@ -837,8 +826,8 @@ def normalize_system_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "conntrack_max": conntrack.get("max"),
         "zonename": time_config.get("zonename"),
         "timezone": time_config.get("timezone"),
-        "ntp_enabled": bool(time_config.get("ntp_enabled", False)),
-        "ntp_servers": time_config.get("ntp_servers") or [],
+        "ntp_enabled": time_config.get("ntp_enabled"),
+        "ntp_servers": time_config.get("ntp_servers"),
         "services": normalize_services_summary(payload),
     }
 
@@ -859,22 +848,19 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "uptime_seconds": system.get("uptime"),
         "load_1m": system.get("load"),
-        "memory_total_mb": int(memory.get("total_kb", 0) or 0) // 1024,
-        "memory_available_mb": int(
-            memory.get("available_kb", memory.get("free_kb", 0)) or 0
-        )
-        // 1024,
+        "memory_total_mb": _kb_to_mb(memory.get("total_kb")),
+        "memory_available_mb": _kb_to_mb(memory.get("available_kb", memory.get("free_kb"))),
         "cpu_cores": cpu.get("cores"),
-        "storage_total_mb": int(storage.get("total_kb", 0) or 0) // 1024,
-        "storage_available_mb": int(storage.get("available_kb", 0) or 0) // 1024,
-        "temperature_celsius": (thermal.get("milli_celsius") or 0) / 1000
-        if thermal.get("available")
-        else None,
+        "storage_total_mb": _kb_to_mb(storage.get("total_kb")),
+        "storage_available_mb": _kb_to_mb(storage.get("available_kb")),
+        "temperature_celsius": _millidegrees_to_celsius(
+            thermal.get("milli_celsius") if thermal.get("available") else None
+        ),
         "traffic_rx_bytes": traffic.get("rx_bytes"),
         "traffic_tx_bytes": traffic.get("tx_bytes"),
-        "wifi_available": bool(wifi.get("available", False)),
-        "wifi_radio_count": len(radios),
-        "network_interface_count": len(interfaces),
+        "wifi_available": wifi.get("available"),
+        "wifi_radio_count": len(radios) if payload.get("wifi") is not None else None,
+        "network_interface_count": len(interfaces) if payload.get("network") is not None else None,
         "agent_capability_count": len(extract_agent_capabilities(payload)),
         "client_count": clients["online_count"],
         "hostname": system_summary.get("hostname"),
@@ -882,3 +868,31 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "conntrack_count": system_summary.get("conntrack_count"),
         "conntrack_max": system_summary.get("conntrack_max"),
     }
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _kb_to_mb(value: Any) -> int | None:
+    parsed = _optional_int(value)
+    return parsed // 1024 if parsed is not None else None
+
+
+def _millidegrees_to_celsius(value: Any) -> float | None:
+    parsed = _optional_float(value)
+    return parsed / 1000 if parsed is not None else None

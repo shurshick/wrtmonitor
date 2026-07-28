@@ -125,6 +125,7 @@ def prepare_router() -> str:
                 json={
                     "device_id": device_id,
                     "telemetry": {
+                        "schema_version": 2,
                         "system": {
                             "uptime": 86320 + sample * 10,
                             "load": str(0.08 + sample * 0.02),
@@ -149,6 +150,7 @@ def prepare_router() -> str:
             json={
                 "device_id": device_id,
                 "telemetry": {
+                    "schema_version": 2,
                     "agent": {
                         "version": "0.5.0",
                         "status": "running",

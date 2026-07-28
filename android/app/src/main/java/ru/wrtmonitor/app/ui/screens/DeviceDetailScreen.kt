@@ -233,7 +233,7 @@ private fun RouterOverview(
     val availableMb = memory?.optLong("available_kb", 0)?.div(1024) ?: 0
     val totalMb = memory?.optLong("total_kb", 0)?.div(1024) ?: 0
     val memoryPercent = if (totalMb > 0) ((totalMb - availableMb).toDouble() / totalMb * 100).coerceIn(0.0, 100.0) else 0.0
-    val load = system?.optString("load")?.toDoubleOrNull() ?: history.lastOrNull()?.load1m ?: 0.0
+    val load = system?.optString("load")?.toDoubleOrNull() ?: history.lastOrNull()?.load1m
 
     val healthy = device.status == "online" && !telemetry.isStale
     SectionCard(
@@ -335,13 +335,13 @@ private fun TrafficMonitorCard(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MetricTile(
                 stringResource(R.string.receive_rate),
-                formatTrafficRate(latest?.rxBps ?: 0),
+                latest?.rxBps?.let(::formatTrafficRate) ?: stringResource(R.string.no_data),
                 Modifier.weight(1f),
                 MaterialTheme.colorScheme.primary,
             )
             MetricTile(
                 stringResource(R.string.transmit_rate),
-                formatTrafficRate(latest?.txBps ?: 0),
+                latest?.txBps?.let(::formatTrafficRate) ?: stringResource(R.string.no_data),
                 Modifier.weight(1f),
                 MaterialTheme.colorScheme.secondary,
             )
@@ -457,37 +457,37 @@ private fun TelemetryChart(
             TelemetryChartSeries(
                 stringResource(R.string.telemetry_metric_load),
                 MaterialTheme.colorScheme.tertiary,
-                points.map { it.load1m.coerceFinite() },
+                points.map { it.load1m ?: Double.NaN },
             ),
         )
         "memory" -> listOf(
             TelemetryChartSeries(
                 stringResource(R.string.telemetry_metric_memory),
                 secondary,
-                points.map { it.memoryPercent.coerceFinite().coerceIn(0.0, 100.0) },
+                points.map { it.memoryPercent?.coerceIn(0.0, 100.0) ?: Double.NaN },
             ),
         )
         "clients" -> listOf(
             TelemetryChartSeries(
                 stringResource(R.string.telemetry_metric_clients),
                 primary,
-                points.map { it.clientCount.coerceAtLeast(0).toDouble() },
+                points.map { it.clientCount?.coerceAtLeast(0)?.toDouble() ?: Double.NaN },
             ),
         )
         else -> listOf(
             TelemetryChartSeries(
                 stringResource(R.string.receive_rate),
                 primary,
-                points.map { it.rxBps.coerceAtLeast(0).toDouble() },
+                points.map { it.rxBps?.coerceAtLeast(0)?.toDouble() ?: Double.NaN },
             ),
             TelemetryChartSeries(
                 stringResource(R.string.transmit_rate),
                 secondary,
-                points.map { it.txBps.coerceAtLeast(0).toDouble() },
+                points.map { it.txBps?.coerceAtLeast(0)?.toDouble() ?: Double.NaN },
             ),
         )
     }
-    val observedMaximum = series.maxOfOrNull { item -> item.values.maxOrNull() ?: 0.0 } ?: 0.0
+    val observedMaximum = series.flatMap { it.values }.filter(Double::isFinite).maxOrNull() ?: 0.0
     val axisMaximum = if (metric == "memory") 100.0 else niceTelemetryAxisMaximum(observedMaximum)
     val axisTicks = (3 downTo 0).map { axisMaximum * it / 3.0 }
     Box(
@@ -506,7 +506,7 @@ private fun TelemetryChart(
                         Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(8.dp).background(item.color, CircleShape))
                             Text(
-                                "${item.label}: ${formatTelemetryAxisValue(item.values.lastOrNull() ?: 0.0, metric)}",
+                                "${item.label}: ${item.values.lastOrNull()?.takeIf(Double::isFinite)?.let { formatTelemetryAxisValue(it, metric) } ?: stringResource(R.string.no_data)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -539,10 +539,16 @@ private fun TelemetryChart(
                         }
                         series.forEach { item ->
                             val path = Path()
+                            var drawing = false
                             item.values.forEachIndexed { index, value ->
+                                if (!value.isFinite()) {
+                                    drawing = false
+                                    return@forEachIndexed
+                                }
                                 val x = size.width * index / (item.values.size - 1).toFloat()
                                 val y = size.height - size.height * value.toFloat() / axisMaximum.toFloat()
-                                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                                if (!drawing) path.moveTo(x, y) else path.lineTo(x, y)
+                                drawing = true
                             }
                             drawPath(path, item.color, style = Stroke(3f, cap = StrokeCap.Round))
                         }

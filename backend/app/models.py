@@ -170,13 +170,13 @@ class DeviceTelemetryMetric(Base):
         ForeignKey("devices.id", ondelete="CASCADE"),
         nullable=False,
     )
-    rx_bps: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
-    tx_bps: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
-    rx_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
-    tx_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
-    load_1m: Mapped[float] = mapped_column(Float, nullable=False, default=0)
-    memory_percent: Mapped[float] = mapped_column(Float, nullable=False, default=0)
-    client_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rx_bps: Mapped[int | None] = mapped_column(BigInteger)
+    tx_bps: Mapped[int | None] = mapped_column(BigInteger)
+    rx_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    tx_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    load_1m: Mapped[float | None] = mapped_column(Float)
+    memory_percent: Mapped[float | None] = mapped_column(Float)
+    client_count: Mapped[int | None] = mapped_column(Integer)
     interfaces: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     wifi: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(

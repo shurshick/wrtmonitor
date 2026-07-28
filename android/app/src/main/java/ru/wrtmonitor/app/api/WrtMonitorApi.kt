@@ -8,6 +8,7 @@ import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
+import ru.wrtmonitor.app.api.dto.DataStateDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
@@ -192,7 +193,15 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 createdAt = json.optString("created_at").takeIf { it.isNotBlank() && it != "null" },
                 ageSeconds = if (json.isNull("age_seconds")) null else json.optLong("age_seconds"),
                 isStale = json.optBoolean("is_stale"),
-                source = json.optString("source", "agent"),
+                source = json.optString("source").takeIf { it.isNotBlank() && it != "null" },
+                dataState = json.optJSONObject("data_state").let { state ->
+                    DataStateDto(
+                        kind = state?.optString("kind", "error") ?: "error",
+                        reason = state?.optString("reason")?.takeIf { it.isNotBlank() && it != "null" },
+                        observedAt = state?.optString("observed_at")?.takeIf { it.isNotBlank() && it != "null" },
+                        ageSeconds = state?.takeUnless { it.isNull("age_seconds") }?.optLong("age_seconds"),
+                    )
+                },
                 payload = json.optJSONObject("telemetry"),
                 agent = json.optJSONObject("agent")?.let(::parseAgentStatus),
                 wifi = json.optJSONObject("wifi"),
@@ -215,13 +224,13 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
             points.getJSONObject(index).let { point ->
                 TelemetryHistoryPointDto(
                     createdAt = point.optString("created_at"),
-                    rxBps = point.optLong("rx_bps"),
-                    txBps = point.optLong("tx_bps"),
-                    rxBytes = point.optLong("rx_bytes"),
-                    txBytes = point.optLong("tx_bytes"),
-                    load1m = point.optDouble("load_1m"),
-                    memoryPercent = point.optDouble("memory_percent"),
-                    clientCount = point.optInt("client_count"),
+                    rxBps = point.optLong("rx_bps").takeIf { !point.isNull("rx_bps") },
+                    txBps = point.optLong("tx_bps").takeIf { !point.isNull("tx_bps") },
+                    rxBytes = point.optLong("rx_bytes").takeIf { !point.isNull("rx_bytes") },
+                    txBytes = point.optLong("tx_bytes").takeIf { !point.isNull("tx_bytes") },
+                    load1m = point.optDouble("load_1m").takeIf { !point.isNull("load_1m") },
+                    memoryPercent = point.optDouble("memory_percent").takeIf { !point.isNull("memory_percent") },
+                    clientCount = point.optInt("client_count").takeIf { !point.isNull("client_count") },
                 )
             }
         }

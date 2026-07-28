@@ -54,7 +54,8 @@ data class TelemetryDto(
     val createdAt: String?,
     val ageSeconds: Long?,
     val isStale: Boolean,
-    val source: String,
+    val source: String?,
+    val dataState: DataStateDto,
     val payload: JSONObject?,
     val agent: AgentStatusDto? = null,
     val wifi: JSONObject? = null,
@@ -65,15 +66,22 @@ data class TelemetryDto(
     val alerts: JSONArray? = null,
 )
 
+data class DataStateDto(
+    val kind: String,
+    val reason: String?,
+    val observedAt: String?,
+    val ageSeconds: Long?,
+)
+
 data class TelemetryHistoryPointDto(
     val createdAt: String,
-    val rxBps: Long,
-    val txBps: Long,
-    val rxBytes: Long,
-    val txBytes: Long,
-    val load1m: Double,
-    val memoryPercent: Double,
-    val clientCount: Int,
+    val rxBps: Long?,
+    val txBps: Long?,
+    val rxBytes: Long?,
+    val txBytes: Long?,
+    val load1m: Double?,
+    val memoryPercent: Double?,
+    val clientCount: Int?,
 )
 
 data class AgentStatusDto(

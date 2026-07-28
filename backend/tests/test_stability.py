@@ -26,9 +26,13 @@ def test_unknown_telemetry_contract_is_rejected() -> None:
         )
 
 
-def test_legacy_telemetry_contract_remains_supported() -> None:
-    payload = TelemetryRequest(device_id=uuid4(), telemetry={"system": {}})
-    assert payload.telemetry == {"system": {}}
+def test_telemetry_contract_requires_explicit_current_schema() -> None:
+    with pytest.raises(ValidationError):
+        TelemetryRequest(device_id=uuid4(), telemetry={"system": {}})
+    payload = TelemetryRequest(
+        device_id=uuid4(), telemetry={"schema_version": 2, "system": {}}
+    )
+    assert payload.telemetry["schema_version"] == 2
 
 
 def test_idempotency_key_returns_the_existing_command() -> None:

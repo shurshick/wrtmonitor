@@ -26,6 +26,7 @@ from ..services.telemetry import (
     record_device_telemetry_metric,
     telemetry_alerts,
 )
+from ..services.data_state import subsystem_data_state, telemetry_data_state
 
 
 router = APIRouter()
@@ -61,32 +62,58 @@ def latest_device_telemetry(
         .limit(1)
     ).first()
     if not telemetry:
+        state = telemetry_data_state(
+            None,
+            observed_at=None,
+            age_seconds=None,
+            stale_after_seconds=TELEMETRY_STALE_SECONDS,
+        )
         return {
             "device_id": str(device_id),
             "telemetry": None,
             "created_at": None,
             "age_seconds": None,
-            "is_stale": False,
-            "source": "agent",
+            "is_stale": True,
+            "source": None,
+            "data_state": state,
             "summary": None,
-            "agent": {},
-            "wifi": {"available": False, "radios": []},
-            "network": {"interfaces": []},
-            "clients": {
-                "count": 0,
-                "online_count": 0,
-                "recent_count": 0,
-                "offline_count": 0,
-                "items": [],
-            },
-            "system": {},
-            "services": {},
+            "agent": None,
+            "wifi": None,
+            "network": None,
+            "clients": None,
+            "system": None,
+            "services": None,
             "alerts": telemetry_alerts(None, None),
         }
     age_seconds = max(
         0, int((datetime.now(UTC) - telemetry.created_at).total_seconds())
     )
     clients = client_inventory_summary(db, device_id)
+    state = telemetry_data_state(
+        telemetry.payload,
+        observed_at=telemetry.created_at,
+        age_seconds=age_seconds,
+        stale_after_seconds=TELEMETRY_STALE_SECONDS,
+    )
+    wifi = normalize_wifi_summary(telemetry.payload)
+    network = normalize_network_summary(telemetry.payload)
+    system = normalize_system_summary(telemetry.payload)
+    services = normalize_services_summary(telemetry.payload)
+    wifi["data_state"] = subsystem_data_state(
+        telemetry.payload.get("wifi"),
+        parent_state=state,
+        available=wifi.get("available"),
+        configured=bool(wifi.get("radios")),
+    )
+    network["data_state"] = subsystem_data_state(
+        telemetry.payload.get("network"), parent_state=state, configured=bool(network.get("interfaces"))
+    )
+    clients["data_state"] = subsystem_data_state(
+        telemetry.payload.get("clients"), parent_state=state
+    )
+    system["data_state"] = subsystem_data_state(
+        telemetry.payload.get("system"), parent_state=state
+    )
     return {
         "device_id": str(device_id),
         "telemetry": telemetry.payload,
@@ -94,13 +121,14 @@ def latest_device_telemetry(
         "age_seconds": age_seconds,
         "is_stale": age_seconds > TELEMETRY_STALE_SECONDS,
         "source": "agent",
+        "data_state": state,
         "summary": build_telemetry_summary(telemetry.payload),
         "agent": get_latest_agent_status(db, device_id),
-        "wifi": normalize_wifi_summary(telemetry.payload),
-        "network": normalize_network_summary(telemetry.payload),
+        "wifi": wifi,
+        "network": network,
         "clients": clients,
-        "system": normalize_system_summary(telemetry.payload),
-        "services": normalize_services_summary(telemetry.payload),
+        "system": system,
+        "services": services,
         "alerts": telemetry_alerts(telemetry.payload, age_seconds),
     }
 

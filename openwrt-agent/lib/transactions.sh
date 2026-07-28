@@ -161,6 +161,8 @@ verify_transaction() {
         if curl -fsS --connect-timeout 5 --max-time 10 "$(server_url)/health" >/dev/null 2>&1; then
             transaction_set_state "$command_id" "confirmed"
             result="$(transaction_success_result "$command_id")"
+            command_type="$(transaction_meta_value "$command_id" command_type)"
+            refresh_state_after_command "$command_type" || true
             report_command_result "$command_id" success "$result" >/dev/null || true
             return 0
         fi

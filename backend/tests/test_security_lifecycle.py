@@ -18,8 +18,8 @@ def test_telemetry_summary_handles_missing_wifi():
     summary = build_telemetry_summary(
         {"system": {"uptime": 5, "memory": {"total_kb": 2048}}}
     )
-    assert summary["wifi_available"] is False
-    assert summary["wifi_radio_count"] == 0
+    assert summary["wifi_available"] is None
+    assert summary["wifi_radio_count"] is None
     assert summary["memory_total_mb"] == 2
 
 
