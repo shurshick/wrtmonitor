@@ -73,6 +73,38 @@ verify_command_postcondition() {
                 verify_uci_value "dhcp.$interface.limit" "$limit" && \
                 verify_uci_value "dhcp.$interface.leasetime" "$lease" || verified=1
             ;;
+        network.set_ipv6)
+            interface="$(json_get_string "$payload_file" '@.interface')"
+            enabled="$(json_get_bool "$payload_file" '@.enabled')"
+            if [ "$enabled" = true ]; then
+                assignment="$(json_get_number "$payload_file" '@.assignment_length')"
+                verify_uci_value "network.$interface.ip6assign" "$assignment" || verified=1
+            else
+                [ -z "$(uci -q get "network.$interface.ip6assign" 2>/dev/null || true)" ] || verified=1
+            fi
+            ;;
+        network.set_vlan)
+            section="$(json_get_string "$payload_file" '@.section')"
+            device="$(json_get_string "$payload_file" '@.device')"
+            vlan_id="$(json_get_number "$payload_file" '@.vlan_id')"
+            if [ -z "$section" ]; then
+                vlan_key="$(printf '%s' "$device" | tr -c 'A-Za-z0-9_' '_')"
+                section="wrtmonitor_vlan_${vlan_key}_$vlan_id"
+            fi
+            verify_uci_value "network.$section.device" "$device" && \
+                verify_uci_value "network.$section.vlan" "$vlan_id" || verified=1
+            ;;
+        network.set_multiwan)
+            enabled="$(json_get_bool "$payload_file" '@.enabled')"
+            primary="$(json_get_string "$payload_file" '@.primary_interface')"
+            secondary="$(json_get_string "$payload_file" '@.secondary_interface')"
+            expected_enabled=0
+            [ "$enabled" = true ] && expected_enabled=1
+            verify_uci_value mwan3.globals.enabled "$expected_enabled" && \
+                verify_uci_value mwan3.wrtmonitor_primary.interface "$primary" && \
+                verify_uci_value mwan3.wrtmonitor_secondary.interface "$secondary" && \
+                verify_uci_value mwan3.wrtmonitor_default.use_policy wrtmonitor_policy || verified=1
+            ;;
     esac
     rm -f "$payload_file"
     [ "$verified" = 0 ]

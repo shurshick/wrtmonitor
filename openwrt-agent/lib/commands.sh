@@ -369,11 +369,53 @@ execute_command() {
             case "$vlan_section" in ''|*[!A-Za-z0-9_.@\[\]-]*) status=failed; result="$(command_failed_result "invalid VLAN section")" ;; *) if uci -q delete "network.$vlan_section" && uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "bridge VLAN deleted")"; else status=failed; result="$(command_failed_result "VLAN section not found")"; fi ;; esac
             ;;
         network.set_multiwan)
-            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; multi_enabled="$(json_get_bool "$payload_file" '@.enabled')"; primary="$(json_get_string "$payload_file" '@.primary_interface')"; secondary="$(json_get_string "$payload_file" '@.secondary_interface')"; primary_metric="$(json_get_number "$payload_file" '@.primary_metric')"; secondary_metric="$(json_get_number "$payload_file" '@.secondary_metric')"; rm -f "$payload_file"
+            payload_file=/tmp/wrtmonitor-command-payload
+            printf '%s' "$command_payload" >"$payload_file"
+            multi_enabled="$(json_get_bool "$payload_file" '@.enabled')"
+            primary="$(json_get_string "$payload_file" '@.primary_interface')"
+            secondary="$(json_get_string "$payload_file" '@.secondary_interface')"
+            primary_metric="$(json_get_number "$payload_file" '@.primary_metric')"
+            secondary_metric="$(json_get_number "$payload_file" '@.secondary_metric')"
+            track_ips="$(jsonfilter -i "$payload_file" -e '@.track_ips[*]' 2>/dev/null || true)"
+            check_interval="$(json_get_number "$payload_file" '@.check_interval')"
+            failure_interval="$(json_get_number "$payload_file" '@.failure_interval')"
+            recovery_interval="$(json_get_number "$payload_file" '@.recovery_interval')"
+            rm -f "$payload_file"
+            backup_file="$(backup_config mwan3 "$command_id" "$command_type" || true)"
+            if [ -z "$backup_file" ]; then
+                status=failed
+                result="$(command_failed_result "failed to create mwan3 backup")"
+            else
+            for monitored_interface in "$primary" "$secondary"; do
+                uci set "mwan3.$monitored_interface=interface"
+                uci set "mwan3.$monitored_interface.enabled=1"
+                uci set "mwan3.$monitored_interface.family=ipv4"
+                uci set "mwan3.$monitored_interface.reliability=1"
+                uci set "mwan3.$monitored_interface.count=1"
+                uci set "mwan3.$monitored_interface.timeout=2"
+                uci set "mwan3.$monitored_interface.interval=$check_interval"
+                uci set "mwan3.$monitored_interface.failure_interval=$check_interval"
+                uci set "mwan3.$monitored_interface.recovery_interval=$check_interval"
+                uci set "mwan3.$monitored_interface.down=$failure_interval"
+                uci set "mwan3.$monitored_interface.up=$recovery_interval"
+                uci -q delete "mwan3.$monitored_interface.track_ip" || true
+                printf '%s\n' "$track_ips" | while IFS= read -r track_ip; do
+                    [ -z "$track_ip" ] || uci add_list "mwan3.$monitored_interface.track_ip=$track_ip"
+                done
+            done
             uci set mwan3.wrtmonitor_primary=member; uci set "mwan3.wrtmonitor_primary.interface=$primary"; uci set "mwan3.wrtmonitor_primary.metric=$primary_metric"; uci set mwan3.wrtmonitor_primary.weight=1
             uci set mwan3.wrtmonitor_secondary=member; uci set "mwan3.wrtmonitor_secondary.interface=$secondary"; uci set "mwan3.wrtmonitor_secondary.metric=$secondary_metric"; uci set mwan3.wrtmonitor_secondary.weight=1
             uci set mwan3.wrtmonitor_policy=policy; uci -q delete mwan3.wrtmonitor_policy.use_member || true; uci add_list mwan3.wrtmonitor_policy.use_member=wrtmonitor_primary; uci add_list mwan3.wrtmonitor_policy.use_member=wrtmonitor_secondary; uci set "mwan3.globals.enabled=$( [ "$multi_enabled" = true ] && echo 1 || echo 0 )"
-            if uci commit mwan3 && /etc/init.d/mwan3 restart >/dev/null 2>&1; then result="$(command_success_result "multi-WAN policy updated")"; else status=failed; result="$(command_failed_result "failed to update multi-WAN")"; fi
+            uci set mwan3.wrtmonitor_default=rule
+            uci set mwan3.wrtmonitor_default.dest_ip=0.0.0.0/0
+            uci set mwan3.wrtmonitor_default.use_policy=wrtmonitor_policy
+            if uci commit mwan3 && /etc/init.d/mwan3 restart >/dev/null 2>&1; then
+                result="$(command_success_result "multi-WAN policy updated" "\"backup\":\"$(json_escape "$backup_file")\"")"
+            else
+                status=failed
+                result="$(command_failed_result "failed to update multi-WAN")"
+            fi
+            fi
             ;;
         network.set_route)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; route_name="$(json_get_string "$payload_file" '@.name')"; route_iface="$(json_get_string "$payload_file" '@.interface')"; route_target="$(json_get_string "$payload_file" '@.target')"; route_gateway="$(json_get_string "$payload_file" '@.gateway')"; route_metric="$(json_get_number "$payload_file" '@.metric')"; rm -f "$payload_file"; route_ref="wrtmonitor_route_$route_name"; case "$route_target" in *:*) route_type=route6 ;; *) route_type=route ;; esac

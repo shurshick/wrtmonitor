@@ -587,6 +587,10 @@ fun NetworkControlScreen(
     var multiWanEnabled by remember { mutableStateOf(true) }
     var primaryWan by remember { mutableStateOf("") }
     var secondaryWan by remember { mutableStateOf("") }
+    var multiWanTrackIps by remember { mutableStateOf("1.1.1.1, 8.8.8.8") }
+    var multiWanCheckInterval by remember { mutableStateOf("5") }
+    var multiWanDownChecks by remember { mutableStateOf("3") }
+    var multiWanUpChecks by remember { mutableStateOf("3") }
     var routeName by remember { mutableStateOf("") }
     var routeTarget by remember { mutableStateOf("") }
     var routeGateway by remember { mutableStateOf("") }
@@ -665,6 +669,24 @@ fun NetworkControlScreen(
                         interfaceName = wan?.optString("interface").orEmpty()
                         sqmInterface = wan?.optString("device").orEmpty()
                         primaryWan = wan?.optString("interface").orEmpty()
+                        val mwan = result.data.network?.optJSONObject("mwan3")
+                        multiWanEnabled = mwan?.optBoolean("enabled", false) == true
+                        val members = mwan?.optJSONArray("members")
+                        for (index in 0 until (members?.length() ?: 0)) {
+                            val member = members?.optJSONObject(index) ?: continue
+                            when (member.optString("role")) {
+                                "primary" -> {
+                                    primaryWan = member.optString("interface", primaryWan)
+                                    multiWanTrackIps = member.optJSONArray("track_ips")?.let { values ->
+                                        (0 until values.length()).joinToString(", ") { values.optString(it) }
+                                    }.orEmpty().ifBlank { multiWanTrackIps }
+                                    multiWanCheckInterval = member.optInt("interval", 5).toString()
+                                    multiWanDownChecks = member.optInt("down", 3).toString()
+                                    multiWanUpChecks = member.optInt("up", 3).toString()
+                                }
+                                "secondary" -> secondaryWan = member.optString("interface")
+                            }
+                        }
                         formInitialized = true
                     }
                 }
@@ -961,7 +983,13 @@ fun NetworkControlScreen(
             SwitchSettingRow(stringResource(R.string.multiwan_settings), checked = multiWanEnabled, onCheckedChange = { multiWanEnabled = it })
             OptionSelector(stringResource(R.string.primary_wan), primaryWan, interfaceOptions, { primaryWan = it })
             OptionSelector(stringResource(R.string.secondary_wan), secondaryWan, interfaceOptions, { secondaryWan = it })
-            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_multiwan", JSONObject().put("enabled", multiWanEnabled).put("primary_interface", primaryWan).put("secondary_interface", secondaryWan).put("primary_metric", 10).put("secondary_metric", 20), genericCommandQueued) }, Modifier.align(Alignment.End))
+            OutlinedTextField(multiWanTrackIps, { multiWanTrackIps = it }, label = { Text(stringResource(R.string.multiwan_track_ips)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(multiWanCheckInterval, { multiWanCheckInterval = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.multiwan_interval)) }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(multiWanDownChecks, { multiWanDownChecks = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.multiwan_down_checks)) }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(multiWanUpChecks, { multiWanUpChecks = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.multiwan_up_checks)) }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("network.set_multiwan", JSONObject().put("enabled", multiWanEnabled).put("primary_interface", primaryWan).put("secondary_interface", secondaryWan).put("primary_metric", 10).put("secondary_metric", 20).put("track_ips", multiWanTrackIps).put("check_interval", multiWanCheckInterval.toIntOrNull() ?: 5).put("failure_interval", multiWanDownChecks.toIntOrNull() ?: 3).put("recovery_interval", multiWanUpChecks.toIntOrNull() ?: 3), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = primaryWan.isNotBlank() && secondaryWan.isNotBlank())
         }
     }
     if (mode == NetworkScreenMode.Rules && capabilities["network.routes.configure"] == true) {

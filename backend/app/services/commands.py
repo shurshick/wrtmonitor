@@ -749,6 +749,14 @@ def _normalize_vlan_payload(
 
 
 def _normalize_multiwan_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    track_ips = _string_list(payload, "track_ips") or ["1.1.1.1", "8.8.8.8"]
+    for address in track_ips:
+        try:
+            IPv4Address(address)
+        except AddressValueError as exc:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid Multi-WAN tracking address: {address}"
+            ) from exc
     return {
         "enabled": _boolean(payload, "enabled"),
         "primary_interface": _safe_identifier(
@@ -763,6 +771,15 @@ def _normalize_multiwan_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ),
         "primary_metric": _integer(payload, "primary_metric", 1, 255),
         "secondary_metric": _integer(payload, "secondary_metric", 1, 255),
+        "track_ips": track_ips,
+        "check_interval": _integer(payload, "check_interval", 1, 600, required=False)
+        or 5,
+        "failure_interval": _integer(payload, "failure_interval", 1, 20, required=False)
+        or 3,
+        "recovery_interval": _integer(
+            payload, "recovery_interval", 1, 20, required=False
+        )
+        or 3,
     }
 
 
@@ -1389,6 +1406,10 @@ def build_command_payload_from_web_form(
     dhcp_leasetime: str = "",
     policy: str = "guest",
     vlan_id: str = "",
+    track_ips: str = "",
+    check_interval: str = "",
+    failure_interval: str = "",
+    recovery_interval: str = "",
 ) -> dict[str, Any]:
     if command_type not in ALLOWED_COMMANDS:
         raise ValueError("Unsupported command")
@@ -1521,6 +1542,10 @@ def build_command_payload_from_web_form(
             "secondary_interface": name,
             "primary_metric": external_port or "10",
             "secondary_metric": internal_port or "20",
+            "track_ips": track_ips,
+            "check_interval": check_interval or "5",
+            "failure_interval": failure_interval or "3",
+            "recovery_interval": recovery_interval or "3",
         }
     elif command_type == "network.set_route":
         payload = {

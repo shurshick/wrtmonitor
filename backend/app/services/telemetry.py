@@ -587,6 +587,22 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
     perimeter = payload.get("perimeter") or {}
+    mwan3 = perimeter.get("mwan3") or {}
+    if not isinstance(mwan3, dict):
+        mwan3 = {}
+    mwan_members = [
+        {
+            "role": str(item.get("role") or ""),
+            "interface": str(item.get("interface") or ""),
+            "metric": _optional_nonnegative_int(item.get("metric")),
+            "track_ips": [str(value) for value in item.get("track_ips") or []],
+            "interval": _optional_nonnegative_int(item.get("interval")),
+            "down": _optional_nonnegative_int(item.get("down")),
+            "up": _optional_nonnegative_int(item.get("up")),
+        }
+        for item in mwan3.get("members") or []
+        if isinstance(item, dict) and item.get("interface")
+    ]
     return {
         "interfaces": normalized_interfaces,
         "topology": network.get("topology")
@@ -596,7 +612,13 @@ def normalize_network_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "firewall_zones": perimeter.get("firewall_zones") or [],
         "firewall_forwardings": perimeter.get("firewall_forwardings") or [],
         "firewall_rules": perimeter.get("firewall_rules") or [],
-        "mwan3": perimeter.get("mwan3"),
+        "mwan3": {
+            "installed": bool(mwan3.get("installed", False)),
+            "service": str(mwan3.get("service") or "unavailable"),
+            "enabled": bool(mwan3.get("enabled", False)),
+            "members": mwan_members,
+            "status": str(mwan3.get("status") or ""),
+        },
         "ddns": perimeter.get("ddns"),
         "upnp": perimeter.get("upnp"),
     }

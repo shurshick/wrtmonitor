@@ -396,6 +396,10 @@
     <string name="ipv6_mode_hybrid">Гибридный</string>
     <string name="save_ipv6">Сохранить IPv6</string>
     <string name="multiwan_settings">Multi-WAN и failover</string>
+    <string name="multiwan_track_ips">IPv4-адреса проверки</string>
+    <string name="multiwan_interval">Интервал, сек</string>
+    <string name="multiwan_down_checks">Ошибок</string>
+    <string name="multiwan_up_checks">Успехов</string>
     <string name="primary_wan">Основной WAN</string>
     <string name="secondary_wan">Резервный WAN</string>
     <string name="static_routes">Статические маршруты</string>

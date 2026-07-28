@@ -45,6 +45,7 @@ json_get_number() {
         '@.interval_seconds') printf 10 ;;
         '@.start') printf 100 ;;
         '@.limit') printf 150 ;;
+        '@.vlan_id') printf 42 ;;
         *) return 1 ;;
     esac
 }
@@ -53,6 +54,10 @@ json_get_string() {
     case "$2" in
         '@.hostname') printf OpenWrt ;;
         '@.interface') printf '%s' "$(grep -o '"interface":"[^"]*' "$1" | cut -d\" -f4)" ;;
+        '@.device') printf br-lan ;;
+        '@.section') printf wrtmonitor_vlan_br_lan_42 ;;
+        '@.primary_interface') printf wan ;;
+        '@.secondary_interface') printf wan2 ;;
         '@.protocol') printf dhcp ;;
         '@.leasetime') printf 12h ;;
         *) return 1 ;;
@@ -60,7 +65,10 @@ json_get_string() {
 }
 
 json_get_bool() {
-    return 1
+    case "$2" in
+        '@.enabled') printf true ;;
+        *) return 1 ;;
+    esac
 }
 
 CONFIG="wrtmonitor.main"
@@ -76,6 +84,12 @@ verify_command_postcondition network.set_wan '{"interface":"wan","protocol":"dhc
 verify_command_postcondition dhcp.set_pool \
     '{"interface":"lan","start":100,"limit":150,"leasetime":"12h"}' \
     || fail "DHCP post-condition"
+verify_command_postcondition network.set_vlan \
+    '{"section":"wrtmonitor_vlan_br_lan_42","device":"br-lan","vlan_id":42}' \
+    || fail "VLAN post-condition"
+verify_command_postcondition network.set_multiwan \
+    '{"enabled":true,"primary_interface":"wan","secondary_interface":"wan2"}' \
+    || fail "Multi-WAN post-condition"
 
 ubus call network.interface.wan status >/dev/null
 fw4 check

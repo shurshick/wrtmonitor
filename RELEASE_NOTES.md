@@ -1,26 +1,23 @@
-# v0.19.0-command-reliability — надёжность команд
+# v0.20.0-internet-network — интернет и сеть
 
-Тестовый релиз формализует жизненный цикл всех 80 команд управления.
+Тестовый релиз завершает единый контур управления WAN, IPv6, DNS, сегментами и резервным подключением.
 
 ## Изменения
 
-- каждая команда получила политику idempotency, timeout, redelivery, post-condition и rollback;
-- срок жизни команды назначается по её риску и типу операции;
-- повторный UUID обслуживается из terminal-result cache без повторного изменения роутера;
-- добавлен OpenWrt harness для UCI, ubus, firewall и init-сервисов;
-- ошибки агента содержат код, конкретную причину и признак допустимости повтора;
-- Web UI показывает понятную причину отказа отдельно от технического payload;
-- registry разделён на 13 подсистем, общая shell-runtime вынесена из dispatcher;
-- физический отчёт запрещает `PASS` без приложенного доказательства выполнения.
+- WAN-редакторы Web UI и Android показывают только поля выбранного протокола DHCP, static или PPPoE;
+- IPv4/IPv6, RA, DHCPv6, DNS, DoT и DoH управляются через проверяемые команды;
+- физические порты передают реальные carrier, speed, duplex, MTU, traffic, errors и dropped counters;
+- сегменты, bridge и VLAN 802.1Q используют реальные UCI-секции и read-after-write;
+- Multi-WAN создаёт monitor-интерфейсы mwan3, health-check, приоритеты, failover и возврат на основной канал;
+- Web UI и Android отображают фактическую конфигурацию и состояние Multi-WAN;
+- post-condition расширен на IPv6, VLAN и Multi-WAN.
 
-## Ограничение проверки
+## Проверка
 
-В CI проверены контракты, lifecycle, mock OpenWrt и E2E. Разрушающие команды на
-физическом роутере в рамках сборки не запускались: для этого требуется отдельный
-стенд, на котором допустимы смена LAN/WAN, restore, sysupgrade и перезагрузка.
+Автоматически проверены backend, Android, shell syntax, OpenWrt harness и контракты команд. Переключение физических WAN требует отдельного роутера с двумя подключёнными каналами.
 
 ## Артефакты
 
-- `wrtmonitor-android-v0.19.0.apk`
-- `wrtmonitor-openwrt-agent-v0.19.0.tar.gz`
-- `wrtmonitor-truenas-v0.19.0.yaml`
+- `wrtmonitor-android-v0.20.0.apk`
+- `wrtmonitor-openwrt-agent-v0.20.0.tar.gz`
+- `wrtmonitor-truenas-v0.20.0.yaml`

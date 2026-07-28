@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.20.0-internet-network
+
+- Завершён единый контур WAN DHCP/static/PPPoE, IPv4/IPv6 и шифрованного DNS.
+- Физические порты показывают наблюдаемые скорость, duplex, carrier, трафик и ошибки.
+- Сегменты, bridge и VLAN получили post-condition после применения.
+- Multi-WAN теперь создаёт monitor-интерфейсы mwan3, health-check, failover и автоматический возврат.
+- Web UI и Android отображают и изменяют одну фактическую конфигурацию Multi-WAN.
+
 ## v0.19.0-command-reliability
 
 - Все 80 команд получили обязательный машинный контракт надёжности.

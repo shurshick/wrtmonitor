@@ -395,6 +395,10 @@
     <string name="ipv6_mode_hybrid">Hybrid</string>
     <string name="save_ipv6">Save IPv6</string>
     <string name="multiwan_settings">Multi-WAN and failover</string>
+    <string name="multiwan_track_ips">Health-check IPv4 addresses</string>
+    <string name="multiwan_interval">Interval, sec</string>
+    <string name="multiwan_down_checks">Failures</string>
+    <string name="multiwan_up_checks">Recoveries</string>
     <string name="primary_wan">Primary WAN</string>
     <string name="secondary_wan">Backup WAN</string>
     <string name="static_routes">Static routes</string>

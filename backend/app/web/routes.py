@@ -1430,6 +1430,10 @@ def web_device_command(
     dhcp_leasetime: str = Form(default=""),
     policy: str = Form(default="guest"),
     vlan_id: str = Form(default=""),
+    track_ips: str = Form(default=""),
+    check_interval: str = Form(default=""),
+    failure_interval: str = Form(default=""),
+    recovery_interval: str = Form(default=""),
     confirmed: bool = Form(default=False),
     diagnostics_checks: list[str] = Form(default=[]),
     csrf_token: str = Form(...),
@@ -1520,6 +1524,10 @@ def web_device_command(
             dhcp_leasetime=dhcp_leasetime,
             policy=policy,
             vlan_id=vlan_id,
+            track_ips=track_ips,
+            check_interval=check_interval,
+            failure_interval=failure_interval,
+            recovery_interval=recovery_interval,
             diagnostics_checks=diagnostics_checks,
         )
         payload = validate_command_request(

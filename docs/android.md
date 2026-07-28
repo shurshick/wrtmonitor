@@ -2,15 +2,15 @@
 
 Android-приложение - основной пользовательский интерфейс `WrtMonitor`.
 
-Текущая версия: `v0.19.0-command-reliability`.
+Текущая версия: `v0.20.0-internet-network`.
 
 ## Установка
 
-1. Откройте релиз `v0.19.0-command-reliability`.
+1. Откройте релиз `v0.20.0-internet-network`.
 2. Скачайте APK:
 
    ```text
-   wrtmonitor-android-v0.19.0.apk
+   wrtmonitor-android-v0.20.0.apk
    ```
 
 3. Установите APK на Android-устройство.

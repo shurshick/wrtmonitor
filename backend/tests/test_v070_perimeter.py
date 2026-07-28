@@ -28,19 +28,19 @@ def test_ipv6_multiwan_and_routes_are_normalized():
         "dhcpv6": "server",
         "ndp": "disabled",
     }
-    assert (
-        validate_command_payload(
-            "network.set_multiwan",
-            {
-                "enabled": True,
-                "primary_interface": "wan",
-                "secondary_interface": "wan2",
-                "primary_metric": 10,
-                "secondary_metric": 20,
-            },
-        )["secondary_interface"]
-        == "wan2"
+    multiwan = validate_command_payload(
+        "network.set_multiwan",
+        {
+            "enabled": True,
+            "primary_interface": "wan",
+            "secondary_interface": "wan2",
+            "primary_metric": 10,
+            "secondary_metric": 20,
+        },
     )
+    assert multiwan["secondary_interface"] == "wan2"
+    assert multiwan["track_ips"] == ["1.1.1.1", "8.8.8.8"]
+    assert multiwan["check_interval"] == 5
     assert (
         validate_command_payload(
             "network.set_route",
@@ -162,7 +162,23 @@ def test_perimeter_telemetry_is_normalized_for_interfaces_and_services():
                 "routes": [{"name": "office", "family": "ipv6"}],
                 "firewall_forwardings": [{"src": "lan", "dest": "wan"}],
                 "firewall_rules": [{"name": "Allow-DNS", "target": "ACCEPT"}],
-                "mwan3": {"service": "running", "status": "online"},
+                "mwan3": {
+                    "installed": True,
+                    "service": "running",
+                    "enabled": True,
+                    "status": "online",
+                    "members": [
+                        {
+                            "role": "primary",
+                            "interface": "wan",
+                            "metric": 10,
+                            "track_ips": ["1.1.1.1"],
+                            "interval": 5,
+                            "down": 3,
+                            "up": 3,
+                        }
+                    ],
+                },
                 "ddns": {"service": "running", "services": [{"name": "home"}]},
                 "upnp": {"service": "running", "mappings": ["TCP:443"]},
             },
@@ -171,3 +187,5 @@ def test_perimeter_telemetry_is_normalized_for_interfaces_and_services():
     assert result["interfaces"][0]["ipv6"] == ["2001:db8::2"]
     assert result["firewall_forwardings"][0] == {"src": "lan", "dest": "wan"}
     assert result["upnp"]["mappings"] == ["TCP:443"]
+    assert result["mwan3"]["enabled"] is True
+    assert result["mwan3"]["members"][0]["track_ips"] == ["1.1.1.1"]
