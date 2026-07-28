@@ -42,7 +42,9 @@ jobs:
       - run: ruff check backend --select E9,F63,F7,F82
       - run: ruff format --check backend
       - run: python scripts/validate_contracts.py
+      - run: python scripts/command_validation_report.py artifacts/command-validation.json --init --router ci-harness
       - run: pytest backend/tests openwrt-agent/tests
+      - run: sh openwrt-agent/tests/harness/run.sh
         env:
           PYTHONPATH: ${{ github.workspace }}
           WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:change-me-db-password@localhost:5432/wrtmonitor_test

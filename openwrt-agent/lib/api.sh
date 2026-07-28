@@ -51,7 +51,7 @@ poll_commands() {
         if cached="$(cached_command_result "$command_id" 2>/dev/null)"; then
             api POST "/api/v1/agent/commands/$command_id/result" "$cached" >/dev/null || true
         elif [ "$contract_version" != "1" ]; then
-            report_command_result "$command_id" failed '{"error":"unsupported command contract version"}' >/dev/null || true
+            report_command_result "$command_id" failed '{"error":"unsupported command contract version","error_detail":{"code":"unsupported_command","message":"unsupported command contract version","retryable":false}}' >/dev/null || true
         elif api POST "/api/v1/agent/commands/$command_id/result" '{"status":"running","result":{}}' >/dev/null; then
             execute_command "$command_id" "$command_type" "$command_payload"
         else

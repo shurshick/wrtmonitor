@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+from .agent import COMMANDS as AGENT_COMMANDS
+from .client import COMMANDS as CLIENT_COMMANDS
+from .dhcp import COMMANDS as DHCP_COMMANDS
+from .diagnostics import COMMANDS as DIAGNOSTICS_COMMANDS
+from .dns import COMMANDS as DNS_COMMANDS
+from .firewall import COMMANDS as FIREWALL_COMMANDS
+from .maintenance import COMMANDS as MAINTENANCE_COMMANDS
+from .network import COMMANDS as NETWORK_COMMANDS
+from .qos import COMMANDS as QOS_COMMANDS
+from .router import COMMANDS as ROUTER_COMMANDS
+from .system import COMMANDS as SYSTEM_COMMANDS
+from .vpn import COMMANDS as VPN_COMMANDS
+from .wifi import COMMANDS as WIFI_COMMANDS
+
+DOMAIN_CATALOGS = (
+    AGENT_COMMANDS,
+    CLIENT_COMMANDS,
+    DHCP_COMMANDS,
+    DIAGNOSTICS_COMMANDS,
+    DNS_COMMANDS,
+    FIREWALL_COMMANDS,
+    MAINTENANCE_COMMANDS,
+    NETWORK_COMMANDS,
+    QOS_COMMANDS,
+    ROUTER_COMMANDS,
+    SYSTEM_COMMANDS,
+    VPN_COMMANDS,
+    WIFI_COMMANDS,
+)

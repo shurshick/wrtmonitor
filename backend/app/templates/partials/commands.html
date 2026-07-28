@@ -12,7 +12,7 @@
         <span>Создано: {{ command.created_at|timestamp if command.created_at else '—' }}</span>
         {% if command.completed_at %}<span>Завершено: {{ command.completed_at|timestamp }}</span>{% endif %}
       </div>
-      {% if command.last_error %}<p class="error">{{ command.last_error }}</p>{% endif %}
+      {% if command.error %}<div class="notice notice--error notice--compact"><strong>{{ command.error.title }}</strong><span>{{ command.error.message }}</span>{% if command.error.retryable %}<small>Можно повторить после устранения причины.</small>{% endif %}</div>{% elif command.last_error %}<p class="error">{{ command.last_error }}</p>{% endif %}
       {% if command.payload or command.result %}
       <details><summary>Технические данные</summary><pre>{{ {'payload': command.payload or {}, 'result': command.result or {}} }}</pre></details>
       {% endif %}

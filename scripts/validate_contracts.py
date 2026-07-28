@@ -56,12 +56,28 @@ def main() -> int:
         if item.get("capability") not in capabilities
     }
     errors = []
+    reliability_fields = {
+        "subsystem",
+        "idempotency",
+        "delivery",
+        "post_condition",
+        "rollback",
+    }
+    incomplete_reliability = {
+        command
+        for command, metadata in COMMAND_REGISTRY.items()
+        if reliability_fields - set(metadata.get("reliability", {}))
+    }
     if missing_dispatch:
         errors.append(f"agent misses commands: {sorted(missing_dispatch)}")
     if unknown_dispatch:
         errors.append(f"agent exposes unknown commands: {sorted(unknown_dispatch)}")
     if missing_capabilities:
         errors.append(f"agent misses capabilities: {sorted(missing_capabilities)}")
+    if incomplete_reliability:
+        errors.append(
+            f"commands miss reliability policy: {sorted(incomplete_reliability)}"
+        )
 
     target = ROOT / "contracts/command-contract.json"
     rendered = json.dumps(manifest(), ensure_ascii=False, indent=2) + "\n"

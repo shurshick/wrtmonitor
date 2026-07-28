@@ -1,0 +1,9 @@
+wrtmonitor.main.interval=10
+system.@system[0].hostname=OpenWrt
+system.@system[0].timezone=MSK-3
+network.wan.proto=dhcp
+network.lan.proto=static
+network.lan.ipaddr=192.168.31.1
+dhcp.lan.start=100
+dhcp.lan.limit=150
+dhcp.lan.leasetime=12h

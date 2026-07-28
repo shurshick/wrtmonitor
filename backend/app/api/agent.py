@@ -176,9 +176,17 @@ def command_result(
             now,
             now,
         )
-        command.last_error = (
-            str(payload.result.get("error")) if payload.result.get("error") else None
-        )
+        error_detail = payload.result.get("error_detail")
+        if isinstance(error_detail, dict):
+            error_code = str(error_detail.get("code") or "command_failed")
+            error_message = str(error_detail.get("message") or "Command failed")
+            command.last_error = f"{error_code}: {error_message}"
+        else:
+            command.last_error = (
+                str(payload.result.get("error"))
+                if payload.result.get("error")
+                else None
+            )
     else:
         raise HTTPException(status_code=422, detail="Unsupported command status")
     if command.command_type == "agent.disconnect" and command.status == "success":

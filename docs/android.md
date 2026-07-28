@@ -2,15 +2,15 @@
 
 Android-приложение - основной пользовательский интерфейс `WrtMonitor`.
 
-Текущая версия: `v0.17.1-agent-update-compatibility`.
+Текущая версия: `v0.19.0-command-reliability`.
 
 ## Установка
 
-1. Откройте релиз `v0.17.1-agent-update-compatibility`.
+1. Откройте релиз `v0.19.0-command-reliability`.
 2. Скачайте APK:
 
    ```text
-   wrtmonitor-android-v0.17.1.apk
+   wrtmonitor-android-v0.19.0.apk
    ```
 
 3. Установите APK на Android-устройство.

@@ -28,6 +28,7 @@ REQUIRED_LIBS = [
     "commands.sh",
     "idempotency.sh",
     "verification.sh",
+    "command_runtime.sh",
     "api.sh",
 ]
 
@@ -173,6 +174,20 @@ def test_agent_and_libs_pass_shell_syntax():
     subprocess.run([shell, "-n", str(INSTALLER)], check=True, env=shell_env())
     for path in sorted(LIB_DIR.glob("*.sh")):
         subprocess.run([shell, "-n", str(path)], check=True, env=shell_env())
+
+
+def test_openwrt_command_harness():
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    completed = subprocess.run(
+        [shell, str(ROOT / "tests" / "harness" / "run.sh")],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=shell_env(),
+    )
+    assert "OpenWrt command harness: PASS" in completed.stdout
 
 
 def test_agent_uses_explicit_load_order():
@@ -682,7 +697,12 @@ def test_management_capabilities_cover_full_router_foundation():
 
 
 def test_management_commands_have_openwrt_handlers():
-    source = read_text(ROOT / "lib" / "commands.sh")
+    source = "\n".join(
+        (
+            read_text(ROOT / "lib" / "command_runtime.sh"),
+            read_text(ROOT / "lib" / "commands.sh"),
+        )
+    )
     for command in (
         "network.set_wan",
         "network.set_lan",

@@ -27,9 +27,9 @@ from .config_transactions import (
     is_transactional_command,
 )
 from .command_registry import COMMAND_REGISTRY
+from .command_errors import public_command_error
 
 
-COMMAND_TTL = timedelta(minutes=5)
 COMMAND_DELIVERY_LEASE = timedelta(seconds=45)
 TERMINAL_STATUSES = {"success", "failed", "expired", "cancelled"}
 
@@ -1777,8 +1777,10 @@ def command_history_entry(command: DeviceCommand) -> dict[str, Any]:
         "expires_at": iso(command.expires_at),
         "retry_count": command.retry_count,
         "last_error": command.last_error,
+        "error": public_command_error(command.result),
         "risk_level": metadata.get("risk_level"),
         "capability": metadata.get("capability"),
+        "reliability": metadata.get("reliability"),
     }
 
 
@@ -1797,6 +1799,7 @@ def create_device_command(
     idempotency_key: str | None = None,
 ) -> DeviceCommand:
     now = now_utc()
+    metadata = get_command_metadata(command_type)
     if idempotency_key:
         existing = db.scalars(
             select(DeviceCommand).where(
@@ -1836,7 +1839,10 @@ def create_device_command(
         created_by=created_by,
         created_at=now,
         updated_at=now,
-        expires_at=now + COMMAND_TTL,
+        expires_at=now
+        + timedelta(
+            seconds=int(metadata["reliability"]["delivery"]["timeout_seconds"])
+        ),
         retry_count=0,
         source=source,
         idempotency_key=idempotency_key,

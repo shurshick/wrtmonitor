@@ -6,157 +6,521 @@
       "risk_level": "level_3_reversible_config",
       "capability": "agent.disable",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "agent_state",
+        "rollback": "agent_previous_version_or_config"
+      }
     },
     "agent.rollback": {
       "risk_level": "level_2_safe_action",
       "capability": "agent.rollback",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "agent_state",
+        "rollback": "agent_previous_version_or_config"
+      }
     },
     "agent.rotate_token": {
       "risk_level": "level_2_safe_action",
       "capability": "agent.rotate_token",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "agent_state",
+        "rollback": "agent_previous_version_or_config"
+      }
     },
     "agent.set_auto_update": {
       "risk_level": "level_2_safe_action",
       "capability": "agent.update",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "agent_state",
+        "rollback": "agent_previous_version_or_config"
+      }
     },
     "agent.set_interval": {
       "risk_level": "level_2_safe_action",
       "capability": "agent.set_interval",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "agent_state",
+        "rollback": "agent_previous_version_or_config"
+      }
     },
     "agent.update": {
       "risk_level": "level_2_safe_action",
       "capability": "agent.update",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "agent_state",
+        "rollback": "agent_previous_version_or_config"
+      }
     },
     "client.set_blocked": {
       "risk_level": "level_3_reversible_config",
       "capability": "clients.block",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "client",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "client.set_policy": {
       "risk_level": "level_3_reversible_config",
       "capability": "clients.policy",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "client",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "dhcp.delete_lease": {
       "risk_level": "level_3_reversible_config",
       "capability": "dhcp.delete_lease",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dhcp",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "dhcp.set_lease": {
       "risk_level": "level_3_reversible_config",
       "capability": "dhcp.set_lease",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dhcp",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "dhcp.set_pool": {
       "risk_level": "level_3_reversible_config",
       "capability": "dhcp.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dhcp",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "diagnostics.run": {
       "risk_level": "level_1_readonly",
       "capability": "diagnostics.check_server",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "diagnostics",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "dns.install_doh": {
       "risk_level": "level_2_safe_write",
       "capability": "dns.encrypted.install",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dns",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "dns.install_dot": {
       "risk_level": "level_2_safe_write",
       "capability": "dns.encrypted.install",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dns",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "dns.set_doh": {
       "risk_level": "level_3_reversible_config",
       "capability": "dns.doh.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dns",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "dns.set_dot": {
       "risk_level": "level_3_reversible_config",
       "capability": "dns.dot.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dns",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "dns.set_servers": {
       "risk_level": "level_3_reversible_config",
       "capability": "dns.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "dns",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.delete_forwarding": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.zones.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.delete_port_forward": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.port_forward",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.delete_rule": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.rules.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.delete_zone": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.zones.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.set_forwarding": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.zones.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.set_port_forward": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.port_forward",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.set_rule": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.rules.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "firewall.set_zone": {
       "risk_level": "level_4_disruptive",
       "capability": "firewall.zones.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "firewall",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.backup.create": {
       "risk_level": "level_1_readonly",
       "capability": "maintenance.backup",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "maintenance.backup.restore": {
       "risk_level": "level_4_disruptive",
@@ -164,109 +528,361 @@
       "requires_confirmation": true,
       "secret_fields": [
         "archive_base64"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.cron.set": {
       "risk_level": "level_3_reversible_config",
       "capability": "maintenance.cron",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.diagnostics.bundle": {
       "risk_level": "level_1_readonly",
       "capability": "maintenance.diagnostics.bundle",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "maintenance.logs.read": {
       "risk_level": "level_1_readonly",
       "capability": "maintenance.logs",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "maintenance.package.install": {
       "risk_level": "level_3_reversible_config",
       "capability": "maintenance.packages.write",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.package.remove": {
       "risk_level": "level_3_reversible_config",
       "capability": "maintenance.packages.write",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.packages.refresh": {
       "risk_level": "level_1_readonly",
       "capability": "maintenance.packages.read",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "maintenance.process.signal": {
       "risk_level": "level_3_reversible_config",
       "capability": "maintenance.processes",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.recovery.disable": {
       "risk_level": "level_2_safe_action",
       "capability": "maintenance.recovery",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.recovery.enable": {
       "risk_level": "level_3_reversible_config",
       "capability": "maintenance.recovery",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.sysupgrade.apply": {
       "risk_level": "level_4_disruptive",
       "capability": "maintenance.sysupgrade.apply",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "maintenance.sysupgrade.check": {
       "risk_level": "level_2_safe_action",
       "capability": "maintenance.sysupgrade.check",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.delete_route": {
       "risk_level": "level_3_reversible_config",
       "capability": "network.routes.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.delete_segment": {
       "risk_level": "level_4_disruptive",
       "capability": "network.segments.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.delete_vlan": {
       "risk_level": "level_4_disruptive",
       "capability": "network.vlan.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.interface_restart": {
       "risk_level": "level_3_reversible_config",
       "capability": "network.interface_restart",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "service_or_connectivity_state",
+        "rollback": "not_safe_after_dispatch"
+      }
     },
     "network.interfaces": {
       "risk_level": "level_1_readonly",
       "capability": "network.read",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "network.restart": {
       "risk_level": "level_4_disruptive",
       "capability": "network.restart",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "service_or_connectivity_state",
+        "rollback": "not_safe_after_dispatch"
+      }
     },
     "network.set_ddns": {
       "risk_level": "level_3_reversible_config",
@@ -274,49 +890,161 @@
       "requires_confirmation": true,
       "secret_fields": [
         "password"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_ipv6": {
       "risk_level": "level_4_disruptive",
       "capability": "network.ipv6.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_lan": {
       "risk_level": "level_4_disruptive",
       "capability": "network.lan.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_multiwan": {
       "risk_level": "level_4_disruptive",
       "capability": "network.multiwan.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_route": {
       "risk_level": "level_3_reversible_config",
       "capability": "network.routes.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_segment": {
       "risk_level": "level_4_disruptive",
       "capability": "network.segments.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_upnp": {
       "risk_level": "level_3_reversible_config",
       "capability": "firewall.upnp.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_vlan": {
       "risk_level": "level_4_disruptive",
       "capability": "network.vlan.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "network.set_wan": {
       "risk_level": "level_4_disruptive",
@@ -324,49 +1052,161 @@
       "requires_confirmation": true,
       "secret_fields": [
         "password"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "network",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "qos.set_sqm": {
       "risk_level": "level_3_reversible_config",
       "capability": "qos.sqm",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "qos",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "router.reboot": {
       "risk_level": "level_3_reversible_config",
       "capability": "system.reboot",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "router",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "service_or_connectivity_state",
+        "rollback": "not_safe_after_dispatch"
+      }
     },
     "system.restart_service": {
       "risk_level": "level_3_reversible_config",
       "capability": "system.restart_service",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "system",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "system.set_hostname": {
       "risk_level": "level_3_reversible_config",
       "capability": "system.set_hostname",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "system",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "system.set_ntp": {
       "risk_level": "level_3_reversible_config",
       "capability": "system.set_ntp",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "system",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "system.set_timezone": {
       "risk_level": "level_3_reversible_config",
       "capability": "system.set_timezone",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "system",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "vpn.openvpn.delete_client": {
       "risk_level": "level_3_reversible_config",
       "capability": "vpn.openvpn.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "vpn.openvpn.set_client": {
       "risk_level": "level_4_disruptive",
@@ -374,31 +1214,101 @@
       "requires_confirmation": true,
       "secret_fields": [
         "config"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "vpn.policy.delete": {
       "risk_level": "level_3_reversible_config",
       "capability": "vpn.policy.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "vpn.policy.set": {
       "risk_level": "level_4_disruptive",
       "capability": "vpn.policy.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "vpn.wireguard.delete_peer": {
       "risk_level": "level_3_reversible_config",
       "capability": "vpn.wireguard.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "vpn.wireguard.export_peer": {
       "risk_level": "level_1_readonly",
       "capability": "vpn.wireguard.read",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "vpn.wireguard.set_interface": {
       "risk_level": "level_4_disruptive",
@@ -406,7 +1316,21 @@
       "requires_confirmation": true,
       "secret_fields": [
         "private_key"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "vpn.wireguard.set_peer": {
       "risk_level": "level_3_reversible_config",
@@ -414,7 +1338,21 @@
       "requires_confirmation": true,
       "secret_fields": [
         "preshared_key"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "vpn",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.add_ssid": {
       "risk_level": "level_3_reversible_config",
@@ -423,31 +1361,101 @@
       "secret_fields": [
         "password",
         "key"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.delete_ssid": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.manage_ssid",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_channel": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.set_channel",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_country": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.set_country",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_enabled": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.enable",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_guest": {
       "risk_level": "level_4_disruptive",
@@ -456,7 +1464,21 @@
       "secret_fields": [
         "password",
         "key"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_mesh": {
       "risk_level": "level_4_disruptive",
@@ -465,7 +1487,21 @@
       "secret_fields": [
         "password",
         "key"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 300,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_password": {
       "risk_level": "level_3_reversible_config",
@@ -475,31 +1511,101 @@
         "password",
         "wifi_password",
         "key"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_radio": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.radio.configure",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_schedule": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.schedule",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.set_ssid": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.set_ssid",
       "requires_confirmation": true,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     },
     "wifi.status": {
       "risk_level": "level_1_readonly",
       "capability": "wifi.read",
       "requires_confirmation": false,
-      "secret_fields": []
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
     },
     "wifi.update_ssid": {
       "risk_level": "level_3_reversible_config",
@@ -508,7 +1614,21 @@
       "secret_fields": [
         "password",
         "key"
-      ]
+      ],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 120,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
     }
   }
 }

@@ -15,4 +15,5 @@ lib/transactions.sh
 lib/commands.sh
 lib/idempotency.sh
 lib/verification.sh
+lib/command_runtime.sh
 lib/api.sh
