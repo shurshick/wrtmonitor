@@ -1,6 +1,6 @@
 command_requires_state_refresh() {
     case "$1" in
-        wifi.status|network.interfaces|diagnostics.run|maintenance.logs.read|maintenance.backup.create|maintenance.diagnostics.bundle|vpn.wireguard.export_peer|agent.status|agent.update|agent.rollback|agent.disconnect) return 1 ;;
+        wifi.status|network.interfaces|diagnostics.run|maintenance.logs.read|maintenance.processes.read|maintenance.cron.read|maintenance.services.read|maintenance.backup.create|maintenance.diagnostics.bundle|vpn.wireguard.export_peer|agent.status|agent.update|agent.rollback|agent.disconnect) return 1 ;;
         *) return 0 ;;
     esac
 }
@@ -26,7 +26,7 @@ execute_command() {
     recovery_mode="$(uci -q get "$CONFIG.recovery_mode" 2>/dev/null || echo 0)"
     if [ "$recovery_mode" = 1 ]; then
         case "$command_type" in
-            wifi.status|network.interfaces|diagnostics.run|maintenance.packages.refresh|maintenance.backup.create|maintenance.logs.read|maintenance.diagnostics.bundle|maintenance.recovery.disable|agent.status) ;;
+            wifi.status|network.interfaces|diagnostics.run|maintenance.packages.refresh|maintenance.backup.create|maintenance.logs.read|maintenance.processes.read|maintenance.cron.read|maintenance.services.read|maintenance.diagnostics.bundle|maintenance.recovery.disable|agent.status) ;;
             *)
                 result="$(command_failed_result "recovery mode blocks configuration changes")"
                 report_command_result "$command_id" failed "$result" >/dev/null || true
@@ -790,7 +790,7 @@ execute_command() {
                 result="$(command_success_result "package lists refreshed" "\"manager\":\"$package_manager_value\",\"upgradable\":\"$(json_escape "$upgrades")\"")"
             else status=failed; result="$(command_failed_result "apk/opkg package index update failed")"; fi
             ;;
-        maintenance.package.install|maintenance.package.remove)
+        maintenance.package.install|maintenance.package.remove|maintenance.package.upgrade)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; package="$(json_get_string "$payload_file" '@.package')"; rm -f "$payload_file"
             package_action=install; [ "$command_type" = maintenance.package.remove ] && package_action=remove
             case "$package_action:$package" in
@@ -806,7 +806,9 @@ execute_command() {
                             fi
                         fi
                         if [ "$status" != failed ]; then
-                            result="$(command_success_result "package operation completed" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"output\":\"$(json_escape "$package_output")\"")"
+                            package_message="package operation completed"
+                            [ "$command_type" = maintenance.package.upgrade ] && package_message="package upgraded"
+                            result="$(command_success_result "$package_message" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"output\":\"$(json_escape "$package_output")\"")"
                         fi
                     else status=failed; result="$(command_failed_result "$package_output")"; fi
                     ;;
@@ -842,11 +844,41 @@ execute_command() {
         maintenance.logs.read)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; log_lines="$(json_get_number "$payload_file" '@.lines')"; rm -f "$payload_file"; logs="$(logread 2>/dev/null | tail -n "$log_lines")"; result="$(command_success_result "system log collected" "\"logs\":\"$(json_escape "$logs")\"")"
             ;;
+        maintenance.processes.read)
+            process_output="$(ps w 2>/dev/null | head -n 100 || true)"
+            result="$(command_success_result "process list collected" "\"processes\":\"$(json_escape "$process_output")\"")"
+            ;;
         maintenance.process.signal)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; process_pid="$(json_get_number "$payload_file" '@.pid')"; process_signal="$(json_get_string "$payload_file" '@.signal')"; rm -f "$payload_file"; if kill -"$process_signal" "$process_pid" 2>/dev/null; then result="$(command_success_result "signal sent to process")"; else status=failed; result="$(command_failed_result "failed to signal process")"; fi
             ;;
         maintenance.cron.set)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; cron_content="$(json_get_string "$payload_file" '@.content')"; rm -f "$payload_file"; cron_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"; cp "$cron_path" "$cron_path.wrtmonitor.bak" 2>/dev/null || true; if printf '%s' "$cron_content" >"$cron_path" && /etc/init.d/cron restart >/dev/null 2>&1; then result="$(command_success_result "cron updated")"; else status=failed; result="$(command_failed_result "failed to update cron")"; fi
+            ;;
+        maintenance.cron.read)
+            cron_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"
+            cron_content="$(cat "$cron_path" 2>/dev/null || true)"
+            result="$(command_success_result "cron schedule collected" "\"content\":\"$(json_escape "$cron_content")\"")"
+            ;;
+        maintenance.services.read)
+            service_rows=""
+            for service_path in "${WRTMONITOR_SYSTEM_ROOT:-}/etc/init.d/"*; do
+                [ -x "$service_path" ] || continue
+                service_name="${service_path##*/}"
+                service_running=false; "$service_path" running >/dev/null 2>&1 && service_running=true
+                service_enabled=false; "$service_path" enabled >/dev/null 2>&1 && service_enabled=true
+                [ -n "$service_rows" ] && service_rows="$service_rows,"
+                service_rows="$service_rows{\"name\":\"$(json_escape "$service_name")\",\"running\":$service_running,\"enabled\":$service_enabled}"
+            done
+            result="$(command_success_result "service list collected" "\"services\":[$service_rows]")"
+            ;;
+        maintenance.service.set)
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"
+            service_name="$(json_get_string "$payload_file" '@.service')"; service_action="$(json_get_string "$payload_file" '@.action')"; rm -f "$payload_file"
+            service_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/init.d/$service_name"
+            case "$service_action" in start|stop|restart|enable|disable) ;; *) service_action="" ;; esac
+            if [ -n "$service_action" ] && [ -x "$service_path" ] && "$service_path" "$service_action" >/dev/null 2>&1; then
+                result="$(command_success_result "service action completed" "\"service\":\"$(json_escape "$service_name")\",\"action\":\"$service_action\"")"
+            else status=failed; result="$(command_failed_result "service action failed or service does not exist")"; fi
             ;;
         maintenance.diagnostics.bundle)
             bundle_dir="/tmp/wrtmonitor-diagnostics-$command_id"; bundle_path="$bundle_dir.tar.gz"; mkdir -p "$bundle_dir"; ubus call system board >"$bundle_dir/board.json" 2>&1 || true; ubus call system info >"$bundle_dir/system.json" 2>&1 || true; ubus call network.interface dump >"$bundle_dir/network.json" 2>&1 || true; logread 2>/dev/null | tail -n 500 >"$bundle_dir/logread.txt"; ps w >"$bundle_dir/processes.txt" 2>&1 || true; df -h >"$bundle_dir/storage.txt" 2>&1 || true; package_list_installed >"$bundle_dir/packages.txt" 2>&1 || true; capabilities_json >"$bundle_dir/capabilities.json"; if tar -czf "$bundle_path" -C "$bundle_dir" .; then bundle_b64="$(base64 <"$bundle_path" | tr -d '\n')"; result="$(command_success_result "diagnostic bundle created" "\"filename\":\"wrtmonitor-diagnostics.tar.gz\",\"bundle_base64\":\"$bundle_b64\"")"; else status=failed; result="$(command_failed_result "failed to create diagnostic bundle")"; fi; rm -rf "$bundle_dir" "$bundle_path"

@@ -1278,13 +1278,16 @@ def validate_command_payload(
         return {"name": _name(normalized_payload)}
     if command_type in {
         "maintenance.packages.refresh",
+        "maintenance.processes.read",
+        "maintenance.cron.read",
+        "maintenance.services.read",
         "maintenance.backup.create",
         "maintenance.diagnostics.bundle",
         "maintenance.recovery.enable",
         "maintenance.recovery.disable",
     }:
         return {}
-    if command_type == "maintenance.package.install":
+    if command_type in {"maintenance.package.install", "maintenance.package.upgrade"}:
         return _maintenance_package(normalized_payload)
     if command_type == "maintenance.package.remove":
         return _maintenance_package(normalized_payload, remove=True)
@@ -1307,6 +1310,19 @@ def validate_command_payload(
         }
     if command_type == "maintenance.cron.set":
         return _maintenance_cron(normalized_payload)
+    if command_type == "maintenance.service.set":
+        return {
+            "service": _safe_identifier(
+                str(normalized_payload.get("service") or ""),
+                "service",
+                r"[A-Za-z0-9_.-]{1,64}",
+            ),
+            "action": _safe_identifier(
+                str(normalized_payload.get("action") or ""),
+                "action",
+                r"(?:start|stop|restart|enable|disable)",
+            ),
+        }
     if command_type == "firewall.set_zone":
         return _normalize_zone_payload(normalized_payload)
     if command_type == "firewall.delete_zone":
@@ -1711,7 +1727,11 @@ def build_command_payload_from_web_form(
         }
     elif command_type == "vpn.policy.delete":
         payload = {"section": uci_section, "name": name}
-    elif command_type in {"maintenance.package.install", "maintenance.package.remove"}:
+    elif command_type in {
+        "maintenance.package.install",
+        "maintenance.package.remove",
+        "maintenance.package.upgrade",
+    }:
         payload = {"package": name}
     elif command_type == "maintenance.backup.restore":
         payload = {"archive_base64": archive_base64 or config_text}
@@ -1733,8 +1753,13 @@ def build_command_payload_from_web_form(
         payload = {"pid": pid or internal_port, "signal": signal or protocol or "TERM"}
     elif command_type == "maintenance.cron.set":
         payload = {"content": content or config_text}
+    elif command_type == "maintenance.service.set":
+        payload = {"service": service or name, "action": protocol}
     elif command_type in {
         "maintenance.packages.refresh",
+        "maintenance.processes.read",
+        "maintenance.cron.read",
+        "maintenance.services.read",
         "maintenance.backup.create",
         "maintenance.diagnostics.bundle",
         "maintenance.recovery.enable",

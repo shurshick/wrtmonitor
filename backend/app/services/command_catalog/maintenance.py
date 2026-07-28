@@ -20,6 +20,12 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "maintenance.package.upgrade": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "maintenance.packages.write",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "maintenance.backup.create": {
         "risk_level": "level_1_readonly",
         "capability": "maintenance.backup",
@@ -50,6 +56,12 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": False,
         "secret_fields": [],
     },
+    "maintenance.processes.read": {
+        "risk_level": "level_1_readonly",
+        "capability": "maintenance.processes",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
     "maintenance.process.signal": {
         "risk_level": "level_3_reversible_config",
         "capability": "maintenance.processes",
@@ -59,6 +71,24 @@ COMMANDS: dict[str, dict[str, Any]] = {
     "maintenance.cron.set": {
         "risk_level": "level_3_reversible_config",
         "capability": "maintenance.cron",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
+    "maintenance.cron.read": {
+        "risk_level": "level_1_readonly",
+        "capability": "maintenance.cron",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "maintenance.services.read": {
+        "risk_level": "level_1_readonly",
+        "capability": "system.restart_service",
+        "requires_confirmation": False,
+        "secret_fields": [],
+    },
+    "maintenance.service.set": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "system.restart_service",
         "requires_confirmation": True,
         "secret_fields": [],
     },

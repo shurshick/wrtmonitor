@@ -584,6 +584,26 @@
         "rollback": "configuration_backup"
       }
     },
+    "maintenance.cron.read": {
+      "risk_level": "level_1_readonly",
+      "capability": "maintenance.cron",
+      "requires_confirmation": false,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
+    },
     "maintenance.cron.set": {
       "risk_level": "level_3_reversible_config",
       "capability": "maintenance.cron",
@@ -684,6 +704,26 @@
         "rollback": "configuration_backup"
       }
     },
+    "maintenance.package.upgrade": {
+      "risk_level": "level_3_reversible_config",
+      "capability": "maintenance.packages.write",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
+    },
     "maintenance.packages.refresh": {
       "risk_level": "level_1_readonly",
       "capability": "maintenance.packages.read",
@@ -724,6 +764,26 @@
         "rollback": "configuration_backup"
       }
     },
+    "maintenance.processes.read": {
+      "risk_level": "level_1_readonly",
+      "capability": "maintenance.processes",
+      "requires_confirmation": false,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
+      }
+    },
     "maintenance.recovery.disable": {
       "risk_level": "level_2_safe_action",
       "capability": "maintenance.recovery",
@@ -762,6 +822,46 @@
         },
         "post_condition": "read_after_write_telemetry",
         "rollback": "configuration_backup"
+      }
+    },
+    "maintenance.service.set": {
+      "risk_level": "level_3_reversible_config",
+      "capability": "system.restart_service",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_telemetry",
+        "rollback": "configuration_backup"
+      }
+    },
+    "maintenance.services.read": {
+      "risk_level": "level_1_readonly",
+      "capability": "system.restart_service",
+      "requires_confirmation": false,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 45,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "rollback": "not_required"
       }
     },
     "maintenance.sysupgrade.apply": {
