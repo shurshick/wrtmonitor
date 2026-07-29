@@ -22,6 +22,7 @@ def create_app() -> FastAPI:
         ensure_openwrt_download_metadata()
         init_db()
         check_database()
+
         async def housekeeping_loop() -> None:
             while True:
                 await asyncio.sleep(settings.housekeeping_interval_seconds)

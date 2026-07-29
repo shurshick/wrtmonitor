@@ -58,7 +58,9 @@ def web_server_diagnostics(
     return Response(
         build_server_diagnostic_archive(db, config),
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="wrtmonitor-server-{APP_VERSION}-diagnostics.zip"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="wrtmonitor-server-{APP_VERSION}-diagnostics.zip"'
+        },
     )
 
 

@@ -27,11 +27,17 @@ from .telemetry_history import (
 TERMINAL_COMMAND_STATES = ("done", "success", "failed", "expired", "cancelled")
 
 
-def _agent_freshness(device: Device, telemetry: DeviceTelemetry | None, now: datetime) -> dict[str, Any]:
+def _agent_freshness(
+    device: Device, telemetry: DeviceTelemetry | None, now: datetime
+) -> dict[str, Any]:
     agent = (telemetry.payload.get("agent") or {}) if telemetry else {}
     interval = max(5, int(agent.get("telemetry_interval_seconds") or 60))
     stale_after = max(30, interval * 3)
-    age = int((now - device.last_seen_at).total_seconds()) if device.last_seen_at else None
+    age = (
+        int((now - device.last_seen_at).total_seconds())
+        if device.last_seen_at
+        else None
+    )
     return {
         "interval_seconds": interval,
         "stale_after_seconds": stale_after,
@@ -43,10 +49,14 @@ def _agent_freshness(device: Device, telemetry: DeviceTelemetry | None, now: dat
 def operation_metrics(db: Session) -> dict[str, Any]:
     now = datetime.now(UTC)
     status_rows = db.execute(
-        select(DeviceCommand.status, func.count(DeviceCommand.id)).group_by(DeviceCommand.status)
+        select(DeviceCommand.status, func.count(DeviceCommand.id)).group_by(
+            DeviceCommand.status
+        )
     ).all()
     queued_at = db.scalar(
-        select(func.min(DeviceCommand.created_at)).where(DeviceCommand.status == "queued")
+        select(func.min(DeviceCommand.created_at)).where(
+            DeviceCommand.status == "queued"
+        )
     )
     freshness: list[dict[str, Any]] = []
     for device in db.scalars(select(Device).where(Device.archived_at.is_(None))).all():
@@ -57,14 +67,22 @@ def operation_metrics(db: Session) -> dict[str, Any]:
             .limit(1)
         ).first()
         state = _agent_freshness(device, telemetry, now)
-        state.update({"device_id": str(device.id), "name": device.name or device.hostname})
+        state.update(
+            {"device_id": str(device.id), "name": device.name or device.hostname}
+        )
         freshness.append(state)
     return {
         "generated_at": now.isoformat(),
         "command_queue": {
             "by_status": {str(status): int(count) for status, count in status_rows},
-            "active": sum(int(count) for status, count in status_rows if status not in TERMINAL_COMMAND_STATES),
-            "oldest_queued_age_seconds": int((now - queued_at).total_seconds()) if queued_at else None,
+            "active": sum(
+                int(count)
+                for status, count in status_rows
+                if status not in TERMINAL_COMMAND_STATES
+            ),
+            "oldest_queued_age_seconds": int((now - queued_at).total_seconds())
+            if queued_at
+            else None,
         },
         "agents": {
             "total": len(freshness),
@@ -123,8 +141,14 @@ def operational_notifications(db: Session) -> list[dict[str, Any]]:
     kind_by_command = {
         "agent.update": ("agent_update_failed", "Ошибка обновления агента"),
         "maintenance.backup.create": ("backup_failed", "Ошибка резервного копирования"),
-        "maintenance.backup.restore": ("backup_failed", "Ошибка восстановления резервной копии"),
-        "network.set_multiwan": ("wan_failover_failed", "Ошибка настройки WAN failover"),
+        "maintenance.backup.restore": (
+            "backup_failed",
+            "Ошибка восстановления резервной копии",
+        ),
+        "network.set_multiwan": (
+            "wan_failover_failed",
+            "Ошибка настройки WAN failover",
+        ),
     }
     for command in failed:
         kind, title = kind_by_command.get(
@@ -157,7 +181,8 @@ def operational_notifications(db: Session) -> list[dict[str, Any]]:
                 "severity": "info" if event.action == "device.online" else "warning",
                 "kind": event.action,
                 "title": details.get("title") or event.action,
-                "message": details.get("message") or "Состояние подключения изменилось.",
+                "message": details.get("message")
+                or "Состояние подключения изменилось.",
                 "device_id": event.object_id,
                 "created_at": event.created_at.isoformat(),
             }
@@ -198,12 +223,18 @@ def run_housekeeping(db: Session, config: Settings) -> dict[str, int]:
                 )
             )
             counters[desired] += 1
-        counters["telemetry"] += cleanup_device_telemetry(
-            db, device.id, config.telemetry_retention_per_device
-        ) or 0
-        counters["telemetry"] += cleanup_device_telemetry_metrics(
-            db, device.id, config.telemetry_metric_retention_days
-        ) or 0
+        counters["telemetry"] += (
+            cleanup_device_telemetry(
+                db, device.id, config.telemetry_retention_per_device
+            )
+            or 0
+        )
+        counters["telemetry"] += (
+            cleanup_device_telemetry_metrics(
+                db, device.id, config.telemetry_metric_retention_days
+            )
+            or 0
+        )
         counters["commands"] += cleanup_device_command_history(
             db,
             device.id,

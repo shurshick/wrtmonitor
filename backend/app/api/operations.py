@@ -39,5 +39,7 @@ def diagnostic_archive(
     return StreamingResponse(
         data,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="wrtmonitor-server-{APP_VERSION}-diagnostics.zip"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="wrtmonitor-server-{APP_VERSION}-diagnostics.zip"'
+        },
     )
