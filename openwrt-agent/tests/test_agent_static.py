@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import base64
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,6 @@ INSTALLER = ROOT / "install-openwrt.sh"
 LIB_DIR = ROOT / "lib"
 MANIFEST = ROOT / "openwrt-agent-files.txt"
 SUMS = ROOT / "SHA256SUMS.txt"
-SIGNATURE = ROOT / "SHA256SUMS.sig"
 AGENT_VERSION = ROOT / "agent-version.txt"
 REQUIRED_LIBS = [
     "common.sh",
@@ -550,15 +550,43 @@ def test_required_dependency_manifest_covers_runtime_features():
 
 def test_update_manifest_signature_is_required_and_valid(tmp_path: Path):
     shell = shell_path()
-    if not shell:
-        pytest.skip("sh is not available")
+    openssl = shutil.which("openssl")
+    if not shell or not openssl:
+        pytest.skip("sh or openssl is not available")
     sums = tmp_path / "SHA256SUMS.txt"
     signature = tmp_path / "SHA256SUMS.sig"
+    private_key = tmp_path / "private.pem"
+    public_key = tmp_path / "public.pem"
+    signature_binary = tmp_path / "signature.bin"
     shutil.copy2(SUMS, sums)
-    shutil.copy2(SIGNATURE, signature)
+    subprocess.run(
+        [openssl, "genpkey", "-algorithm", "ED25519", "-out", private_key],
+        check=True,
+    )
+    subprocess.run(
+        [openssl, "pkey", "-in", private_key, "-pubout", "-out", public_key],
+        check=True,
+    )
+    subprocess.run(
+        [
+            openssl,
+            "pkeyutl",
+            "-sign",
+            "-inkey",
+            private_key,
+            "-rawin",
+            "-in",
+            sums,
+            "-out",
+            signature_binary,
+        ],
+        check=True,
+    )
+    signature.write_bytes(base64.b64encode(signature_binary.read_bytes()) + b"\n")
     script = f'''
         set -eu
         . "{(LIB_DIR / "update.sh").as_posix()}"
+        write_update_public_key() {{ cp "{public_key.as_posix()}" "$1"; }}
         verify_manifest_signature "{tmp_path.as_posix()}"
     '''
     subprocess.run([shell, "-c", script], check=True, env=shell_env())
