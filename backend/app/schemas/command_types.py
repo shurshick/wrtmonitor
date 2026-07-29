@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Literal, TypeAlias, TypedDict
 
+from pydantic import JsonValue
 
-JsonScalar: TypeAlias = str | int | float | bool | None
-JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
+
 CommandPayload: TypeAlias = dict[str, JsonValue]
 CommandResult: TypeAlias = dict[str, JsonValue]
 CommandResultStatus: TypeAlias = Literal["running", "done", "success", "failed"]
