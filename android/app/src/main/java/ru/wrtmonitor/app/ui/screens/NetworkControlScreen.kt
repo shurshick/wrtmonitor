@@ -275,8 +275,6 @@ fun NetworkControlScreen(
     val firewallRedirects = telemetry?.network?.optJsonArray("firewall_redirects") ?: JsonArray()
     val vpn = telemetry?.payload?.optJsonObject("vpn")
     val interfacesRequestQueued = stringResource(R.string.interfaces_request_queued)
-    val interfaceRestartQueued = stringResource(R.string.interface_restart_queued)
-    val networkRestartQueued = stringResource(R.string.network_restart_queued)
     val genericCommandQueued = stringResource(R.string.command_queued)
     fun queue(type: String, payload: JsonObject, success: String) {
         scope.launch {
@@ -828,25 +826,14 @@ fun NetworkControlScreen(
             }
         }
     }
-    if (mode == NetworkScreenMode.Internet && (capabilities["network.interface_restart"] == true || capabilities["network.restart"] == true)) {
-        ExpandableSettingsCard(stringResource(R.string.network_maintenance), stringResource(R.string.network_maintenance_summary)) {
-            if (capabilities["network.interface_restart"] == true) {
-                OptionSelector(stringResource(R.string.network_interfaces), interfaceName, interfaceOptions, { interfaceName = it })
-                SecondaryActionButton(
-                    label = stringResource(R.string.restart_interface),
-                    onClick = { pendingCommand = PendingSafeCommand("network.interface_restart", JsonObject().put("interface", interfaceName), interfaceRestartQueued) },
-                    enabled = interfaceName.isNotBlank(),
-                    modifier = Modifier.align(Alignment.End),
-                )
-            }
-            if (capabilities["network.restart"] == true) {
-                SecondaryActionButton(
-                    stringResource(R.string.restart_network),
-                    { pendingCommand = PendingSafeCommand("network.restart", JsonObject(), networkRestartQueued) },
-                    Modifier.align(Alignment.End),
-                )
-            }
-        }
+    if (mode == NetworkScreenMode.Internet) {
+        NetworkMaintenanceCard(
+            capabilities = capabilities,
+            interfaceName = interfaceName,
+            interfaceOptions = interfaceOptions,
+            onInterfaceChange = { interfaceName = it },
+            onCommand = { pendingCommand = it },
+        )
     }
     MessageBanner(message, error = messageIsError)
     pendingCommand?.let { command -> SafeCommandDialog(
@@ -859,5 +846,3 @@ fun NetworkControlScreen(
         onSessionExpired = onSessionExpired,
     ) }
 }
-
-enum class SystemScreenMode { System, Management }
