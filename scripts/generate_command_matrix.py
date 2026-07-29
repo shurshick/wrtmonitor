@@ -68,7 +68,7 @@ def markdown(matrix: dict[str, Any]) -> str:
     lines = [
         "# Матрица команд WrtMonitor",
         "",
-        "Файл генерируется из исполнимого контракта и исходников командой ",
+        "Файл генерируется из исполнимого контракта и исходников командой",
         "`python scripts/generate_command_matrix.py --write`. Ручное редактирование запрещено.",
         "",
         f"Всего команд: **{matrix['command_count']}**.",
