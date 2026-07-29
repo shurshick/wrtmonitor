@@ -50,6 +50,7 @@ execute_command() {
     elif handle_vpn_command; then :
     elif handle_system_command; then :
     elif handle_maintenance_command; then :
+    elif handle_module_command; then :
     elif handle_agent_command; then :
     else
         status="failed"

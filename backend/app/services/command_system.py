@@ -79,6 +79,20 @@ def _maintenance_package(
     return {"package": package}
 
 
+def _maintenance_module(payload: dict[str, Any]) -> dict[str, str]:
+    module = str(payload.get("module") or "").strip().lower()
+    action = str(payload.get("action") or "").strip().lower()
+    if module not in {"storage", "smb", "nfs", "ftp", "dlna", "printer", "modem"}:
+        raise HTTPException(status_code=400, detail="Unsupported OpenWrt module")
+    if action not in {"install", "enable", "disable", "remove"}:
+        raise HTTPException(status_code=400, detail="Unsupported module action")
+    if action in {"enable", "disable"} and module in {"storage", "modem"}:
+        raise HTTPException(
+            status_code=400, detail="This module does not expose a background service"
+        )
+    return {"module": module, "action": action}
+
+
 def _maintenance_backup_restore(payload: dict[str, Any]) -> dict[str, str]:
     archive = _require_string(payload, "archive_base64", max_length=2_000_000)
     try:
@@ -185,6 +199,7 @@ __all__ = [
     "_normalize_timezone_payload",
     "_normalize_ntp_payload",
     "_maintenance_package",
+    "_maintenance_module",
     "_maintenance_backup_restore",
     "_maintenance_sysupgrade",
     "_maintenance_cron",

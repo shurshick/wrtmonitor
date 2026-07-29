@@ -34,6 +34,7 @@ SERVICE_STATE_COMMANDS = {
     "maintenance.service.set",
     "system.restart_service",
 }
+MODULE_STATE_COMMANDS = {"maintenance.module.configure"}
 HANDLER_RESULT_COMMANDS = {
     "maintenance.process.signal",
     "maintenance.sysupgrade.check",
@@ -72,6 +73,9 @@ def command_reliability(
     elif command_type in SERVICE_STATE_COMMANDS:
         post_condition = "service_state"
         rollback = "configuration_backup"
+    elif command_type in MODULE_STATE_COMMANDS:
+        post_condition = "module_state"
+        rollback = "package_manager_transaction"
     elif command_type in HANDLER_RESULT_COMMANDS:
         post_condition = "handler_result"
         rollback = "not_available"

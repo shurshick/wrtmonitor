@@ -6,6 +6,28 @@
 </div>
 
 <div class="maintenance-grid section">
+  {% if supports.maintenance_modules and maintenance.modules %}
+  <section class="card maintenance-card maintenance-card--modules">
+    <div class="maintenance-card__heading"><div><span class="eyebrow">Расширения OpenWrt</span><h2>USB и сетевые службы</h2></div><span class="risk-badge risk-badge--readonly">capability-driven</span></div>
+    <p class="muted">Показываются только доступные для этого роутера или уже установленные модули. Зависимости устанавливает агент.</p>
+    <div class="package-list service-list-scroll" tabindex="0" aria-label="Модули OpenWrt">
+      {% for module in maintenance.modules if module.supported %}
+      <div class="package-row">
+        <span><strong>{{ module_labels.get(module.id, module.id) }}</strong><small>{% if module.installed %}установлен{% if module.running %} · работает{% elif module.id not in ['storage', 'modem'] %} · остановлен{% endif %}{% else %}не установлен{% endif %}{% if module.hardware_count %} · устройств: {{ module.hardware_count }}{% endif %}</small></span>
+        <div class="action-row">
+          {% if not module.installed %}
+          <form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.module.configure"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="name" value="{{ module.id }}"><input type="hidden" name="protocol" value="install"><button class="button--small" type="submit">Установить</button></form>
+          {% else %}
+            {% if module.id not in ['storage', 'modem'] %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.module.configure"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="name" value="{{ module.id }}"><input type="hidden" name="protocol" value="{{ 'disable' if module.running else 'enable' }}"><button class="button--small button--secondary" type="submit">{{ 'Остановить' if module.running else 'Запустить' }}</button></form>{% endif %}
+            <form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}" onsubmit="return confirm('Удалить модуль и его пакеты?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.module.configure"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="name" value="{{ module.id }}"><input type="hidden" name="protocol" value="remove"><button class="button--small button--ghost" type="submit">Удалить</button></form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <section class="card maintenance-card">
     <div class="maintenance-card__heading"><div><span class="eyebrow">OpenWrt</span><h2>Пакеты</h2></div><span class="risk-badge risk-badge--readonly">{{ maintenance.package_manager or 'apk / opkg' }}</span></div>
     <p class="muted">Установка и удаление пакетов через системный менеджер OpenWrt. Критические системные пакеты защищены.</p>

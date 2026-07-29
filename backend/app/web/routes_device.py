@@ -274,6 +274,7 @@ def device_page(
         "maintenance_cron": has("maintenance.cron"),
         "maintenance_bundle": has("maintenance.diagnostics.bundle"),
         "maintenance_recovery": has("maintenance.recovery"),
+        "maintenance_modules": has("maintenance.modules.write"),
     }
     cleanup_device_command_history(
         db,
@@ -489,6 +490,15 @@ def device_page(
             "system_view": system_view,
             "services": services,
             "maintenance": maintenance,
+            "module_labels": {
+                "storage": "USB и накопители",
+                "smb": "SMB-файлы",
+                "nfs": "NFS-файлы",
+                "ftp": "FTP-сервер",
+                "dlna": "DLNA-медиасервер",
+                "printer": "USB-принтер",
+                "modem": "LTE/USB-модем",
+            },
             "commands": command_entries,
             "command_pagination": {
                 "page": command_page,

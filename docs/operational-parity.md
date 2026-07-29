@@ -1,6 +1,6 @@
 # Operational parity
 
-`v0.27.0` использует единый реестр 90 команд для API, Web UI, Android и OpenWrt-агента.
+WrtMonitor использует единый реестр 91 команды для API, Web UI, Android и OpenWrt-агента.
 
 ## Проверка поверхностей
 

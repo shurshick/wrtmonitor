@@ -609,4 +609,18 @@
     <string name="client_dns_security">Malware protection</string>
     <string name="client_dns_family">Family filter</string>
     <string name="client_blocked_domains">Blocked domains</string>
+    <string name="openwrt_modules">OpenWrt modules</string>
+    <string name="openwrt_modules_summary">USB, storage and network services</string>
+    <string name="module_storage">USB and storage</string>
+    <string name="module_smb">SMB file sharing</string>
+    <string name="module_nfs">NFS file sharing</string>
+    <string name="module_ftp">FTP server</string>
+    <string name="module_dlna">DLNA media server</string>
+    <string name="module_printer">USB printer</string>
+    <string name="module_modem">LTE/USB modem</string>
+    <string name="module_installed">Installed</string>
+    <string name="module_not_installed">Not installed</string>
+    <string name="module_devices">Devices: %1$d</string>
+    <string name="start_service">Start</string>
+    <string name="stop_service">Stop</string>
 </resources>

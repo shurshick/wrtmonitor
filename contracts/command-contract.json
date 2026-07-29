@@ -829,6 +829,31 @@
         "rollback": "not_required"
       }
     },
+    "maintenance.module.configure": {
+      "risk_level": "level_3_reversible_config",
+      "capability": "maintenance.modules.write",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "maintenance",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 900,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "module_state",
+        "verification": {
+          "required": true,
+          "mode": "module_state",
+          "fail_closed": true
+        },
+        "rollback": "package_manager_transaction"
+      }
+    },
     "maintenance.package.install": {
       "risk_level": "level_3_reversible_config",
       "capability": "maintenance.packages.write",

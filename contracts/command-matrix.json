@@ -1,5 +1,5 @@
 {
-  "command_count": 90,
+  "command_count": 91,
   "commands": [
     {
       "command": "agent.disconnect",
@@ -908,6 +908,33 @@
         "fail_closed": true
       },
       "rollback": "not_required",
+      "surface_equivalents": {}
+    },
+    {
+      "command": "maintenance.module.configure",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.modules.write",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "module_state",
+      "verification": {
+        "required": true,
+        "mode": "module_state",
+        "fail_closed": true
+      },
+      "rollback": "package_manager_transaction",
       "surface_equivalents": {}
     },
     {

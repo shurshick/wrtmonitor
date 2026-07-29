@@ -10,6 +10,7 @@ lib/status.sh
 lib/update.sh
 lib/telemetry_system.sh
 lib/telemetry_maintenance.sh
+lib/telemetry_modules.sh
 lib/telemetry_vpn.sh
 lib/telemetry_network.sh
 lib/telemetry_wifi.sh
@@ -27,5 +28,6 @@ lib/command_firewall.sh
 lib/command_vpn.sh
 lib/command_system.sh
 lib/command_maintenance.sh
+lib/command_modules.sh
 lib/command_agent.sh
 lib/api.sh

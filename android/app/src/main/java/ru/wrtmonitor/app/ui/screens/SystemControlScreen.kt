@@ -303,6 +303,61 @@ fun SystemControlScreen(
             }
         }
     }
+    if (mode == SystemScreenMode.Management && capabilities["maintenance.modules.write"] == true) {
+        val moduleItems = telemetry?.payload?.optJsonObject("modules")?.optJsonArray("items")
+        if (moduleItems != null && moduleItems.length() > 0) {
+            ExpandableSettingsCard(stringResource(R.string.openwrt_modules), stringResource(R.string.openwrt_modules_summary)) {
+                (0 until moduleItems.length()).mapNotNull(moduleItems::optJsonObject)
+                    .filter { it.optBoolean("supported") }
+                    .forEach { item ->
+                        val moduleId = item.optString("id")
+                        val installed = item.optBoolean("installed")
+                        val running = item.optBoolean("running")
+                        val hardwareCount = item.optInt("hardware_count")
+                        val label = when (moduleId) {
+                            "storage" -> stringResource(R.string.module_storage)
+                            "smb" -> stringResource(R.string.module_smb)
+                            "nfs" -> stringResource(R.string.module_nfs)
+                            "ftp" -> stringResource(R.string.module_ftp)
+                            "dlna" -> stringResource(R.string.module_dlna)
+                            "printer" -> stringResource(R.string.module_printer)
+                            "modem" -> stringResource(R.string.module_modem)
+                            else -> moduleId
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    buildString {
+                                        append(if (installed) stringResource(R.string.module_installed) else stringResource(R.string.module_not_installed))
+                                        if (running) append(" · ${stringResource(R.string.service_running)}")
+                                        if (hardwareCount > 0) append(" · ${stringResource(R.string.module_devices, hardwareCount)}")
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            if (!installed) {
+                                TextButton(onClick = { pendingSystemCommand = PendingSafeCommand("maintenance.module.configure", JsonObject().put("module", moduleId).put("action", "install"), systemCommandQueued) }) {
+                                    Text(stringResource(R.string.install_package))
+                                }
+                            } else {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    if (moduleId !in setOf("storage", "modem")) {
+                                        TextButton(onClick = { pendingSystemCommand = PendingSafeCommand("maintenance.module.configure", JsonObject().put("module", moduleId).put("action", if (running) "disable" else "enable"), systemCommandQueued) }) {
+                                            Text(stringResource(if (running) R.string.stop_service else R.string.start_service))
+                                        }
+                                    }
+                                    TextButton(onClick = { pendingSystemCommand = PendingSafeCommand("maintenance.module.configure", JsonObject().put("module", moduleId).put("action", "remove"), systemCommandQueued) }) {
+                                        Text(stringResource(R.string.remove_package))
+                                    }
+                                }
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+            }
+        }
+    }
     if (mode == SystemScreenMode.Management && (capabilities["maintenance.packages.read"] == true || capabilities["maintenance.packages.write"] == true)) {
         ExpandableSettingsCard(stringResource(R.string.router_packages), stringResource(R.string.router_packages_summary)) {
             if (capabilities["maintenance.packages.read"] == true) {

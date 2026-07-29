@@ -102,6 +102,9 @@ def test_web_form_and_maintenance_telemetry_summary():
         "staged_firmware_sha256": "",
         "installed_items": [],
         "upgradable_items": [],
+        "modules_state": "unsupported",
+        "modules": [],
+        "module_hardware": {},
     }
 
 

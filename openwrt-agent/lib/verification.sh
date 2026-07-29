@@ -17,6 +17,8 @@ postcondition_mode_for_command() {
             printf package_state ;;
         maintenance.service.set|system.restart_service)
             printf service_state ;;
+        maintenance.module.configure)
+            printf module_state ;;
         maintenance.process.signal|maintenance.sysupgrade.check)
             printf handler_result ;;
         client.set_blocked|client.set_policy|dhcp.delete_lease|dhcp.set_lease|dhcp.set_pool|dns.set_doh|dns.set_dot|dns.set_servers|firewall.delete_forwarding|firewall.delete_port_forward|firewall.delete_redirect|firewall.delete_rule|firewall.delete_zone|firewall.set_forwarding|firewall.set_port_forward|firewall.set_redirect|firewall.set_rule|firewall.set_zone|maintenance.cron.set|maintenance.recovery.disable|maintenance.recovery.enable|network.delete_route|network.delete_segment|network.delete_vlan|network.set_ddns|network.set_ipv6|network.set_lan|network.set_multiwan|network.set_route|network.set_segment|network.set_upnp|network.set_vlan|network.set_wan|qos.set_sqm|system.set_hostname|system.set_ntp|system.set_timezone|vpn.openvpn.delete_client|vpn.openvpn.set_client|vpn.openvpn.set_enabled|vpn.policy.delete|vpn.policy.set|vpn.wireguard.delete_interface|vpn.wireguard.delete_peer|vpn.wireguard.set_interface|vpn.wireguard.set_peer|wifi.add_ssid|wifi.delete_ssid|wifi.set_channel|wifi.set_country|wifi.set_enabled|wifi.set_guest|wifi.set_mesh|wifi.set_password|wifi.set_radio|wifi.set_schedule|wifi.set_ssid|wifi.update_ssid)
@@ -91,6 +93,30 @@ verify_service_postcondition() {
     esac
 }
 
+verify_module_postcondition() {
+    payload_file="$1"
+    module="$(json_get_string "$payload_file" '@.module')"
+    action="$(json_get_string "$payload_file" '@.action')"
+    package="$(module_primary_package "$module" 2>/dev/null || true)"
+    [ -n "$package" ] || return 1
+    case "$action" in
+        install) module_package_installed "$package" ;;
+        remove) ! module_package_installed "$package" ;;
+        enable|disable)
+            service="$(module_service "$module" 2>/dev/null || true)"
+            [ -n "$service" ] || return 1
+            service_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/init.d/$service"
+            [ -x "$service_path" ] || return 1
+            if [ "$action" = enable ]; then
+                "$service_path" enabled >/dev/null 2>&1 && "$service_path" running >/dev/null 2>&1
+            else
+                ! "$service_path" enabled >/dev/null 2>&1 && ! "$service_path" running >/dev/null 2>&1
+            fi
+            ;;
+        *) return 1 ;;
+    esac
+}
+
 verify_command_postcondition() {
     command_type="$1"
     command_payload="$2"
@@ -111,6 +137,12 @@ verify_command_postcondition() {
             ;;
         service_state)
             verify_service_postcondition "$command_type" "$payload_file"
+            status=$?
+            rm -f "$payload_file"
+            return "$status"
+            ;;
+        module_state)
+            verify_module_postcondition "$payload_file"
             status=$?
             rm -f "$payload_file"
             return "$status"

@@ -3,7 +3,7 @@
 Файл генерируется из исполнимого контракта и исходников командой
 `python scripts/generate_command_matrix.py --write`. Ручное редактирование запрещено.
 
-Всего команд: **90**.
+Всего команд: **91**.
 
 | Команда | Web | Android | API | Agent | Capability | Риск | Post-condition | Rollback |
 |---|:---:|:---:|:---:|:---:|---|---|---|---|
@@ -40,6 +40,7 @@
 | `maintenance.cron.set` | да | да | да | да | `maintenance.cron` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `maintenance.diagnostics.bundle` | да | да | да | да | `maintenance.diagnostics.bundle` | level_1_readonly | result_payload | not_required |
 | `maintenance.logs.read` | да | да | да | да | `maintenance.logs` | level_1_readonly | result_payload | not_required |
+| `maintenance.module.configure` | да | да | да | да | `maintenance.modules.write` | level_3_reversible_config | module_state | package_manager_transaction |
 | `maintenance.package.install` | да | да | да | да | `maintenance.packages.write` | level_3_reversible_config | package_state | package_manager_transaction |
 | `maintenance.package.remove` | да | да | да | да | `maintenance.packages.write` | level_3_reversible_config | package_state | package_manager_transaction |
 | `maintenance.package.upgrade` | да | да | да | да | `maintenance.packages.write` | level_3_reversible_config | package_state | package_manager_transaction |

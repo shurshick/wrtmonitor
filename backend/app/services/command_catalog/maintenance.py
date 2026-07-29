@@ -110,4 +110,10 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "maintenance.module.configure": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "maintenance.modules.write",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
 }

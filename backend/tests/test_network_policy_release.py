@@ -6,6 +6,7 @@ import json
 from backend.app.services.commands import validate_command_payload
 from backend.app.services.firmware_catalog import _profiles, firmware_catalog
 from backend.app.services.policy_catalog import policy_catalog
+from backend.app.services.telemetry import normalize_maintenance_summary
 from backend.app.services.wan_events import _mwan_state
 
 
@@ -133,3 +134,44 @@ def test_firmware_catalog_uses_reported_board_and_official_sysupgrade(monkeypatc
         "openwrt-router-sysupgrade.bin"
     ]
     assert catalog["images"][0]["model"] == "vendor,router"
+
+
+def test_openwrt_module_command_is_allowlisted_and_normalized():
+    assert validate_command_payload(
+        "maintenance.module.configure",
+        {"module": "smb", "action": "install"},
+    ) == {"module": "smb", "action": "install"}
+
+
+def test_module_telemetry_drops_empty_records_and_preserves_state():
+    summary = normalize_maintenance_summary(
+        {
+            "modules": {
+                "state": "observed",
+                "items": [
+                    {
+                        "id": "storage",
+                        "supported": True,
+                        "installed": True,
+                        "hardware_count": 2,
+                    },
+                    {},
+                ],
+                "hardware": {"block_devices": "sda sda1"},
+            }
+        }
+    )
+
+    assert summary["modules_state"] == "observed"
+    assert summary["modules"] == [
+        {
+            "id": "storage",
+            "supported": True,
+            "installed": True,
+            "running": False,
+            "enabled": False,
+            "hardware_count": 2,
+            "primary_package": "",
+        }
+    ]
+    assert summary["module_hardware"]["block_devices"] == "sda sda1"

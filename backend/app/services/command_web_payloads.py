@@ -361,6 +361,8 @@ def build_command_payload_from_web_form(
         payload = {"content": content or config_text}
     elif command_type == "maintenance.service.set":
         payload = {"service": service or name, "action": protocol}
+    elif command_type == "maintenance.module.configure":
+        payload = {"module": name, "action": protocol}
     elif command_type in {
         "maintenance.packages.refresh",
         "maintenance.processes.read",

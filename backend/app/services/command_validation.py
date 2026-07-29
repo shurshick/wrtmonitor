@@ -60,6 +60,7 @@ from .command_system import (
     _maintenance_backup_restore,
     _maintenance_cron,
     _maintenance_package,
+    _maintenance_module,
     _maintenance_sysupgrade,
     _normalize_auto_update_payload,
     _normalize_diagnostics_payload,
@@ -178,6 +179,8 @@ def validate_command_payload(
         return _maintenance_package(normalized_payload)
     if command_type == "maintenance.package.remove":
         return _maintenance_package(normalized_payload, remove=True)
+    if command_type == "maintenance.module.configure":
+        return _maintenance_module(normalized_payload)
     if command_type == "maintenance.backup.restore":
         return _maintenance_backup_restore(normalized_payload)
     if command_type == "maintenance.sysupgrade.check":
