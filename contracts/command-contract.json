@@ -18,8 +18,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "agent_state",
-        "rollback": "agent_previous_version_or_config"
+        "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
+        "rollback": "not_safe_after_dispatch"
       }
     },
     "agent.rollback": {
@@ -38,8 +43,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "agent_state",
-        "rollback": "agent_previous_version_or_config"
+        "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
+        "rollback": "not_safe_after_dispatch"
       }
     },
     "agent.rotate_token": {
@@ -59,6 +69,11 @@
           "max_deliveries": 2
         },
         "post_condition": "agent_state",
+        "verification": {
+          "required": true,
+          "mode": "agent_state",
+          "fail_closed": true
+        },
         "rollback": "agent_previous_version_or_config"
       }
     },
@@ -79,6 +94,11 @@
           "max_deliveries": 2
         },
         "post_condition": "agent_state",
+        "verification": {
+          "required": true,
+          "mode": "agent_state",
+          "fail_closed": true
+        },
         "rollback": "agent_previous_version_or_config"
       }
     },
@@ -99,6 +119,11 @@
           "max_deliveries": 2
         },
         "post_condition": "agent_state",
+        "verification": {
+          "required": true,
+          "mode": "agent_state",
+          "fail_closed": true
+        },
         "rollback": "agent_previous_version_or_config"
       }
     },
@@ -118,8 +143,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "agent_state",
-        "rollback": "agent_previous_version_or_config"
+        "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
+        "rollback": "not_safe_after_dispatch"
       }
     },
     "client.set_blocked": {
@@ -138,7 +168,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -158,7 +193,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -178,7 +218,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -198,7 +243,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -218,7 +268,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -239,6 +294,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -258,8 +318,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "package_state",
+        "verification": {
+          "required": true,
+          "mode": "package_state",
+          "fail_closed": true
+        },
+        "rollback": "package_manager_transaction"
       }
     },
     "dns.install_dot": {
@@ -278,8 +343,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "package_state",
+        "verification": {
+          "required": true,
+          "mode": "package_state",
+          "fail_closed": true
+        },
+        "rollback": "package_manager_transaction"
       }
     },
     "dns.set_doh": {
@@ -298,7 +368,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -318,7 +393,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -338,7 +418,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -358,7 +443,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -378,7 +468,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -398,7 +493,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -418,7 +518,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -438,7 +543,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -458,7 +568,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -478,7 +593,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -498,7 +618,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -518,7 +643,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -538,7 +668,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -559,6 +694,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -580,8 +720,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
+        "rollback": "not_safe_after_dispatch"
       }
     },
     "maintenance.cron.read": {
@@ -601,6 +746,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -620,7 +770,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -641,6 +796,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -661,6 +821,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -680,8 +845,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "package_state",
+        "verification": {
+          "required": true,
+          "mode": "package_state",
+          "fail_closed": true
+        },
+        "rollback": "package_manager_transaction"
       }
     },
     "maintenance.package.remove": {
@@ -700,8 +870,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "package_state",
+        "verification": {
+          "required": true,
+          "mode": "package_state",
+          "fail_closed": true
+        },
+        "rollback": "package_manager_transaction"
       }
     },
     "maintenance.package.upgrade": {
@@ -720,8 +895,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "package_state",
+        "verification": {
+          "required": true,
+          "mode": "package_state",
+          "fail_closed": true
+        },
+        "rollback": "package_manager_transaction"
       }
     },
     "maintenance.packages.refresh": {
@@ -741,6 +921,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -760,8 +945,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "handler_result",
+        "verification": {
+          "required": true,
+          "mode": "handler_result",
+          "fail_closed": true
+        },
+        "rollback": "not_available"
       }
     },
     "maintenance.processes.read": {
@@ -781,6 +971,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -800,7 +995,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -820,7 +1020,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -840,7 +1045,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "service_state",
+        "verification": {
+          "required": true,
+          "mode": "service_state",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -861,6 +1071,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -880,8 +1095,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
+        "rollback": "not_safe_after_dispatch"
       }
     },
     "maintenance.sysupgrade.check": {
@@ -900,8 +1120,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
-        "rollback": "configuration_backup"
+        "post_condition": "handler_result",
+        "verification": {
+          "required": true,
+          "mode": "handler_result",
+          "fail_closed": true
+        },
+        "rollback": "not_available"
       }
     },
     "network.delete_route": {
@@ -920,7 +1145,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -940,7 +1170,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -960,7 +1195,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -981,6 +1221,11 @@
           "max_deliveries": 2
         },
         "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
         "rollback": "not_safe_after_dispatch"
       }
     },
@@ -1001,6 +1246,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -1021,6 +1271,11 @@
           "max_deliveries": 2
         },
         "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
         "rollback": "not_safe_after_dispatch"
       }
     },
@@ -1042,7 +1297,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1062,7 +1322,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1082,7 +1347,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1102,7 +1372,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1122,7 +1397,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1142,7 +1422,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1162,7 +1447,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1182,7 +1472,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1204,7 +1499,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1224,7 +1524,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1245,6 +1550,11 @@
           "max_deliveries": 2
         },
         "post_condition": "service_or_connectivity_state",
+        "verification": {
+          "required": true,
+          "mode": "service_or_connectivity_state",
+          "fail_closed": true
+        },
         "rollback": "not_safe_after_dispatch"
       }
     },
@@ -1264,7 +1574,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "service_state",
+        "verification": {
+          "required": true,
+          "mode": "service_state",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1284,7 +1599,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1304,7 +1624,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1324,7 +1649,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1344,7 +1674,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1365,6 +1700,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -1386,7 +1726,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1406,7 +1751,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1426,7 +1776,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1446,7 +1801,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1466,7 +1826,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1486,7 +1851,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1507,6 +1877,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -1528,7 +1903,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1550,7 +1930,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1573,7 +1958,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1593,7 +1983,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1613,7 +2008,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1633,7 +2033,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1653,7 +2058,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1676,7 +2086,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1699,7 +2114,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1723,7 +2143,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1743,7 +2168,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1763,7 +2193,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1783,7 +2218,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     },
@@ -1804,6 +2244,11 @@
           "max_deliveries": 3
         },
         "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
         "rollback": "not_required"
       }
     },
@@ -1826,7 +2271,12 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_telemetry",
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
         "rollback": "configuration_backup"
       }
     }

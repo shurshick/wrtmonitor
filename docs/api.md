@@ -177,7 +177,7 @@ Content-Type: application/json
 
 Тело совпадает с созданием команды. Ответ содержит `changes`, `warnings`, `errors`, `can_apply`, список UCI-конфигураций и timeout автоматического rollback.
 
-### Управляющие команды v0.17.0
+### Управляющие команды
 
 Расширенный Wi-Fi: `wifi.set_radio`, `wifi.add_ssid`, `wifi.update_ssid`, `wifi.delete_ssid`, `wifi.set_schedule`, `wifi.set_mesh`. Сервер валидирует radio/iface, режим защиты, длину ключа, channel/htmode/txpower, дни и время расписания до постановки команды в очередь.
 

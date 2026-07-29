@@ -1,5 +1,21 @@
 # Проверка на реальном OpenWrt-роутере
 
+Автоматический CI и x86 harness не считаются испытанием физического роутера. Релиз получает отметку `hardware verified` только после заполнения отчёта для всех поддержанных устройством команд.
+
+Создание отчёта:
+
+```sh
+python scripts/command_validation_report.py certification/netis-nx31.json --init --router "Netis NX31 / OpenWrt 25.12"
+```
+
+Финальный gate:
+
+```sh
+python scripts/command_validation_report.py certification/netis-nx31.json --require-complete
+```
+
+`not_applicable` допустим только для capability, которую роутер явно объявил неподдерживаемой. `pass` без ссылки на лог, JSON result или снимок UCI не принимается.
+
 Перед изменением SSID, отключением Wi-Fi или reboot убедитесь, что есть SSH-доступ по кабелю и сохранен backup: `sysupgrade -b /tmp/openwrt-backup.tar.gz`.
 
 ## Чек-лист

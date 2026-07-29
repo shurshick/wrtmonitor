@@ -1,0 +1,2345 @@
+{
+  "command_count": 90,
+  "commands": [
+    {
+      "command": "agent.disconnect",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": false,
+        "agent": true
+      },
+      "capability": "agent.disable",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "agent.rollback",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "agent.rollback",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "agent.rotate_token",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "agent.rotate_token",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "agent_state",
+      "verification": {
+        "required": true,
+        "mode": "agent_state",
+        "fail_closed": true
+      },
+      "rollback": "agent_previous_version_or_config"
+    },
+    {
+      "command": "agent.set_auto_update",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "agent.update",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "agent_state",
+      "verification": {
+        "required": true,
+        "mode": "agent_state",
+        "fail_closed": true
+      },
+      "rollback": "agent_previous_version_or_config"
+    },
+    {
+      "command": "agent.set_interval",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "agent.set_interval",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "agent_state",
+      "verification": {
+        "required": true,
+        "mode": "agent_state",
+        "fail_closed": true
+      },
+      "rollback": "agent_previous_version_or_config"
+    },
+    {
+      "command": "agent.update",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "agent.update",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "client.set_blocked",
+      "subsystem": "client",
+      "surfaces": {
+        "api": true,
+        "web": false,
+        "android": false,
+        "agent": true
+      },
+      "capability": "clients.block",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "client.set_policy",
+      "subsystem": "client",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": false,
+        "agent": true
+      },
+      "capability": "clients.policy",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "dhcp.delete_lease",
+      "subsystem": "dhcp",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dhcp.delete_lease",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "dhcp.set_lease",
+      "subsystem": "dhcp",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dhcp.set_lease",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "dhcp.set_pool",
+      "subsystem": "dhcp",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dhcp.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "diagnostics.run",
+      "subsystem": "diagnostics",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "diagnostics.check_server",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "dns.install_doh",
+      "subsystem": "dns",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dns.encrypted.install",
+      "risk": "level_2_safe_write",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "package_state",
+      "verification": {
+        "required": true,
+        "mode": "package_state",
+        "fail_closed": true
+      },
+      "rollback": "package_manager_transaction"
+    },
+    {
+      "command": "dns.install_dot",
+      "subsystem": "dns",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dns.encrypted.install",
+      "risk": "level_2_safe_write",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "package_state",
+      "verification": {
+        "required": true,
+        "mode": "package_state",
+        "fail_closed": true
+      },
+      "rollback": "package_manager_transaction"
+    },
+    {
+      "command": "dns.set_doh",
+      "subsystem": "dns",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dns.doh.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "dns.set_dot",
+      "subsystem": "dns",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dns.dot.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "dns.set_servers",
+      "subsystem": "dns",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "dns.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.delete_forwarding",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.zones.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.delete_port_forward",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": false,
+        "android": false,
+        "agent": true
+      },
+      "capability": "firewall.port_forward",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.delete_redirect",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.port_forward",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.delete_rule",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.rules.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.delete_zone",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.zones.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.set_forwarding",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.zones.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.set_port_forward",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": false,
+        "agent": true
+      },
+      "capability": "firewall.port_forward",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.set_redirect",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.port_forward",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.set_rule",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.rules.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "firewall.set_zone",
+      "subsystem": "firewall",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.zones.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "maintenance.backup.create",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.backup",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "maintenance.backup.restore",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.backup",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "maintenance.cron.read",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": false,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.cron",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "maintenance.cron.set",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.cron",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "maintenance.diagnostics.bundle",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.diagnostics.bundle",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "maintenance.logs.read",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.logs",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "maintenance.package.install",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.packages.write",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "package_state",
+      "verification": {
+        "required": true,
+        "mode": "package_state",
+        "fail_closed": true
+      },
+      "rollback": "package_manager_transaction"
+    },
+    {
+      "command": "maintenance.package.remove",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.packages.write",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "package_state",
+      "verification": {
+        "required": true,
+        "mode": "package_state",
+        "fail_closed": true
+      },
+      "rollback": "package_manager_transaction"
+    },
+    {
+      "command": "maintenance.package.upgrade",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.packages.write",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "package_state",
+      "verification": {
+        "required": true,
+        "mode": "package_state",
+        "fail_closed": true
+      },
+      "rollback": "package_manager_transaction"
+    },
+    {
+      "command": "maintenance.packages.refresh",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.packages.read",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "maintenance.process.signal",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.processes",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "handler_result",
+      "verification": {
+        "required": true,
+        "mode": "handler_result",
+        "fail_closed": true
+      },
+      "rollback": "not_available"
+    },
+    {
+      "command": "maintenance.processes.read",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": false,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.processes",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "maintenance.recovery.disable",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.recovery",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "maintenance.recovery.enable",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.recovery",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "maintenance.service.set",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "system.restart_service",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "service_state",
+      "verification": {
+        "required": true,
+        "mode": "service_state",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "maintenance.services.read",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": false,
+        "android": true,
+        "agent": true
+      },
+      "capability": "system.restart_service",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "maintenance.sysupgrade.apply",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.sysupgrade.apply",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "maintenance.sysupgrade.check",
+      "subsystem": "maintenance",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "maintenance.sysupgrade.check",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 900,
+      "max_deliveries": 2,
+      "post_condition": "handler_result",
+      "verification": {
+        "required": true,
+        "mode": "handler_result",
+        "fail_closed": true
+      },
+      "rollback": "not_available"
+    },
+    {
+      "command": "network.delete_route",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.routes.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.delete_segment",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.segments.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.delete_vlan",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.vlan.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.interface_restart",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.interface_restart",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "network.interfaces",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.read",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "network.restart",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.restart",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "network.set_ddns",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.ddns.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_ipv6",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.ipv6.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_lan",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.lan.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_multiwan",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.multiwan.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_route",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.routes.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_segment",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.segments.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_upnp",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "firewall.upnp.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_vlan",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.vlan.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "network.set_wan",
+      "subsystem": "network",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "network.wan.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "qos.set_sqm",
+      "subsystem": "qos",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "qos.sqm",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "router.reboot",
+      "subsystem": "router",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "system.reboot",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "service_or_connectivity_state",
+      "verification": {
+        "required": true,
+        "mode": "service_or_connectivity_state",
+        "fail_closed": true
+      },
+      "rollback": "not_safe_after_dispatch"
+    },
+    {
+      "command": "system.restart_service",
+      "subsystem": "system",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "system.restart_service",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "service_state",
+      "verification": {
+        "required": true,
+        "mode": "service_state",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "system.set_hostname",
+      "subsystem": "system",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "system.set_hostname",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "system.set_ntp",
+      "subsystem": "system",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "system.set_ntp",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "system.set_timezone",
+      "subsystem": "system",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "system.set_timezone",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.openvpn.delete_client",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.openvpn.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.openvpn.export_client",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.openvpn.read",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "vpn.openvpn.set_client",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.openvpn.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.openvpn.set_enabled",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.openvpn.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.policy.delete",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.policy.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.policy.set",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.policy.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.wireguard.delete_interface",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.wireguard.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.wireguard.delete_peer",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.wireguard.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.wireguard.export_peer",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.wireguard.read",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "vpn.wireguard.set_interface",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.wireguard.configure",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "vpn.wireguard.set_peer",
+      "subsystem": "vpn",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "vpn.wireguard.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.add_ssid",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.manage_ssid",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.delete_ssid",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.manage_ssid",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_channel",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.set_channel",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_country",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.set_country",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_enabled",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.enable",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_guest",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.guest",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_mesh",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.mesh",
+      "risk": "level_4_disruptive",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 300,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_password",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.set_password",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_radio",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.radio.configure",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_schedule",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.schedule",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.set_ssid",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.set_ssid",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    },
+    {
+      "command": "wifi.status",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": false,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.read",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 45,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required"
+    },
+    {
+      "command": "wifi.update_ssid",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.manage_ssid",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 120,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup"
+    }
+  ]
+}

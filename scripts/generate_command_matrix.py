@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import re
+import sys
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from backend.app.services.command_registry import COMMAND_REGISTRY  # noqa: E402
+
+
+def source_text(*parts: str) -> str:
+    root = ROOT.joinpath(*parts)
+    if root.is_file():
+        return root.read_text(encoding="utf-8")
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in root.rglob("*")
+        if path.is_file() and path.suffix in {".html", ".kt", ".py", ".sh"}
+    )
+
+
+def exact_reference(source: str, command: str) -> bool:
+    return bool(
+        re.search(rf"(?<![A-Za-z0-9_.]){re.escape(command)}(?![A-Za-z0-9_.])", source)
+    )
+
+
+def build_matrix() -> dict[str, Any]:
+    web = source_text("backend", "app", "templates") + source_text(
+        "backend", "app", "web"
+    )
+    android = source_text("android", "app", "src", "main", "java")
+    agent = source_text("openwrt-agent", "lib", "commands.sh")
+    rows: list[dict[str, Any]] = []
+    for command, metadata in sorted(COMMAND_REGISTRY.items()):
+        reliability = metadata["reliability"]
+        rows.append(
+            {
+                "command": command,
+                "subsystem": reliability["subsystem"],
+                "surfaces": {
+                    "api": True,
+                    "web": exact_reference(web, command),
+                    "android": exact_reference(android, command),
+                    "agent": exact_reference(agent, command),
+                },
+                "capability": metadata["capability"],
+                "risk": metadata["risk_level"],
+                "confirmation": metadata["requires_confirmation"],
+                "idempotency": reliability["idempotency"],
+                "timeout_seconds": reliability["delivery"]["timeout_seconds"],
+                "max_deliveries": reliability["delivery"]["max_deliveries"],
+                "post_condition": reliability["post_condition"],
+                "verification": reliability["verification"],
+                "rollback": reliability["rollback"],
+            }
+        )
+    return {"command_count": len(rows), "commands": rows}
+
+
+def markdown(matrix: dict[str, Any]) -> str:
+    lines = [
+        "# Матрица команд WrtMonitor",
+        "",
+        "Файл генерируется из исполнимого контракта и исходников командой ",
+        "`python scripts/generate_command_matrix.py --write`. Ручное редактирование запрещено.",
+        "",
+        f"Всего команд: **{matrix['command_count']}**.",
+        "",
+        "| Команда | Web | Android | API | Agent | Capability | Риск | Post-condition | Rollback |",
+        "|---|:---:|:---:|:---:|:---:|---|---|---|---|",
+    ]
+    for row in matrix["commands"]:
+        surfaces = row["surfaces"]
+        mark = lambda value: "да" if value else "нет"
+        lines.append(
+            "| {command} | {web} | {android} | {api} | {agent} | {capability} | "
+            "{risk} | {post_condition} | {rollback} |".format(
+                command=f"`{row['command']}`",
+                web=mark(surfaces["web"]),
+                android=mark(surfaces["android"]),
+                api=mark(surfaces["api"]),
+                agent=mark(surfaces["agent"]),
+                capability=f"`{row['capability']}`",
+                risk=row["risk"],
+                post_condition=row["post_condition"],
+                rollback=row["rollback"],
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--write", action="store_true")
+    args = parser.parse_args()
+    matrix = build_matrix()
+    json_rendered = json.dumps(matrix, ensure_ascii=False, indent=2) + "\n"
+    md_rendered = markdown(matrix)
+    targets = {
+        ROOT / "contracts" / "command-matrix.json": json_rendered,
+        ROOT / "docs" / "command-matrix.md": md_rendered,
+    }
+    if args.write:
+        for target, rendered in targets.items():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(rendered, encoding="utf-8")
+    stale = [
+        str(target.relative_to(ROOT))
+        for target, rendered in targets.items()
+        if not target.is_file() or target.read_text(encoding="utf-8") != rendered
+    ]
+    if stale:
+        print(f"command matrix is stale: {', '.join(stale)}", file=sys.stderr)
+        return 1
+    missing_agent = [
+        row["command"] for row in matrix["commands"] if not row["surfaces"]["agent"]
+    ]
+    if missing_agent:
+        print(f"agent surface missing: {missing_agent}", file=sys.stderr)
+        return 1
+    print(f"command matrix OK: {matrix['command_count']} commands")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

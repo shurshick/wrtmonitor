@@ -65,6 +65,11 @@ def main() -> int:
     parser.add_argument("report", type=Path)
     parser.add_argument("--init", action="store_true")
     parser.add_argument("--router", default="physical-openwrt")
+    parser.add_argument(
+        "--require-complete",
+        action="store_true",
+        help="fail unless every command has a final hardware result and evidence",
+    )
     args = parser.parse_args()
     if args.init:
         args.report.parent.mkdir(parents=True, exist_ok=True)
@@ -75,7 +80,14 @@ def main() -> int:
     if not args.report.is_file():
         print(f"report not found: {args.report}")
         return 1
-    errors = validate(json.loads(args.report.read_text(encoding="utf-8")))
+    report = json.loads(args.report.read_text(encoding="utf-8"))
+    errors = validate(report)
+    if args.require_complete:
+        for name, result in report.get("commands", {}).items():
+            if result.get("status") not in {"pass", "not_applicable"}:
+                errors.append(f"{name}: hardware certification is incomplete")
+            if result.get("status") == "pass" and not result.get("evidence"):
+                errors.append(f"{name}: hardware certification has no evidence")
     if errors:
         print("\n".join(errors))
         return 1

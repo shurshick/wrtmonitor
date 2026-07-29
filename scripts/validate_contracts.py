@@ -62,6 +62,7 @@ def main() -> int:
         "delivery",
         "post_condition",
         "rollback",
+        "verification",
     }
     incomplete_reliability = {
         command
@@ -77,6 +78,16 @@ def main() -> int:
     if incomplete_reliability:
         errors.append(
             f"commands miss reliability policy: {sorted(incomplete_reliability)}"
+        )
+    non_fail_closed = {
+        command
+        for command, metadata in COMMAND_REGISTRY.items()
+        if metadata.get("reliability", {}).get("verification", {}).get("fail_closed")
+        is not True
+    }
+    if non_fail_closed:
+        errors.append(
+            f"commands do not fail closed during verification: {sorted(non_fail_closed)}"
         )
 
     target = ROOT / "contracts/command-contract.json"

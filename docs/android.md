@@ -2,15 +2,15 @@
 
 Android-приложение - основной пользовательский интерфейс `WrtMonitor`.
 
-Текущая версия: `v0.21.0-wifi-clients`.
+Текущая версия берётся из файла `VERSION` и отображается на странице последнего GitHub Release.
 
 ## Установка
 
-1. Откройте релиз `v0.21.0-wifi-clients`.
+1. Откройте последний тестовый релиз WrtMonitor.
 2. Скачайте APK:
 
    ```text
-   wrtmonitor-android-v0.21.0.apk
+   wrtmonitor-android-v<версия>.apk
    ```
 
 3. Установите APK на Android-устройство.

@@ -12,6 +12,9 @@ def test_all_commands_have_executable_reliability_policy():
         assert policy["delivery"]["timeout_seconds"] >= 30
         assert policy["delivery"]["max_deliveries"] in {2, 3}
         assert policy["post_condition"]
+        assert policy["verification"]["required"] is True
+        assert policy["verification"]["fail_closed"] is True
+        assert policy["verification"]["mode"] == policy["post_condition"]
         assert policy["rollback"]
 
 

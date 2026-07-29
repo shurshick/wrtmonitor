@@ -90,6 +90,9 @@ verify_command_postcondition network.set_vlan \
 verify_command_postcondition network.set_multiwan \
     '{"enabled":true,"primary_interface":"wan","secondary_interface":"wan2"}' \
     || fail "Multi-WAN post-condition"
+if verify_command_postcondition future.unknown '{}'; then
+    fail "unknown commands must fail post-condition verification"
+fi
 
 ubus call network.interface.wan status >/dev/null
 fw4 check

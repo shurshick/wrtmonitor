@@ -20,7 +20,7 @@ lib/commands.sh
 lib/api.sh
 ```
 
-Версия `0.17.1` использует capability schema 16 и единый манифест обязательных runtime-зависимостей. Installer и обновление агента применяют этот манифест автоматически, поэтому новые зависимости будущих релизов устанавливаются без переустановки агента. Перед установкой каждый payload-файл проверяется по SHA-256, а detached-манифест — отдельно по встроенному Ed25519 public key. Такое разделение сохраняет обновление со старых агентов `0.15.x`.
+Актуальный агент использует capability schema 16 и единый манифест обязательных runtime-зависимостей. Installer и обновление применяют этот манифест автоматически. Каждый payload-файл проверяется по SHA-256, а detached-манифест отдельно проверяется по встроенному Ed25519 public key.
 
 ## Требования
 
@@ -93,7 +93,7 @@ Installer сам скачает:
 ```sh
 cd /tmp
 wget -O wrtmonitor-agent.tar.gz \
-  https://github.com/shurshick/wrtmonitor/releases/download/v0.17.1-agent-update-compatibility/wrtmonitor-openwrt-agent-v0.17.1.tar.gz
+  https://github.com/shurshick/wrtmonitor/releases/latest/download/wrtmonitor-openwrt-agent-v<версия>.tar.gz
 tar -xzf wrtmonitor-agent.tar.gz
 sh install-openwrt.sh \
   --server 'https://monitor.example.ru' \
@@ -131,7 +131,7 @@ Installer считает установку успешной только пос
 
 ```text
 Initial telemetry accepted by WrtMonitor server
-wrtmonitor agent 0.17.1 installed and running
+wrtmonitor agent <версия> installed and running
 ```
 
 ## Проверка после установки
@@ -211,7 +211,7 @@ wrtmonitor-agent diagnostics --json
 
 ## Обслуживание роутера
 
-Команды `v0.17.1` выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера. Повторная доставка команды не запускает действие второй раз: агент возвращает сохранённый terminal result по command id.
+Команды выполняются только через авторизованный сервер и показываются в интерфейсах по реальным capabilities роутера. Повторная доставка команды не запускает действие второй раз: агент возвращает сохранённый terminal result по command id.
 
 ### Сегменты и VLAN
 
