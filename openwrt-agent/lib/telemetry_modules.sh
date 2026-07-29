@@ -40,10 +40,10 @@ module_hardware_items() {
             done
             ;;
         printer)
-            for item in "$root"/dev/usb/lp*; do [ -e "$item" ] && printf '%s\n' "${item#${root}}"; done
+            for item in "$root"/dev/usb/lp*; do [ -e "$item" ] && printf '%s\n' "${item#"${root}"}"; done
             ;;
         modem)
-            for item in "$root"/dev/cdc-wdm* "$root"/dev/ttyUSB* "$root"/dev/ttyACM*; do [ -e "$item" ] && printf '%s\n' "${item#${root}}"; done
+            for item in "$root"/dev/cdc-wdm* "$root"/dev/ttyUSB* "$root"/dev/ttyACM*; do [ -e "$item" ] && printf '%s\n' "${item#"${root}"}"; done
             ;;
     esac
 }

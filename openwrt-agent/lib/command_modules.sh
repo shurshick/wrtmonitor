@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034,SC2154
 module_packages() {
     case "$1" in
         storage) printf '%s\n' block-mount kmod-usb-storage e2fsprogs usbutils ;;
