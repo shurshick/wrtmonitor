@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034,SC2154
 handle_vpn_command() {
     case "$command_type" in
         vpn.wireguard.set_interface)

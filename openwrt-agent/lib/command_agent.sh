@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034,SC2154
 handle_agent_command() {
     case "$command_type" in
         diagnostics.run)
