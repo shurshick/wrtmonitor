@@ -14,6 +14,11 @@ sys.path.insert(0, str(ROOT))
 from backend.app.services.command_registry import COMMAND_REGISTRY  # noqa: E402
 
 
+SURFACE_EQUIVALENTS = json.loads(
+    (ROOT / "contracts" / "surface-equivalents.json").read_text(encoding="utf-8")
+)
+
+
 def source_text(*parts: str) -> str:
     root = ROOT.joinpath(*parts)
     if root.is_file():
@@ -40,14 +45,21 @@ def build_matrix() -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     for command, metadata in sorted(COMMAND_REGISTRY.items()):
         reliability = metadata["reliability"]
+        equivalents = SURFACE_EQUIVALENTS.get(command, {})
+        web_reference = exact_reference(web, command)
+        android_reference = exact_reference(android, command)
+        if equivalents.get("web"):
+            web_reference = web_reference or equivalents["web"] in web
+        if equivalents.get("android"):
+            android_reference = android_reference or equivalents["android"] in android
         rows.append(
             {
                 "command": command,
                 "subsystem": reliability["subsystem"],
                 "surfaces": {
                     "api": True,
-                    "web": exact_reference(web, command),
-                    "android": exact_reference(android, command),
+                    "web": web_reference,
+                    "android": android_reference,
                     "agent": exact_reference(agent, command),
                 },
                 "capability": metadata["capability"],
@@ -59,6 +71,7 @@ def build_matrix() -> dict[str, Any]:
                 "post_condition": reliability["post_condition"],
                 "verification": reliability["verification"],
                 "rollback": reliability["rollback"],
+                "surface_equivalents": equivalents,
             }
         )
     return {"command_count": len(rows), "commands": rows}
@@ -76,6 +89,7 @@ def markdown(matrix: dict[str, Any]) -> str:
         "| Команда | Web | Android | API | Agent | Capability | Риск | Post-condition | Rollback |",
         "|---|:---:|:---:|:---:|:---:|---|---|---|---|",
     ]
+
     def mark(value: bool) -> str:
         return "да" if value else "нет"
 
@@ -126,6 +140,20 @@ def main() -> int:
     ]
     if missing_agent:
         print(f"agent surface missing: {missing_agent}", file=sys.stderr)
+        return 1
+    missing_user_surfaces = {
+        surface: [
+            row["command"] for row in matrix["commands"] if not row["surfaces"][surface]
+        ]
+        for surface in ("web", "android")
+    }
+    missing_user_surfaces = {
+        surface: commands
+        for surface, commands in missing_user_surfaces.items()
+        if commands
+    }
+    if missing_user_surfaces:
+        print(f"operation parity missing: {missing_user_surfaces}", file=sys.stderr)
         return 1
     print(f"command matrix OK: {matrix['command_count']} commands")
     return 0

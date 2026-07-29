@@ -1,0 +1,38 @@
+{
+  "agent.disconnect": {
+    "android": "suspend fun disconnect(",
+    "web": "/devices/{device_id}/disconnect"
+  },
+  "client.set_blocked": {
+    "android": "applyClientPolicy(",
+    "web": "/devices/{device_id}/clients/{client_id}/policy"
+  },
+  "client.set_policy": {
+    "android": "applyClientPolicy(",
+    "web": "/devices/{device_id}/clients/{client_id}/policy"
+  },
+  "firewall.set_port_forward": {
+    "android": "firewall.set_redirect",
+    "web": "firewall.set_redirect"
+  },
+  "firewall.delete_port_forward": {
+    "android": "firewall.delete_redirect",
+    "web": "firewall.delete_redirect"
+  },
+  "maintenance.cron.read": {
+    "android": "cron_content",
+    "web": "cron_content"
+  },
+  "maintenance.processes.read": {
+    "android": "processes",
+    "web": "processes"
+  },
+  "maintenance.services.read": {
+    "android": "services",
+    "web": "services"
+  },
+  "wifi.status": {
+    "android": "wifi.status",
+    "web": "normalize_wifi_summary"
+  }
+}

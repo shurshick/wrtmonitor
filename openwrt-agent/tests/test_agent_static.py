@@ -691,6 +691,13 @@ EOF
     assert survey["utilization_percent"] == 42
 
 
+def test_wifi_telemetry_reports_supported_channels_from_selected_phy():
+    source = read_text(LIB_DIR / "telemetry_wifi.sh")
+    assert "wifi_supported_channels_json" in source
+    assert 'iw phy "phy$wiphy_index" info' in source
+    assert "supported_channels" in source
+
+
 def test_agent_version_file_matches_entrypoint():
     expected_version = read_text(REPO_ROOT / "VERSION").strip()
     assert read_text(AGENT_VERSION).strip() == expected_version

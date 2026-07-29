@@ -7,7 +7,7 @@
       "surfaces": {
         "api": true,
         "web": true,
-        "android": false,
+        "android": true,
         "agent": true
       },
       "capability": "agent.disable",
@@ -25,7 +25,11 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {
+        "android": "suspend fun disconnect(",
+        "web": "/devices/{device_id}/disconnect"
+      }
     },
     {
       "command": "agent.rollback",
@@ -51,7 +55,8 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {}
     },
     {
       "command": "agent.rotate_token",
@@ -77,7 +82,8 @@
         "mode": "agent_state",
         "fail_closed": true
       },
-      "rollback": "agent_previous_version_or_config"
+      "rollback": "agent_previous_version_or_config",
+      "surface_equivalents": {}
     },
     {
       "command": "agent.set_auto_update",
@@ -103,7 +109,8 @@
         "mode": "agent_state",
         "fail_closed": true
       },
-      "rollback": "agent_previous_version_or_config"
+      "rollback": "agent_previous_version_or_config",
+      "surface_equivalents": {}
     },
     {
       "command": "agent.set_interval",
@@ -129,7 +136,8 @@
         "mode": "agent_state",
         "fail_closed": true
       },
-      "rollback": "agent_previous_version_or_config"
+      "rollback": "agent_previous_version_or_config",
+      "surface_equivalents": {}
     },
     {
       "command": "agent.update",
@@ -155,15 +163,16 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {}
     },
     {
       "command": "client.set_blocked",
       "subsystem": "client",
       "surfaces": {
         "api": true,
-        "web": false,
-        "android": false,
+        "web": true,
+        "android": true,
         "agent": true
       },
       "capability": "clients.block",
@@ -181,7 +190,11 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {
+        "android": "applyClientPolicy(",
+        "web": "/devices/{device_id}/clients/{client_id}/policy"
+      }
     },
     {
       "command": "client.set_policy",
@@ -189,7 +202,7 @@
       "surfaces": {
         "api": true,
         "web": true,
-        "android": false,
+        "android": true,
         "agent": true
       },
       "capability": "clients.policy",
@@ -207,7 +220,11 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {
+        "android": "applyClientPolicy(",
+        "web": "/devices/{device_id}/clients/{client_id}/policy"
+      }
     },
     {
       "command": "dhcp.delete_lease",
@@ -233,7 +250,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "dhcp.set_lease",
@@ -259,7 +277,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "dhcp.set_pool",
@@ -285,7 +304,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "diagnostics.run",
@@ -311,7 +331,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "dns.install_doh",
@@ -337,7 +358,8 @@
         "mode": "package_state",
         "fail_closed": true
       },
-      "rollback": "package_manager_transaction"
+      "rollback": "package_manager_transaction",
+      "surface_equivalents": {}
     },
     {
       "command": "dns.install_dot",
@@ -363,7 +385,8 @@
         "mode": "package_state",
         "fail_closed": true
       },
-      "rollback": "package_manager_transaction"
+      "rollback": "package_manager_transaction",
+      "surface_equivalents": {}
     },
     {
       "command": "dns.set_doh",
@@ -389,7 +412,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "dns.set_dot",
@@ -415,7 +439,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "dns.set_servers",
@@ -441,7 +466,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.delete_forwarding",
@@ -467,15 +493,16 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.delete_port_forward",
       "subsystem": "firewall",
       "surfaces": {
         "api": true,
-        "web": false,
-        "android": false,
+        "web": true,
+        "android": true,
         "agent": true
       },
       "capability": "firewall.port_forward",
@@ -493,7 +520,11 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {
+        "android": "firewall.delete_redirect",
+        "web": "firewall.delete_redirect"
+      }
     },
     {
       "command": "firewall.delete_redirect",
@@ -519,7 +550,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.delete_rule",
@@ -545,7 +577,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.delete_zone",
@@ -571,7 +604,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.set_forwarding",
@@ -597,7 +631,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.set_port_forward",
@@ -605,7 +640,7 @@
       "surfaces": {
         "api": true,
         "web": true,
-        "android": false,
+        "android": true,
         "agent": true
       },
       "capability": "firewall.port_forward",
@@ -623,7 +658,11 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {
+        "android": "firewall.set_redirect",
+        "web": "firewall.set_redirect"
+      }
     },
     {
       "command": "firewall.set_redirect",
@@ -649,7 +688,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.set_rule",
@@ -675,7 +715,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "firewall.set_zone",
@@ -701,7 +742,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.backup.create",
@@ -727,7 +769,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.backup.restore",
@@ -753,14 +796,15 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.cron.read",
       "subsystem": "maintenance",
       "surfaces": {
         "api": true,
-        "web": false,
+        "web": true,
         "android": true,
         "agent": true
       },
@@ -779,7 +823,11 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {
+        "android": "cron_content",
+        "web": "cron_content"
+      }
     },
     {
       "command": "maintenance.cron.set",
@@ -805,7 +853,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.diagnostics.bundle",
@@ -831,7 +880,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.logs.read",
@@ -857,7 +907,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.package.install",
@@ -883,7 +934,8 @@
         "mode": "package_state",
         "fail_closed": true
       },
-      "rollback": "package_manager_transaction"
+      "rollback": "package_manager_transaction",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.package.remove",
@@ -909,7 +961,8 @@
         "mode": "package_state",
         "fail_closed": true
       },
-      "rollback": "package_manager_transaction"
+      "rollback": "package_manager_transaction",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.package.upgrade",
@@ -935,7 +988,8 @@
         "mode": "package_state",
         "fail_closed": true
       },
-      "rollback": "package_manager_transaction"
+      "rollback": "package_manager_transaction",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.packages.refresh",
@@ -961,7 +1015,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.process.signal",
@@ -987,14 +1042,15 @@
         "mode": "handler_result",
         "fail_closed": true
       },
-      "rollback": "not_available"
+      "rollback": "not_available",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.processes.read",
       "subsystem": "maintenance",
       "surfaces": {
         "api": true,
-        "web": false,
+        "web": true,
         "android": true,
         "agent": true
       },
@@ -1013,7 +1069,11 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {
+        "android": "processes",
+        "web": "processes"
+      }
     },
     {
       "command": "maintenance.recovery.disable",
@@ -1039,7 +1099,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.recovery.enable",
@@ -1065,7 +1126,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.service.set",
@@ -1091,14 +1153,15 @@
         "mode": "service_state",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.services.read",
       "subsystem": "maintenance",
       "surfaces": {
         "api": true,
-        "web": false,
+        "web": true,
         "android": true,
         "agent": true
       },
@@ -1117,7 +1180,11 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {
+        "android": "services",
+        "web": "services"
+      }
     },
     {
       "command": "maintenance.sysupgrade.apply",
@@ -1143,7 +1210,8 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {}
     },
     {
       "command": "maintenance.sysupgrade.check",
@@ -1169,7 +1237,8 @@
         "mode": "handler_result",
         "fail_closed": true
       },
-      "rollback": "not_available"
+      "rollback": "not_available",
+      "surface_equivalents": {}
     },
     {
       "command": "network.delete_route",
@@ -1195,7 +1264,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.delete_segment",
@@ -1221,7 +1291,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.delete_vlan",
@@ -1247,7 +1318,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.interface_restart",
@@ -1273,7 +1345,8 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {}
     },
     {
       "command": "network.interfaces",
@@ -1299,7 +1372,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "network.restart",
@@ -1325,7 +1399,8 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_ddns",
@@ -1351,7 +1426,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_ipv6",
@@ -1377,7 +1453,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_lan",
@@ -1403,7 +1480,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_multiwan",
@@ -1429,7 +1507,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_route",
@@ -1455,7 +1534,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_segment",
@@ -1481,7 +1561,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_upnp",
@@ -1507,7 +1588,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_vlan",
@@ -1533,7 +1615,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "network.set_wan",
@@ -1559,7 +1642,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "qos.set_sqm",
@@ -1585,7 +1669,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "router.reboot",
@@ -1611,7 +1696,8 @@
         "mode": "service_or_connectivity_state",
         "fail_closed": true
       },
-      "rollback": "not_safe_after_dispatch"
+      "rollback": "not_safe_after_dispatch",
+      "surface_equivalents": {}
     },
     {
       "command": "system.restart_service",
@@ -1637,7 +1723,8 @@
         "mode": "service_state",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "system.set_hostname",
@@ -1663,7 +1750,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "system.set_ntp",
@@ -1689,7 +1777,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "system.set_timezone",
@@ -1715,7 +1804,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.openvpn.delete_client",
@@ -1741,7 +1831,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.openvpn.export_client",
@@ -1767,7 +1858,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.openvpn.set_client",
@@ -1793,7 +1885,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.openvpn.set_enabled",
@@ -1819,7 +1912,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.policy.delete",
@@ -1845,7 +1939,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.policy.set",
@@ -1871,7 +1966,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.wireguard.delete_interface",
@@ -1897,7 +1993,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.wireguard.delete_peer",
@@ -1923,7 +2020,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.wireguard.export_peer",
@@ -1949,7 +2047,8 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.wireguard.set_interface",
@@ -1975,7 +2074,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "vpn.wireguard.set_peer",
@@ -2001,7 +2101,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.add_ssid",
@@ -2027,7 +2128,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.delete_ssid",
@@ -2053,7 +2155,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_channel",
@@ -2079,7 +2182,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_country",
@@ -2105,7 +2209,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_enabled",
@@ -2131,7 +2236,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_guest",
@@ -2157,7 +2263,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_mesh",
@@ -2183,7 +2290,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_password",
@@ -2209,7 +2317,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_radio",
@@ -2235,7 +2344,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_schedule",
@@ -2261,7 +2371,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.set_ssid",
@@ -2287,14 +2398,15 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     },
     {
       "command": "wifi.status",
       "subsystem": "wifi",
       "surfaces": {
         "api": true,
-        "web": false,
+        "web": true,
         "android": true,
         "agent": true
       },
@@ -2313,7 +2425,11 @@
         "mode": "result_payload",
         "fail_closed": true
       },
-      "rollback": "not_required"
+      "rollback": "not_required",
+      "surface_equivalents": {
+        "android": "wifi.status",
+        "web": "normalize_wifi_summary"
+      }
     },
     {
       "command": "wifi.update_ssid",
@@ -2339,7 +2455,8 @@
         "mode": "read_after_write_config",
         "fail_closed": true
       },
-      "rollback": "configuration_backup"
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
     }
   ]
 }

@@ -129,6 +129,23 @@ EOF
         "$(json_escape "$survey_interface")" "$survey_frequency" "$survey_noise" "$survey_active" "$survey_busy" "$survey_rx" "$survey_tx" "$survey_utilization"
 }
 
+wifi_supported_channels_json() {
+    channel_interface="$1"
+    if ! command -v iw >/dev/null 2>&1 || [ -z "$channel_interface" ]; then
+        printf '[]'
+        return 0
+    fi
+    wiphy_index="$(iw dev "$channel_interface" info 2>/dev/null | awk '$1 == "wiphy" {print $2; exit}')"
+    case "$wiphy_index" in ''|*[!0-9]*) printf '[]'; return 0 ;; esac
+    channel_values="$(iw phy "phy$wiphy_index" info 2>/dev/null | sed -n 's/.*\[\([0-9][0-9]*\)\].*/\1/p' | sort -nu)"
+    channels=""
+    for supported_channel in $channel_values; do
+        [ -n "$channels" ] && channels="$channels,"
+        channels="$channels\"$supported_channel\""
+    done
+    printf '["auto"%s%s]' "$( [ -n "$channels" ] && printf ',' )" "$channels"
+}
+
 wifi_status_json() {
     radios=""
     index=0
@@ -182,6 +199,7 @@ wifi_status_json() {
         [ -n "${encryption:-}" ] && radio="$radio,\"encryption\":\"$(json_escape "$encryption")\""
         radio="$radio,\"schedule\":$(wifi_schedule_json "$name")"
         runtime_ifname="$(wifi_radio_ifname "$name" "$index")"
+        radio="$radio,\"supported_channels\":$(wifi_supported_channels_json "$runtime_ifname")"
         radio="$radio,\"survey\":$(wifi_survey_json "$runtime_ifname")"
         radio="$radio}"
         [ -n "$radios" ] && radios="$radios,"

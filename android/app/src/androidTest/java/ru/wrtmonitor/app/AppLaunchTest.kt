@@ -24,4 +24,11 @@ class AppLaunchTest {
     fun cleanInstallShowsServerSetup() {
         composeRule.onNodeWithText("WrtMonitor").assertIsDisplayed()
     }
+
+    @Test
+    fun setupRouteSurvivesActivityRecreation() {
+        composeRule.onNodeWithText("WrtMonitor").assertIsDisplayed()
+        composeRule.activityRule.scenario.recreate()
+        composeRule.onNodeWithText("WrtMonitor").assertIsDisplayed()
+    }
 }

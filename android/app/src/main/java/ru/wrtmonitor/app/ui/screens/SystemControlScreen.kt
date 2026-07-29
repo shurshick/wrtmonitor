@@ -38,14 +38,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ru.wrtmonitor.app.api.dto.JsonArray
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
-import ru.wrtmonitor.app.api.WrtMonitorApi
+import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
@@ -53,6 +51,7 @@ import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
+import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.ui.components.ActionRow
 import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
@@ -82,7 +81,9 @@ fun SystemControlScreen(
     mode: SystemScreenMode = SystemScreenMode.System,
 ) {
     val scope = rememberCoroutineScope()
+    val repository = remember(serverUrl, accessToken) { RouterRepository(serverUrl, accessToken) }
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
+    var managementOptions by remember { mutableStateOf<ManagementOptionsDto?>(null) }
     var commands by remember { mutableStateOf<List<CommandDto>>(emptyList()) }
     var loading by remember(device.id) { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
@@ -107,7 +108,7 @@ fun SystemControlScreen(
     val refresh: () -> Unit = {
         loading = true
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
+            when (val result = repository.latestTelemetry(device.id)) {
                 is ApiResult.Success -> {
                     telemetry = result.data
                     hostnameValue = result.data.system?.optString("hostname").orEmpty().ifBlank { device.hostname }
@@ -128,7 +129,14 @@ fun SystemControlScreen(
                     messageIsError = true
                 }
             }
-            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getCommands(device.id) }) {
+            when (val result = repository.managementOptions(device.id)) {
+                is ApiResult.Success -> managementOptions = result.data
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                    message = result.message
+                    messageIsError = true
+                }
+            }
+            when (val result = repository.commands(device.id)) {
                 is ApiResult.Success -> commands = result.data
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
@@ -162,7 +170,7 @@ fun SystemControlScreen(
 
     fun queueSystem(type: String, payload: JsonObject, success: String) {
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload, true) }) {
+            when (val result = repository.createCommand(device.id, type, payload, true)) {
                 is ApiResult.Success -> { message = success; messageIsError = false; refresh() }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
@@ -238,10 +246,10 @@ fun SystemControlScreen(
                 OptionSelector(
                     stringResource(R.string.timezone_region),
                     zoneName,
-                    timezoneOptions.map { SelectOption(it.zonename, it.label) },
+                    managementOptions?.timezones.orEmpty().map { SelectOption(it.value, it.label) },
                     {
                         zoneName = it
-                        timezoneValue = timezoneOptions.firstOrNull { option -> option.zonename == it }?.timezone.orEmpty()
+                        timezoneValue = managementOptions?.timezones?.firstOrNull { option -> option.value == it }?.metadata.orEmpty()
                     },
                 )
                 PrimaryActionButton(
@@ -390,9 +398,12 @@ fun SystemControlScreen(
                     label = stringResource(R.string.diagnostics),
                     onClick = {
                         scope.launch {
-                            when (val result = withContext(Dispatchers.IO) {
-                                WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, "diagnostics.run", JsonObject(), confirmed = true)
-                            }) {
+                            when (val result = repository.createCommand(
+                                device.id,
+                                "diagnostics.run",
+                                JsonObject(),
+                                confirmed = true,
+                            )) {
                                 is ApiResult.Success -> { message = diagnosticsQueued; messageIsError = false; refresh() }
                                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                                     message = result.message
@@ -439,9 +450,12 @@ fun SystemControlScreen(
                 onClick = {
                     confirmReboot = false
                     scope.launch {
-                        when (val result = withContext(Dispatchers.IO) {
-                            WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, "router.reboot", JsonObject(), confirmed = true)
-                        }) {
+                        when (val result = repository.createCommand(
+                            device.id,
+                            "router.reboot",
+                            JsonObject(),
+                            confirmed = true,
+                        )) {
                             is ApiResult.Success -> { message = rebootQueued; messageIsError = false }
                             is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                                 message = result.message
@@ -467,7 +481,7 @@ fun SystemControlScreen(
         dismissButton = { TextButton(onClick = { confirmAgentRollback = false }) { Text(stringResource(R.string.cancel)) } },
     )
     pendingSystemCommand?.let { command -> SafeCommandDialog(
-        serverUrl, accessToken, device.id, command,
+        repository, device.id, command,
         onDismiss = { pendingSystemCommand = null },
         onApply = {
             pendingSystemCommand = null

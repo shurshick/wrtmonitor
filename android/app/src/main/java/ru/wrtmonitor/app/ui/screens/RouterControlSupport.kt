@@ -38,14 +38,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ru.wrtmonitor.app.api.dto.JsonArray
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
-import ru.wrtmonitor.app.api.WrtMonitorApi
+import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
@@ -79,42 +77,6 @@ internal data class PendingSafeCommand(
     val successMessage: String = "",
 )
 
-internal data class TimezoneOption(val zonename: String, val timezone: String, val label: String)
-
-internal val timezoneOptions = listOf(
-    TimezoneOption("UTC", "UTC0", "UTC (UTC+0)"),
-    TimezoneOption("Europe/Kaliningrad", "EET-2", "Europe/Kaliningrad (UTC+2)"),
-    TimezoneOption("Europe/Moscow", "MSK-3", "Europe/Moscow (UTC+3)"),
-    TimezoneOption("Europe/Samara", "<+04>-4", "Europe/Samara (UTC+4)"),
-    TimezoneOption("Asia/Yekaterinburg", "<+05>-5", "Asia/Yekaterinburg (UTC+5)"),
-    TimezoneOption("Asia/Omsk", "<+06>-6", "Asia/Omsk (UTC+6)"),
-    TimezoneOption("Asia/Krasnoyarsk", "<+07>-7", "Asia/Krasnoyarsk (UTC+7)"),
-    TimezoneOption("Asia/Irkutsk", "<+08>-8", "Asia/Irkutsk (UTC+8)"),
-    TimezoneOption("Asia/Yakutsk", "<+09>-9", "Asia/Yakutsk (UTC+9)"),
-    TimezoneOption("Asia/Vladivostok", "<+10>-10", "Asia/Vladivostok (UTC+10)"),
-    TimezoneOption("Asia/Magadan", "<+11>-11", "Asia/Magadan (UTC+11)"),
-    TimezoneOption("Asia/Kamchatka", "<+12>-12", "Asia/Kamchatka (UTC+12)"),
-    TimezoneOption("Europe/London", "GMT0BST,M3.5.0/1,M10.5.0", "Europe/London"),
-    TimezoneOption("Europe/Berlin", "CET-1CEST,M3.5.0,M10.5.0/3", "Europe/Berlin"),
-    TimezoneOption("Europe/Kyiv", "EET-2EEST,M3.5.0/3,M10.5.0/4", "Europe/Kyiv"),
-    TimezoneOption("Asia/Dubai", "<+04>-4", "Asia/Dubai"),
-    TimezoneOption("Asia/Shanghai", "CST-8", "Asia/Shanghai"),
-    TimezoneOption("Asia/Tokyo", "JST-9", "Asia/Tokyo"),
-    TimezoneOption("America/New_York", "EST5EDT,M3.2.0,M11.1.0", "America/New_York"),
-    TimezoneOption("America/Chicago", "CST6CDT,M3.2.0,M11.1.0", "America/Chicago"),
-    TimezoneOption("America/Denver", "MST7MDT,M3.2.0,M11.1.0", "America/Denver"),
-    TimezoneOption("America/Los_Angeles", "PST8PDT,M3.2.0,M11.1.0", "America/Los_Angeles"),
-    TimezoneOption("Australia/Sydney", "AEST-10AEDT,M10.1.0,M4.1.0/3", "Australia/Sydney"),
-)
-
-internal val netmaskOptions = (8..30).map { prefix ->
-    val mask = (0xffffffffL shl (32 - prefix) and 0xffffffffL)
-    SelectOption(
-        value = listOf(24, 16, 8, 0).joinToString(".") { shift -> ((mask shr shift) and 0xff).toString() },
-        label = "/$prefix · " + listOf(24, 16, 8, 0).joinToString(".") { shift -> ((mask shr shift) and 0xff).toString() },
-    )
-}
-
 internal val weekdayOptions = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun").map { SelectOption(it, it.uppercase()) }
 internal val priorityOptions = listOf("low", "normal", "high", "realtime").map { SelectOption(it, it) }
 internal val leaseTimeOptions = listOf("30m", "1h", "6h", "12h", "24h", "72h", "168h").map { SelectOption(it, it) }
@@ -124,19 +86,6 @@ internal val encryptedDnsProviderOptions = listOf(
     SelectOption("quad9", "Quad9"),
     SelectOption("google", "Google"),
 )
-internal val wifiCountryOptions = listOf("RU", "BY", "KZ", "AM", "AZ", "GE", "KG", "UZ", "DE", "FR", "GB", "IT", "ES", "PL", "NL", "FI", "SE", "NO", "US", "CA", "CN", "JP", "KR", "AU").map { SelectOption(it, it) }
-internal val wifiChannelOptions = (
-    listOf("auto") + (1..14).map(Int::toString) +
-        listOf("36", "40", "44", "48", "52", "56", "60", "64", "100", "104", "108", "112", "116", "120", "124", "128", "132", "136", "140", "144", "149", "153", "157", "161", "165")
-    ).map { SelectOption(it, if (it == "auto") "AUTO" else it) }
-internal fun wifiChannelOptionsForBand(band: String): List<SelectOption> {
-    val values = when (band.lowercase()) {
-        "2g" -> listOf("auto") + (1..13).map(Int::toString)
-        "5g" -> listOf("auto", "36", "40", "44", "48", "52", "56", "60", "64", "100", "104", "108", "112", "116", "120", "124", "128", "132", "136", "140", "144", "149", "153", "157", "161", "165")
-        else -> wifiChannelOptions.map(SelectOption::value)
-    }
-    return values.map { SelectOption(it, if (it == "auto") "AUTO" else it) }
-}
 internal val wifiModeOptions = listOf("HE80", "HE40", "HE20", "VHT160", "VHT80", "VHT40", "VHT20", "HT40", "HT20").map { SelectOption(it, it) }
 internal val wifiEncryptionOptions = listOf("sae-mixed", "sae", "psk2", "none").map { SelectOption(it, it) }
 internal val processSignalOptions = listOf("TERM", "HUP", "INT", "KILL").map { SelectOption(it, it) }
@@ -151,8 +100,7 @@ internal fun encryptedDnsProviderFromValue(value: String): String = when {
 
 @Composable
 internal fun SafeCommandDialog(
-    serverUrl: String,
-    accessToken: String,
+    repository: RouterRepository,
     deviceId: String,
     command: PendingSafeCommand,
     onDismiss: () -> Unit,
@@ -162,9 +110,7 @@ internal fun SafeCommandDialog(
     var preview by remember(command.type, command.payload.toString()) { mutableStateOf<CommandPreviewDto?>(null) }
     var error by remember(command.type, command.payload.toString()) { mutableStateOf("") }
     LaunchedEffect(command.type, command.payload.toString()) {
-        when (val result = withContext(Dispatchers.IO) {
-            WrtMonitorApi(serverUrl, accessToken).previewCommand(deviceId, command.type, command.payload)
-        }) {
+        when (val result = repository.previewCommand(deviceId, command.type, command.payload)) {
             is ApiResult.Success -> preview = result.data
             is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else error = result.message
         }

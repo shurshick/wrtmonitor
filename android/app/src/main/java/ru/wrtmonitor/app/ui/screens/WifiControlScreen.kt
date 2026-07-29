@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -38,14 +39,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ru.wrtmonitor.app.api.dto.JsonArray
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
-import ru.wrtmonitor.app.api.WrtMonitorApi
+import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
@@ -53,6 +52,7 @@ import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
+import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.ui.components.ActionRow
 import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
@@ -76,7 +76,9 @@ import java.util.Locale
 @Composable
 fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val repository = remember(serverUrl, accessToken) { RouterRepository(serverUrl, accessToken) }
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
+    var managementOptions by remember { mutableStateOf<ManagementOptionsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var ssid by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -102,8 +104,8 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
-    var selectedRadioId by remember(device.id) { mutableStateOf("") }
-    var selectedInterfaceId by remember(device.id) { mutableStateOf("") }
+    var selectedRadioId by rememberSaveable(device.id) { mutableStateOf("") }
+    var selectedInterfaceId by rememberSaveable(device.id) { mutableStateOf("") }
     var interfaceEnabled by remember { mutableStateOf(true) }
     var interfaceHidden by remember { mutableStateOf(false) }
     var interfaceIsolated by remember { mutableStateOf(false) }
@@ -116,11 +118,18 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     val refresh: () -> Unit = {
         scope.launch {
             loading = true
-            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
+            when (val result = repository.latestTelemetry(device.id)) {
                 is ApiResult.Success -> {
                     telemetry = result.data
                     if (selectedRadioId.isBlank()) selectedRadioId = firstRadio(result.data)?.optString("id").orEmpty()
                 }
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                    message = result.message
+                    messageIsError = true
+                }
+            }
+            when (val result = repository.managementOptions(device.id)) {
+                is ApiResult.Success -> managementOptions = result.data
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
                     messageIsError = true
@@ -133,9 +142,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
 
     fun queue(type: String, payload: JsonObject, success: String) {
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload, confirmed = true)
-            }) {
+            when (val result = repository.createCommand(device.id, type, payload, confirmed = true)) {
                 is ApiResult.Success -> {
                     message = success
                     messageIsError = false
@@ -178,6 +185,15 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             .map { it.optString("interface") }.filter(String::isNotBlank).distinct()
             .map { SelectOption(it, it) }
     }.orEmpty()
+    val observedRadioOptions = managementOptions?.wifiRadios?.firstOrNull { it.id == radioId }
+    val routerChannelOptions = observedRadioOptions?.supportedChannels.orEmpty().ifEmpty {
+        managementOptions?.fallbackWifiChannels.orEmpty()
+    }.map { SelectOption(it, if (it == "auto") "AUTO" else it) }.ifEmpty {
+        listOf(SelectOption(channel.ifBlank { "auto" }, channel.ifBlank { "AUTO" }))
+    }
+    val routerCountryOptions = managementOptions?.wifiCountries.orEmpty().map {
+        SelectOption(it.value, it.label)
+    }.ifEmpty { listOf(SelectOption(country, country)) }
     LaunchedEffect(telemetry, selectedRadioId) {
         val selected = findRadio(radios, selectedRadioId) ?: radios.optJsonObject(0) ?: return@LaunchedEffect
         if (selectedRadioId != selected.optString("id")) selectedRadioId = selected.optString("id")
@@ -310,9 +326,9 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
 
     if (capabilities["wifi.radio.configure"] == true) {
         ExpandableSettingsCard(title = stringResource(R.string.wifi_radio_advanced), summary = listOf(channel, htmode, country).filter(String::isNotBlank).joinToString(" · ")) {
-            OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptionsForBand(radio?.optString("band").orEmpty()), { channel = it })
+            OptionSelector(stringResource(R.string.wifi_channel), channel, routerChannelOptions, { channel = it })
             OptionSelector(stringResource(R.string.wifi_width_mode), htmode, wifiModeOptions, { htmode = it })
-            OptionSelector(stringResource(R.string.wifi_country), country, wifiCountryOptions, { country = it })
+            OptionSelector(stringResource(R.string.wifi_country), country, routerCountryOptions, { country = it })
             OutlinedTextField(txpower, { txpower = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.wifi_txpower)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             PrimaryActionButton(label = stringResource(R.string.save), onClick = {
                 val payload = JsonObject().put("radio", radioId).put("channel", channel).put("htmode", htmode).put("country", country)
@@ -448,7 +464,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             summary = listOf(channel, country).filter(String::isNotBlank).joinToString(" · "),
         ) {
             if (capabilities["wifi.set_channel"] == true) {
-                OptionSelector(stringResource(R.string.wifi_channel), channel, wifiChannelOptionsForBand(radio?.optString("band").orEmpty()), { channel = it })
+                OptionSelector(stringResource(R.string.wifi_channel), channel, routerChannelOptions, { channel = it })
                 PrimaryActionButton(
                     label = stringResource(R.string.change_channel),
                     onClick = { pendingCommand = PendingSafeCommand("wifi.set_channel", JsonObject().put("channel", channel).put("radio", radioId), wifiChannelQueued) },
@@ -457,7 +473,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                 )
             }
             if (capabilities["wifi.set_country"] == true) {
-                OptionSelector(stringResource(R.string.wifi_country), country, wifiCountryOptions, { country = it })
+                OptionSelector(stringResource(R.string.wifi_country), country, routerCountryOptions, { country = it })
                 PrimaryActionButton(
                     label = stringResource(R.string.change_country),
                     onClick = { pendingCommand = PendingSafeCommand("wifi.set_country", JsonObject().put("country", country).put("radio", radioId), wifiCountryQueued) },
@@ -488,7 +504,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     MessageBanner(message, error = messageIsError)
 
     pendingCommand?.let { command -> SafeCommandDialog(
-        serverUrl, accessToken, device.id, command,
+        repository, device.id, command,
         onDismiss = { pendingCommand = null },
         onApply = {
             pendingCommand = null

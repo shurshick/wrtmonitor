@@ -46,17 +46,37 @@ def main() -> int:
     for path in android_ui.rglob("*.kt"):
         source = path.read_text(encoding="utf-8")
         if "org.json" in source or "JSONObject" in source or "JSONArray" in source:
-            failures.append(f"transport JSON leaked into Compose: {path.relative_to(ROOT)}")
+            failures.append(
+                f"transport JSON leaked into Compose: {path.relative_to(ROOT)}"
+            )
         lines = len(source.splitlines())
         if lines > 850:
-            failures.append(f"Android UI file exceeds transitional 850-line limit: {path.relative_to(ROOT)} ({lines})")
+            failures.append(
+                f"Android UI file exceeds transitional 850-line limit: {path.relative_to(ROOT)} ({lines})"
+            )
+        if (
+            path.name
+            in {
+                "ClientsControlScreen.kt",
+                "WifiControlScreen.kt",
+                "NetworkControlScreen.kt",
+                "SystemControlScreen.kt",
+                "RouterControlSupport.kt",
+            }
+            and "WrtMonitorApi(" in source
+        ):
+            failures.append(
+                f"router control UI bypasses RouterRepository: {path.relative_to(ROOT)}"
+            )
 
     if failures:
         print("architecture validation failed:")
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("architecture OK: subsystem facades are thin and transport JSON stays outside Compose")
+    print(
+        "architecture OK: subsystem facades are thin and transport JSON stays outside Compose"
+    )
     return 0
 
 

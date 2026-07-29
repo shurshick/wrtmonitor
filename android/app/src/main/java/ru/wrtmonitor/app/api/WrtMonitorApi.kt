@@ -9,6 +9,9 @@ import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.JsonObject
+import ru.wrtmonitor.app.api.dto.ManagementOptionDto
+import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
+import ru.wrtmonitor.app.api.dto.WifiRadioOptionDto
 import ru.wrtmonitor.app.api.dto.DataStateDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
@@ -339,6 +342,55 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         val (status, response) = request("/api/v1/devices/$deviceId/agent")
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         parseAgentStatus(JSONObject(response))
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getManagementOptions(deviceId: String): ApiResult<ManagementOptionsDto> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/management-options")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val json = JSONObject(response)
+        val catalogs = json.optJSONObject("catalogs") ?: JSONObject()
+        fun strings(key: String): List<String> = json.optJSONArray(key).toStringList()
+        fun catalog(key: String, valueKey: String = "value"): List<ManagementOptionDto> {
+            val values = catalogs.optJSONArray(key) ?: JSONArray()
+            return (0 until values.length()).map { index ->
+                values.getJSONObject(index).let { item ->
+                    ManagementOptionDto(
+                        value = item.optString(valueKey),
+                        label = item.optString("label", item.optString(valueKey)),
+                        metadata = when {
+                            item.has("timezone") -> item.optString("timezone")
+                            item.has("prefix") -> item.optInt("prefix").toString()
+                            else -> ""
+                        },
+                    )
+                }
+            }
+        }
+        val radios = json.optJSONArray("wifi_radios") ?: JSONArray()
+        ManagementOptionsDto(
+            source = json.optString("source"),
+            interfaces = strings("interfaces"),
+            networks = strings("networks"),
+            bridges = strings("bridges"),
+            firewallZones = strings("firewall_zones"),
+            wifiRadios = (0 until radios.length()).map { index ->
+                radios.getJSONObject(index).let { item ->
+                    WifiRadioOptionDto(
+                        id = item.optString("id"),
+                        name = item.optString("name"),
+                        band = item.optString("band"),
+                        channel = item.optString("channel"),
+                        country = item.optString("country"),
+                        htmode = item.optString("htmode"),
+                        supportedChannels = item.optJSONArray("supported_channels").toStringList(),
+                    )
+                }
+            },
+            netmasks = catalog("netmasks"),
+            timezones = catalog("timezones", "zonename"),
+            wifiCountries = catalog("wifi_countries"),
+            fallbackWifiChannels = catalogs.optJSONArray("wifi_channels_fallback").toStringList(),
+        )
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
     fun getCommands(deviceId: String): ApiResult<List<CommandDto>> = runCatching {

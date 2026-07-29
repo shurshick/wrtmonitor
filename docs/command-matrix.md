@@ -7,14 +7,14 @@
 
 | Команда | Web | Android | API | Agent | Capability | Риск | Post-condition | Rollback |
 |---|:---:|:---:|:---:|:---:|---|---|---|---|
-| `agent.disconnect` | да | нет | да | да | `agent.disable` | level_3_reversible_config | service_or_connectivity_state | not_safe_after_dispatch |
+| `agent.disconnect` | да | да | да | да | `agent.disable` | level_3_reversible_config | service_or_connectivity_state | not_safe_after_dispatch |
 | `agent.rollback` | да | да | да | да | `agent.rollback` | level_2_safe_action | service_or_connectivity_state | not_safe_after_dispatch |
 | `agent.rotate_token` | да | да | да | да | `agent.rotate_token` | level_2_safe_action | agent_state | agent_previous_version_or_config |
 | `agent.set_auto_update` | да | да | да | да | `agent.update` | level_2_safe_action | agent_state | agent_previous_version_or_config |
 | `agent.set_interval` | да | да | да | да | `agent.set_interval` | level_2_safe_action | agent_state | agent_previous_version_or_config |
 | `agent.update` | да | да | да | да | `agent.update` | level_2_safe_action | service_or_connectivity_state | not_safe_after_dispatch |
-| `client.set_blocked` | нет | нет | да | да | `clients.block` | level_3_reversible_config | read_after_write_config | configuration_backup |
-| `client.set_policy` | да | нет | да | да | `clients.policy` | level_3_reversible_config | read_after_write_config | configuration_backup |
+| `client.set_blocked` | да | да | да | да | `clients.block` | level_3_reversible_config | read_after_write_config | configuration_backup |
+| `client.set_policy` | да | да | да | да | `clients.policy` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `dhcp.delete_lease` | да | да | да | да | `dhcp.delete_lease` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `dhcp.set_lease` | да | да | да | да | `dhcp.set_lease` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `dhcp.set_pool` | да | да | да | да | `dhcp.configure` | level_3_reversible_config | read_after_write_config | configuration_backup |
@@ -25,18 +25,18 @@
 | `dns.set_dot` | да | да | да | да | `dns.dot.configure` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `dns.set_servers` | да | да | да | да | `dns.configure` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `firewall.delete_forwarding` | да | да | да | да | `firewall.zones.configure` | level_4_disruptive | read_after_write_config | configuration_backup |
-| `firewall.delete_port_forward` | нет | нет | да | да | `firewall.port_forward` | level_4_disruptive | read_after_write_config | configuration_backup |
+| `firewall.delete_port_forward` | да | да | да | да | `firewall.port_forward` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `firewall.delete_redirect` | да | да | да | да | `firewall.port_forward` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `firewall.delete_rule` | да | да | да | да | `firewall.rules.configure` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `firewall.delete_zone` | да | да | да | да | `firewall.zones.configure` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `firewall.set_forwarding` | да | да | да | да | `firewall.zones.configure` | level_4_disruptive | read_after_write_config | configuration_backup |
-| `firewall.set_port_forward` | да | нет | да | да | `firewall.port_forward` | level_4_disruptive | read_after_write_config | configuration_backup |
+| `firewall.set_port_forward` | да | да | да | да | `firewall.port_forward` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `firewall.set_redirect` | да | да | да | да | `firewall.port_forward` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `firewall.set_rule` | да | да | да | да | `firewall.rules.configure` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `firewall.set_zone` | да | да | да | да | `firewall.zones.configure` | level_4_disruptive | read_after_write_config | configuration_backup |
 | `maintenance.backup.create` | да | да | да | да | `maintenance.backup` | level_1_readonly | result_payload | not_required |
 | `maintenance.backup.restore` | да | да | да | да | `maintenance.backup` | level_4_disruptive | service_or_connectivity_state | not_safe_after_dispatch |
-| `maintenance.cron.read` | нет | да | да | да | `maintenance.cron` | level_1_readonly | result_payload | not_required |
+| `maintenance.cron.read` | да | да | да | да | `maintenance.cron` | level_1_readonly | result_payload | not_required |
 | `maintenance.cron.set` | да | да | да | да | `maintenance.cron` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `maintenance.diagnostics.bundle` | да | да | да | да | `maintenance.diagnostics.bundle` | level_1_readonly | result_payload | not_required |
 | `maintenance.logs.read` | да | да | да | да | `maintenance.logs` | level_1_readonly | result_payload | not_required |
@@ -45,11 +45,11 @@
 | `maintenance.package.upgrade` | да | да | да | да | `maintenance.packages.write` | level_3_reversible_config | package_state | package_manager_transaction |
 | `maintenance.packages.refresh` | да | да | да | да | `maintenance.packages.read` | level_1_readonly | result_payload | not_required |
 | `maintenance.process.signal` | да | да | да | да | `maintenance.processes` | level_3_reversible_config | handler_result | not_available |
-| `maintenance.processes.read` | нет | да | да | да | `maintenance.processes` | level_1_readonly | result_payload | not_required |
+| `maintenance.processes.read` | да | да | да | да | `maintenance.processes` | level_1_readonly | result_payload | not_required |
 | `maintenance.recovery.disable` | да | да | да | да | `maintenance.recovery` | level_2_safe_action | read_after_write_config | configuration_backup |
 | `maintenance.recovery.enable` | да | да | да | да | `maintenance.recovery` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `maintenance.service.set` | да | да | да | да | `system.restart_service` | level_3_reversible_config | service_state | configuration_backup |
-| `maintenance.services.read` | нет | да | да | да | `system.restart_service` | level_1_readonly | result_payload | not_required |
+| `maintenance.services.read` | да | да | да | да | `system.restart_service` | level_1_readonly | result_payload | not_required |
 | `maintenance.sysupgrade.apply` | да | да | да | да | `maintenance.sysupgrade.apply` | level_4_disruptive | service_or_connectivity_state | not_safe_after_dispatch |
 | `maintenance.sysupgrade.check` | да | да | да | да | `maintenance.sysupgrade.check` | level_2_safe_action | handler_result | not_available |
 | `network.delete_route` | да | да | да | да | `network.routes.configure` | level_3_reversible_config | read_after_write_config | configuration_backup |
@@ -95,5 +95,5 @@
 | `wifi.set_radio` | да | да | да | да | `wifi.radio.configure` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `wifi.set_schedule` | да | да | да | да | `wifi.schedule` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `wifi.set_ssid` | да | да | да | да | `wifi.set_ssid` | level_3_reversible_config | read_after_write_config | configuration_backup |
-| `wifi.status` | нет | да | да | да | `wifi.read` | level_1_readonly | result_payload | not_required |
+| `wifi.status` | да | да | да | да | `wifi.read` | level_1_readonly | result_payload | not_required |
 | `wifi.update_ssid` | да | да | да | да | `wifi.manage_ssid` | level_3_reversible_config | read_after_write_config | configuration_backup |

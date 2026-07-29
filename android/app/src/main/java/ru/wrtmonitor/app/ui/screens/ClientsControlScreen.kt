@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -47,19 +48,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ru.wrtmonitor.app.api.dto.JsonArray
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
-import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
+import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.ui.components.ActionRow
 import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
 import ru.wrtmonitor.app.ui.components.InfoRow
@@ -98,13 +97,14 @@ fun ClientsControlScreen(
     onSessionExpired: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val repository = remember(serverUrl, accessToken) { RouterRepository(serverUrl, accessToken) }
     var telemetry by remember(device.id) { mutableStateOf<TelemetryDto?>(null) }
     var clients by remember(device.id) { mutableStateOf<List<NetworkClientDto>>(emptyList()) }
     var profiles by remember(device.id) { mutableStateOf<List<ClientProfileDto>>(emptyList()) }
-    var view by remember(device.id) { mutableStateOf(ClientsView.List) }
-    var selectedClientId by remember(device.id) { mutableStateOf<String?>(null) }
-    var search by remember(device.id) { mutableStateOf("") }
-    var filter by remember(device.id) { mutableStateOf(ClientsFilter.All) }
+    var view by rememberSaveable(device.id) { mutableStateOf(ClientsView.List) }
+    var selectedClientId by rememberSaveable(device.id) { mutableStateOf<String?>(null) }
+    var search by rememberSaveable(device.id) { mutableStateOf("") }
+    var filter by rememberSaveable(device.id) { mutableStateOf(ClientsFilter.All) }
     var profileName by remember(device.id) { mutableStateOf("") }
     var profileBlocked by remember(device.id) { mutableStateOf(false) }
     var poolStart by remember(device.id) { mutableStateOf("") }
@@ -126,8 +126,7 @@ fun ClientsControlScreen(
     val refresh: () -> Unit = {
         scope.launch {
             loading = true
-            val api = WrtMonitorApi(serverUrl, accessToken)
-            when (val result = withContext(Dispatchers.IO) { api.getLatestTelemetry(device.id) }) {
+            when (val result = repository.latestTelemetry(device.id)) {
                 is ApiResult.Success -> {
                     telemetry = result.data
                     if (!dhcpInitialized) {
@@ -160,14 +159,14 @@ fun ClientsControlScreen(
                     messageIsError = true
                 }
             }
-            when (val result = withContext(Dispatchers.IO) { api.getNetworkClients(device.id) }) {
+            when (val result = repository.clients(device.id)) {
                 is ApiResult.Success -> clients = result.data
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
                     messageIsError = true
                 }
             }
-            when (val result = withContext(Dispatchers.IO) { api.getClientProfiles(device.id) }) {
+            when (val result = repository.clientProfiles(device.id)) {
                 is ApiResult.Success -> profiles = result.data
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
@@ -180,9 +179,7 @@ fun ClientsControlScreen(
 
     fun queue(type: String, payload: JsonObject) {
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload, true)
-            }) {
+            when (val result = repository.createCommand(device.id, type, payload, true)) {
                 is ApiResult.Success -> {
                     message = if (type.startsWith("dhcp.")) leaseQueued else commandQueued
                     messageIsError = false
@@ -198,14 +195,15 @@ fun ClientsControlScreen(
 
     fun saveClient(client: NetworkClientDto, name: String, profileId: String?, policy: JsonObject) {
         scope.launch {
-            val api = WrtMonitorApi(serverUrl, accessToken)
             val storedPolicy = if (profileId == null) policy else JsonObject()
-            when (val update = withContext(Dispatchers.IO) {
-                api.updateNetworkClient(device.id, client.id, name, profileId, storedPolicy)
-            }) {
-                is ApiResult.Success -> when (val apply = withContext(Dispatchers.IO) {
-                    api.applyNetworkClientPolicy(device.id, client.id)
-                }) {
+            when (val update = repository.updateClient(
+                device.id,
+                client.id,
+                name,
+                profileId,
+                storedPolicy,
+            )) {
+                is ApiResult.Success -> when (val apply = repository.applyClientPolicy(device.id, client.id)) {
                     is ApiResult.Success -> {
                         message = commandQueued
                         messageIsError = false
@@ -290,9 +288,7 @@ fun ClientsControlScreen(
             onBack = { view = ClientsView.List },
             onCreateProfile = {
                 scope.launch {
-                    when (val result = withContext(Dispatchers.IO) {
-                        WrtMonitorApi(serverUrl, accessToken).createClientProfile(device.id, profileName, profileBlocked)
-                    }) {
+                    when (val result = repository.createClientProfile(device.id, profileName, profileBlocked)) {
                         is ApiResult.Success -> {
                             profileName = ""
                             profileBlocked = false
@@ -307,9 +303,7 @@ fun ClientsControlScreen(
             },
             onDeleteProfile = { profileId ->
                 scope.launch {
-                    when (val result = withContext(Dispatchers.IO) {
-                        WrtMonitorApi(serverUrl, accessToken).deleteClientProfile(device.id, profileId)
-                    }) {
+                    when (val result = repository.deleteClientProfile(device.id, profileId)) {
                         is ApiResult.Success -> refresh()
                         is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                             message = result.message
@@ -356,8 +350,7 @@ fun ClientsControlScreen(
 
     pendingCommand?.let { command ->
         SafeCommandDialog(
-            serverUrl = serverUrl,
-            accessToken = accessToken,
+            repository = repository,
             deviceId = device.id,
             command = command,
             onDismiss = { pendingCommand = null },

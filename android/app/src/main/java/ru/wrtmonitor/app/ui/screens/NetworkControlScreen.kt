@@ -38,14 +38,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ru.wrtmonitor.app.api.dto.JsonArray
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
-import ru.wrtmonitor.app.api.WrtMonitorApi
+import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
@@ -53,6 +51,7 @@ import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.isUnauthorized
+import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.ui.components.ActionRow
 import ru.wrtmonitor.app.ui.components.ExpandableSettingsCard
@@ -72,7 +71,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
 @Composable
 fun NetworkControlScreen(
     serverUrl: String,
@@ -82,7 +80,9 @@ fun NetworkControlScreen(
     mode: NetworkScreenMode = NetworkScreenMode.Internet,
 ) {
     val scope = rememberCoroutineScope()
+    val repository = remember(serverUrl, accessToken) { RouterRepository(serverUrl, accessToken) }
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
+    var managementOptions by remember { mutableStateOf<ManagementOptionsDto?>(null) }
     var loading by remember(device.id) { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
@@ -165,7 +165,7 @@ fun NetworkControlScreen(
     val refresh: () -> Unit = {
         loading = true
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).getLatestTelemetry(device.id) }) {
+            when (val result = repository.latestTelemetry(device.id)) {
                 is ApiResult.Success -> {
                     telemetry = result.data
                     if (!formInitialized) {
@@ -222,6 +222,13 @@ fun NetworkControlScreen(
                     messageIsError = true
                 }
             }
+            when (val result = repository.managementOptions(device.id)) {
+                is ApiResult.Success -> managementOptions = result.data
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                    message = result.message
+                    messageIsError = true
+                }
+            }
             loading = false
         }
         Unit
@@ -238,18 +245,26 @@ fun NetworkControlScreen(
             while (keys?.hasNext() == true) add(keys.next())
         }.sorted()
     }
-    val interfaceOptions = interfaces?.let { array ->
+    val telemetryInterfaceOptions = interfaces?.let { array ->
         (0 until array.length()).mapNotNull(array::optJsonObject)
             .flatMap { listOf(it.optString("interface"), it.optString("device")) }
             .filter(String::isNotBlank).distinct().map { SelectOption(it, it) }
     }.orEmpty()
-    val firewallZoneOptions = listOf(SelectOption("*", stringResource(R.string.any_zone))) + (telemetry?.network?.optJsonArray("firewall_zones")?.let { array ->
+    val interfaceOptions = managementOptions?.interfaces.orEmpty().map { SelectOption(it, it) }
+        .ifEmpty { telemetryInterfaceOptions }
+    val routerNetmaskOptions = managementOptions?.netmasks.orEmpty().map {
+        SelectOption(it.value, "/${it.metadata} · ${it.value}")
+    }.ifEmpty { listOf(SelectOption(wanNetmask, wanNetmask)) }
+    val telemetryFirewallZoneOptions = telemetry?.network?.optJsonArray("firewall_zones")?.let { array ->
         (0 until array.length()).mapNotNull(array::optJsonObject)
             .map { it.optString("name") }
             .filter(String::isNotBlank)
             .distinct()
             .map { SelectOption(it, it) }
-    }.orEmpty())
+    }.orEmpty()
+    val firewallZoneOptions = listOf(SelectOption("*", stringResource(R.string.any_zone))) +
+        managementOptions?.firewallZones.orEmpty().map { SelectOption(it, it) }
+            .ifEmpty { telemetryFirewallZoneOptions }
     val firewallZones = telemetry?.network?.optJsonArray("firewall_zones") ?: JsonArray()
     val firewallForwardings = telemetry?.network?.optJsonArray("firewall_forwardings") ?: JsonArray()
     val firewallRules = telemetry?.network?.optJsonArray("firewall_rules") ?: JsonArray()
@@ -259,10 +274,9 @@ fun NetworkControlScreen(
     val interfaceRestartQueued = stringResource(R.string.interface_restart_queued)
     val networkRestartQueued = stringResource(R.string.network_restart_queued)
     val genericCommandQueued = stringResource(R.string.command_queued)
-
     fun queue(type: String, payload: JsonObject, success: String) {
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) { WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload, true) }) {
+            when (val result = repository.createCommand(device.id, type, payload, true)) {
                 is ApiResult.Success -> { message = success; messageIsError = false; refresh() }
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
@@ -358,9 +372,12 @@ fun NetworkControlScreen(
                 label = stringResource(R.string.request_interfaces),
                 onClick = {
                     scope.launch {
-                        when (val result = withContext(Dispatchers.IO) {
-                            WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, "network.interfaces", JsonObject(), confirmed = true)
-                        }) {
+                        when (val result = repository.createCommand(
+                            device.id,
+                            "network.interfaces",
+                            JsonObject(),
+                            confirmed = true,
+                        )) {
                             is ApiResult.Success -> { message = interfacesRequestQueued; messageIsError = false; refresh() }
                             is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                                 message = result.message
@@ -373,7 +390,6 @@ fun NetworkControlScreen(
             )
         }
     }
-
     if (mode == NetworkScreenMode.Internet && networkDeviceNames.isNotEmpty()) {
         ExpandableSettingsCard(
             stringResource(R.string.physical_network_devices),
@@ -406,13 +422,12 @@ fun NetworkControlScreen(
             }
         }
     }
-
     if (mode == NetworkScreenMode.Internet && capabilities["network.wan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.wan_settings), wanProtocol.uppercase()) {
             OptionSelector(stringResource(R.string.connection_type), wanProtocol, wanProtocolOptions, { wanProtocol = it })
             if (wanProtocol == "static") {
                 OutlinedTextField(wanIp, { wanIp = it }, label = { Text(stringResource(R.string.ip_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OptionSelector(stringResource(R.string.netmask), wanNetmask, netmaskOptions, { wanNetmask = it })
+                OptionSelector(stringResource(R.string.netmask), wanNetmask, routerNetmaskOptions, { wanNetmask = it })
                 OutlinedTextField(wanGateway, { wanGateway = it }, label = { Text(stringResource(R.string.gateway)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             }
             if (wanProtocol == "pppoe") {
@@ -430,7 +445,7 @@ fun NetworkControlScreen(
     if (mode == NetworkScreenMode.Internet && capabilities["network.lan.configure"] == true) {
         ExpandableSettingsCard(stringResource(R.string.lan_settings), "$lanIp · $lanNetmask") {
             OutlinedTextField(lanIp, { lanIp = it }, label = { Text(stringResource(R.string.router_ip)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OptionSelector(stringResource(R.string.netmask), lanNetmask, netmaskOptions, { lanNetmask = it })
+            OptionSelector(stringResource(R.string.netmask), lanNetmask, routerNetmaskOptions, { lanNetmask = it })
             PrimaryActionButton(
                 label = stringResource(R.string.save_lan),
                 onClick = { pendingCommand = PendingSafeCommand("network.set_lan", JsonObject().put("interface", "lan").put("ip_address", lanIp).put("netmask", lanNetmask), genericCommandQueued) },
@@ -822,7 +837,7 @@ fun NetworkControlScreen(
     }
     MessageBanner(message, error = messageIsError)
     pendingCommand?.let { command -> SafeCommandDialog(
-        serverUrl, accessToken, device.id, command,
+        repository, device.id, command,
         onDismiss = { pendingCommand = null },
         onApply = {
             pendingCommand = null

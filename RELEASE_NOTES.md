@@ -1,19 +1,18 @@
-# v0.26.0-architecture-split
+# v0.27.0-operational-parity
 
-Тестовый архитектурный релиз разбивает сервер, агент и Android на подсистемы без изменения пользовательского контракта 90 команд.
+Тестовый релиз закрепляет единый набор операций и фактических параметров управления в Web UI и Android.
 
 ## Изменения
 
-- backend commands, telemetry и Web routes разделены по предметным модулям;
-- command и telemetry shell-код агента разделён по тем же подсистемам;
-- API request/result и reliability policy получили строгие типы;
-- Android получил Repository и ViewModel для списка устройств и live telemetry;
-- transport JSON больше не разбирается внутри Compose;
-- архитектурная проверка включена в CI.
+- все 90 команд доступны через эквивалентные пользовательские операции Web UI и Android;
+- новый management-options API возвращает варианты выбора из текущей telemetry роутера;
+- Wi-Fi каналы формируются по возможностям выбранного радиомодуля, а не по встроенному списку;
+- Android-экраны управления обращаются к серверу через Repository и сохраняют выбранное состояние;
+- инструментальные Android-тесты запускаются на эмуляторе как обязательный release gate.
 
 ## Проверка
 
-- backend test suite и ruff;
+- backend, contract и API tests;
 - OpenWrt static tests, shell syntax и command harness;
-- Android compile и unit tests;
-- contract, command matrix и architecture validators.
+- Android unit, lint и emulator UI tests;
+- command matrix и architecture validators.

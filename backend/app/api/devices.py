@@ -15,7 +15,9 @@ from ..services.devices import (
     delete_device_permanently,
     get_latest_agent_status,
     get_user_device_or_404,
+    latest_device_telemetry,
 )
+from ..services.management_options import build_management_options
 from ..schemas import DeviceProvisionRequest
 from ..security import hash_token
 
@@ -144,3 +146,14 @@ def get_device_agent(
 ) -> dict[str, object]:
     get_user_device_or_404(db, user, device_id)
     return get_latest_agent_status(db, device_id)
+
+
+@router.get("/{device_id}/management-options")
+def get_device_management_options(
+    device_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    get_user_device_or_404(db, user, device_id)
+    telemetry = latest_device_telemetry(db, device_id)
+    return build_management_options(telemetry.payload if telemetry else {})
