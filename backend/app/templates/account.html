@@ -40,6 +40,7 @@
 </section>
 
 <div class="settings-grid section">
+  <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">Диагностика</span><h2>Архив сервера</h2></div></div><p class="muted">Версия, состояние очереди, свежесть агентов и уведомления. Секреты и пароли не включаются.</p><a class="button" href="/account/diagnostics">Скачать ZIP</a></section>
   <section class="card maintenance-card"><div class="maintenance-card__heading"><div><span class="eyebrow">Владелец</span><h2>Сменить пароль</h2></div></div><p class="muted">После смены пароля все мобильные refresh-сессии будут отозваны.</p>
     <form class="compact-form" method="post" action="/account/password"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Текущий пароль<input type="password" name="current_password" required autocomplete="current-password"></label><label>Новый пароль<input type="password" name="new_password" minlength="12" required autocomplete="new-password"></label><label>Повторите новый пароль<input type="password" name="new_password_confirm" minlength="12" required autocomplete="new-password"></label><button type="submit">Изменить пароль</button></form>
   </section>

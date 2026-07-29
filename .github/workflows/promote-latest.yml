@@ -1,0 +1,56 @@
+name: Promote tested release to latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without v prefix
+        required: true
+      minimum_age_hours:
+        description: Canary soak time
+        required: true
+        default: "24"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify canary age and successful release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
+        run: |
+          test "$MINIMUM_AGE_HOURS" -ge 24
+          test "$MINIMUM_AGE_HOURS" -le 72
+          RELEASE_TAG="v${VERSION}"
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            RELEASE_TAG="$(gh release list --limit 100 --json tagName --jq ".[] | select(.tagName | startswith(\"v${VERSION}-\")) | .tagName" | head -n1)"
+          fi
+          test -n "$RELEASE_TAG"
+          PUBLISHED="$(gh release view "$RELEASE_TAG" --json publishedAt --jq .publishedAt)"
+          AGE="$(( $(date -u +%s) - $(date -u -d "$PUBLISHED" +%s) ))"
+          test "$AGE" -ge "$(( MINIMUM_AGE_HOURS * 3600 ))"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Promote immutable image
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/wrtmonitor
+          VERSION: ${{ inputs.version }}
+        run: |
+          docker pull "$IMAGE:$VERSION"
+          docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
+          docker push "$IMAGE:latest"
+      - name: Mark GitHub release latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$RELEASE_TAG" --prerelease=false --latest

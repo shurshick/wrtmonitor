@@ -140,7 +140,7 @@ jobs:
         run: |
           docker build \
             -t "$IMAGE_NAME:$RELEASE_VERSION" \
-            -t "$IMAGE_NAME:latest" \
+            -t "$IMAGE_NAME:canary" \
             .
       - name: Smoke-test release image
         run: |
@@ -164,7 +164,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
-            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:canary
           provenance: mode=max
           sbom: true
 
@@ -289,4 +289,4 @@ jobs:
             "openwrt-agent/agent-version.txt" \
             --title "$RELEASE_TAG" \
             --notes-file RELEASE_NOTES.md \
-            --latest
+            --prerelease

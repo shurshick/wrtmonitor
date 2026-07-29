@@ -85,11 +85,12 @@ EOF
     esac
     if [ "$traffic_status" = "ready" ]; then
         traffic_file="/tmp/wrtmonitor-nlbw-$$.csv"
-        if nlbw -c csv -g mac -n -q -s ';' >"$traffic_file" 2>/dev/null; then
+        traffic_error_file="/tmp/wrtmonitor-nlbw-$$.err"
+        if nlbw_query_csv >"$traffic_file" 2>"$traffic_error_file"; then
             traffic_available=true
             traffic_status="ready"
             traffic_rows="/tmp/wrtmonitor-nlbw-$$.rows"
-            awk -F';' '
+            if awk -F '\t' '
                 NR == 1 {
                     for (i = 1; i <= NF; i++) {
                         name = $i
@@ -107,7 +108,19 @@ EOF
                     gsub(/[^0-9]/, "", tx)
                     print mac "|" (rx == "" ? 0 : rx) "|" (tx == "" ? 0 : tx)
                 }
-            ' "$traffic_file" >"$traffic_rows"
+                    if (!column["mac"] || !column["rx_bytes"] || !column["tx_bytes"])
+                        exit 42
+                }
+            ' "$traffic_file" >"$traffic_rows"; then
+                parser_status=0
+            else
+                parser_status=$?
+            fi
+            if [ "$parser_status" -eq 42 ]; then
+                traffic_available=false
+                traffic_status="invalid_output"
+                traffic_error="nlbw CSV header does not contain mac, rx_bytes and tx_bytes"
+            fi
             while IFS='|' read -r mac rx_bytes tx_bytes; do
                 case "$mac" in ""|00:00:00:00:00:00) continue ;; esac
                 case "$rx_bytes" in ""|*[!0-9]*) rx_bytes=0 ;; esac
@@ -119,14 +132,17 @@ EOF
             rm -f "$traffic_rows"
         else
             traffic_status="query_failed"
+            traffic_error="$(head -c 240 "$traffic_error_file" 2>/dev/null || true)"
         fi
+        rm -f "$traffic_error_file"
         rm -f "$traffic_file"
     fi
     case "$traffic_status" in
         not_installed) traffic_error="nlbw executable is missing" ;;
         service_missing) traffic_error="nlbwmon init service is missing" ;;
         service_stopped) traffic_error="nlbwmon service did not start" ;;
-        query_failed) traffic_error="nlbwmon query failed after recovery" ;;
+        query_failed) [ -n "$traffic_error" ] || traffic_error="nlbwmon query failed after recovery" ;;
+        invalid_output) [ -n "$traffic_error" ] || traffic_error="nlbwmon returned an unsupported CSV format" ;;
     esac
     printf '{"neighbours":[%s],"dhcp":%s,"traffic":{"available":%s,"status":"%s","records":%s,"installed":%s,"service":"%s","recovery_attempted":%s,"error":"%s"}}' \
         "$neighbours" "$(dhcp_json)" "$traffic_available" "$traffic_status" "$traffic_records" \

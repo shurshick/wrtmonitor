@@ -1,10 +1,14 @@
 from contextlib import asynccontextmanager
+import asyncio
+from contextlib import suppress
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .config import APP_NAME, APP_VERSION, load_settings
-from .db import check_database, init_db
+from .db import check_database, get_engine, init_db
+from sqlalchemy.orm import Session
+from .services.operations import run_housekeeping
 from .services.openwrt_downloads import ensure_openwrt_download_metadata
 from .web.security_headers import SecurityHeadersMiddleware
 from .observability import ObservabilityMiddleware
@@ -18,7 +22,23 @@ def create_app() -> FastAPI:
         ensure_openwrt_download_metadata()
         init_db()
         check_database()
-        yield
+        async def housekeeping_loop() -> None:
+            while True:
+                await asyncio.sleep(settings.housekeeping_interval_seconds)
+                await asyncio.to_thread(_run_housekeeping_once)
+
+        def _run_housekeeping_once() -> None:
+            with Session(get_engine()) as db:
+                run_housekeeping(db, settings)
+
+        await asyncio.to_thread(_run_housekeeping_once)
+        housekeeping = asyncio.create_task(housekeeping_loop())
+        try:
+            yield
+        finally:
+            housekeeping.cancel()
+            with suppress(asyncio.CancelledError):
+                await housekeeping
 
     app = FastAPI(
         title=APP_NAME,

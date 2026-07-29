@@ -98,7 +98,7 @@ has_client_traffic() {
     has_commands nlbw || return 1
     [ -x "$(capability_path /etc/init.d/nlbwmon)" ] || return 1
     "$(capability_path /etc/init.d/nlbwmon)" running >/dev/null 2>&1 || return 1
-    nlbw -c csv -g mac -n -q -s ';' >/dev/null 2>&1
+    nlbw_query_csv >/dev/null 2>&1
 }
 
 has_wifi_roaming() {

@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
+from ..config import APP_VERSION
+from ..services.operations import build_server_diagnostic_archive
 from .route_shared import (
     AuditLog,
     BACKUP_DIRECTORY,
@@ -42,6 +44,22 @@ from .route_shared import (
 )
 
 router = APIRouter()
+
+
+@router.get("/account/diagnostics")
+def web_server_diagnostics(
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> Response:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user or user.role != "owner" or user.disabled:
+        raise HTTPException(status_code=403, detail="Owner access required")
+    return Response(
+        build_server_diagnostic_archive(db, config),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="wrtmonitor-server-{APP_VERSION}-diagnostics.zip"'},
+    )
 
 
 @router.get("/account", response_class=HTMLResponse)

@@ -648,12 +648,17 @@ def test_terminal_command_result_is_cached_for_replay(tmp_path: Path):
 
 def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
     source = library_sources("telemetry")
+    dependencies = read_text(LIB_DIR / "dependencies.sh")
     assert 'column["mac"]' in source
     assert 'column["rx_bytes"]' in source
     assert 'column["tx_bytes"]' in source
     assert '"traffic":{"available":%s,"status":"%s","records":%s' in source
     assert '"recovery_attempted":%s' in source
     assert "ensure_nlbwmon_runtime" in source
+    assert "nlbw -c csv -g mac -o mac -n -q" in dependencies
+    assert "nlbw -c csv -g mac -n -q -s ';'" not in dependencies
+    assert "awk -F '\\t'" in source
+    assert 'traffic_status="invalid_output"' in source
 
 
 def test_wifi_survey_reports_observed_driver_values():

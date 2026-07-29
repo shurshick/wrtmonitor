@@ -15,7 +15,7 @@ services:
       retries: 10
 
   wrtmonitor:
-    image: ghcr.io/shurshick/wrtmonitor:latest
+    image: ghcr.io/shurshick/wrtmonitor:0.28.0
     pull_policy: always
     restart: unless-stopped
     depends_on:
@@ -39,6 +39,7 @@ services:
       WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS: 30
       WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE: 500
       WRTMONITOR_TELEMETRY_METRIC_RETENTION_DAYS: 45
+      WRTMONITOR_HOUSEKEEPING_INTERVAL_SECONDS: 60
     volumes:
       - wrtmonitor_backups:/backups
     healthcheck:

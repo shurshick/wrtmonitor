@@ -1,18 +1,18 @@
-# v0.27.0-operational-parity
+# v0.28.0-operations-and-notifications
 
-Тестовый релиз закрепляет единый набор операций и фактических параметров управления в Web UI и Android.
+Тестовый эксплуатационный релиз. Перед переводом Docker-тега `latest` образ проходит canary-выдержку не менее 24 часов.
 
 ## Изменения
 
-- все 90 команд доступны через эквивалентные пользовательские операции Web UI и Android;
-- новый management-options API возвращает варианты выбора из текущей telemetry роутера;
-- Wi-Fi каналы формируются по возможностям выбранного радиомодуля, а не по встроенному списку;
-- Android-экраны управления обращаются к серверу через Repository и сохраняют выбранное состояние;
-- инструментальные Android-тесты запускаются на эмуляторе как обязательный release gate.
+- исправлен разбор CSV `nlbwmon`: трафик клиентов больше не теряется из-за пустого разделителя;
+- добавлены уведомления offline/online, WAN failover, ошибок обновления и резервного копирования;
+- API отдаёт метрики очереди команд и свежести каждого агента;
+- фоновая housekeeping-задача очищает telemetry, журнал команд и служебные попытки авторизации;
+- сервер формирует безопасный диагностический ZIP без секретов;
+- Docker-образ сначала публикуется как `canary`; перевод в `latest` выполняется отдельным workflow после 24–72 часов.
 
 ## Проверка
 
-- backend, contract и API tests;
-- OpenWrt static tests, shell syntax и command harness;
-- Android unit, lint и emulator UI tests;
-- command matrix и architecture validators.
+- backend/API, OpenWrt agent и contract tests;
+- проверка shell syntax и Android release gates;
+- проверка неизменяемого versioned Docker image и canary-публикации.

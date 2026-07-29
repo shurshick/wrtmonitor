@@ -56,7 +56,7 @@ ensure_nlbwmon_runtime() {
     wait_count=0
     while [ "$wait_count" -lt 5 ]; do
         if "$nlbwmon_init" running >/dev/null 2>&1 \
-            && nlbw -c csv -g mac -n -q -s ';' >/dev/null 2>&1; then
+            && nlbw_query_csv >/dev/null 2>&1; then
             return 0
         fi
         wait_count=$((wait_count + 1))
@@ -73,11 +73,18 @@ nlbwmon_runtime_status() {
         printf 'service_missing'
     elif ! "$nlbwmon_init" running >/dev/null 2>&1; then
         printf 'service_stopped'
-    elif ! nlbw -c csv -g mac -n -q -s ';' >/dev/null 2>&1; then
+    elif ! nlbw_query_csv >/dev/null 2>&1; then
         printf 'query_failed'
     else
         printf 'ready'
     fi
+}
+
+nlbw_query_csv() {
+    # nlbw uses optional arguments for -s/-q. Passing `-s ';'` therefore
+    # selects an empty separator and silently produces an unparseable header.
+    # The native tab separated output is stable across opkg and apk releases.
+    nlbw -c csv -g mac -o mac -n -q
 }
 
 dependencies_healthy() {
