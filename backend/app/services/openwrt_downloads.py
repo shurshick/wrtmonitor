@@ -12,9 +12,9 @@ SIGNATURE_FILE = "SHA256SUMS.sig"
 
 def _sha256_for(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(8192), b""):
-            digest.update(chunk)
+    # Linux release jobs ship LF files. Canonicalizing text payloads keeps the
+    # signed manifest identical when it is generated from a Windows checkout.
+    digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
     return digest.hexdigest()
 
 

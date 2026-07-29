@@ -132,7 +132,7 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: signed-agent-metadata
-          path: .
+          path: openwrt-agent
       - name: Read release metadata
         run: echo "RELEASE_VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
       - name: Build release image
@@ -199,7 +199,7 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: signed-agent-metadata
-          path: .
+          path: openwrt-agent
       - name: Read release metadata
         run: |
           echo "RELEASE_VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
