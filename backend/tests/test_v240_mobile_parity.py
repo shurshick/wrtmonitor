@@ -35,17 +35,9 @@ def test_android_has_restorable_navigation_and_explicit_data_states() -> None:
     app = (
         ANDROID_SOURCES / "ru" / "wrtmonitor" / "app" / "WrtMonitorApp.kt"
     ).read_text(encoding="utf-8")
-    screens = (
-        ANDROID_SOURCES
-        / "ru"
-        / "wrtmonitor"
-        / "app"
-        / "ui"
-        / "screens"
-    )
+    screens = ANDROID_SOURCES / "ru" / "wrtmonitor" / "app" / "ui" / "screens"
     controls = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in screens.glob("*ControlScreen.kt")
+        path.read_text(encoding="utf-8") for path in screens.glob("*ControlScreen.kt")
     )
 
     assert "rememberSaveable" in app

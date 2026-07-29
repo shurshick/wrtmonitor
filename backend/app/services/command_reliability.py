@@ -82,23 +82,23 @@ def command_reliability(
     return cast(
         ReliabilityPolicy,
         {
-        "subsystem": command_subsystem(command_type),
-        "idempotency": {
-            "strategy": "command_uuid_result_cache",
-            "semantic": readonly or risk in SAFE_ACTIONS,
-        },
-        "delivery": {
-            "timeout_seconds": timeout_seconds,
-            "lease_seconds": min(45, timeout_seconds),
-            "max_deliveries": 3 if readonly else 2,
-        },
-        "post_condition": post_condition,
-        "verification": {
-            "required": True,
-            "mode": post_condition,
-            "fail_closed": True,
-        },
-        "rollback": rollback,
+            "subsystem": command_subsystem(command_type),
+            "idempotency": {
+                "strategy": "command_uuid_result_cache",
+                "semantic": readonly or risk in SAFE_ACTIONS,
+            },
+            "delivery": {
+                "timeout_seconds": timeout_seconds,
+                "lease_seconds": min(45, timeout_seconds),
+                "max_deliveries": 3 if readonly else 2,
+            },
+            "post_condition": post_condition,
+            "verification": {
+                "required": True,
+                "mode": post_condition,
+                "fail_closed": True,
+            },
+            "rollback": rollback,
         },
     )
 
