@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.26.0-architecture-split
+
+- Backend-разделы commands, telemetry и Web routes разнесены по подсистемам с тонкими facade-модулями.
+- OpenWrt agent получил отдельные command и telemetry модули для Wi-Fi, сети, firewall, VPN, system и maintenance.
+- API закрепил типизированные payload, result, status и reliability policy вместо неограниченного `Any`.
+- Android-экраны устройств и telemetry переведены на Repository и ViewModel.
+- Транспортный `org.json` удалён из Compose и изолирован в API DTO.
+- CI проверяет архитектурные границы и размер ключевых модулей.
+
 ## v0.25.0-core-certification
 
 - Сформирована машинно проверяемая матрица всех 90 команд и пользовательских поверхностей.

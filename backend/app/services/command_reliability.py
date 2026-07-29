@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
+
+from ..schemas.command_types import ReliabilityPolicy
 
 
 READ_ONLY = "level_1_readonly"
@@ -42,7 +44,10 @@ def command_subsystem(command_type: str) -> str:
     return command_type.split(".", 1)[0]
 
 
-def command_reliability(command_type: str, metadata: dict[str, Any]) -> dict[str, Any]:
+def command_reliability(
+    command_type: str,
+    metadata: dict[str, Any],
+) -> ReliabilityPolicy:
     """Return the executable delivery policy included in the public contract."""
     risk = str(metadata["risk_level"])
     readonly = risk == READ_ONLY
@@ -74,7 +79,9 @@ def command_reliability(command_type: str, metadata: dict[str, Any]) -> dict[str
         post_condition = "read_after_write_config"
         rollback = "configuration_backup"
 
-    return {
+    return cast(
+        ReliabilityPolicy,
+        {
         "subsystem": command_subsystem(command_type),
         "idempotency": {
             "strategy": "command_uuid_result_cache",
@@ -92,7 +99,8 @@ def command_reliability(command_type: str, metadata: dict[str, Any]) -> dict[str
             "fail_closed": True,
         },
         "rollback": rollback,
-    }
+        },
+    )
 
 
 def apply_reliability_contract(

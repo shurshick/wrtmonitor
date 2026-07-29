@@ -35,18 +35,22 @@ def test_android_has_restorable_navigation_and_explicit_data_states() -> None:
     app = (
         ANDROID_SOURCES / "ru" / "wrtmonitor" / "app" / "WrtMonitorApp.kt"
     ).read_text(encoding="utf-8")
-    controls = (
+    screens = (
         ANDROID_SOURCES
         / "ru"
         / "wrtmonitor"
         / "app"
         / "ui"
         / "screens"
-        / "RouterControlScreens.kt"
-    ).read_text(encoding="utf-8")
+    )
+    controls = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in screens.glob("*ControlScreen.kt")
+    )
 
     assert "rememberSaveable" in app
     assert "deviceStateSaver" in app
     assert "BackHandler" in app
+    assert not (screens / "RouterControlScreens.kt").exists()
     for state in ('"stale"', '"error"', '"unsupported"'):
         assert state in controls

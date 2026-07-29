@@ -50,8 +50,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
+import ru.wrtmonitor.app.api.dto.JsonArray
+import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
@@ -77,17 +77,17 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private enum class ClientsView { List, Details, Settings }
+internal enum class ClientsView { List, Details, Settings }
 
-private enum class ClientsFilter { All, Online, Recent, Offline }
+internal enum class ClientsFilter { All, Online, Recent, Offline }
 
-private val clientWeekdayOptions = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+internal val clientWeekdayOptions = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
     .map { SelectOption(it, it.uppercase()) }
-private val clientPriorityOptions = listOf("low", "normal", "high", "realtime")
+internal val clientPriorityOptions = listOf("low", "normal", "high", "realtime")
     .map { SelectOption(it, it) }
-private val clientLeaseTimeOptions = listOf("30m", "1h", "6h", "12h", "24h", "72h", "168h")
+internal val clientLeaseTimeOptions = listOf("30m", "1h", "6h", "12h", "24h", "72h", "168h")
     .map { SelectOption(it, it) }
-private val clientIpv6PrefixOptions = listOf("48", "52", "56", "60", "64")
+internal val clientIpv6PrefixOptions = listOf("48", "52", "56", "60", "64")
     .map { SelectOption(it, "/$it") }
 
 @Composable
@@ -131,9 +131,9 @@ fun ClientsControlScreen(
                 is ApiResult.Success -> {
                     telemetry = result.data
                     if (!dhcpInitialized) {
-                        val pools = result.data.payload?.optJSONObject("dhcp")?.optJSONArray("pools")
+                        val pools = result.data.payload?.optJsonObject("dhcp")?.optJsonArray("pools")
                         val lanPool = pools?.let { array ->
-                            (0 until array.length()).mapNotNull(array::optJSONObject)
+                            (0 until array.length()).mapNotNull(array::optJsonObject)
                                 .firstOrNull { it.optString("interface") == "lan" }
                         }
                         if (lanPool != null) {
@@ -144,9 +144,9 @@ fun ClientsControlScreen(
                             ipv6Dhcp = lanPool.optString("dhcpv6", "disabled")
                             ipv6Ndp = lanPool.optString("ndp", "disabled")
                         }
-                        val interfaces = result.data.network?.optJSONArray("interfaces")
+                        val interfaces = result.data.network?.optJsonArray("interfaces")
                         val lan = interfaces?.let { array ->
-                            (0 until array.length()).mapNotNull(array::optJSONObject)
+                            (0 until array.length()).mapNotNull(array::optJsonObject)
                                 .firstOrNull { it.optString("interface") == "lan" }
                         }
                         val configuredPrefix = lan?.optString("ip6assign").orEmpty()
@@ -178,7 +178,7 @@ fun ClientsControlScreen(
         }
     }
 
-    fun queue(type: String, payload: JSONObject) {
+    fun queue(type: String, payload: JsonObject) {
         scope.launch {
             when (val result = withContext(Dispatchers.IO) {
                 WrtMonitorApi(serverUrl, accessToken).createCommand(device.id, type, payload, true)
@@ -196,10 +196,10 @@ fun ClientsControlScreen(
         }
     }
 
-    fun saveClient(client: NetworkClientDto, name: String, profileId: String?, policy: JSONObject) {
+    fun saveClient(client: NetworkClientDto, name: String, profileId: String?, policy: JsonObject) {
         scope.launch {
             val api = WrtMonitorApi(serverUrl, accessToken)
-            val storedPolicy = if (profileId == null) policy else JSONObject()
+            val storedPolicy = if (profileId == null) policy else JsonObject()
             when (val update = withContext(Dispatchers.IO) {
                 api.updateNetworkClient(device.id, client.id, name, profileId, storedPolicy)
             }) {
@@ -247,14 +247,14 @@ fun ClientsControlScreen(
             onSetLease = { hostname, ip ->
                 pendingCommand = PendingSafeCommand(
                     "dhcp.set_lease",
-                    JSONObject().put("hostname", hostname).put("mac", selectedClient.mac).put("ip", ip),
+                    JsonObject().put("hostname", hostname).put("mac", selectedClient.mac).put("ip", ip),
                     leaseQueued,
                 )
             },
             onDeleteLease = {
                 pendingCommand = PendingSafeCommand(
                     "dhcp.delete_lease",
-                    JSONObject().put("mac", selectedClient.mac),
+                    JsonObject().put("mac", selectedClient.mac),
                     commandQueued,
                 )
             },
@@ -264,7 +264,7 @@ fun ClientsControlScreen(
             canManageProfiles = capabilities["clients.policy"] == true,
             canConfigureDhcp = capabilities["dhcp.configure"] == true,
             canConfigureIpv6 = capabilities["network.ipv6.configure"] == true,
-            topology = telemetry?.network?.optJSONObject("topology"),
+            topology = telemetry?.network?.optJsonObject("topology"),
             canConfigureSegments = capabilities["network.segments.configure"] == true,
             canConfigureVlans = capabilities["network.vlan.configure"] == true,
             profileName = profileName,
@@ -321,7 +321,7 @@ fun ClientsControlScreen(
             onSaveDhcp = {
                 pendingCommand = PendingSafeCommand(
                     "dhcp.set_pool",
-                    JSONObject().put("interface", "lan").put("start", poolStart)
+                    JsonObject().put("interface", "lan").put("start", poolStart)
                         .put("limit", poolLimit).put("leasetime", leaseTime),
                     commandQueued,
                 )
@@ -329,7 +329,7 @@ fun ClientsControlScreen(
             onSaveIpv6 = {
                 pendingCommand = PendingSafeCommand(
                     "network.set_ipv6",
-                    JSONObject().put("interface", "lan").put("enabled", ipv6Enabled)
+                    JsonObject().put("interface", "lan").put("enabled", ipv6Enabled)
                         .put("assignment_length", ipv6Prefix.toIntOrNull() ?: 64)
                         .put("ra", ipv6Ra).put("dhcpv6", ipv6Dhcp).put("ndp", ipv6Ndp),
                     commandQueued,
@@ -369,823 +369,3 @@ fun ClientsControlScreen(
         )
     }
 }
-
-@Composable
-private fun ClientsList(
-    clients: List<NetworkClientDto>,
-    search: String,
-    onSearchChange: (String) -> Unit,
-    filter: ClientsFilter,
-    onFilterChange: (ClientsFilter) -> Unit,
-    loading: Boolean,
-    onRefresh: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenClient: (NetworkClientDto) -> Unit,
-) {
-    val onlineCount = clients.count(NetworkClientDto::online)
-    val recentCount = clients.count { it.presenceState == "recent" }
-    val offlineCount = clients.size - onlineCount - recentCount
-    val query = search.trim().lowercase(Locale.getDefault())
-    val filtered = clients.filter { client ->
-        val stateMatches = when (filter) {
-            ClientsFilter.All -> true
-            ClientsFilter.Online -> client.presenceState == "online"
-            ClientsFilter.Recent -> client.presenceState == "recent"
-            ClientsFilter.Offline -> client.presenceState == "offline"
-        }
-        val searchable = listOfNotNull(
-            client.displayName,
-            client.hostname,
-            client.vendor,
-            client.currentIpv4,
-            client.mac,
-            client.wifiSsid,
-        ).joinToString(" ").lowercase(Locale.getDefault())
-        stateMatches && (query.isBlank() || query in searchable)
-    }
-
-    RouterPageHeader(
-        title = stringResource(R.string.clients_title_count, clients.size),
-        subtitle = stringResource(R.string.clients_online_count, onlineCount),
-        refreshing = loading,
-        onRefresh = onRefresh,
-    )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        TextButton(onClick = onOpenSettings) {
-            Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.client_list_settings), Modifier.padding(start = 6.dp))
-        }
-    }
-    OutlinedTextField(
-        value = search,
-        onValueChange = onSearchChange,
-        modifier = Modifier.fillMaxWidth(),
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        placeholder = { Text(stringResource(R.string.client_search_hint)) },
-        singleLine = true,
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = filter == ClientsFilter.All,
-                onClick = { onFilterChange(ClientsFilter.All) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(R.string.client_filter_all, clients.size), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            )
-            FilterChip(
-                selected = filter == ClientsFilter.Online,
-                onClick = { onFilterChange(ClientsFilter.Online) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(R.string.client_filter_online, onlineCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            )
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = filter == ClientsFilter.Recent,
-                onClick = { onFilterChange(ClientsFilter.Recent) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(R.string.client_filter_recent, recentCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            )
-            FilterChip(
-                selected = filter == ClientsFilter.Offline,
-                onClick = { onFilterChange(ClientsFilter.Offline) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(R.string.client_filter_offline, offlineCount), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            )
-        }
-    }
-
-    if (filtered.isEmpty()) {
-        SectionCard(stringResource(R.string.home_network_clients)) {
-            Text(stringResource(R.string.client_filter_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        return
-    }
-
-    val groups = filtered.groupBy(::clientGroupKey).toList().sortedWith(
-        compareBy<Pair<String, List<NetworkClientDto>>> { when (it.first) { "recent" -> 1; "offline" -> 2; else -> 0 } }
-            .thenBy { it.first.lowercase(Locale.getDefault()) },
-    )
-    groups.forEach { (key, groupClients) ->
-        ClientGroup(
-            title = clientGroupTitle(key, groupClients),
-            subtitle = clientGroupSubtitle(groupClients),
-            initiallyExpanded = key != "offline",
-            forceExpanded = query.isNotBlank() || filter != ClientsFilter.All,
-            clients = groupClients.sortedWith(
-                compareBy<NetworkClientDto> {
-                    when (it.presenceState) {
-                        "online" -> 0
-                        "recent" -> 1
-                        else -> 2
-                    }
-                }
-                    .thenBy { clientDisplayNameRaw(it).lowercase(Locale.getDefault()) },
-            ),
-            onOpenClient = onOpenClient,
-        )
-    }
-}
-
-@Composable
-private fun ClientGroup(
-    title: String,
-    subtitle: String,
-    initiallyExpanded: Boolean,
-    forceExpanded: Boolean,
-    clients: List<NetworkClientDto>,
-    onOpenClient: (NetworkClientDto) -> Unit,
-) {
-    var expanded by remember(title) { mutableStateOf(initiallyExpanded) }
-    LaunchedEffect(forceExpanded) {
-        if (forceExpanded) expanded = true
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Icon(
-                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (expanded) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            ) {
-                Column {
-                    clients.forEachIndexed { index, client ->
-                        ClientRow(client, onClick = { onOpenClient(client) })
-                        if (index < clients.lastIndex) HorizontalDivider(Modifier.padding(start = 64.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ClientRow(client: NetworkClientDto, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier.size(38.dp).background(
-                if (client.presenceState == "online") MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                CircleShape,
-            ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                clientIcon(client),
-                contentDescription = null,
-                modifier = Modifier.size(21.dp),
-                tint = when (client.presenceState) {
-                    "online" -> MaterialTheme.colorScheme.secondary
-                    "recent" -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.outline
-                },
-            )
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                clientDisplayName(client),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                client.currentIpv4 ?: compactMac(client.mac),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                clientConnectionLabel(client),
-                style = MaterialTheme.typography.labelMedium,
-                color = when (client.presenceState) {
-                    "online" -> MaterialTheme.colorScheme.secondary
-                    "recent" -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.outline
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (client.staticIpv4 != null) {
-                Text("IP", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            }
-        }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
-    }
-}
-
-@Composable
-private fun ClientDetails(
-    client: NetworkClientDto,
-    profiles: List<ClientProfileDto>,
-    canManagePolicy: Boolean,
-    canSetLease: Boolean,
-    canDeleteLease: Boolean,
-    onBack: () -> Unit,
-    onSave: (String, String?, JSONObject) -> Unit,
-    onSetLease: (String, String) -> Unit,
-    onDeleteLease: () -> Unit,
-) {
-    val policy = client.effectivePolicy
-    val schedule = policy.optJSONObject("schedule") ?: JSONObject()
-    val qos = policy.optJSONObject("qos") ?: JSONObject()
-    var displayName by remember(client.id, client.displayName) { mutableStateOf(client.displayName.orEmpty()) }
-    var profileId by remember(client.id, client.profileId) { mutableStateOf(client.profileId) }
-    var blocked by remember(client.id, policy.toString()) { mutableStateOf(policy.optBoolean("blocked")) }
-    var scheduleEnabled by remember(client.id, schedule.toString()) { mutableStateOf(schedule.optBoolean("enabled")) }
-    var weekdays by remember(client.id, schedule.toString()) {
-        mutableStateOf(schedule.optJSONArray("weekdays")?.let { array ->
-            (0 until array.length()).map(array::optString).filter(String::isNotBlank).toSet()
-        } ?: emptySet())
-    }
-    var start by remember(client.id, schedule.toString()) { mutableStateOf(schedule.optString("start")) }
-    var stop by remember(client.id, schedule.toString()) { mutableStateOf(schedule.optString("stop")) }
-    var priority by remember(client.id, qos.toString()) { mutableStateOf(qos.optString("priority", "normal")) }
-    var download by remember(client.id, qos.toString()) { mutableStateOf(qos.optInt("download_kbps").toString()) }
-    var upload by remember(client.id, qos.toString()) { mutableStateOf(qos.optInt("upload_kbps").toString()) }
-    var leaseIp by remember(client.id, client.currentIpv4, client.staticIpv4) {
-        mutableStateOf(client.staticIpv4 ?: client.currentIpv4.orEmpty())
-    }
-    val profileOptions = listOf(SelectOption("", stringResource(R.string.no_profile))) +
-        profiles.map { SelectOption(it.id, it.name) }
-
-    ClientBackRow(onBack, stringResource(R.string.back_to_clients))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(56.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(clientIcon(client), contentDescription = null, modifier = Modifier.size(30.dp), tint = MaterialTheme.colorScheme.secondary)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(clientDisplayName(client), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                listOfNotNull(client.currentIpv4, compactMac(client.mac)).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        StatusPill(
-            when (client.presenceState) {
-                "online" -> stringResource(R.string.online)
-                "recent" -> stringResource(R.string.client_recent)
-                else -> stringResource(R.string.offline)
-            },
-            client.presenceState == "online",
-        )
-    }
-
-    SectionCard(stringResource(R.string.client_connection_details)) {
-        InfoRow(stringResource(R.string.connection_type), clientConnectionLabel(client))
-        InfoRow(stringResource(R.string.ip_address), client.currentIpv4, stringResource(R.string.no_ip_address))
-        InfoRow(stringResource(R.string.mac_address), client.mac)
-        InfoRow(stringResource(R.string.client_vendor), client.vendor, stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.client_interface), client.networkInterface, stringResource(R.string.no_data))
-        client.signalDbm?.let { InfoRow(stringResource(R.string.client_signal), "$it dBm") }
-        val speed = maxOf(client.rxBitrate ?: 0, client.txBitrate ?: 0)
-        if (speed > 0) InfoRow(stringResource(R.string.client_link_speed), formatLinkRate(speed))
-        InfoRow(stringResource(R.string.first_seen), formatClientDate(client.firstSeenAt), stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.last_confirmed), formatClientDate(client.lastConfirmedAt), stringResource(R.string.never_confirmed))
-        InfoRow(stringResource(R.string.presence_source), presenceSourceLabel(client.presenceSource), stringResource(R.string.no_data))
-    }
-
-    if (canManagePolicy) {
-        SectionCard(stringResource(R.string.client_main_settings)) {
-            OutlinedTextField(
-                value = displayName,
-                onValueChange = { displayName = it },
-                label = { Text(stringResource(R.string.device_name)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            OptionSelector(
-                stringResource(R.string.client_profile),
-                profileId.orEmpty(),
-                profileOptions,
-                { profileId = it.ifBlank { null } },
-            )
-            SwitchSettingRow(
-                title = stringResource(R.string.block_client),
-                subtitle = if (blocked) stringResource(R.string.access_blocked) else stringResource(R.string.access_allowed),
-                checked = blocked,
-                onCheckedChange = { blocked = it },
-            )
-        }
-
-        ExpandableSettingsCard(
-            stringResource(R.string.client_priority_limits),
-            stringResource(R.string.client_priority_summary, priority),
-        ) {
-            OptionSelector(
-                stringResource(R.string.traffic_priority),
-                priority,
-                clientPriorityOptions,
-                { priority = it },
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    download,
-                    { download = it.filter(Char::isDigit) },
-                    label = { Text(stringResource(R.string.download_limit)) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    upload,
-                    { upload = it.filter(Char::isDigit) },
-                    label = { Text(stringResource(R.string.upload_limit)) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                )
-            }
-        }
-
-        ExpandableSettingsCard(
-            stringResource(R.string.access_schedule),
-            if (scheduleEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value),
-        ) {
-            SwitchSettingRow(stringResource(R.string.access_schedule), checked = scheduleEnabled, onCheckedChange = { scheduleEnabled = it })
-            if (scheduleEnabled) {
-                MultiOptionSelector(
-                    stringResource(R.string.schedule_weekdays),
-                    weekdays,
-                    clientWeekdayOptions,
-                    { weekdays = it },
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(start, { start = it }, label = { Text(stringResource(R.string.schedule_start)) }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(stop, { stop = it }, label = { Text(stringResource(R.string.schedule_stop)) }, modifier = Modifier.weight(1f), singleLine = true)
-                }
-            }
-        }
-    }
-
-    if (canSetLease || (canDeleteLease && client.staticIpv4 != null)) {
-        ExpandableSettingsCard(
-            stringResource(R.string.static_lease),
-            client.staticIpv4 ?: stringResource(R.string.static_lease_missing),
-        ) {
-            OutlinedTextField(
-                value = leaseIp,
-                onValueChange = { leaseIp = it },
-                label = { Text(stringResource(R.string.ip_address)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            ActionRow {
-                if (canSetLease) {
-                    PrimaryActionButton(
-                        label = if (client.staticIpv4 == null) stringResource(R.string.pin_current_address) else stringResource(R.string.save_lease),
-                        onClick = {
-                            onSetLease(
-                                displayName.ifBlank { client.hostname ?: "client-${client.mac.takeLast(5).replace(":", "")}" },
-                                leaseIp,
-                            )
-                        },
-                        enabled = leaseIp.isNotBlank(),
-                    )
-                }
-                if (canDeleteLease && client.staticIpv4 != null) {
-                    TextButton(onClick = onDeleteLease) { Text(stringResource(R.string.delete_lease)) }
-                }
-            }
-        }
-    }
-
-    SectionCard(stringResource(R.string.client_traffic)) {
-        val traffic = client.traffic
-        InfoRow(stringResource(R.string.traffic_received), formatClientBytes(traffic?.optLong("rx_bytes") ?: 0))
-        InfoRow(stringResource(R.string.traffic_sent), formatClientBytes(traffic?.optLong("tx_bytes") ?: 0))
-    }
-
-    if (canManagePolicy) {
-        PrimaryActionButton(
-            label = stringResource(R.string.save_policy),
-            onClick = {
-                val days = JSONArray()
-                weekdays.sorted().forEach(days::put)
-                onSave(
-                    displayName,
-                    profileId,
-                    JSONObject()
-                        .put("blocked", blocked)
-                        .put("schedule", JSONObject().put("enabled", scheduleEnabled).put("weekdays", days).put("start", start).put("stop", stop))
-                        .put("qos", JSONObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0)),
-                )
-            },
-        )
-    }
-}
-
-@Composable
-private fun ClientsSettings(
-    profiles: List<ClientProfileDto>,
-    canManageProfiles: Boolean,
-    canConfigureDhcp: Boolean,
-    canConfigureIpv6: Boolean,
-    topology: JSONObject?,
-    canConfigureSegments: Boolean,
-    canConfigureVlans: Boolean,
-    profileName: String,
-    onProfileNameChange: (String) -> Unit,
-    profileBlocked: Boolean,
-    onProfileBlockedChange: (Boolean) -> Unit,
-    poolStart: String,
-    onPoolStartChange: (String) -> Unit,
-    poolLimit: String,
-    onPoolLimitChange: (String) -> Unit,
-    leaseTime: String,
-    onLeaseTimeChange: (String) -> Unit,
-    ipv6Enabled: Boolean,
-    onIpv6EnabledChange: (Boolean) -> Unit,
-    ipv6Prefix: String,
-    onIpv6PrefixChange: (String) -> Unit,
-    ipv6Ra: String,
-    onIpv6RaChange: (String) -> Unit,
-    ipv6Dhcp: String,
-    onIpv6DhcpChange: (String) -> Unit,
-    ipv6Ndp: String,
-    onIpv6NdpChange: (String) -> Unit,
-    onBack: () -> Unit,
-    onCreateProfile: () -> Unit,
-    onDeleteProfile: (String) -> Unit,
-    onSaveDhcp: () -> Unit,
-    onSaveIpv6: () -> Unit,
-    onPrepareCommand: (PendingSafeCommand) -> Unit,
-) {
-    ClientBackRow(onBack, stringResource(R.string.back_to_clients))
-    RouterPageHeader(
-        title = stringResource(R.string.clients_settings_title),
-        subtitle = stringResource(R.string.clients_settings_summary),
-    )
-    if (canManageProfiles) {
-        SectionCard(
-            title = stringResource(R.string.access_profiles),
-            subtitle = stringResource(R.string.profiles_count, profiles.size),
-        ) {
-            profiles.forEachIndexed { index, profile ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(profile.name, fontWeight = FontWeight.Medium)
-                        Text(
-                            if (profile.policy.optBoolean("blocked")) stringResource(R.string.access_blocked) else stringResource(R.string.access_allowed),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    TextButton(onClick = { onDeleteProfile(profile.id) }) { Text(stringResource(R.string.delete)) }
-                }
-                if (index < profiles.lastIndex) HorizontalDivider()
-            }
-            if (profiles.isNotEmpty()) HorizontalDivider()
-            Text(stringResource(R.string.create_profile), style = MaterialTheme.typography.titleSmall)
-            OutlinedTextField(
-                profileName,
-                onProfileNameChange,
-                label = { Text(stringResource(R.string.profile_name)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            SwitchSettingRow(stringResource(R.string.block_client), checked = profileBlocked, onCheckedChange = onProfileBlockedChange)
-            PrimaryActionButton(
-                label = stringResource(R.string.create_profile),
-                onClick = onCreateProfile,
-                enabled = profileName.isNotBlank(),
-            )
-        }
-    }
-    if (canConfigureDhcp) {
-        SectionCard(
-            title = stringResource(R.string.dhcp_pool),
-            subtitle = stringResource(R.string.dhcp_pool_summary),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(poolStart, onPoolStartChange, label = { Text(stringResource(R.string.pool_start)) }, modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(poolLimit, onPoolLimitChange, label = { Text(stringResource(R.string.pool_size)) }, modifier = Modifier.weight(1f), singleLine = true)
-            }
-            OptionSelector(stringResource(R.string.lease_time), leaseTime, clientLeaseTimeOptions, onLeaseTimeChange)
-            PrimaryActionButton(
-                label = stringResource(R.string.save_dhcp),
-                onClick = onSaveDhcp,
-                enabled = poolStart.isNotBlank() && poolLimit.isNotBlank() && leaseTime.isNotBlank(),
-            )
-        }
-    }
-    if (canConfigureIpv6) {
-        val ipv6ModeOptions = listOf(
-            SelectOption("server", stringResource(R.string.ipv6_mode_server)),
-            SelectOption("relay", stringResource(R.string.ipv6_mode_relay)),
-            SelectOption("hybrid", stringResource(R.string.ipv6_mode_hybrid)),
-            SelectOption("disabled", stringResource(R.string.disabled_value)),
-        )
-        ExpandableSettingsCard(
-            title = stringResource(R.string.ipv6_settings),
-            summary = if (ipv6Enabled) "/$ipv6Prefix · RA $ipv6Ra · DHCPv6 $ipv6Dhcp" else stringResource(R.string.disabled_value),
-        ) {
-            SwitchSettingRow(stringResource(R.string.ipv6_lan_enabled), checked = ipv6Enabled, onCheckedChange = onIpv6EnabledChange)
-            OptionSelector(stringResource(R.string.prefix_length), ipv6Prefix, clientIpv6PrefixOptions, onIpv6PrefixChange)
-            OptionSelector(stringResource(R.string.ipv6_ra_mode), ipv6Ra, ipv6ModeOptions, onIpv6RaChange)
-            OptionSelector(stringResource(R.string.ipv6_dhcp_mode), ipv6Dhcp, ipv6ModeOptions, onIpv6DhcpChange)
-            OptionSelector(stringResource(R.string.ipv6_ndp_mode), ipv6Ndp, ipv6ModeOptions.filter { it.value != "server" }, onIpv6NdpChange)
-            PrimaryActionButton(stringResource(R.string.save_ipv6), onSaveIpv6)
-        }
-    }
-    if (canConfigureSegments || canConfigureVlans) {
-        NetworkTopologySettings(
-            topology = topology,
-            canConfigureSegments = canConfigureSegments,
-            canConfigureVlans = canConfigureVlans,
-            onPrepareCommand = onPrepareCommand,
-        )
-    }
-}
-
-@Composable
-private fun NetworkTopologySettings(
-    topology: JSONObject?,
-    canConfigureSegments: Boolean,
-    canConfigureVlans: Boolean,
-    onPrepareCommand: (PendingSafeCommand) -> Unit,
-) {
-    val topologyKey = topology?.toString().orEmpty()
-    val segments = remember(topologyKey) {
-        topology?.optJSONArray("segments").jsonObjects()
-            .filterNot { it.optString("name") in setOf("wan", "wan6", "loopback") }
-    }
-    val bridges = remember(topologyKey) { topology?.optJSONArray("bridges").jsonObjects() }
-    val vlans = remember(topologyKey) { topology?.optJSONArray("vlans").jsonObjects() }
-    val queued = stringResource(R.string.command_queued)
-
-    if (canConfigureSegments) {
-        val segmentChoices = listOf(SelectOption("__new__", stringResource(R.string.network_segment_new))) +
-            segments.map { SelectOption(it.optString("name"), it.optString("name")) }
-        var selectedName by remember(topologyKey) { mutableStateOf(segments.firstOrNull()?.optString("name") ?: "__new__") }
-        val selected = segments.firstOrNull { it.optString("name") == selectedName }
-        val selectedBridge = bridges.firstOrNull { it.optString("name") == selected?.optString("device") }
-        var name by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("name").orEmpty()) }
-        var address by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("ip_address").orEmpty()) }
-        var netmask by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("netmask").orEmpty().ifBlank { "255.255.255.0" }) }
-        var deviceName by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("device").orEmpty()) }
-        var ports by remember(selectedName, topologyKey) { mutableStateOf(selectedBridge?.optJSONArray("ports").jsonStrings().joinToString(", ")) }
-        var enabled by remember(selectedName, topologyKey) { mutableStateOf(selected?.optBoolean("enabled", true) ?: true) }
-        var bridgeEnabled by remember(selectedName, topologyKey) { mutableStateOf(selectedBridge != null || selected == null) }
-        var dhcpEnabled by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optBoolean("enabled", false) ?: true) }
-        var dhcpStart by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optString("start").orEmpty().ifBlank { "100" }) }
-        var dhcpLimit by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optString("limit").orEmpty().ifBlank { "150" }) }
-        var leaseTime by remember(selectedName, topologyKey) { mutableStateOf(selected?.optJSONObject("dhcp")?.optString("leasetime").orEmpty().ifBlank { "12h" }) }
-        var policy by remember(selectedName, topologyKey) { mutableStateOf(selected?.optString("policy").orEmpty().ifBlank { if (selectedName == "lan") "trusted" else "guest" }) }
-
-        ExpandableSettingsCard(
-            title = stringResource(R.string.network_segments),
-            summary = stringResource(R.string.network_segments_summary, segments.size),
-        ) {
-            OptionSelector(
-                label = stringResource(R.string.network_segment),
-                value = selectedName,
-                options = segmentChoices,
-                onValueChange = { selectedName = it },
-            )
-            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.system_name)) }, modifier = Modifier.fillMaxWidth(), enabled = selected == null, singleLine = true)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(address, { address = it }, label = { Text(stringResource(R.string.ipv4_address)) }, modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(netmask, { netmask = it }, label = { Text(stringResource(R.string.netmask)) }, modifier = Modifier.weight(1f), singleLine = true)
-            }
-            OutlinedTextField(deviceName, { deviceName = it }, label = { Text(stringResource(R.string.bridge_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(ports, { ports = it }, label = { Text(stringResource(R.string.bridge_ports)) }, modifier = Modifier.fillMaxWidth(), supportingText = { Text(stringResource(R.string.bridge_ports_hint)) }, singleLine = true)
-            SwitchSettingRow(stringResource(R.string.enabled_value), checked = enabled, onCheckedChange = { enabled = it })
-            SwitchSettingRow(stringResource(R.string.create_bridge), checked = bridgeEnabled, onCheckedChange = { bridgeEnabled = it })
-            SwitchSettingRow(stringResource(R.string.dhcp_server), checked = dhcpEnabled, onCheckedChange = { dhcpEnabled = it })
-            if (dhcpEnabled) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(dhcpStart, { dhcpStart = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.pool_start)) }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(dhcpLimit, { dhcpLimit = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.pool_size)) }, modifier = Modifier.weight(1f), singleLine = true)
-                }
-                OptionSelector(
-                    label = stringResource(R.string.lease_time),
-                    value = leaseTime,
-                    options = clientLeaseTimeOptions,
-                    onValueChange = { leaseTime = it },
-                )
-            }
-            OptionSelector(
-                stringResource(R.string.segment_policy),
-                policy,
-                listOf(
-                    SelectOption("trusted", stringResource(R.string.segment_policy_trusted)),
-                    SelectOption("guest", stringResource(R.string.segment_policy_guest)),
-                    SelectOption("isolated", stringResource(R.string.segment_policy_isolated)),
-                ),
-                onValueChange = { policy = it },
-            )
-            ActionRow {
-                PrimaryActionButton(
-                    stringResource(R.string.save),
-                    onClick = {
-                        onPrepareCommand(PendingSafeCommand(
-                            "network.set_segment",
-                            JSONObject()
-                                .put("name", name).put("protocol", "static").put("device", deviceName)
-                                .put("bridge_section", selectedBridge?.optString("section").orEmpty())
-                                .put("ip_address", address).put("netmask", netmask).put("enabled", enabled)
-                                .put("bridge", bridgeEnabled).put("ports", ports.toJsonArray())
-                                .put("stp", selectedBridge?.optBoolean("stp", false) ?: false)
-                                .put("igmp_snooping", selectedBridge?.optBoolean("igmp_snooping", true) ?: true)
-                                .put("dhcp_enabled", dhcpEnabled).put("dhcp_start", dhcpStart.toIntOrNull() ?: 100)
-                                .put("dhcp_limit", dhcpLimit.toIntOrNull() ?: 150).put("dhcp_leasetime", leaseTime)
-                                .put("policy", policy),
-                            queued,
-                        ))
-                    },
-                    enabled = name.isNotBlank() && address.isNotBlank() && netmask.isNotBlank(),
-                )
-                if (selected != null && selectedName !in setOf("lan", "wan", "wan6", "loopback")) {
-                    TextButton(onClick = { onPrepareCommand(PendingSafeCommand("network.delete_segment", JSONObject().put("name", selectedName), queued)) }) { Text(stringResource(R.string.delete)) }
-                }
-            }
-        }
-    }
-
-    if (canConfigureVlans) {
-        val vlanChoices = listOf(SelectOption("__new__", stringResource(R.string.vlan_new))) +
-            vlans.map { SelectOption(it.optString("section"), "VLAN ${it.optInt("vlan_id")} · ${it.optString("device")}") }
-        var selectedSection by remember(topologyKey) { mutableStateOf(vlans.firstOrNull()?.optString("section") ?: "__new__") }
-        val selected = vlans.firstOrNull { it.optString("section") == selectedSection }
-        var bridgeName by remember(selectedSection, topologyKey) { mutableStateOf(selected?.optString("device").orEmpty()) }
-        var vlanId by remember(selectedSection, topologyKey) { mutableStateOf(selected?.optInt("vlan_id")?.toString().orEmpty()) }
-        var vlanPorts by remember(selectedSection, topologyKey) { mutableStateOf(selected?.optJSONArray("ports").jsonStrings().joinToString(", ")) }
-        ExpandableSettingsCard(
-            title = stringResource(R.string.bridge_vlan),
-            summary = stringResource(R.string.bridge_vlan_summary, vlans.size),
-        ) {
-            OptionSelector(
-                label = stringResource(R.string.vlan),
-                value = selectedSection,
-                options = vlanChoices,
-                onValueChange = { selectedSection = it },
-            )
-            val bridgeChoices = bridges.map { SelectOption(it.optString("name"), it.optString("name")) }
-            if (bridgeChoices.isNotEmpty()) OptionSelector(
-                label = stringResource(R.string.bridge_name),
-                value = bridgeName,
-                options = bridgeChoices,
-                onValueChange = { bridgeName = it },
-            )
-            else OutlinedTextField(bridgeName, { bridgeName = it }, label = { Text(stringResource(R.string.bridge_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(vlanId, { vlanId = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.vlan_id)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(vlanPorts, { vlanPorts = it }, label = { Text(stringResource(R.string.bridge_ports)) }, modifier = Modifier.fillMaxWidth(), supportingText = { Text(stringResource(R.string.vlan_ports_hint)) }, singleLine = true)
-            ActionRow {
-                PrimaryActionButton(
-                    stringResource(R.string.save),
-                    onClick = { onPrepareCommand(PendingSafeCommand("network.set_vlan", JSONObject().put("section", selected?.optString("section").orEmpty()).put("device", bridgeName).put("vlan_id", vlanId.toIntOrNull() ?: 1).put("ports", vlanPorts.toJsonArray()), queued)) },
-                    enabled = bridgeName.isNotBlank() && vlanId.toIntOrNull() in 1..4094 && vlanPorts.isNotBlank(),
-                )
-                if (selected != null) TextButton(onClick = { onPrepareCommand(PendingSafeCommand("network.delete_vlan", JSONObject().put("section", selectedSection), queued)) }) { Text(stringResource(R.string.delete)) }
-            }
-        }
-    }
-}
-
-private fun JSONArray?.jsonObjects(): List<JSONObject> = this?.let { array ->
-    (0 until array.length()).mapNotNull(array::optJSONObject)
-}.orEmpty()
-
-private fun JSONArray?.jsonStrings(): List<String> = this?.let { array ->
-    (0 until array.length()).mapNotNull { index -> array.optString(index).takeIf(String::isNotBlank) }
-}.orEmpty()
-
-private fun String.toJsonArray(): JSONArray = JSONArray().also { array ->
-    split(',').map(String::trim).filter(String::isNotBlank).forEach(array::put)
-}
-
-@Composable
-private fun ClientBackRow(onBack: () -> Unit, label: String) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = label)
-        }
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-    }
-}
-
-private fun clientGroupKey(client: NetworkClientDto): String = when {
-    client.presenceState == "offline" -> "offline"
-    client.presenceState == "recent" -> "recent"
-    client.connectionType == "wifi" -> "wifi:${client.wifiSsid.orEmpty().ifBlank { "wifi" }}"
-    client.connectionType == "wired" -> "wired"
-    else -> "network"
-}
-
-@Composable
-private fun clientGroupTitle(key: String, clients: List<NetworkClientDto>): String = when {
-    key == "offline" -> stringResource(R.string.offline_clients)
-    key == "recent" -> stringResource(R.string.recent_clients)
-    key == "wired" -> stringResource(R.string.wired_clients)
-    key.startsWith("wifi:") -> clients.firstOrNull()?.wifiSsid?.takeIf(String::isNotBlank) ?: stringResource(R.string.wifi_clients)
-    else -> stringResource(R.string.home_network)
-}
-
-@Composable
-private fun clientGroupSubtitle(clients: List<NetworkClientDto>): String {
-    val online = clients.count(NetworkClientDto::online)
-    val bandResources = clients.filter(NetworkClientDto::online).mapNotNull { wifiBandResource(it.wifiBand) }.distinct()
-    val bands = mutableListOf<String>()
-    for (resource in bandResources) bands += stringResource(resource)
-    val connection = bands.takeIf { it.isNotEmpty() }?.joinToString(" · ")
-    return listOfNotNull(connection, stringResource(R.string.client_segment_summary, clients.size, online)).joinToString(" · ")
-}
-
-@Composable
-private fun clientDisplayName(client: NetworkClientDto): String = clientDisplayNameRaw(client)
-    .ifBlank { stringResource(R.string.client_unknown) }
-
-private fun clientDisplayNameRaw(client: NetworkClientDto): String {
-    val candidate = client.displayName?.trim()?.takeUnless { it.isBlank() }
-        ?: client.hostname?.trim()?.takeUnless { it.isBlank() }
-        ?: ""
-    return candidate.takeUnless(::looksLikeAddress).orEmpty()
-}
-
-private fun looksLikeAddress(value: String): Boolean = value.contains(":") ||
-    Regex("^\\d{1,3}(?:\\.\\d{1,3}){3}$").matches(value)
-
-private fun compactMac(mac: String): String = mac.lowercase(Locale.ROOT)
-
-@Composable
-private fun presenceSourceLabel(source: String?): String? = when (source) {
-    "wifi_station" -> stringResource(R.string.presence_wifi)
-    "neighbour_active" -> stringResource(R.string.presence_neighbour)
-    "traffic_activity" -> stringResource(R.string.presence_traffic)
-    "neighbour_grace" -> stringResource(R.string.presence_grace)
-    "confirmation_expired" -> stringResource(R.string.presence_expired)
-    "neighbour_stale" -> stringResource(R.string.presence_stale)
-    "neighbour_failed" -> stringResource(R.string.presence_failed)
-    else -> null
-}
-
-@Composable
-private fun clientConnectionLabel(client: NetworkClientDto): String = when (client.connectionType) {
-    "wifi" -> formatWifiBand(client.wifiBand) ?: stringResource(R.string.wifi)
-    "wired" -> stringResource(R.string.client_connection_wired)
-    else -> stringResource(R.string.client_connection_unknown)
-}
-
-@Composable
-private fun formatWifiBand(band: String?): String? {
-    val resource = wifiBandResource(band) ?: return null
-    return stringResource(resource)
-}
-
-private fun wifiBandResource(band: String?): Int? = when (band?.lowercase(Locale.ROOT)) {
-    "2g", "2.4g", "2.4ghz" -> R.string.client_band_2g
-    "5g", "5ghz" -> R.string.client_band_5g
-    "6g", "6ghz" -> R.string.client_band_6g
-    else -> null
-}
-
-private fun clientIcon(client: NetworkClientDto): ImageVector {
-    val identity = listOfNotNull(client.displayName, client.hostname, client.vendor).joinToString(" ").lowercase(Locale.ROOT)
-    return when {
-        listOf("phone", "redmi", "poco", "xiaomi", "huawei", "mobile", "android", "iphone").any(identity::contains) -> Icons.Default.PhoneAndroid
-        listOf("pc", "desktop", "computer", "laptop", "windows", "macbook").any(identity::contains) -> Icons.Default.Computer
-        listOf("router", "openwrt", "gateway").any(identity::contains) -> Icons.Default.Router
-        client.connectionType == "wifi" -> Icons.Default.Wifi
-        else -> Icons.Default.DevicesOther
-    }
-}
-
-internal fun formatClientBytes(value: Long): String = when {
-    value >= 1024L * 1024 * 1024 -> String.format(Locale.getDefault(), "%.1f GB", value / (1024.0 * 1024 * 1024))
-    value >= 1024L * 1024 -> String.format(Locale.getDefault(), "%.1f MB", value / (1024.0 * 1024))
-    value >= 1024L -> String.format(Locale.getDefault(), "%.1f KB", value / 1024.0)
-    else -> "$value B"
-}
-
-private fun formatLinkRate(value: Long): String = when {
-    value >= 1_000_000 -> String.format(Locale.getDefault(), "%.1f Gbit/s", value / 1_000_000.0)
-    value >= 1_000 -> String.format(Locale.getDefault(), "%.0f Mbit/s", value / 1_000.0)
-    else -> "$value Kbit/s"
-}
-
-private fun formatClientDate(value: String?): String = runCatching {
-    Instant.parse(value).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
-}.getOrNull().orEmpty()

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 from ..contracts import telemetry_schema_version
+from .command_types import CommandPayload, CommandResult, CommandResultStatus
 
 
 class LoginRequest(BaseModel):
@@ -64,14 +65,14 @@ class TelemetryRequest(BaseModel):
 
 class CommandCreateRequest(BaseModel):
     command_type: str
-    payload: dict[str, Any] = Field(default_factory=dict)
+    payload: CommandPayload = Field(default_factory=dict)
     confirmed: bool = False
     idempotency_key: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class CommandResultRequest(BaseModel):
-    status: str
-    result: dict[str, Any] = Field(default_factory=dict)
+    status: CommandResultStatus
+    result: CommandResult = Field(default_factory=dict)
 
 
 class ClientUpdateRequest(BaseModel):

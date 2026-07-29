@@ -19,9 +19,11 @@ from backend.app.services.command_registry import COMMAND_REGISTRY  # noqa: E402
 
 
 def agent_commands() -> set[str]:
-    source = (ROOT / "openwrt-agent/lib/commands.sh").read_text(encoding="utf-8")
-    body = source[source.index("execute_command() {") :]
-    groups = re.findall(r"^        ([a-z][a-z0-9_.|]+)\)$", body, re.MULTILINE)
+    source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((ROOT / "openwrt-agent/lib").glob("command_*.sh"))
+    )
+    groups = re.findall(r"^        ([a-z][a-z0-9_.|]+)\)$", source, re.MULTILINE)
     return {item for group in groups for item in group.split("|")}
 
 

@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, inspect
 from sqlalchemy.orm import sessionmaker
 
-import backend.app.web.routes as main
+import backend.app.web.route_shared as route_shared
+import backend.app.web.routes_auth as routes_auth
+import backend.app.web.routes_device as routes_device
 import backend.app.api.setup as setup_api
 import backend.app.services.setup as setup_service
 from backend.app.config import Settings, load_settings
@@ -54,7 +56,8 @@ def test_allowed_commands_are_explicit():
 
 def test_web_timestamp_filter_accepts_command_history_iso_strings():
     assert (
-        main.format_timestamp("2026-07-16T10:49:59+00:00") == "16.07.2026 10:49:59 UTC"
+        route_shared.format_timestamp("2026-07-16T10:49:59+00:00")
+        == "16.07.2026 10:49:59 UTC"
     )
 
 
@@ -193,7 +196,7 @@ def test_complete_setup_flushes_user_before_audit(monkeypatch):
 
 
 def test_devices_page_lists_devices(monkeypatch):
-    monkeypatch.setattr(main, "operational_notifications", lambda db: [])
+    monkeypatch.setattr(routes_auth, "operational_notifications", lambda db: [])
 
     class FakeScalars:
         def all(self):
@@ -219,9 +222,9 @@ def test_devices_page_lists_devices(monkeypatch):
     def fake_db():
         yield FakeSession()
 
-    monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
+    monkeypatch.setattr(routes_auth, "is_setup_required", lambda db, config: False)
     monkeypatch.setattr(
-        main, "web_user_from_session", lambda session_token, config, db: object()
+        routes_auth, "web_user_from_session", lambda session_token, config, db: object()
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
@@ -237,7 +240,7 @@ def test_devices_page_lists_devices(monkeypatch):
 
 
 def test_devices_page_allows_permanent_delete_for_every_device(monkeypatch):
-    monkeypatch.setattr(main, "operational_notifications", lambda db: [])
+    monkeypatch.setattr(routes_auth, "operational_notifications", lambda db: [])
 
     class FakeScalars:
         def all(self):
@@ -275,9 +278,9 @@ def test_devices_page_allows_permanent_delete_for_every_device(monkeypatch):
     def fake_db():
         yield FakeSession()
 
-    monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
+    monkeypatch.setattr(routes_auth, "is_setup_required", lambda db, config: False)
     monkeypatch.setattr(
-        main, "web_user_from_session", lambda session_token, config, db: object()
+        routes_auth, "web_user_from_session", lambda session_token, config, db: object()
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
@@ -348,14 +351,18 @@ def test_device_page_renders_agent_update_status(monkeypatch):
     def fake_db():
         yield FakeSession()
 
-    monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
+    monkeypatch.setattr(routes_device, "is_setup_required", lambda db, config: False)
     monkeypatch.setattr(
-        main, "web_user_from_session", lambda session_token, config, db: object()
+        routes_device,
+        "web_user_from_session",
+        lambda session_token, config, db: object(),
     )
     monkeypatch.setattr(
-        main, "get_user_device_or_404", lambda db, user, device_id: device
+        routes_device, "get_user_device_or_404", lambda db, user, device_id: device
     )
-    monkeypatch.setattr(main, "cleanup_device_command_history", lambda *args: 0)
+    monkeypatch.setattr(
+        routes_device, "cleanup_device_command_history", lambda *args: 0
+    )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
     client.cookies.set("wrtmonitor_session", "token")
@@ -424,20 +431,17 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
     def fake_db():
         yield FakeSession()
 
-    monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
+    monkeypatch.setattr(routes_device, "is_setup_required", lambda db, config: False)
     monkeypatch.setattr(
-        main, "web_user_from_session", lambda session_token, config, db: object()
+        routes_device,
+        "web_user_from_session",
+        lambda session_token, config, db: object(),
     )
     monkeypatch.setattr(
-        main, "get_user_device_or_404", lambda db, user, device_id: device
+        routes_device, "get_user_device_or_404", lambda db, user, device_id: device
     )
-    monkeypatch.setattr(main, "cleanup_device_command_history", lambda *args: 0)
     monkeypatch.setattr(
-        main,
-        "device_supports",
-        lambda db, device_id, capability: telemetry.payload["agent"][
-            "capabilities"
-        ].get(capability, False),
+        routes_device, "cleanup_device_command_history", lambda *args: 0
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
@@ -460,9 +464,9 @@ def test_devices_page_requires_web_session(monkeypatch):
     def fake_db():
         yield object()
 
-    monkeypatch.setattr(main, "is_setup_required", lambda db, config: False)
+    monkeypatch.setattr(routes_auth, "is_setup_required", lambda db, config: False)
     monkeypatch.setattr(
-        main, "web_user_from_session", lambda session_token, config, db: None
+        routes_auth, "web_user_from_session", lambda session_token, config, db: None
     )
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app, follow_redirects=False)

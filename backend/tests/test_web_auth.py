@@ -2,7 +2,8 @@ from uuid import uuid4
 
 from starlette.requests import Request
 
-import backend.app.web.routes as routes
+import backend.app.web.route_shared as route_shared
+import backend.app.web.routes_auth as routes_auth
 from backend.app.config import Settings
 from backend.app.models import User
 
@@ -41,14 +42,14 @@ def config(*, allow_insecure_local: bool = False) -> Settings:
 
 
 def test_reverse_proxy_https_header_is_respected():
-    assert routes.request_uses_https(make_request(forwarded_proto="https"))
-    assert not routes.request_uses_https(make_request(scheme="http"))
+    assert route_shared.request_uses_https(make_request(forwarded_proto="https"))
+    assert not route_shared.request_uses_https(make_request(scheme="http"))
 
 
 def test_web_login_rejects_plain_http_when_secure_cookie_is_required(monkeypatch):
-    monkeypatch.setattr(routes, "is_setup_required", lambda db, current: False)
+    monkeypatch.setattr(routes_auth, "is_setup_required", lambda db, current: False)
 
-    response = routes.login_form(
+    response = routes_auth.login_form(
         make_request(scheme="http"),
         username="admin@example.com",
         password="correct-password",
@@ -81,15 +82,19 @@ def test_web_login_sets_secure_cookie_and_checks_it_after_redirect(monkeypatch):
         def commit(self):
             return None
 
-    monkeypatch.setattr(routes, "is_setup_required", lambda db, current: False)
-    monkeypatch.setattr(routes, "verify_user_password", lambda password, hashed: True)
-    monkeypatch.setattr(routes, "audit", lambda *args, **kwargs: None)
+    monkeypatch.setattr(routes_auth, "is_setup_required", lambda db, current: False)
     monkeypatch.setattr(
-        routes, "enforce_login_rate_limit", lambda *args, **kwargs: None
+        routes_auth, "verify_user_password", lambda password, hashed: True
     )
-    monkeypatch.setattr(routes, "record_login_attempt", lambda *args, **kwargs: None)
+    monkeypatch.setattr(routes_auth, "audit", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        routes_auth, "enforce_login_rate_limit", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        routes_auth, "record_login_attempt", lambda *args, **kwargs: None
+    )
 
-    response = routes.login_form(
+    response = routes_auth.login_form(
         make_request(forwarded_proto="https"),
         username=" admin@example.com ",
         password="correct-password",

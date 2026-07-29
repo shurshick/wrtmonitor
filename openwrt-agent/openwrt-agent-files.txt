@@ -8,6 +8,11 @@ lib/common.sh
 lib/dependencies.sh
 lib/status.sh
 lib/update.sh
+lib/telemetry_system.sh
+lib/telemetry_maintenance.sh
+lib/telemetry_vpn.sh
+lib/telemetry_network.sh
+lib/telemetry_wifi.sh
 lib/telemetry.sh
 lib/capabilities.sh
 lib/diagnostics.sh
@@ -16,4 +21,11 @@ lib/commands.sh
 lib/idempotency.sh
 lib/verification.sh
 lib/command_runtime.sh
+lib/command_wifi.sh
+lib/command_network.sh
+lib/command_firewall.sh
+lib/command_vpn.sh
+lib/command_system.sh
+lib/command_maintenance.sh
+lib/command_agent.sh
 lib/api.sh

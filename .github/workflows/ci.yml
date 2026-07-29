@@ -42,6 +42,7 @@ jobs:
       - run: ruff check backend --select E9,F63,F7,F82
       - run: ruff format --check backend
       - run: python scripts/validate_contracts.py
+      - run: python scripts/validate_architecture.py
       - run: python scripts/generate_command_matrix.py
       - run: python scripts/command_validation_report.py artifacts/command-validation.json --init --router ci-harness
       - run: pytest backend/tests openwrt-agent/tests
@@ -183,6 +184,8 @@ jobs:
       - run: ./gradlew :android:app:testDebugUnitTest
       - run: ./gradlew :android:app:lintDebug
       - run: ./gradlew :android:app:assembleDebugAndroidTest
+      - name: Verify Compose architecture boundary
+        run: python scripts/validate_architecture.py
       - uses: actions/upload-artifact@v7
         with:
           name: wrtmonitor-android-debug

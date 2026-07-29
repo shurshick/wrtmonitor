@@ -36,7 +36,7 @@ def build_matrix() -> dict[str, Any]:
         "backend", "app", "web"
     )
     android = source_text("android", "app", "src", "main", "java")
-    agent = source_text("openwrt-agent", "lib", "commands.sh")
+    agent = source_text("openwrt-agent", "lib")
     rows: list[dict[str, Any]] = []
     for command, metadata in sorted(COMMAND_REGISTRY.items()):
         reliability = metadata["reliability"]
@@ -76,9 +76,11 @@ def markdown(matrix: dict[str, Any]) -> str:
         "| Команда | Web | Android | API | Agent | Capability | Риск | Post-condition | Rollback |",
         "|---|:---:|:---:|:---:|:---:|---|---|---|---|",
     ]
+    def mark(value: bool) -> str:
+        return "да" if value else "нет"
+
     for row in matrix["commands"]:
         surfaces = row["surfaces"]
-        mark = lambda value: "да" if value else "нет"
         lines.append(
             "| {command} | {web} | {android} | {api} | {agent} | {capability} | "
             "{risk} | {post_condition} | {rollback} |".format(

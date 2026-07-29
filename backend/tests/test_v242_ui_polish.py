@@ -32,16 +32,19 @@ def test_reboot_is_an_icon_action_in_web_and_android_lists() -> None:
     android = read(
         "android/app/src/main/java/ru/wrtmonitor/app/ui/screens/DeviceListScreen.kt"
     )
+    repository = read(
+        "android/app/src/main/java/ru/wrtmonitor/app/data/RouterRepository.kt"
+    )
 
     assert 'class="icon-button router-card__reboot"' in web
     assert 'aria-label="Перезагрузить роутер"' in web
     assert "Icons.Default.RestartAlt" in android
-    assert '"router.reboot"' in android
+    assert '"router.reboot"' in repository
     assert "rebootTarget" in android
 
 
 def test_system_load_is_explained_relative_to_cpu_capacity() -> None:
-    routes = read("backend/app/web/routes.py")
+    routes = read("backend/app/web/routes_device.py")
     template = read("backend/app/templates/partials/system.html")
     android = read(
         "android/app/src/main/java/ru/wrtmonitor/app/ui/screens/DeviceDetailScreen.kt"

@@ -30,26 +30,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.wrtmonitor.app.R
-import ru.wrtmonitor.app.api.ApiResult
-import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.DeviceDto
-import ru.wrtmonitor.app.api.isUnauthorized
+import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.StatusPill
-import ru.wrtmonitor.app.viewmodel.DevicesUiState
-import org.json.JSONObject
+import ru.wrtmonitor.app.viewmodel.DevicesViewModel
+import ru.wrtmonitor.app.viewmodel.RouterViewModelFactory
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,78 +58,30 @@ fun DeviceListScreen(
     onOpenDevice: (DeviceDto) -> Unit,
     onSessionExpired: () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-    var state by remember { mutableStateOf(DevicesUiState(loading = true)) }
+    val viewModel: DevicesViewModel = viewModel(
+        key = "devices:$serverUrl:$accessToken",
+        factory = RouterViewModelFactory {
+            DevicesViewModel(RouterRepository(serverUrl, accessToken))
+        },
+    )
+    val state = viewModel.state
     var disconnectTarget by remember { mutableStateOf<DeviceDto?>(null) }
     var deleteTarget by remember { mutableStateOf<DeviceDto?>(null) }
     var rebootTarget by remember { mutableStateOf<DeviceDto?>(null) }
-    var actionError by remember { mutableStateOf("") }
-
-    fun refresh() {
-        state = state.copy(loading = true, error = null)
-        actionError = ""
-        scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).getDevices()
-            }) {
-                is ApiResult.Success -> state = DevicesUiState(devices = result.data)
-                is ApiResult.Error -> {
-                    if (result.isUnauthorized()) onSessionExpired()
-                    else state = DevicesUiState(error = result.message)
-                }
-            }
-        }
+    LaunchedEffect(serverUrl, accessToken, refreshNonce) { viewModel.refresh() }
+    LaunchedEffect(state.sessionExpired) {
+        if (state.sessionExpired) onSessionExpired()
     }
-
-    fun disconnect(device: DeviceDto) {
-        scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).disconnectDevice(device.id)
-            }) {
-                is ApiResult.Success -> refresh()
-                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else actionError = result.message
-            }
-        }
-    }
-
-    fun deleteDevice(device: DeviceDto) {
-        scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).deleteDevice(device.id)
-            }) {
-                is ApiResult.Success -> refresh()
-                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else actionError = result.message
-            }
-        }
-    }
-
-    fun reboot(device: DeviceDto) {
-        scope.launch {
-            when (val result = withContext(Dispatchers.IO) {
-                WrtMonitorApi(serverUrl, accessToken).createCommand(
-                    device.id,
-                    "router.reboot",
-                    JSONObject(),
-                    confirmed = true,
-                )
-            }) {
-                is ApiResult.Success -> Unit
-                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else actionError = result.message
-            }
-        }
-    }
-
-    LaunchedEffect(serverUrl, accessToken, refreshNonce) { refresh() }
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         RouterPageHeader(
             title = stringResource(R.string.routers),
             subtitle = stringResource(R.string.routers_summary),
             refreshing = state.loading,
-            onRefresh = ::refresh,
+            onRefresh = viewModel::refresh,
         )
-        if (actionError.isNotBlank()) {
-            Text(actionError, color = MaterialTheme.colorScheme.error)
+        if (!state.actionError.isNullOrBlank()) {
+            Text(state.actionError.orEmpty(), color = MaterialTheme.colorScheme.error)
         }
         when {
             state.loading -> Box(
@@ -145,7 +92,7 @@ fun DeviceListScreen(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.load_error))
                     Text(state.error.orEmpty())
-                    SecondaryActionButton(stringResource(R.string.refresh), ::refresh)
+                    SecondaryActionButton(stringResource(R.string.refresh), viewModel::refresh)
                 }
             }
             state.devices.isEmpty() -> Card(Modifier.fillMaxWidth()) {
@@ -176,7 +123,7 @@ fun DeviceListScreen(
             confirmButton = {
                 TextButton(onClick = {
                     disconnectTarget = null
-                    disconnect(device)
+                    viewModel.disconnect(device)
                 }) { Text(stringResource(R.string.disconnect_router_action)) }
             },
             dismissButton = {
@@ -195,7 +142,7 @@ fun DeviceListScreen(
             confirmButton = {
                 TextButton(onClick = {
                     rebootTarget = null
-                    reboot(device)
+                    viewModel.reboot(device)
                 }) { Text(stringResource(R.string.reboot)) }
             },
             dismissButton = {
@@ -212,7 +159,7 @@ fun DeviceListScreen(
             confirmButton = {
                 TextButton(onClick = {
                     deleteTarget = null
-                    deleteDevice(device)
+                    viewModel.delete(device)
                 }) { Text(stringResource(R.string.delete_router_action)) }
             },
             dismissButton = {

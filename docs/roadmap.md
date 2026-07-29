@@ -18,6 +18,8 @@
 - атомарный подписанный bundle агента, Docker-образ и GitHub Release;
 - актуальные инструкции без старых зафиксированных ссылок.
 
+Статус: выпущен.
+
 ## v0.26.0 - Architecture Split
 
 - backend-модули network, Wi-Fi, firewall, VPN, system и maintenance;
@@ -25,6 +27,8 @@
 - типизированные command request/result schemas;
 - Android Repository, ViewModel и DTO/domain без JSON в Compose;
 - ограничение размера основных модулей и архитектурный тест.
+
+Статус: выпущен.
 
 ## v0.27.0 - Operational Parity
 

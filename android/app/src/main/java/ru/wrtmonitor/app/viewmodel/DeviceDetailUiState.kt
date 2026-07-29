@@ -13,4 +13,5 @@ data class DeviceDetailUiState(
     val telemetryHistoryLoading: Boolean = false,
     val telemetryHistoryError: String? = null,
     val loadedTelemetryRange: String? = null,
+    val sessionExpired: Boolean = false,
 )

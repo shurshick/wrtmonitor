@@ -6,7 +6,7 @@ from backend.app.services.commands import (
     TERMINAL_STATUSES,
     cleanup_device_command_history,
 )
-from backend.app.web.routes import templates
+from backend.app.web.route_shared import templates
 
 
 class Result:

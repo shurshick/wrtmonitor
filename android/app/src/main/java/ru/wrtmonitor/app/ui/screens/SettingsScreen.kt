@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
+import ru.wrtmonitor.app.api.dto.JsonArray
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
@@ -286,8 +286,8 @@ private fun checkForUpdate(currentVersion: String): UpdateState {
         ),
     )
     if (status !in 200..299) throw IllegalStateException("HTTP $status")
-    val releases = JSONArray(response)
-    val release = (0 until releases.length()).mapNotNull { releases.optJSONObject(it) }.firstOrNull { !it.optBoolean("draft", false) } ?: throw IllegalStateException("No published releases")
+    val releases = JsonArray(response)
+    val release = (0 until releases.length()).mapNotNull { releases.optJsonObject(it) }.firstOrNull { !it.optBoolean("draft", false) } ?: throw IllegalStateException("No published releases")
     val latestVersion = release.optString("tag_name").removePrefix("v")
     return if (VersionComparator.compare(latestVersion, currentVersion) > 0) UpdateState.Available(latestVersion, release.optString("html_url")) else UpdateState.UpToDate(latestVersion)
 }

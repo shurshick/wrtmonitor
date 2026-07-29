@@ -21,6 +21,11 @@ REQUIRED_LIBS = [
     "dependencies.sh",
     "status.sh",
     "update.sh",
+    "telemetry_system.sh",
+    "telemetry_maintenance.sh",
+    "telemetry_vpn.sh",
+    "telemetry_network.sh",
+    "telemetry_wifi.sh",
     "telemetry.sh",
     "capabilities.sh",
     "diagnostics.sh",
@@ -29,6 +34,13 @@ REQUIRED_LIBS = [
     "idempotency.sh",
     "verification.sh",
     "command_runtime.sh",
+    "command_wifi.sh",
+    "command_network.sh",
+    "command_firewall.sh",
+    "command_vpn.sh",
+    "command_system.sh",
+    "command_maintenance.sh",
+    "command_agent.sh",
     "api.sh",
 ]
 
@@ -47,6 +59,16 @@ def shell_env() -> dict[str, str]:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def library_sources(prefix: str) -> str:
+    return "\n".join(read_text(path) for path in sorted(LIB_DIR.glob(f"{prefix}*.sh")))
+
+
+def source_libraries(prefix: str) -> str:
+    return "\n".join(
+        f". '{path.as_posix()}'" for path in sorted(LIB_DIR.glob(f"{prefix}*.sh"))
+    )
 
 
 def test_agent_entrypoint_exists_and_is_thin():
@@ -236,7 +258,7 @@ def test_no_basic_bashisms_in_agent_libs():
 
 
 def test_management_telemetry_contains_real_router_configuration():
-    telemetry = read_text(LIB_DIR / "telemetry.sh")
+    telemetry = library_sources("telemetry")
     for field in (
         "ipv4_details",
         "netmask",
@@ -251,7 +273,7 @@ def test_management_telemetry_contains_real_router_configuration():
 
 
 def test_guest_network_does_not_use_a_fixed_demo_address():
-    commands = read_text(LIB_DIR / "commands.sh")
+    commands = library_sources("command")
     assert "network.wrtmonitor_guest.ipaddr=192.168.3.1" not in commands
     assert 'guest_subnet="192.168.$guest_octet.0/24"' in commands
 
@@ -296,7 +318,7 @@ def test_smoke_cli_capabilities_json():
 
 
 def test_maintenance_handlers_and_multiline_json_escape_are_present():
-    commands = read_text(LIB_DIR / "commands.sh")
+    commands = library_sources("command")
     common = read_text(LIB_DIR / "common.sh")
     capabilities = read_text(LIB_DIR / "capabilities.sh")
     for command in (
@@ -400,7 +422,7 @@ esac
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
         . '{(LIB_DIR / "capabilities.sh").as_posix()}'
-        . '{(LIB_DIR / "telemetry.sh").as_posix()}'
+        {source_libraries("telemetry")}
         maintenance_json
     """
     completed = subprocess.run(
@@ -625,7 +647,7 @@ def test_terminal_command_result_is_cached_for_replay(tmp_path: Path):
 
 
 def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
-    source = read_text(ROOT / "lib" / "telemetry.sh")
+    source = library_sources("telemetry")
     assert 'column["mac"]' in source
     assert 'column["rx_bytes"]' in source
     assert 'column["tx_bytes"]' in source
@@ -641,7 +663,7 @@ def test_wifi_survey_reports_observed_driver_values():
     script = f"""
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
-        . '{(LIB_DIR / "telemetry.sh").as_posix()}'
+        {source_libraries("telemetry")}
         iw() {{
             cat <<'EOF'
 Survey data from phy1-ap0
@@ -764,7 +786,7 @@ def test_management_commands_have_openwrt_handlers():
     source = "\n".join(
         (
             read_text(ROOT / "lib" / "command_runtime.sh"),
-            read_text(ROOT / "lib" / "commands.sh"),
+            library_sources("command"),
         )
     )
     for command in (
@@ -827,7 +849,7 @@ def test_network_topology_telemetry_reads_live_uci_sections():
     script = f'''
         set -eu
         . "{(LIB_DIR / "common.sh").as_posix()}"
-        . "{(LIB_DIR / "telemetry.sh").as_posix()}"
+        {source_libraries("telemetry")}
         uci() {{
             [ "$1" = "-q" ] && shift
             action="$1"; key="${{2:-}}"

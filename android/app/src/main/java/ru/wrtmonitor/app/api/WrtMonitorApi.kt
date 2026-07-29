@@ -8,10 +8,13 @@ import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
+import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.api.dto.DataStateDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
+import ru.wrtmonitor.app.api.dto.toJsonArray
+import ru.wrtmonitor.app.api.dto.toJsonObject
 import java.util.UUID
 
 class WrtMonitorApi(private val serverUrl: String, private val accessToken: String = "") {
@@ -202,14 +205,14 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                         ageSeconds = state?.takeUnless { it.isNull("age_seconds") }?.optLong("age_seconds"),
                     )
                 },
-                payload = json.optJSONObject("telemetry"),
+                payload = json.optJSONObject("telemetry")?.toJsonObject(),
                 agent = json.optJSONObject("agent")?.let(::parseAgentStatus),
-                wifi = json.optJSONObject("wifi"),
-                network = json.optJSONObject("network"),
-                clients = json.optJSONObject("clients"),
-                system = json.optJSONObject("system"),
-                services = json.optJSONObject("services"),
-                alerts = json.optJSONArray("alerts"),
+                wifi = json.optJSONObject("wifi")?.toJsonObject(),
+                network = json.optJSONObject("network")?.toJsonObject(),
+                clients = json.optJSONObject("clients")?.toJsonObject(),
+                system = json.optJSONObject("system")?.toJsonObject(),
+                services = json.optJSONObject("services")?.toJsonObject(),
+                alerts = json.optJSONArray("alerts")?.toJsonArray(),
             )
         }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
@@ -269,8 +272,8 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     lastConfirmedAt = item.optString("last_confirmed_at").takeIf { it.isNotBlank() && it != "null" },
                     isStatic = item.optBoolean("is_static"),
                     profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },
-                    effectivePolicy = item.optJSONObject("effective_policy") ?: JSONObject(),
-                    traffic = item.optJSONObject("traffic"),
+                    effectivePolicy = (item.optJSONObject("effective_policy") ?: JSONObject()).toJsonObject(),
+                    traffic = item.optJSONObject("traffic")?.toJsonObject(),
                     firstSeenAt = item.optString("first_seen_at").takeIf { it.isNotBlank() && it != "null" },
                     lastSeenAt = item.optString("last_seen_at").takeIf { it.isNotBlank() && it != "null" },
                 )
@@ -284,7 +287,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         val array = JSONArray(response)
         (0 until array.length()).map { index ->
             array.getJSONObject(index).let { item ->
-                ClientProfileDto(item.optString("id"), item.optString("name"), item.optJSONObject("policy") ?: JSONObject())
+                ClientProfileDto(item.optString("id"), item.optString("name"), (item.optJSONObject("policy") ?: JSONObject()).toJsonObject())
             }
         }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
@@ -312,12 +315,12 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         clientId: String,
         displayName: String,
         profileId: String?,
-        policy: JSONObject,
+        policy: JsonObject,
     ): ApiResult<Unit> = runCatching {
         val (status, _) = request(
             "/api/v1/devices/$deviceId/clients/$clientId",
             "PUT",
-            JSONObject().put("display_name", displayName).put("profile_id", profileId ?: JSONObject.NULL).put("policy", policy),
+            JSONObject().put("display_name", displayName).put("profile_id", profileId ?: JSONObject.NULL).put("policy", policy.raw),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
     }.fold({ ApiResult.Success(Unit) }, ::toApiError)
@@ -348,7 +351,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
     fun createCommand(
         deviceId: String,
         type: String,
-        payload: JSONObject,
+        payload: JsonObject,
         confirmed: Boolean = true,
     ): ApiResult<String> = runCatching {
         val (status, response) = request(
@@ -356,7 +359,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
             "POST",
             JSONObject()
                 .put("command_type", type)
-                .put("payload", payload)
+                .put("payload", payload.raw)
                 .put("confirmed", confirmed)
                 .put("idempotency_key", UUID.randomUUID().toString()),
         )
@@ -364,11 +367,11 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         JSONObject(response).optString("status", "queued")
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
-    fun previewCommand(deviceId: String, type: String, payload: JSONObject): ApiResult<CommandPreviewDto> = runCatching {
+    fun previewCommand(deviceId: String, type: String, payload: JsonObject): ApiResult<CommandPreviewDto> = runCatching {
         val (status, response) = request(
             "/api/v1/devices/$deviceId/commands/preview",
             "POST",
-            JSONObject().put("command_type", type).put("payload", payload).put("confirmed", true),
+            JSONObject().put("command_type", type).put("payload", payload.raw).put("confirmed", true),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         val json = JSONObject(response)
@@ -431,8 +434,8 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         commandType = json.optString("command_type"),
         status = json.optString("status"),
         source = json.optString("source"),
-        payload = json.optJSONObject("payload") ?: JSONObject(),
-        result = json.optJSONObject("result"),
+        payload = (json.optJSONObject("payload") ?: JSONObject()).toJsonObject(),
+        result = json.optJSONObject("result")?.toJsonObject(),
         createdAt = json.optString("created_at").takeIf { it.isNotBlank() && it != "null" },
         pickedAt = json.optString("picked_at").takeIf { it.isNotBlank() && it != "null" },
         completedAt = json.optString("completed_at").takeIf { it.isNotBlank() && it != "null" },

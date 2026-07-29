@@ -1,8 +1,5 @@
 package ru.wrtmonitor.app.api.dto
 
-import org.json.JSONObject
-import org.json.JSONArray
-
 data class DeviceDto(
     val id: String,
     val name: String,
@@ -38,8 +35,8 @@ data class NetworkClientDto(
     val lastConfirmedAt: String?,
     val isStatic: Boolean,
     val profileId: String?,
-    val effectivePolicy: JSONObject,
-    val traffic: JSONObject?,
+    val effectivePolicy: JsonObject,
+    val traffic: JsonObject?,
     val firstSeenAt: String?,
     val lastSeenAt: String?,
 )
@@ -47,7 +44,7 @@ data class NetworkClientDto(
 data class ClientProfileDto(
     val id: String,
     val name: String,
-    val policy: JSONObject,
+    val policy: JsonObject,
 )
 
 data class TelemetryDto(
@@ -56,14 +53,14 @@ data class TelemetryDto(
     val isStale: Boolean,
     val source: String?,
     val dataState: DataStateDto,
-    val payload: JSONObject?,
+    val payload: JsonObject?,
     val agent: AgentStatusDto? = null,
-    val wifi: JSONObject? = null,
-    val network: JSONObject? = null,
-    val clients: JSONObject? = null,
-    val system: JSONObject? = null,
-    val services: JSONObject? = null,
-    val alerts: JSONArray? = null,
+    val wifi: JsonObject? = null,
+    val network: JsonObject? = null,
+    val clients: JsonObject? = null,
+    val system: JsonObject? = null,
+    val services: JsonObject? = null,
+    val alerts: JsonArray? = null,
 )
 
 data class DataStateDto(
@@ -106,8 +103,8 @@ data class CommandDto(
     val commandType: String,
     val status: String,
     val source: String,
-    val payload: JSONObject,
-    val result: JSONObject?,
+    val payload: JsonObject,
+    val result: JsonObject?,
     val createdAt: String?,
     val pickedAt: String?,
     val completedAt: String?,

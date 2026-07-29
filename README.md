@@ -4,15 +4,15 @@
 
 ## Текущая версия
 
-Текущая тестовая версия: `v0.25.0-core-certification`. Публичного стабильного релиза пока нет; тестовые базы можно пересоздавать между несовместимыми версиями.
+Текущая тестовая версия: `v0.26.0-architecture-split`. Публичного стабильного релиза пока нет; тестовые базы можно пересоздавать между несовместимыми версиями.
 
-Главное в `0.25.0`:
+Главное в `0.26.0`:
 
-- исполнимый reliability-контракт для 90 команд;
-- fail-closed post-condition verification;
-- автоматически создаваемая [матрица команд](docs/command-matrix.md);
-- единый подписанный agent bundle для Docker и GitHub Release;
-- отдельный gate аппаратной сертификации без ложной отметки CI как физического теста.
+- backend routes, commands и telemetry разделены по подсистемам;
+- OpenWrt command handlers и сбор telemetry разнесены на независимые модули;
+- command request/result и reliability policy получили строгие типы;
+- Android использует Repository, ViewModel и DTO-границу без `org.json` в Compose;
+- CI блокирует возврат монолитных facade и transport JSON в UI.
 
 Полная история изменений: [CHANGELOG.md](CHANGELOG.md).
 
@@ -71,7 +71,7 @@ WRTMONITOR_ALLOW_INSECURE_LOCAL=true
 В релизе он публикуется как:
 
 ```text
-wrtmonitor-truenas-v0.25.0.yaml
+wrtmonitor-truenas-v0.26.0.yaml
 ```
 
 Контейнер использует:
