@@ -51,6 +51,9 @@ from .route_shared import (
     templates,
     web_user_from_session,
 )
+from ..models import AuditLog
+from ..services.firmware_catalog import firmware_catalog
+from ..services.policy_catalog import policy_catalog
 
 router = APIRouter()
 
@@ -339,6 +342,27 @@ def device_page(
     )
     latest = format_timestamp(telemetry.created_at) if telemetry else "нет данных"
     dashboard_history = device_telemetry_history(db, device_id, 120, range_name="live")
+    wan_events = []
+    if section == "internet":
+        wan_events = [
+            {
+                "created_at": format_timestamp(item.created_at),
+                "details": item.details or {},
+            }
+            for item in db.scalars(
+                select(AuditLog)
+                .where(
+                    AuditLog.object_type == "device",
+                    AuditLog.object_id == str(device_id),
+                    AuditLog.action == "wan.failover",
+                )
+                .order_by(AuditLog.created_at.desc())
+                .limit(20)
+            ).all()
+        ]
+    firmware_images = (
+        firmware_catalog(payload) if section == "management" else {"images": []}
+    )
     db.commit()
 
     age = (
@@ -438,6 +462,9 @@ def device_page(
             "wifi_countries": WIFI_COUNTRIES,
             "wifi_channels": WIFI_CHANNELS,
             "network": network,
+            "wan_events": wan_events,
+            "policy_catalog": policy_catalog(),
+            "firmware_catalog": firmware_images,
             "vpn": vpn,
             "network_devices": network_devices,
             "clients": clients,

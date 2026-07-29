@@ -332,6 +332,7 @@
     <string name="sqm_title">Smart Queue Management</string>
     <string name="sqm_summary">CAKE shaping for lower latency</string>
     <string name="sqm_enabled">Enable SQM</string>
+    <string name="sqm_profile">Traffic profile</string>
     <string name="sqm_interface">WAN device</string>
     <string name="apply_sqm">Apply SQM</string>
     <string name="client_profile">Access profile</string>
@@ -483,6 +484,8 @@
     <string name="openwrt_update">OpenWrt update</string>
     <string name="openwrt_update_summary">Validate the image before installing it</string>
     <string name="firmware_url">Firmware HTTPS URL</string>
+    <string name="official_firmware">Official OpenWrt image</string>
+    <string name="firmware_catalog_unavailable">The official firmware catalog is unavailable for this model.</string>
     <string name="validate_firmware">Validate and stage</string>
     <string name="install_validated_firmware">Install staged image</string>
     <string name="advanced_maintenance">Logs, processes and cron</string>
@@ -600,4 +603,10 @@
     <string name="vlan_new">New VLAN</string>
     <string name="vlan_id">VLAN ID</string>
     <string name="vlan_ports_hint">Use lan1:u* for untagged/PVID and lan2:t for tagged</string>
+    <string name="client_dns_policy">DNS filtering</string>
+    <string name="client_dns_policy_summary">Per-device resolver and domain rules</string>
+    <string name="client_dns_none">No filtering</string>
+    <string name="client_dns_security">Malware protection</string>
+    <string name="client_dns_family">Family filter</string>
+    <string name="client_blocked_domains">Blocked domains</string>
 </resources>

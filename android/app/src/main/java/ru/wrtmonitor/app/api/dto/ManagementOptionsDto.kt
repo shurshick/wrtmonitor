@@ -27,4 +27,5 @@ data class ManagementOptionsDto(
     val timezones: List<ManagementOptionDto>,
     val wifiCountries: List<ManagementOptionDto>,
     val fallbackWifiChannels: List<String>,
+    val sqmProfiles: List<ManagementOptionDto>,
 )

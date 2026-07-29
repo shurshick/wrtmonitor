@@ -92,6 +92,7 @@ internal fun ClientDetails(
     val policy = client.effectivePolicy
     val schedule = policy.optJsonObject("schedule") ?: JsonObject()
     val qos = policy.optJsonObject("qos") ?: JsonObject()
+    val dnsPolicy = policy.optJsonObject("dns") ?: JsonObject()
     var displayName by remember(client.id, client.displayName) { mutableStateOf(client.displayName.orEmpty()) }
     var profileId by remember(client.id, client.profileId) { mutableStateOf(client.profileId) }
     var blocked by remember(client.id, policy.toString()) { mutableStateOf(policy.optBoolean("blocked")) }
@@ -106,6 +107,7 @@ internal fun ClientDetails(
     var priority by remember(client.id, qos.toString()) { mutableStateOf(qos.optString("priority", "normal")) }
     var download by remember(client.id, qos.toString()) { mutableStateOf(qos.optInt("download_kbps").toString()) }
     var upload by remember(client.id, qos.toString()) { mutableStateOf(qos.optInt("upload_kbps").toString()) }
+    var dnsProvider by remember(client.id, dnsPolicy.toString()) { mutableStateOf(dnsPolicy.optString("provider", "none")) }
     var leaseIp by remember(client.id, client.currentIpv4, client.staticIpv4) {
         mutableStateOf(client.staticIpv4 ?: client.currentIpv4.orEmpty())
     }
@@ -204,6 +206,22 @@ internal fun ClientDetails(
         }
 
         ExpandableSettingsCard(
+            stringResource(R.string.client_dns_policy),
+            stringResource(R.string.client_dns_policy_summary),
+        ) {
+            OptionSelector(
+                stringResource(R.string.client_dns_policy),
+                dnsProvider,
+                listOf(
+                    SelectOption("none", stringResource(R.string.client_dns_none)),
+                    SelectOption("cloudflare-security", stringResource(R.string.client_dns_security)),
+                    SelectOption("cloudflare-family", stringResource(R.string.client_dns_family)),
+                ),
+                { dnsProvider = it },
+            )
+        }
+
+        ExpandableSettingsCard(
             stringResource(R.string.access_schedule),
             if (scheduleEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value),
         ) {
@@ -273,7 +291,8 @@ internal fun ClientDetails(
                     JsonObject()
                         .put("blocked", blocked)
                         .put("schedule", JsonObject().put("enabled", scheduleEnabled).put("weekdays", days).put("start", start).put("stop", stop))
-                        .put("qos", JsonObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0)),
+                        .put("qos", JsonObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0))
+                        .put("dns", JsonObject().put("provider", dnsProvider).put("blocked_domains", JsonArray())),
                 )
             },
         )

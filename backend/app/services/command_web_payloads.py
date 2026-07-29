@@ -432,6 +432,16 @@ def build_command_payload_from_web_form(
             "interface": interface,
             "download_kbps": download_kbps,
             "upload_kbps": upload_kbps,
+            "profile": name or "balanced",
+            "qdisc": protocol or "cake",
+            "script": source or "piece_of_cake.qos",
+            "qdisc_options": config_text,
+            "schedule": {
+                "enabled": blocked.lower() == "true",
+                "weekdays": weekdays or [],
+                "start": start,
+                "stop": stop,
+            },
         }
     elif command_type == "wifi.set_guest":
         payload = {

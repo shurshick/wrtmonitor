@@ -308,16 +308,21 @@ handle_network_command() {
             qos_priority="$(json_get_string "$payload_file" '@.qos.priority')"
             download_kbps="$(json_get_number "$payload_file" '@.qos.download_kbps')"
             upload_kbps="$(json_get_number "$payload_file" '@.qos.upload_kbps')"
+            dns_provider="$(json_get_string "$payload_file" '@.dns.provider')"
             rm -f "$payload_file"
             client_suffix="$(printf '%s' "$client_mac" | tr -d ':')"
             client_ref="wrtmonitor_policy_$client_suffix"
             qos_ref="wrtmonitor_qos_$client_suffix"
+            dns_ref="wrtmonitor_dns_$client_suffix"
+            dot_ref="wrtmonitor_dot_$client_suffix"
             backup_file="$(backup_config firewall "$command_id" "$command_type" || true)"
             if [ -z "$backup_file" ]; then
                 status="failed"; result="$(command_failed_result "failed to create firewall backup")"
             else
                 uci -q delete "firewall.$client_ref" || true
                 uci -q delete "firewall.$qos_ref" || true
+                uci -q delete "firewall.$dns_ref" || true
+                uci -q delete "firewall.$dot_ref" || true
                 if [ "$client_blocked" = "true" ] || [ "$schedule_enabled" = "true" ]; then
                     uci set "firewall.$client_ref=rule"
                     uci set "firewall.$client_ref.name=WrtMonitor policy $client_mac"
@@ -340,8 +345,33 @@ handle_network_command() {
                     uci set "firewall.$qos_ref.target=MARK"
                     uci set "firewall.$qos_ref.set_mark=$policy_mark"
                 fi
-                if uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then
-                    result="$(command_success_result "client policy applied" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\",\"qos_priority\":\"$(json_escape "$qos_priority")\",\"download_kbps\":${download_kbps:-0},\"upload_kbps\":${upload_kbps:-0}")"
+                case "$dns_provider" in
+                    cloudflare-security) policy_dns="1.1.1.2" ;;
+                    cloudflare-family) policy_dns="1.1.1.3" ;;
+                    none|"") policy_dns="" ;;
+                    *) status="failed"; result="$(command_failed_result "unsupported client DNS policy")" ;;
+                esac
+                if [ "$status" = "done" ] && [ -n "$policy_dns" ]; then
+                    uci set "firewall.$dns_ref=redirect"
+                    uci set "firewall.$dns_ref.name=WrtMonitor DNS policy $client_mac"
+                    uci set "firewall.$dns_ref.src=lan"
+                    uci set "firewall.$dns_ref.src_mac=$client_mac"
+                    uci set "firewall.$dns_ref.proto=tcp udp"
+                    uci set "firewall.$dns_ref.src_dport=53"
+                    uci set "firewall.$dns_ref.dest_ip=$policy_dns"
+                    uci set "firewall.$dns_ref.dest_port=53"
+                    uci set "firewall.$dns_ref.target=DNAT"
+                    uci set "firewall.$dot_ref=rule"
+                    uci set "firewall.$dot_ref.name=WrtMonitor block DoT $client_mac"
+                    uci set "firewall.$dot_ref.src=lan"
+                    uci set "firewall.$dot_ref.dest=wan"
+                    uci set "firewall.$dot_ref.src_mac=$client_mac"
+                    uci set "firewall.$dot_ref.proto=tcp udp"
+                    uci set "firewall.$dot_ref.dest_port=853"
+                    uci set "firewall.$dot_ref.target=REJECT"
+                fi
+                if [ "$status" = "done" ] && uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then
+                    result="$(command_success_result "client policy applied" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\",\"qos_priority\":\"$(json_escape "$qos_priority")\",\"dns_provider\":\"$(json_escape "$dns_provider")\",\"download_kbps\":${download_kbps:-0},\"upload_kbps\":${upload_kbps:-0}")"
                 else
                     status="failed"; result="$(command_failed_result "failed to apply client policy")"
                 fi
@@ -355,6 +385,12 @@ handle_network_command() {
             sqm_upload="$(json_get_number "$payload_file" '@.upload_kbps')"
             sqm_qdisc="$(json_get_string "$payload_file" '@.qdisc')"
             sqm_script="$(json_get_string "$payload_file" '@.script')"
+            sqm_profile="$(json_get_string "$payload_file" '@.profile')"
+            sqm_qdisc_options="$(json_get_string "$payload_file" '@.qdisc_options')"
+            sqm_schedule_enabled="$(json_get_bool "$payload_file" '@.schedule.enabled')"
+            sqm_schedule_days="$(jsonfilter -i "$payload_file" -e '@.schedule.weekdays[*]' 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+            sqm_schedule_start="$(json_get_string "$payload_file" '@.schedule.start')"
+            sqm_schedule_stop="$(json_get_string "$payload_file" '@.schedule.stop')"
             rm -f "$payload_file"
             [ -n "$sqm_qdisc" ] || sqm_qdisc="cake"
             [ -n "$sqm_script" ] || sqm_script="piece_of_cake.qos"
@@ -368,9 +404,29 @@ handle_network_command() {
                 && uci set "sqm.wrtmonitor.upload=$sqm_upload" \
                 && uci set "sqm.wrtmonitor.qdisc=$sqm_qdisc" \
                 && uci set "sqm.wrtmonitor.script=$sqm_script" \
-                && uci commit sqm \
-                && /etc/init.d/sqm restart >/dev/null 2>&1; then
-                result="$(command_success_result "SQM configuration applied" "\"backup\":\"$(json_escape "$sqm_backup")\",\"interface\":\"$(json_escape "$sqm_interface")\",\"download_kbps\":$sqm_download,\"upload_kbps\":$sqm_upload")"
+                && uci set "sqm.wrtmonitor.qdisc_advanced=$( [ -n "$sqm_qdisc_options" ] && printf 1 || printf 0 )" \
+                && uci set "sqm.wrtmonitor.qdisc_really_really_advanced=$( [ -n "$sqm_qdisc_options" ] && printf 1 || printf 0 )" \
+                && uci set "sqm.wrtmonitor.eqdisc_opts=$sqm_qdisc_options" \
+                  && uci set "sqm.wrtmonitor.iqdisc_opts=$sqm_qdisc_options" \
+                  && uci commit sqm \
+                  && /etc/init.d/sqm restart >/dev/null 2>&1; then
+                sqm_crontab="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"
+                mkdir -p "$(dirname "$sqm_crontab")"
+                touch "$sqm_crontab"
+                sed -i '/# wrtmonitor-sqm-schedule$/d' "$sqm_crontab"
+                if [ "$sqm_schedule_enabled" = true ]; then
+                    sqm_cron_days=""
+                    for sqm_day in $sqm_schedule_days; do
+                        case "$sqm_day" in mon) sqm_number=1 ;; tue) sqm_number=2 ;; wed) sqm_number=3 ;; thu) sqm_number=4 ;; fri) sqm_number=5 ;; sat) sqm_number=6 ;; sun) sqm_number=0 ;; *) continue ;; esac
+                        sqm_cron_days="${sqm_cron_days:+$sqm_cron_days,}$sqm_number"
+                    done
+                    sqm_start_hour="${sqm_schedule_start%:*}"; sqm_start_minute="${sqm_schedule_start#*:}"
+                    sqm_stop_hour="${sqm_schedule_stop%:*}"; sqm_stop_minute="${sqm_schedule_stop#*:}"
+                    printf '%s %s * * %s /etc/init.d/sqm start # wrtmonitor-sqm-schedule\n' "$sqm_start_minute" "$sqm_start_hour" "$sqm_cron_days" >>"$sqm_crontab"
+                    printf '%s %s * * %s /etc/init.d/sqm stop # wrtmonitor-sqm-schedule\n' "$sqm_stop_minute" "$sqm_stop_hour" "$sqm_cron_days" >>"$sqm_crontab"
+                fi
+                [ ! -x /etc/init.d/cron ] || /etc/init.d/cron restart >/dev/null 2>&1 || true
+                result="$(command_success_result "SQM configuration applied" "\"backup\":\"$(json_escape "$sqm_backup")\",\"profile\":\"$(json_escape "$sqm_profile")\",\"interface\":\"$(json_escape "$sqm_interface")\",\"download_kbps\":$sqm_download,\"upload_kbps\":$sqm_upload")"
             else
                 status="failed"; result="$(command_failed_result "failed to apply SQM configuration")"
             fi

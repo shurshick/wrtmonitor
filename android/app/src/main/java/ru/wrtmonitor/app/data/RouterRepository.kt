@@ -10,6 +10,7 @@ import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
+import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
@@ -37,6 +38,9 @@ class RouterRepository(
 
     suspend fun managementOptions(deviceId: String): ApiResult<ManagementOptionsDto> =
         onIo { api.getManagementOptions(deviceId) }
+
+    suspend fun firmwareCatalog(deviceId: String): ApiResult<FirmwareCatalogDto> =
+        onIo { api.getFirmwareCatalog(deviceId) }
 
     suspend fun commands(deviceId: String): ApiResult<List<CommandDto>> =
         onIo { api.getCommands(deviceId) }

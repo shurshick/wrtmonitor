@@ -10,6 +10,8 @@
 <div class="empty-state card section"><h2>Сетевые правила недоступны</h2><p>Обновите агент и дождитесь новой telemetry с capabilities.</p></div>
 {% endif %}
 
+{% if supports.firewall_rules %}<section class="workspace-section section"><div class="card__heading"><div><p class="eyebrow">Шаблоны</p><h2>Готовые правила</h2><p class="muted">Проверенные заготовки используют тот же CRUD firewall и проходят обычное подтверждение.</p></div></div><div class="inline-actions">{% for template in policy_catalog.firewall_templates if template.command == 'firewall.set_rule' %}<form method="post" action="/devices/{{ device.id }}/web-command?section=rules"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="firewall.set_rule"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="name" value="{{ template.payload.name }}"><input type="hidden" name="interface" value="{{ template.payload.src }}"><input type="hidden" name="network" value="{{ template.payload.dest }}"><input type="hidden" name="protocol" value="{{ template.payload.protocol }}"><input type="hidden" name="internal_port" value="{{ template.payload.dest_port }}"><input type="hidden" name="hostname" value="{{ template.payload.target }}"><button class="button--secondary button--small" type="submit">{{ template.label }}</button></form>{% endfor %}</div></section>{% endif %}
+
 <div class="settings-workspace settings-workspace--masonry section">
   {% if supports.firewall_rules %}
   <details class="settings-panel card">

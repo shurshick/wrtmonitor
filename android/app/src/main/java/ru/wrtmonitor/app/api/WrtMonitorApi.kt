@@ -11,6 +11,8 @@ import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.api.dto.ManagementOptionDto
 import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
+import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
+import ru.wrtmonitor.app.api.dto.FirmwareImageDto
 import ru.wrtmonitor.app.api.dto.WifiRadioOptionDto
 import ru.wrtmonitor.app.api.dto.DataStateDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
@@ -390,6 +392,32 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
             timezones = catalog("timezones", "zonename"),
             wifiCountries = catalog("wifi_countries"),
             fallbackWifiChannels = catalogs.optJSONArray("wifi_channels_fallback").toStringList(),
+            sqmProfiles = catalog("sqm_profiles", "id").mapIndexed { index, item ->
+                val raw = catalogs.optJSONArray("sqm_profiles")?.optJSONObject(index)
+                item.copy(metadata = listOf(raw?.optString("qdisc"), raw?.optString("script"), raw?.optString("qdisc_options")).joinToString("|"))
+            },
+        )
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getFirmwareCatalog(deviceId: String): ApiResult<FirmwareCatalogDto> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/firmware-catalog")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val json = JSONObject(response)
+        val images = json.optJSONArray("images") ?: JSONArray()
+        FirmwareCatalogDto(
+            status = json.optString("status"),
+            error = json.optString("error"),
+            images = (0 until images.length()).map { index ->
+                images.getJSONObject(index).let { item ->
+                    FirmwareImageDto(
+                        name = item.optString("name"),
+                        label = item.optString("label"),
+                        url = item.optString("url"),
+                        sha256 = item.optString("sha256"),
+                        model = item.optString("model"),
+                    )
+                }
+            },
         )
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 

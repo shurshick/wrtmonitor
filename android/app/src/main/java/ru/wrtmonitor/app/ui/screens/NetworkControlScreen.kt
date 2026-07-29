@@ -110,6 +110,10 @@ fun NetworkControlScreen(
     var sqmInterface by remember { mutableStateOf("") }
     var sqmDownload by remember { mutableStateOf("") }
     var sqmUpload by remember { mutableStateOf("") }
+    var sqmProfile by remember { mutableStateOf("balanced") }
+    var sqmQdisc by remember { mutableStateOf("cake") }
+    var sqmScript by remember { mutableStateOf("piece_of_cake.qos") }
+    var sqmOptions by remember { mutableStateOf("") }
     var multiWanEnabled by remember { mutableStateOf(true) }
     var primaryWan by remember { mutableStateOf("") }
     var secondaryWan by remember { mutableStateOf("") }
@@ -503,6 +507,15 @@ fun NetworkControlScreen(
     if (mode == NetworkScreenMode.Internet && capabilities["qos.sqm"] == true) {
         ExpandableSettingsCard(stringResource(R.string.sqm_title), stringResource(R.string.sqm_summary)) {
             SwitchSettingRow(stringResource(R.string.sqm_enabled), checked = sqmEnabled, onCheckedChange = { sqmEnabled = it })
+            val sqmProfiles = managementOptions?.sqmProfiles.orEmpty().map { SelectOption(it.value, it.label) }
+            OptionSelector(stringResource(R.string.sqm_profile), sqmProfile, sqmProfiles, { selected ->
+                sqmProfile = selected
+                managementOptions?.sqmProfiles?.firstOrNull { it.value == selected }?.metadata?.split('|')?.let { metadata ->
+                    sqmQdisc = metadata.getOrNull(0).orEmpty().ifBlank { "cake" }
+                    sqmScript = metadata.getOrNull(1).orEmpty().ifBlank { "piece_of_cake.qos" }
+                    sqmOptions = metadata.getOrNull(2).orEmpty()
+                }
+            })
             OptionSelector(stringResource(R.string.sqm_interface), sqmInterface, interfaceOptions, { sqmInterface = it })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(sqmDownload, { sqmDownload = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.download_limit)) }, modifier = Modifier.weight(1f), singleLine = true)
@@ -510,7 +523,7 @@ fun NetworkControlScreen(
             }
             PrimaryActionButton(
                 label = stringResource(R.string.apply_sqm),
-                onClick = { pendingCommand = PendingSafeCommand("qos.set_sqm", JsonObject().put("enabled", sqmEnabled).put("interface", sqmInterface).put("download_kbps", sqmDownload).put("upload_kbps", sqmUpload), genericCommandQueued) },
+                onClick = { pendingCommand = PendingSafeCommand("qos.set_sqm", JsonObject().put("enabled", sqmEnabled).put("interface", sqmInterface).put("download_kbps", sqmDownload).put("upload_kbps", sqmUpload).put("profile", sqmProfile).put("qdisc", sqmQdisc).put("script", sqmScript).put("qdisc_options", sqmOptions).put("schedule", JsonObject().put("enabled", false).put("weekdays", JsonArray()).put("start", "").put("stop", "")), genericCommandQueued) },
                 enabled = sqmInterface.isNotBlank() && sqmDownload.isNotBlank() && sqmUpload.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             )

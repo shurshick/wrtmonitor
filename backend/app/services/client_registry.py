@@ -139,6 +139,10 @@ def validate_client_policy(value: dict[str, Any] | None) -> dict[str, Any]:
     if priority not in {"low", "normal", "high", "realtime"}:
         raise HTTPException(status_code=422, detail="Invalid QoS priority")
     qos["priority"] = priority
+    dns = dict(policy.get("dns") or {})
+    provider = str(dns.get("provider") or "none")
+    if provider not in {"none", "cloudflare-security", "cloudflare-family"}:
+        raise HTTPException(status_code=422, detail="Invalid client DNS policy")
     return {
         "blocked": blocked,
         "schedule": {
@@ -148,6 +152,7 @@ def validate_client_policy(value: dict[str, Any] | None) -> dict[str, Any]:
             "stop": str(schedule.get("stop") or ""),
         },
         "qos": qos,
+        "dns": {"provider": provider, "blocked_domains": []},
     }
 
 

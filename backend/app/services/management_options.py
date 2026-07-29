@@ -9,6 +9,7 @@ from ..management_options import (
     WIFI_COUNTRIES,
 )
 from .telemetry import normalize_network_summary, normalize_wifi_summary
+from .policy_catalog import policy_catalog
 
 
 def _strings(values: Any) -> list[str]:
@@ -104,6 +105,7 @@ def build_management_options(payload: dict[str, Any]) -> dict[str, Any]:
         "firewall_zones": firewall_zones,
         "wifi_radios": wifi_radios,
         "catalogs": {
+            **policy_catalog(),
             "netmasks": [
                 {"value": mask, "prefix": prefix} for mask, prefix in NETMASK_OPTIONS
             ],

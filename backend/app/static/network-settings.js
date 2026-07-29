@@ -14,3 +14,21 @@
   protocol.addEventListener('change', update);
   update();
 })();
+
+(() => {
+  const profile = document.querySelector('[data-sqm-profile]');
+  if (!profile) return;
+  const form = profile.closest('form');
+  const qdisc = form.querySelector('[data-sqm-qdisc]');
+  const script = form.querySelector('[data-sqm-script]');
+  const options = form.querySelector('[data-sqm-options]');
+  const update = () => {
+    const selected = profile.selectedOptions[0];
+    if (!selected || selected.value === 'custom') return;
+    qdisc.value = selected.dataset.qdisc || 'cake';
+    script.value = selected.dataset.script || 'piece_of_cake.qos';
+    options.value = selected.dataset.options || '';
+  };
+  profile.addEventListener('change', update);
+  update();
+})();

@@ -168,6 +168,16 @@ def _normalize_client_policy_payload(payload: dict[str, Any]) -> dict[str, Any]:
     priority = str(qos.get("priority") or "normal")
     if priority not in {"low", "normal", "high", "realtime"}:
         raise HTTPException(status_code=400, detail="Invalid QoS priority")
+    dns = payload.get("dns") or {}
+    if not isinstance(dns, dict):
+        raise HTTPException(status_code=400, detail="Field 'dns' must be an object")
+    dns_provider = str(dns.get("provider") or "none")
+    if dns_provider not in {
+        "none",
+        "cloudflare-security",
+        "cloudflare-family",
+    }:
+        raise HTTPException(status_code=400, detail="Invalid client DNS policy")
     return {
         "mac": mac,
         "blocked": payload["blocked"],
@@ -184,6 +194,10 @@ def _normalize_client_policy_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 {"upload_kbps": qos.get("upload_kbps", 0)}, "upload_kbps", 0, 10_000_000
             ),
         },
+        "dns": {
+            "provider": dns_provider,
+            "blocked_domains": [],
+        },
     }
 
 
@@ -195,13 +209,50 @@ def _normalize_sqm_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "interface",
         r"[A-Za-z0-9_.@:-]+",
     )
+    profile = str(payload.get("profile") or "balanced")
+    if profile not in {"balanced", "gaming", "streaming", "custom"}:
+        raise HTTPException(status_code=400, detail="Invalid SQM profile")
+    qdisc = str(payload.get("qdisc") or "cake")
+    script = str(payload.get("script") or "piece_of_cake.qos")
+    if qdisc not in {"cake", "fq_codel"}:
+        raise HTTPException(status_code=400, detail="Invalid SQM queue discipline")
+    if script not in {"piece_of_cake.qos", "layer_cake.qos", "simple.qos"}:
+        raise HTTPException(status_code=400, detail="Invalid SQM script")
+    schedule = payload.get("schedule") or {}
+    if not isinstance(schedule, dict):
+        raise HTTPException(
+            status_code=400, detail="Field 'schedule' must be an object"
+        )
+    weekdays = schedule.get("weekdays") or []
+    allowed_days = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+    if not isinstance(weekdays, list) or any(
+        str(day).lower() not in allowed_days for day in weekdays
+    ):
+        raise HTTPException(status_code=400, detail="Invalid SQM schedule weekdays")
+    schedule_result = {
+        "enabled": bool(schedule.get("enabled", False)),
+        "weekdays": [str(day).lower() for day in weekdays],
+        "start": str(schedule.get("start") or ""),
+        "stop": str(schedule.get("stop") or ""),
+    }
+    if schedule_result["enabled"]:
+        if not schedule_result["weekdays"]:
+            raise HTTPException(status_code=400, detail="SQM schedule needs weekdays")
+        for field in ("start", "stop"):
+            if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", schedule_result[field]):
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid SQM schedule {field}"
+                )
     return {
         "enabled": payload["enabled"],
         "interface": interface,
         "download_kbps": _integer(payload, "download_kbps", 0, 10_000_000),
         "upload_kbps": _integer(payload, "upload_kbps", 0, 10_000_000),
-        "qdisc": "cake",
-        "script": "piece_of_cake.qos",
+        "profile": profile,
+        "qdisc": qdisc,
+        "script": script,
+        "qdisc_options": _optional_string(payload, "qdisc_options") or "",
+        "schedule": schedule_result,
     }
 
 

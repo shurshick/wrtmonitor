@@ -28,6 +28,7 @@ from ..services.telemetry import (
     telemetry_alerts,
 )
 from ..services.data_state import subsystem_data_state, telemetry_data_state
+from ..services.wan_events import record_wan_transition
 
 
 router = APIRouter()
@@ -152,6 +153,12 @@ def agent_telemetry(
     if device.id != payload.device_id:
         raise HTTPException(status_code=403, detail="Device token mismatch")
     now = datetime.now(UTC)
+    previous = db.scalars(
+        select(DeviceTelemetry)
+        .where(DeviceTelemetry.device_id == device.id)
+        .order_by(DeviceTelemetry.created_at.desc())
+        .limit(1)
+    ).first()
     device.status, device.last_seen_at, device.updated_at = "online", now, now
     db.add(
         DeviceTelemetry(
@@ -161,6 +168,12 @@ def agent_telemetry(
     db.flush()
     record_device_telemetry_metric(db, device.id, payload.telemetry, now)
     sync_client_inventory(db, device.id, payload.telemetry, now)
+    record_wan_transition(
+        db,
+        device.id,
+        previous.payload if previous else None,
+        payload.telemetry,
+    )
     queue_automatic_agent_update(
         db, device_id=device.id, telemetry=payload.telemetry, now=now
     )

@@ -44,6 +44,7 @@ import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
+import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
@@ -84,6 +85,7 @@ fun SystemControlScreen(
     val repository = remember(serverUrl, accessToken) { RouterRepository(serverUrl, accessToken) }
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var managementOptions by remember { mutableStateOf<ManagementOptionsDto?>(null) }
+    var firmwareCatalog by remember { mutableStateOf<FirmwareCatalogDto?>(null) }
     var commands by remember { mutableStateOf<List<CommandDto>>(emptyList()) }
     var loading by remember(device.id) { mutableStateOf(true) }
     var message by remember { mutableStateOf("") }
@@ -134,6 +136,20 @@ fun SystemControlScreen(
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
                     messageIsError = true
+                }
+            }
+            if (mode == SystemScreenMode.Management) {
+                when (val result = repository.firmwareCatalog(device.id)) {
+                    is ApiResult.Success -> {
+                        firmwareCatalog = result.data
+                        if (firmwareUrl.isBlank()) {
+                            result.data.images.firstOrNull()?.let { image ->
+                                firmwareUrl = image.url
+                                firmwareSha256 = image.sha256
+                            }
+                        }
+                    }
+                    is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired()
                 }
             }
             when (val result = repository.commands(device.id)) {
@@ -327,9 +343,18 @@ fun SystemControlScreen(
     }
     if (mode == SystemScreenMode.Management && capabilities["maintenance.sysupgrade.check"] == true) {
         ExpandableSettingsCard(stringResource(R.string.openwrt_update), stringResource(R.string.openwrt_update_summary)) {
-            OutlinedTextField(firmwareUrl, { firmwareUrl = it }, label = { Text(stringResource(R.string.firmware_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(firmwareSha256, { firmwareSha256 = it }, label = { Text("SHA-256") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            PrimaryActionButton(stringResource(R.string.validate_firmware), { pendingSystemCommand = PendingSafeCommand("maintenance.sysupgrade.check", JsonObject().put("url", firmwareUrl).put("sha256", firmwareSha256).put("expected_model", "").put("preserve_config", true), systemCommandQueued) }, enabled = firmwareUrl.startsWith("https://") && firmwareSha256.length == 64)
+            val firmwareOptions = firmwareCatalog?.images.orEmpty().map { SelectOption(it.url, it.label) }
+            if (firmwareOptions.isNotEmpty()) {
+                OptionSelector(stringResource(R.string.official_firmware), firmwareUrl, firmwareOptions, { selected ->
+                    firmwareUrl = selected
+                    firmwareSha256 = firmwareCatalog?.images?.firstOrNull { it.url == selected }?.sha256.orEmpty()
+                })
+            } else {
+                Text(firmwareCatalog?.error.orEmpty().ifBlank { stringResource(R.string.firmware_catalog_unavailable) }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(firmwareUrl, { firmwareUrl = it }, label = { Text(stringResource(R.string.firmware_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(firmwareSha256, { firmwareSha256 = it }, label = { Text("SHA-256") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            }
+            PrimaryActionButton(stringResource(R.string.validate_firmware), { pendingSystemCommand = PendingSafeCommand("maintenance.sysupgrade.check", JsonObject().put("url", firmwareUrl).put("sha256", firmwareSha256).put("expected_model", firmwareCatalog?.images?.firstOrNull { it.url == firmwareUrl }?.model.orEmpty()).put("preserve_config", true), systemCommandQueued) }, enabled = firmwareUrl.startsWith("https://") && firmwareSha256.length == 64)
             if (capabilities["maintenance.sysupgrade.apply"] == true) {
                 SecondaryActionButton(stringResource(R.string.install_validated_firmware), { pendingSystemCommand = PendingSafeCommand("maintenance.sysupgrade.apply", JsonObject().put("sha256", firmwareSha256).put("preserve_config", true), systemCommandQueued) }, enabled = firmwareSha256.length == 64)
             }

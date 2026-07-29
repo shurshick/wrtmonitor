@@ -332,6 +332,7 @@
     <string name="sqm_title">Управление очередью SQM</string>
     <string name="sqm_summary">CAKE для снижения задержек под нагрузкой</string>
     <string name="sqm_enabled">Включить SQM</string>
+    <string name="sqm_profile">Профиль трафика</string>
     <string name="sqm_interface">WAN-устройство</string>
     <string name="apply_sqm">Применить SQM</string>
     <string name="client_profile">Профиль доступа</string>
@@ -483,6 +484,8 @@
     <string name="openwrt_update">Обновление OpenWrt</string>
     <string name="openwrt_update_summary">Проверка образа перед установкой</string>
     <string name="firmware_url">HTTPS-адрес прошивки</string>
+    <string name="official_firmware">Официальный образ OpenWrt</string>
+    <string name="firmware_catalog_unavailable">Для этой модели официальный каталог прошивок недоступен.</string>
     <string name="validate_firmware">Проверить и подготовить</string>
     <string name="install_validated_firmware">Установить подготовленный образ</string>
     <string name="advanced_maintenance">Журналы, процессы и cron</string>
@@ -600,4 +603,10 @@
     <string name="vlan_new">Новый VLAN</string>
     <string name="vlan_id">VLAN ID</string>
     <string name="vlan_ports_hint">lan1:u* — untagged/PVID, lan2:t — tagged</string>
+    <string name="client_dns_policy">DNS-фильтрация</string>
+    <string name="client_dns_policy_summary">Резолвер и доменные правила для устройства</string>
+    <string name="client_dns_none">Без фильтрации</string>
+    <string name="client_dns_security">Защита от вредоносных сайтов</string>
+    <string name="client_dns_family">Семейный фильтр</string>
+    <string name="client_blocked_domains">Заблокированные домены</string>
 </resources>

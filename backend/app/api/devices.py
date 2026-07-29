@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Device, User
+from ..models import AuditLog, Device, User
 from ..services.audit import audit
 from ..services.auth import current_user
 from ..services.devices import (
@@ -18,6 +18,7 @@ from ..services.devices import (
     latest_device_telemetry,
 )
 from ..services.management_options import build_management_options
+from ..services.firmware_catalog import firmware_catalog
 from ..schemas import DeviceProvisionRequest
 from ..security import hash_token
 
@@ -157,3 +158,37 @@ def get_device_management_options(
     get_user_device_or_404(db, user, device_id)
     telemetry = latest_device_telemetry(db, device_id)
     return build_management_options(telemetry.payload if telemetry else {})
+
+
+@router.get("/{device_id}/firmware-catalog")
+def get_device_firmware_catalog(
+    device_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    get_user_device_or_404(db, user, device_id)
+    telemetry = latest_device_telemetry(db, device_id)
+    return firmware_catalog(telemetry.payload if telemetry else {})
+
+
+@router.get("/{device_id}/wan-events")
+def get_device_wan_events(
+    device_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    get_user_device_or_404(db, user, device_id)
+    rows = db.scalars(
+        select(AuditLog)
+        .where(
+            AuditLog.object_type == "device",
+            AuditLog.object_id == str(device_id),
+            AuditLog.action == "wan.failover",
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(50)
+    ).all()
+    return [
+        {"created_at": row.created_at.isoformat(), "details": row.details or {}}
+        for row in rows
+    ]

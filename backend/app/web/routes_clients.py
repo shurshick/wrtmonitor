@@ -45,6 +45,7 @@ def web_client_policy(
     priority: str = Form("normal"),
     download_kbps: int = Form(0),
     upload_kbps: int = Form(0),
+    dns_provider: str = Form("none"),
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
     wrtmonitor_session: str | None = Cookie(default=None),
@@ -72,6 +73,10 @@ def web_client_policy(
                 "priority": priority,
                 "download_kbps": download_kbps,
                 "upload_kbps": upload_kbps,
+            },
+            "dns": {
+                "provider": dns_provider,
+                "blocked_domains": [],
             },
         }
     )
