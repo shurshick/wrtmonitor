@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034,SC2154
 handle_wifi_command() {
     case "$command_type" in
         wifi.status)

@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034,SC2154
 handle_network_command() {
     case "$command_type" in
         network.interfaces)
