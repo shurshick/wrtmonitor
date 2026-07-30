@@ -11,6 +11,10 @@ permissions:
   contents: read
   security-events: write
 
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 jobs:
   codeql:
     strategy:
