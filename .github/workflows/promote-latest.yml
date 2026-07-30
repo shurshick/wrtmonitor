@@ -56,9 +56,13 @@ jobs:
           IMAGE: ghcr.io/${{ github.repository_owner }}/wrtmonitor
           VERSION: ${{ inputs.version }}
         run: |
-          docker pull "$IMAGE:$VERSION"
-          docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
-          docker push "$IMAGE:latest"
+          docker buildx imagetools create \
+            --tag "$IMAGE:latest" \
+            "$IMAGE:$VERSION"
+          SOURCE_DIGEST="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --raw | sha256sum | awk '{print $1}')"
+          LATEST_DIGEST="$(docker buildx imagetools inspect "$IMAGE:latest" --raw | sha256sum | awk '{print $1}')"
+          test -n "$SOURCE_DIGEST"
+          test "$SOURCE_DIGEST" = "$LATEST_DIGEST"
       - name: Mark GitHub release latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
