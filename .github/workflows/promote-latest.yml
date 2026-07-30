@@ -10,6 +10,10 @@ on:
         description: Canary soak time
         required: true
         default: "24"
+      force_confirmation:
+        description: Type PROMOTE_NOW to bypass the canary soak time
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -25,9 +29,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ inputs.version }}
           MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
+          FORCE_CONFIRMATION: ${{ inputs.force_confirmation }}
         run: |
-          test "$MINIMUM_AGE_HOURS" -ge 24
-          test "$MINIMUM_AGE_HOURS" -le 72
+          if [ "$FORCE_CONFIRMATION" != "PROMOTE_NOW" ]; then
+            test "$MINIMUM_AGE_HOURS" -ge 24
+            test "$MINIMUM_AGE_HOURS" -le 72
+          fi
           RELEASE_TAG="v${VERSION}"
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             RELEASE_TAG="$(gh release list --limit 100 --json tagName --jq ".[] | select(.tagName | startswith(\"v${VERSION}-\")) | .tagName" | head -n1)"
@@ -35,7 +42,9 @@ jobs:
           test -n "$RELEASE_TAG"
           PUBLISHED="$(gh release view "$RELEASE_TAG" --json publishedAt --jq .publishedAt)"
           AGE="$(( $(date -u +%s) - $(date -u -d "$PUBLISHED" +%s) ))"
-          test "$AGE" -ge "$(( MINIMUM_AGE_HOURS * 3600 ))"
+          if [ "$FORCE_CONFIRMATION" != "PROMOTE_NOW" ]; then
+            test "$AGE" -ge "$(( MINIMUM_AGE_HOURS * 3600 ))"
+          fi
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
       - uses: docker/login-action@v3
         with:
