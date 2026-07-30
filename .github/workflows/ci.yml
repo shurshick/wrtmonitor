@@ -135,7 +135,12 @@ jobs:
           name: signed-agent-metadata
           path: openwrt-agent
       - name: Read release metadata
-        run: echo "RELEASE_VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
+        run: |
+          echo "RELEASE_VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$(cat RELEASE_TAG)" >> "$GITHUB_ENV"
+      - name: Validate immutable image tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: test "$GITHUB_REF_NAME" = "$RELEASE_TAG"
       - name: Build release image
         run: |
           docker build \
@@ -162,9 +167,23 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
-            ${{ env.IMAGE_NAME }}:canary
+          tags: ${{ env.IMAGE_NAME }}:canary
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.RELEASE_VERSION }}-canary
+          provenance: mode=max
+          sbom: true
+      - uses: docker/build-push-action@v6
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.RELEASE_VERSION }}
           provenance: mode=max
           sbom: true
 
