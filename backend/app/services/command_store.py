@@ -263,6 +263,10 @@ def requeue_stale_sent_commands(db: Session) -> int:
             command.last_error = "Delivery lease expired; command queued for retry"
             requeued += 1
         command.updated_at = timestamp
+    if commands:
+        # Sessions deliberately disable autoflush. The polling query that runs
+        # immediately after this function must observe queued retries.
+        db.flush()
     return requeued
 
 
