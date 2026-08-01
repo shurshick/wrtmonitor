@@ -94,10 +94,20 @@ handle_network_command() {
                 backup_file="$(backup_config network "$command_id" "$command_type" || true)"
                 if [ -n "$backup_file" ] && uci set "network.$lan_interface=interface" && uci set "network.$lan_interface.proto=static"; then
                     case "$lan_current_value" in
-                        */*) uci set "network.$lan_interface.ipaddr=$lan_ip/$lan_expected_prefix" && uci -q delete "network.$lan_interface.netmask" || true ;;
-                        *) uci set "network.$lan_interface.ipaddr=$lan_ip" && uci set "network.$lan_interface.netmask=$lan_netmask" ;;
+                        */*)
+                            if uci set "network.$lan_interface.ipaddr=$lan_ip/$lan_expected_prefix"; then
+                                uci -q delete "network.$lan_interface.netmask" || true
+                            else
+                                status=failed
+                            fi
+                            ;;
+                        *)
+                            if ! uci set "network.$lan_interface.ipaddr=$lan_ip" || ! uci set "network.$lan_interface.netmask=$lan_netmask"; then
+                                status=failed
+                            fi
+                            ;;
                     esac
-                    if uci commit network; then
+                    if [ "$status" = "done" ] && uci commit network; then
                         result="$(command_success_result "LAN configuration saved; connection address may change" "\"backup\":\"$(json_escape "$backup_file")\",\"interface\":\"$(json_escape "$lan_interface")\",\"ip_address\":\"$(json_escape "$lan_ip")\",\"changed\":true")"
                         (sleep 2; network_interface_cycle "$lan_interface") >/dev/null 2>&1 &
                     else status="failed"; result="$(command_failed_result "failed to commit LAN configuration")"; fi
