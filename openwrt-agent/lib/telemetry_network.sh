@@ -108,6 +108,7 @@ EOF
                     gsub(/[^0-9]/, "", tx)
                     print mac "|" (rx == "" ? 0 : rx) "|" (tx == "" ? 0 : tx)
                 }
+                END {
                     if (!column["mac"] || !column["rx_bytes"] || !column["tx_bytes"])
                         exit 42
                 }
@@ -116,10 +117,14 @@ EOF
             else
                 parser_status=$?
             fi
-            if [ "$parser_status" -eq 42 ]; then
+            if [ "$parser_status" -ne 0 ]; then
                 traffic_available=false
                 traffic_status="invalid_output"
-                traffic_error="nlbw CSV header does not contain mac, rx_bytes and tx_bytes"
+                if [ "$parser_status" -eq 42 ]; then
+                    traffic_error="nlbw CSV header does not contain mac, rx_bytes and tx_bytes"
+                else
+                    traffic_error="nlbw CSV parser failed with exit code $parser_status"
+                fi
             fi
             while IFS='|' read -r mac rx_bytes tx_bytes; do
                 case "$mac" in ""|00:00:00:00:00:00) continue ;; esac

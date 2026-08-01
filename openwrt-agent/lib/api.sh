@@ -64,6 +64,7 @@ poll_commands() {
 
 daemon() {
     agent_enabled || exit 0
+    transaction_recover_pending
     next_update_check=0
     while true; do
         now="$(date +%s 2>/dev/null || echo 0)"
@@ -169,9 +170,19 @@ main() {
                 update_status_text
             fi
             ;;
-        send-now) acquire_lock || exit 0; apply_wifi_schedules || true; telemetry; poll_commands ;;
+        send-now)
+            acquire_lock || exit 0
+            apply_wifi_schedules || true
+            telemetry
+            poll_commands
+            release_run_lock
+            ;;
         apply-wifi-schedules) apply_wifi_schedules ;;
-        daemon) acquire_lock || exit 0; daemon ;;
+        daemon)
+            acquire_lock || exit 0
+            daemon
+            release_run_lock
+            ;;
         debug) debug ;;
         debug-telemetry) debug_telemetry ;;
         debug-api) debug_api ;;

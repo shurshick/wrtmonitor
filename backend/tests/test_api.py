@@ -1079,6 +1079,26 @@ def test_command_lifecycle_retry_expiry_and_idempotent_result_e2e():
     assert retry_entry["status"] == "sent"
     assert retry_entry["retry_count"] == 2
 
+    with session_factory() as session:
+        retry_command = session.get(DeviceCommand, UUID(retry_id))
+        retry_command.updated_at = datetime.now(UTC) - timedelta(seconds=60)
+        session.commit()
+    third_delivery = client.get("/api/v1/agent/commands", headers=agent_headers)
+    assert any(item["id"] == retry_id for item in third_delivery.json())
+    with session_factory() as session:
+        retry_command = session.get(DeviceCommand, UUID(retry_id))
+        retry_command.updated_at = datetime.now(UTC) - timedelta(seconds=60)
+        session.commit()
+    exhausted = client.get("/api/v1/agent/commands", headers=agent_headers)
+    assert all(item["id"] != retry_id for item in exhausted.json())
+    history = client.get(
+        f"/api/v1/devices/{device_id}/commands?limit=20", headers=owner_headers
+    ).json()
+    retry_entry = next(item for item in history if item["id"] == retry_id)
+    assert retry_entry["status"] == "failed"
+    assert retry_entry["retry_count"] == 3
+    assert retry_entry["last_error"] == "Command delivery attempts exhausted"
+
     expired_id = create_diagnostics()
     with session_factory() as session:
         expired_command = session.get(DeviceCommand, UUID(expired_id))

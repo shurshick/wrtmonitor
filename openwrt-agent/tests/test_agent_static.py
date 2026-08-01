@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import base64
+import time
 from pathlib import Path
 
 import pytest
@@ -105,6 +106,80 @@ def test_manifest_lists_required_files():
         assert name in entries
     for name in REQUIRED_LIBS:
         assert f"lib/{name}" in entries
+
+
+def test_init_script_uses_procd_instead_of_a_stale_pid_file():
+    source = read_text(ROOT / "wrtmonitor.init")
+    assert "USE_PROCD=1" in source
+    assert "start_service()" in source
+    assert "procd_set_param command /usr/bin/wrtmonitor-agent daemon" in source
+    assert "procd_set_param term_timeout 40" in source
+    assert "procd_set_param respawn" in source
+    assert "PID_FILE" not in source
+
+
+def test_lan_postcondition_checks_static_address_and_netmask():
+    source = read_text(ROOT / "lib" / "verification.sh")
+    assert "network.set_lan)" in source
+    assert 'verify_uci_value "network.$interface.proto" static' in source
+    assert 'actual_ip="${actual%%/*}"' in source
+    assert 'expected_prefix="$(ipv4_netmask_prefix "$netmask"' in source
+    assert '[ "$actual_prefix" = "$expected_prefix" ]' in source
+
+
+def test_lan_noop_does_not_restart_the_network_stack():
+    source = read_text(ROOT / "lib" / "command_network.sh")
+    assert 'transaction_noop=1' in source
+    assert 'LAN configuration already matches' in source
+    assert 'network_interface_cycle "$lan_interface"' in source
+    assert '(sleep 3; /etc/init.d/network restart)' not in source
+
+
+def test_uci_verifier_does_not_clobber_postcondition_values():
+    verification = read_text(ROOT / "lib" / "verification.sh")
+    helper = verification.split("postcondition_mode_for_command()", 1)[0]
+
+    assert 'verify_uci_key="$1"' in helper
+    assert 'verify_uci_expected="$2"' in helper
+    assert 'verify_uci_actual=' in helper
+    assert '\n    expected="$2"' not in helper
+    assert '\n    actual=' not in helper
+
+
+def test_dns_server_postcondition_checks_dhcp_values_not_unrelated_network_config():
+    source = read_text(ROOT / "lib" / "verification.sh")
+    assert "dns.set_servers) verify_uci_package dhcp" in source
+    assert "dns.set_servers) verify_uci_package network" not in source
+    assert "actual=\"$(uci -q get 'dhcp.@dnsmasq[0].server'" in source
+
+
+def test_run_lock_survives_command_substitutions_and_tracks_owner_pid():
+    common = read_text(LIB_DIR / "common.sh")
+    api = read_text(LIB_DIR / "api.sh")
+    assert 'printf \'%s\\n\' "$$" >"$RUN_LOCK_DIR/pid"' in common
+    assert 'trap \'release_run_lock; exit 0\' INT TERM HUP' in common
+    acquire_source = common.split("acquire_lock()", 1)[1].split(
+        "release_run_lock()", 1
+    )[0]
+    assert " EXIT " not in acquire_source
+    assert api.count("release_run_lock") >= 2
+
+
+def test_postcondition_verification_preserves_terminal_command_status():
+    verification = (LIB_DIR / "verification.sh").read_text(encoding="utf-8")
+    commands = (LIB_DIR / "commands.sh").read_text(encoding="utf-8")
+
+    assert "verification_status=$?" in verification
+    assert not any(line.strip() == "status=$?" for line in verification.splitlines())
+    assert 'command_payload="${3:-{}}"' not in commands
+    assert '"^${package}([|[:space:]]|$)"' in verification
+
+
+def test_telemetry_does_not_send_raw_wireless_configuration():
+    telemetry = (LIB_DIR / "telemetry.sh").read_text(encoding="utf-8")
+
+    assert '"wireless_status"' not in telemetry
+    assert "ubus_json network.wireless status" not in telemetry
 
 
 def test_manifest_remains_compatible_with_legacy_updater():
@@ -646,6 +721,52 @@ def test_terminal_command_result_is_cached_for_replay(tmp_path: Path):
     }
 
 
+def test_command_execution_does_not_run_competing_telemetry_refresh():
+    commands = read_text(LIB_DIR / "commands.sh")
+    transactions = read_text(LIB_DIR / "transactions.sh")
+    assert 'report_command_result "$command_id" "$status" "$result"' in commands
+    assert 'report_command_result "$command_id" success "$result"' in transactions
+    assert "refresh_state_after_command" not in commands
+    assert "refresh_state_after_command" not in transactions
+
+
+def test_service_action_stops_a_hung_init_script(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    service_dir = tmp_path / "etc" / "init.d"
+    service_dir.mkdir(parents=True)
+    hung_service = service_dir / "dnsmasq"
+    hung_service.write_text("#!/bin/sh\nwhile :; do :; done\n", encoding="utf-8")
+    hung_service.chmod(0o755)
+    script = f'''
+        . "{(LIB_DIR / "common.sh").as_posix()}"
+        export WRTMONITOR_SYSTEM_ROOT="{tmp_path.as_posix()}"
+        service_action dnsmasq restart 1
+        test "$?" -eq 124
+    '''
+    started = time.monotonic()
+    completed = subprocess.run(
+        [shell, "-c", script],
+        capture_output=True,
+        text=True,
+        env=shell_env(),
+        timeout=5,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert time.monotonic() - started < 4
+
+
+def test_dns_management_uses_bounded_service_actions():
+    network = read_text(LIB_DIR / "command_network.sh")
+    runtime = read_text(LIB_DIR / "command_runtime.sh")
+    transactions = read_text(LIB_DIR / "transactions.sh")
+    assert "service_action dnsmasq restart 20" in network
+    assert "service_action dnsmasq restart 20" in runtime
+    assert "service_action dnsmasq restart 20" in transactions
+    assert "/etc/init.d/dnsmasq restart" not in runtime
+
+
 def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
     source = library_sources("telemetry")
     dependencies = read_text(LIB_DIR / "dependencies.sh")
@@ -659,6 +780,56 @@ def test_nlbwmon_traffic_parser_uses_named_columns_and_reports_source_state():
     assert "nlbw -c csv -g mac -n -q -s ';'" not in dependencies
     assert "awk -F '\\t'" in source
     assert 'traffic_status="invalid_output"' in source
+
+
+def test_nlbwmon_traffic_parser_reads_real_tab_separated_counters(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    init_script = tmp_path / "etc" / "init.d" / "nlbwmon"
+    init_script.parent.mkdir(parents=True)
+    init_script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    init_script.chmod(0o755)
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "telemetry_network.sh").as_posix()}'
+        export WRTMONITOR_SYSTEM_ROOT='{tmp_path.as_posix()}'
+        nlbw() {{ return 0; }}
+        ip() {{ return 0; }}
+        nlbwmon_runtime_status() {{ printf ready; }}
+        nlbw_query_csv() {{
+            printf 'mac\tconns\trx_bytes\trx_pkts\ttx_bytes\ttx_pkts\n'
+            printf '02:11:22:33:44:55\t3\t1234\t4\t5678\t6\n'
+        }}
+        dhcp_json() {{ printf '{{"leases":[],"static_leases":[],"pools":[]}}'; }}
+        clients_json
+    """
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=shell_env(),
+    )
+    payload = json.loads(completed.stdout)
+    assert payload["traffic"] == {
+        "available": True,
+        "status": "ready",
+        "records": 1,
+        "installed": True,
+        "service": "running",
+        "recovery_attempted": False,
+        "error": "",
+    }
+    assert payload["neighbours"] == [
+        {
+            "mac": "02:11:22:33:44:55",
+            "state": "traffic",
+            "rx_bytes": 1234,
+            "tx_bytes": 5678,
+        }
+    ]
 
 
 def test_wifi_survey_reports_observed_driver_values():
@@ -921,3 +1092,17 @@ def test_network_topology_telemetry_reads_live_uci_sections():
         "vlan_id": 10,
         "ports": ["lan1:u*", "lan2:t"],
     }
+
+
+def test_daemon_recovers_unfinished_transactions_after_restart():
+    api = read_text(LIB_DIR / "api.sh")
+    transactions = read_text(LIB_DIR / "transactions.sh")
+
+    assert "transaction_recover_pending" in api
+    assert 'case "$state" in prepared|verifying)' in transactions
+    assert "transaction_has_newer_confirmed_overlap" in transactions
+    assert 'transaction_set_state "$command_id" "superseded"' in transactions
+    assert "transaction_restart_verification_window" in transactions
+    assert "transaction_runtime_ready" in transactions
+    assert 'transaction_restore "$command_id"' in transactions
+    assert "agent restarted before transaction confirmation" in transactions

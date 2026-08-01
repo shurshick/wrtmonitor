@@ -65,6 +65,74 @@ log_notice() {
     logger -t wrtmonitor "$1"
 }
 
+run_with_deadline() {
+    wrt_deadline_seconds="$1"
+    shift
+    case "$wrt_deadline_seconds" in
+        ""|*[!0-9]*) wrt_deadline_seconds=20 ;;
+    esac
+    "$@" &
+    wrt_deadline_pid=$!
+    wrt_deadline_elapsed=0
+    while kill -0 "$wrt_deadline_pid" 2>/dev/null; do
+        if [ "$wrt_deadline_elapsed" -ge "$wrt_deadline_seconds" ]; then
+            kill -TERM "$wrt_deadline_pid" 2>/dev/null || true
+            sleep 1
+            kill -KILL "$wrt_deadline_pid" 2>/dev/null || true
+            wait "$wrt_deadline_pid" 2>/dev/null || true
+            return 124
+        fi
+        sleep 1
+        wrt_deadline_elapsed=$((wrt_deadline_elapsed + 1))
+    done
+    wait "$wrt_deadline_pid"
+}
+
+service_action() {
+    wrt_service_name="$1"
+    wrt_service_action="$2"
+    wrt_service_timeout="${3:-20}"
+    wrt_service_script="${WRTMONITOR_SYSTEM_ROOT:-}/etc/init.d/$wrt_service_name"
+    [ -x "$wrt_service_script" ] || return 127
+    run_with_deadline "$wrt_service_timeout" "$wrt_service_script" "$wrt_service_action"
+}
+
+ipv4_netmask_prefix() {
+    case "$1" in
+        0.0.0.0) printf 0 ;; 128.0.0.0) printf 1 ;; 192.0.0.0) printf 2 ;;
+        224.0.0.0) printf 3 ;; 240.0.0.0) printf 4 ;; 248.0.0.0) printf 5 ;;
+        252.0.0.0) printf 6 ;; 254.0.0.0) printf 7 ;; 255.0.0.0) printf 8 ;;
+        255.128.0.0) printf 9 ;; 255.192.0.0) printf 10 ;; 255.224.0.0) printf 11 ;;
+        255.240.0.0) printf 12 ;; 255.248.0.0) printf 13 ;; 255.252.0.0) printf 14 ;;
+        255.254.0.0) printf 15 ;; 255.255.0.0) printf 16 ;; 255.255.128.0) printf 17 ;;
+        255.255.192.0) printf 18 ;; 255.255.224.0) printf 19 ;; 255.255.240.0) printf 20 ;;
+        255.255.248.0) printf 21 ;; 255.255.252.0) printf 22 ;; 255.255.254.0) printf 23 ;;
+        255.255.255.0) printf 24 ;; 255.255.255.128) printf 25 ;; 255.255.255.192) printf 26 ;;
+        255.255.255.224) printf 27 ;; 255.255.255.240) printf 28 ;; 255.255.255.248) printf 29 ;;
+        255.255.255.252) printf 30 ;; 255.255.255.254) printf 31 ;; 255.255.255.255) printf 32 ;;
+        /*) printf '%s' "${1#/}" ;;
+        *) return 1 ;;
+    esac
+}
+
+network_interface_cycle() {
+    wrt_interface="$1"
+    case "$wrt_interface" in ""|*[!A-Za-z0-9_.-]*) return 2 ;; esac
+    command -v ifdown >/dev/null 2>&1 && command -v ifup >/dev/null 2>&1 || return 127
+    run_with_deadline 20 ifdown "$wrt_interface" >/dev/null 2>&1 || true
+    sleep 2
+    run_with_deadline 30 ifup "$wrt_interface" >/dev/null 2>&1
+}
+
+network_interface_has_ipv4() {
+    wrt_interface="$1"
+    wrt_expected_ipv4="$2"
+    command -v ubus >/dev/null 2>&1 && command -v jsonfilter >/dev/null 2>&1 || return 0
+    wrt_runtime_ipv4="$(ubus call "network.interface.$wrt_interface" status 2>/dev/null \
+        | jsonfilter -e '@["ipv4-address"][0].address' 2>/dev/null || true)"
+    [ "$wrt_runtime_ipv4" = "$wrt_expected_ipv4" ]
+}
+
 iso_now() {
     date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo ""
 }
@@ -90,15 +158,24 @@ ensure_state_dirs() {
 
 acquire_lock() {
     if ! mkdir "$RUN_LOCK_DIR" 2>/dev/null; then
-        log_notice "agent is already running"
-        return 1
+        lock_pid="$(cat "$RUN_LOCK_DIR/pid" 2>/dev/null || true)"
+        if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+            log_notice "agent is already running"
+            return 1
+        fi
+        rm -rf "$RUN_LOCK_DIR"
+        mkdir "$RUN_LOCK_DIR" 2>/dev/null || {
+            log_notice "failed to acquire agent lock"
+            return 1
+        }
     fi
-    trap 'rmdir "$RUN_LOCK_DIR" 2>/dev/null || true' EXIT INT TERM
+    printf '%s\n' "$$" >"$RUN_LOCK_DIR/pid"
+    trap 'release_run_lock; exit 0' INT TERM HUP
 }
 
 release_run_lock() {
-    rmdir "$RUN_LOCK_DIR" 2>/dev/null || true
-    trap - EXIT INT TERM
+    rm -rf "$RUN_LOCK_DIR"
+    trap - INT TERM HUP
 }
 
 require_json_tool() {

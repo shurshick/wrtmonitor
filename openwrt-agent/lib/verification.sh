@@ -1,8 +1,8 @@
 verify_uci_value() {
-    key="$1"
-    expected="$2"
-    actual="$(uci -q get "$key" 2>/dev/null || true)"
-    [ "$actual" = "$expected" ]
+    verify_uci_key="$1"
+    verify_uci_expected="$2"
+    verify_uci_actual="$(uci -q get "$verify_uci_key" 2>/dev/null || true)"
+    [ "$verify_uci_actual" = "$verify_uci_expected" ]
 }
 
 postcondition_mode_for_command() {
@@ -36,7 +36,7 @@ verify_config_integrity_for_command() {
         wifi.set_schedule|maintenance.recovery.*) verify_uci_package wrtmonitor ;;
         wifi.*) verify_uci_package wireless ;;
         dhcp.*) verify_uci_package dhcp ;;
-        dns.set_servers) verify_uci_package network ;;
+        dns.set_servers) verify_uci_package dhcp ;;
         dns.set_dot) verify_uci_package unbound || verify_uci_package stubby ;;
         dns.set_doh) verify_uci_package https-dns-proxy ;;
         firewall.*|client.*) verify_uci_package firewall ;;
@@ -64,7 +64,7 @@ verify_package_postcondition() {
         *) package="$(json_get_string "$payload_file" '@.package')" ;;
     esac
     [ -n "$package" ] || return 1
-    package_list_installed 2>/dev/null | grep -Eq "^${package}([[:space:]]|$)" && installed=1 || installed=0
+    package_list_installed 2>/dev/null | grep -Eq "^${package}([|[:space:]]|$)" && installed=1 || installed=0
     if [ "$command_type" = maintenance.package.remove ]; then
         [ "$installed" = 0 ]
     else
@@ -131,21 +131,21 @@ verify_command_postcondition() {
             ;;
         package_state)
             verify_package_postcondition "$command_type" "$payload_file"
-            status=$?
+            verification_status=$?
             rm -f "$payload_file"
-            return "$status"
+            return "$verification_status"
             ;;
         service_state)
             verify_service_postcondition "$command_type" "$payload_file"
-            status=$?
+            verification_status=$?
             rm -f "$payload_file"
-            return "$status"
+            return "$verification_status"
             ;;
         module_state)
             verify_module_postcondition "$payload_file"
-            status=$?
+            verification_status=$?
             rm -f "$payload_file"
-            return "$status"
+            return "$verification_status"
             ;;
     esac
     verified=0
@@ -197,15 +197,33 @@ verify_command_postcondition() {
             radio="$(resolve_wifi_radio "$radio" || true)"
             [ -n "$radio" ] && verify_uci_value "wireless.$radio.country" "$expected" || verified=1
             ;;
-        network.set_wan|network.set_lan)
+        network.set_wan)
             interface="$(json_get_string "$payload_file" '@.interface')"
-            [ -n "$interface" ] || interface="$( [ "$command_type" = network.set_lan ] && printf lan || printf wan )"
+            [ -n "$interface" ] || interface=wan
             protocol="$(json_get_string "$payload_file" '@.protocol')"
             [ -n "$protocol" ] && verify_uci_value "network.$interface.proto" "$protocol" || verified=1
             if [ "$verified" = 0 ] && [ "$protocol" = static ]; then
                 expected="$(json_get_string "$payload_file" '@.ip_address')"
                 verify_uci_value "network.$interface.ipaddr" "$expected" || verified=1
             fi
+            ;;
+        network.set_lan)
+            interface="$(json_get_string "$payload_file" '@.interface')"
+            [ -n "$interface" ] || interface=lan
+            expected="$(json_get_string "$payload_file" '@.ip_address')"
+            netmask="$(json_get_string "$payload_file" '@.netmask')"
+            actual="$(uci -q get "network.$interface.ipaddr" 2>/dev/null || true)"
+            actual_ip="${actual%%/*}"
+            actual_prefix=""
+            case "$actual" in
+                */*) actual_prefix="${actual#*/}" ;;
+                *) actual_prefix="$(ipv4_netmask_prefix "$(uci -q get "network.$interface.netmask" 2>/dev/null || true)" 2>/dev/null || true)" ;;
+            esac
+            expected_prefix="$(ipv4_netmask_prefix "$netmask" 2>/dev/null || true)"
+            verify_uci_value "network.$interface.proto" static && \
+                [ "$actual_ip" = "$expected" ] && \
+                [ -n "$expected_prefix" ] && \
+                [ "$actual_prefix" = "$expected_prefix" ] || verified=1
             ;;
         dhcp.set_pool)
             interface="$(json_get_string "$payload_file" '@.interface')"
@@ -216,6 +234,11 @@ verify_command_postcondition() {
             verify_uci_value "dhcp.$interface.start" "$start" && \
                 verify_uci_value "dhcp.$interface.limit" "$limit" && \
                 verify_uci_value "dhcp.$interface.leasetime" "$lease" || verified=1
+            ;;
+        dns.set_servers)
+            expected="$(jsonfilter -i "$payload_file" -e '@.servers[*]' 2>/dev/null | sed '/^$/d' | sort)"
+            actual="$(uci -q get 'dhcp.@dnsmasq[0].server' 2>/dev/null | tr ' ' '\n' | sed '/^$/d' | sort)"
+            [ -n "$expected" ] && [ "$actual" = "$expected" ] || verified=1
             ;;
         network.set_ipv6)
             interface="$(json_get_string "$payload_file" '@.interface')"

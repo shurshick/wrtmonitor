@@ -1,28 +1,13 @@
-command_requires_state_refresh() {
-    case "$1" in
-        wifi.status|network.interfaces|diagnostics.run|maintenance.logs.read|maintenance.processes.read|maintenance.cron.read|maintenance.services.read|maintenance.backup.create|maintenance.diagnostics.bundle|vpn.wireguard.export_peer|agent.status|agent.update|agent.rollback|agent.disconnect) return 1 ;;
-        *) return 0 ;;
-    esac
-}
-
-refresh_state_after_command() {
-    command_requires_state_refresh "$1" || return 0
-    if telemetry >/dev/null 2>&1; then
-        log_notice "state refreshed after $1"
-        return 0
-    fi
-    log_notice "state refresh failed after $1"
-    return 1
-}
-
 execute_command() {
     command_id="$1"
     command_type="$2"
-    command_payload="${3:-{}}"
+    command_payload="${3:-}"
+    [ -n "$command_payload" ] || command_payload="{}"
     status="done"
     result="{}"
     disconnect_after=0
     transaction_active=0
+    transaction_noop=0
     recovery_mode="$(uci -q get "$CONFIG.recovery_mode" 2>/dev/null || echo 0)"
     if [ "$recovery_mode" = 1 ]; then
         case "$command_type" in
@@ -38,6 +23,7 @@ execute_command() {
         transaction_timeout="$(transaction_timeout_from_payload "$command_payload")"
         if transaction_begin "$command_id" "$command_type" "$transaction_timeout"; then
             transaction_active=1
+            transaction_store_payload "$command_id" "$command_payload"
         else
             result="$(transaction_failure_result "$command_id" "configuration preflight or backup failed" "not_applied")"
             report_command_result "$command_id" failed "$result" >/dev/null || true
@@ -61,7 +47,7 @@ execute_command() {
         result="$(command_failed_result "post-condition verification failed")"
     fi
     if [ "$transaction_active" = "1" ]; then
-        if [ "$status" = "done" ] && transaction_is_connectivity_sensitive "$command_type"; then
+        if [ "$status" = "done" ] && [ "$transaction_noop" != "1" ] && transaction_is_connectivity_sensitive "$command_type"; then
             result="{\"message\":\"configuration applied; connectivity verification is running\",\"transaction\":{\"id\":\"$(json_escape "$command_id")\",\"state\":\"verifying\",\"rollback_timeout_seconds\":$transaction_timeout}}"
             api POST "/api/v1/agent/commands/$command_id/result" "{\"status\":\"running\",\"result\":$result}" >/dev/null || true
             transaction_schedule_verification "$command_id"
@@ -76,9 +62,9 @@ execute_command() {
             result="$(transaction_failure_result "$command_id" "configuration command failed and rollback failed" "rollback_failed")"
         fi
     fi
-    if [ "$status" = "done" ] || [ "$status" = "success" ]; then
-        refresh_state_after_command "$command_type" || true
-    fi
+    # Read-after-write is handled by the explicit post-condition above. Full
+    # telemetry belongs to the next daemon cycle: running it here can stall the
+    # command lifecycle or race a connectivity transaction helper.
     report_command_result "$command_id" "$status" "$result" >/dev/null || true
     if [ "$disconnect_after" = "1" ] && [ "$status" = "done" ]; then
         uci set "$CONFIG.enabled=0"

@@ -125,10 +125,10 @@ configure_dot() {
     enabled="$2"
     [ -x /etc/init.d/stubby ] || return 1
     if [ "$enabled" != true ]; then
-        /etc/init.d/stubby stop >/dev/null 2>&1 || true
-        /etc/init.d/stubby disable >/dev/null 2>&1 || true
+        service_action stubby stop 20 >/dev/null 2>&1 || true
+        service_action stubby disable 20 >/dev/null 2>&1 || true
         restore_plain_dns
-        /etc/init.d/dnsmasq restart >/dev/null 2>&1
+        service_action dnsmasq restart 20 >/dev/null 2>&1
         return
     fi
     provider_data="$(encrypted_dns_provider dot "$provider")" || return 1
@@ -154,10 +154,10 @@ configure_dot() {
     uci add_list 'dhcp.@dnsmasq[0].server=127.0.0.1#5453'
     uci set 'dhcp.@dnsmasq[0].noresolv=1'
     uci commit stubby && uci commit dhcp
-    [ ! -x /etc/init.d/https-dns-proxy ] || { /etc/init.d/https-dns-proxy stop >/dev/null 2>&1 || true; /etc/init.d/https-dns-proxy disable >/dev/null 2>&1 || true; }
+    [ ! -x /etc/init.d/https-dns-proxy ] || { service_action https-dns-proxy stop 20 >/dev/null 2>&1 || true; service_action https-dns-proxy disable 20 >/dev/null 2>&1 || true; }
     /etc/init.d/stubby enable >/dev/null 2>&1
-    /etc/init.d/stubby restart >/dev/null 2>&1
-    /etc/init.d/dnsmasq restart >/dev/null 2>&1
+    service_action stubby restart 20 >/dev/null 2>&1
+    service_action dnsmasq restart 20 >/dev/null 2>&1
 }
 
 configure_doh() {
@@ -165,10 +165,10 @@ configure_doh() {
     enabled="$2"
     [ -x /etc/init.d/https-dns-proxy ] || return 1
     if [ "$enabled" != true ]; then
-        /etc/init.d/https-dns-proxy stop >/dev/null 2>&1 || true
-        /etc/init.d/https-dns-proxy disable >/dev/null 2>&1 || true
+        service_action https-dns-proxy stop 20 >/dev/null 2>&1 || true
+        service_action https-dns-proxy disable 20 >/dev/null 2>&1 || true
         restore_plain_dns
-        /etc/init.d/dnsmasq restart >/dev/null 2>&1
+        service_action dnsmasq restart 20 >/dev/null 2>&1
         return
     fi
     case "$provider" in
@@ -178,8 +178,8 @@ configure_doh() {
         *) return 1 ;;
     esac
     [ ! -x /etc/init.d/stubby ] || {
-        /etc/init.d/stubby stop >/dev/null 2>&1 || true
-        /etc/init.d/stubby disable >/dev/null 2>&1 || true
+        service_action stubby stop 20 >/dev/null 2>&1 || true
+        service_action stubby disable 20 >/dev/null 2>&1 || true
         restore_plain_dns
     }
     backup_plain_dns
@@ -193,8 +193,8 @@ configure_doh() {
     uci set 'dhcp.@dnsmasq[0].noresolv=1'
     uci commit https-dns-proxy && uci commit dhcp
     /etc/init.d/https-dns-proxy enable >/dev/null 2>&1
-    /etc/init.d/https-dns-proxy restart >/dev/null 2>&1
-    /etc/init.d/dnsmasq restart >/dev/null 2>&1
+    service_action https-dns-proxy restart 20 >/dev/null 2>&1
+    service_action dnsmasq restart 20 >/dev/null 2>&1
 }
 
 resolve_wifi_radio() {

@@ -78,16 +78,36 @@ handle_network_command() {
             lan_netmask="$(json_get_string "$payload_file" '@.netmask')"
             rm -f "$payload_file"
             [ -n "$lan_interface" ] || lan_interface="lan"
-            backup_file="$(backup_config network "$command_id" "$command_type" || true)"
-            if [ -n "$backup_file" ] && uci set "network.$lan_interface=interface" && uci set "network.$lan_interface.proto=static" && uci set "network.$lan_interface.ipaddr=$lan_ip" && uci set "network.$lan_interface.netmask=$lan_netmask" && uci commit network; then
-                result="$(command_success_result "LAN configuration saved; connection address may change" "\"backup\":\"$(json_escape "$backup_file")\",\"interface\":\"$(json_escape "$lan_interface")\",\"ip_address\":\"$(json_escape "$lan_ip")\"")"
-                (sleep 3; /etc/init.d/network restart) >/dev/null 2>&1 &
-            else status="failed"; result="$(command_failed_result "failed to configure LAN")"; fi
+            lan_current_proto="$(uci -q get "network.$lan_interface.proto" 2>/dev/null || true)"
+            lan_current_value="$(uci -q get "network.$lan_interface.ipaddr" 2>/dev/null || true)"
+            lan_current_ip="${lan_current_value%%/*}"
+            lan_current_prefix=""
+            case "$lan_current_value" in
+                */*) lan_current_prefix="${lan_current_value#*/}" ;;
+                *) lan_current_prefix="$(ipv4_netmask_prefix "$(uci -q get "network.$lan_interface.netmask" 2>/dev/null || true)" 2>/dev/null || true)" ;;
+            esac
+            lan_expected_prefix="$(ipv4_netmask_prefix "$lan_netmask" 2>/dev/null || true)"
+            if [ "$lan_current_proto" = static ] && [ "$lan_current_ip" = "$lan_ip" ] && [ -n "$lan_expected_prefix" ] && [ "$lan_current_prefix" = "$lan_expected_prefix" ]; then
+                transaction_noop=1
+                result="$(command_success_result "LAN configuration already matches" "\"interface\":\"$(json_escape "$lan_interface")\",\"ip_address\":\"$(json_escape "$lan_ip")\",\"changed\":false")"
+            else
+                backup_file="$(backup_config network "$command_id" "$command_type" || true)"
+                if [ -n "$backup_file" ] && uci set "network.$lan_interface=interface" && uci set "network.$lan_interface.proto=static"; then
+                    case "$lan_current_value" in
+                        */*) uci set "network.$lan_interface.ipaddr=$lan_ip/$lan_expected_prefix" && uci -q delete "network.$lan_interface.netmask" || true ;;
+                        *) uci set "network.$lan_interface.ipaddr=$lan_ip" && uci set "network.$lan_interface.netmask=$lan_netmask" ;;
+                    esac
+                    if uci commit network; then
+                        result="$(command_success_result "LAN configuration saved; connection address may change" "\"backup\":\"$(json_escape "$backup_file")\",\"interface\":\"$(json_escape "$lan_interface")\",\"ip_address\":\"$(json_escape "$lan_ip")\",\"changed\":true")"
+                        (sleep 2; network_interface_cycle "$lan_interface") >/dev/null 2>&1 &
+                    else status="failed"; result="$(command_failed_result "failed to commit LAN configuration")"; fi
+                else status="failed"; result="$(command_failed_result "failed to configure LAN")"; fi
+            fi
             ;;
         network.set_ipv6)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ipv6_iface="$(json_get_string "$payload_file" '@.interface')"; ipv6_enabled="$(json_get_bool "$payload_file" '@.enabled')"; assignment="$(json_get_number "$payload_file" '@.assignment_length')"; ra_mode="$(json_get_string "$payload_file" '@.ra')"; dhcpv6_mode="$(json_get_string "$payload_file" '@.dhcpv6')"; ndp_mode="$(json_get_string "$payload_file" '@.ndp')"; rm -f "$payload_file"
             if [ "$ipv6_enabled" = true ]; then uci set "network.$ipv6_iface.ip6assign=$assignment"; uci set "dhcp.$ipv6_iface.ra=$ra_mode"; uci set "dhcp.$ipv6_iface.dhcpv6=$dhcpv6_mode"; uci set "dhcp.$ipv6_iface.ndp=$ndp_mode"; else uci -q delete "network.$ipv6_iface.ip6assign" || true; uci set "dhcp.$ipv6_iface.ra=disabled"; uci set "dhcp.$ipv6_iface.dhcpv6=disabled"; uci set "dhcp.$ipv6_iface.ndp=disabled"; fi
-            if uci commit network && uci commit dhcp && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/odhcpd restart >/dev/null 2>&1; then result="$(command_success_result "IPv6 configuration updated")"; else status=failed; result="$(command_failed_result "failed to update IPv6")"; fi
+            if uci commit network && uci commit dhcp && service_action network reload 30 >/dev/null 2>&1 && service_action odhcpd restart 20 >/dev/null 2>&1; then result="$(command_success_result "IPv6 configuration updated")"; else status=failed; result="$(command_failed_result "failed to update IPv6")"; fi
             ;;
         network.set_segment)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"
@@ -117,13 +137,13 @@ handle_network_command() {
                             if [ "$segment_policy" = isolated ]; then uci -q delete "firewall.$segment_forward" || true; else uci set "firewall.$segment_forward=forwarding"; uci set "firewall.$segment_forward.src=$segment_name"; uci set "firewall.$segment_forward.dest=wan"; fi
                             ;;
                     esac
-                    if [ "$status" = "done" ] && uci commit network && uci commit dhcp && uci commit firewall && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/dnsmasq restart >/dev/null 2>&1 && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "network segment updated" "\"segment\":\"$(json_escape "$segment_name")\"")"; else status=failed; result="$(command_failed_result "failed to update network segment")"; fi
+                    if [ "$status" = "done" ] && uci commit network && uci commit dhcp && uci commit firewall && service_action network reload 30 >/dev/null 2>&1 && service_action dnsmasq restart 20 >/dev/null 2>&1 && service_action firewall reload 20 >/dev/null 2>&1; then result="$(command_success_result "network segment updated" "\"segment\":\"$(json_escape "$segment_name")\"")"; else status=failed; result="$(command_failed_result "failed to update network segment")"; fi
                     ;;
             esac
             ;;
         network.delete_segment)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; segment_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"
-            case "$segment_name" in ''|lan|wan|wan6|loopback|*[!A-Za-z0-9_-]*) status=failed; result="$(command_failed_result "core or invalid segment cannot be deleted")" ;; *) uci -q delete "network.$segment_name" || true; uci -q delete "network.wrtmonitor_bridge_$segment_name" || true; uci -q delete "dhcp.$segment_name" || true; uci -q delete "firewall.wrtmonitor_zone_$segment_name" || true; uci -q delete "firewall.wrtmonitor_forward_$segment_name" || true; uci -q delete "firewall.wrtmonitor_dns_$segment_name" || true; uci -q delete "firewall.wrtmonitor_dhcp_$segment_name" || true; if uci commit network && uci commit dhcp && uci commit firewall && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/dnsmasq restart >/dev/null 2>&1 && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "network segment deleted")"; else status=failed; result="$(command_failed_result "failed to delete network segment")"; fi ;; esac
+            case "$segment_name" in ''|lan|wan|wan6|loopback|*[!A-Za-z0-9_-]*) status=failed; result="$(command_failed_result "core or invalid segment cannot be deleted")" ;; *) uci -q delete "network.$segment_name" || true; uci -q delete "network.wrtmonitor_bridge_$segment_name" || true; uci -q delete "dhcp.$segment_name" || true; uci -q delete "firewall.wrtmonitor_zone_$segment_name" || true; uci -q delete "firewall.wrtmonitor_forward_$segment_name" || true; uci -q delete "firewall.wrtmonitor_dns_$segment_name" || true; uci -q delete "firewall.wrtmonitor_dhcp_$segment_name" || true; if uci commit network && uci commit dhcp && uci commit firewall && service_action network reload 30 >/dev/null 2>&1 && service_action dnsmasq restart 20 >/dev/null 2>&1 && service_action firewall reload 20 >/dev/null 2>&1; then result="$(command_success_result "network segment deleted")"; else status=failed; result="$(command_failed_result "failed to delete network segment")"; fi ;; esac
             ;;
         network.set_vlan)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; vlan_section="$(json_get_string "$payload_file" '@.section')"; vlan_device="$(json_get_string "$payload_file" '@.device')"; vlan_id="$(json_get_number "$payload_file" '@.vlan_id')"; vlan_ports="$(jsonfilter -i "$payload_file" -e '@.ports[*]' 2>/dev/null || true)"; rm -f "$payload_file"
@@ -137,12 +157,12 @@ handle_network_command() {
                 uci set "network.$vlan_section=bridge-vlan"; uci set "network.$vlan_section.device=$vlan_device"; uci set "network.$vlan_section.vlan=$vlan_id"; uci -q delete "network.$vlan_section.ports" || true
                 printf '%s\n' "$vlan_ports" | while IFS= read -r port; do case "$port" in ''|*[!A-Za-z0-9_.@:\*-]*) exit 1 ;; esac; uci add_list "network.$vlan_section.ports=$port"; done || status=failed
                 for device_ref in $(uci -q show network 2>/dev/null | sed -n 's/^network\.\([^.=]*\)=device$/\1/p'); do [ "$(uci -q get "network.$device_ref.name" 2>/dev/null || true)" != "$vlan_device" ] || uci set "network.$device_ref.vlan_filtering=1"; done
-                if [ "$status" = "done" ] && uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "bridge VLAN updated" "\"section\":\"$(json_escape "$vlan_section")\",\"vlan_id\":$vlan_id")"; else status=failed; result="$(command_failed_result "failed to update bridge VLAN")"; fi
+                if [ "$status" = "done" ] && uci commit network && service_action network reload 30 >/dev/null 2>&1; then result="$(command_success_result "bridge VLAN updated" "\"section\":\"$(json_escape "$vlan_section")\",\"vlan_id\":$vlan_id")"; else status=failed; result="$(command_failed_result "failed to update bridge VLAN")"; fi
             fi
             ;;
         network.delete_vlan)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; vlan_section="$(json_get_string "$payload_file" '@.section')"; rm -f "$payload_file"
-            case "$vlan_section" in ''|*[!A-Za-z0-9_.@\[\]-]*) status=failed; result="$(command_failed_result "invalid VLAN section")" ;; *) if uci -q delete "network.$vlan_section" && uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "bridge VLAN deleted")"; else status=failed; result="$(command_failed_result "VLAN section not found")"; fi ;; esac
+            case "$vlan_section" in ''|*[!A-Za-z0-9_.@\[\]-]*) status=failed; result="$(command_failed_result "invalid VLAN section")" ;; *) if uci -q delete "network.$vlan_section" && uci commit network && service_action network reload 30 >/dev/null 2>&1; then result="$(command_success_result "bridge VLAN deleted")"; else status=failed; result="$(command_failed_result "VLAN section not found")"; fi ;; esac
             ;;
         network.set_multiwan)
             payload_file=/tmp/wrtmonitor-command-payload
@@ -185,7 +205,7 @@ handle_network_command() {
             uci set mwan3.wrtmonitor_default=rule
             uci set mwan3.wrtmonitor_default.dest_ip=0.0.0.0/0
             uci set mwan3.wrtmonitor_default.use_policy=wrtmonitor_policy
-            if uci commit mwan3 && /etc/init.d/mwan3 restart >/dev/null 2>&1; then
+            if uci commit mwan3 && service_action mwan3 restart 20 >/dev/null 2>&1; then
                 result="$(command_success_result "multi-WAN policy updated" "\"backup\":\"$(json_escape "$backup_file")\"")"
             else
                 status=failed
@@ -196,20 +216,20 @@ handle_network_command() {
         network.set_route)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; route_section="$(json_get_string "$payload_file" '@.section')"; route_name="$(json_get_string "$payload_file" '@.name')"; route_iface="$(json_get_string "$payload_file" '@.interface')"; route_target="$(json_get_string "$payload_file" '@.target')"; route_gateway="$(json_get_string "$payload_file" '@.gateway')"; route_metric="$(json_get_number "$payload_file" '@.metric')"; rm -f "$payload_file"; route_ref="${route_section:-wrtmonitor_route_$route_name}"; case "$route_target" in *:*) route_type=route6 ;; *) route_type=route ;; esac
             uci set "network.$route_ref=$route_type"; uci set "network.$route_ref.wrtmonitor_name=$route_name"; uci set "network.$route_ref.interface=$route_iface"; uci set "network.$route_ref.target=$route_target"; uci -q delete "network.$route_ref.gateway" || true; [ -z "$route_gateway" ] || uci set "network.$route_ref.gateway=$route_gateway"; uci set "network.$route_ref.metric=$route_metric"
-            if uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "static route updated")"; else status=failed; result="$(command_failed_result "failed to update route")"; fi
+            if uci commit network && service_action network reload 30 >/dev/null 2>&1; then result="$(command_success_result "static route updated")"; else status=failed; result="$(command_failed_result "failed to update route")"; fi
             ;;
         network.delete_route)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; route_section="$(json_get_string "$payload_file" '@.section')"; route_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; route_ref="${route_section:-wrtmonitor_route_$route_name}"
-            if uci -q delete "network.$route_ref" && uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "static route deleted")"; else status=failed; result="$(command_failed_result "route not found")"; fi
+            if uci -q delete "network.$route_ref" && uci commit network && service_action network reload 30 >/dev/null 2>&1; then result="$(command_success_result "static route deleted")"; else status=failed; result="$(command_failed_result "route not found")"; fi
             ;;
         network.set_ddns)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ddns_name="$(json_get_string "$payload_file" '@.name')"; ddns_enabled="$(json_get_bool "$payload_file" '@.enabled')"; provider="$(json_get_string "$payload_file" '@.provider')"; domain="$(json_get_string "$payload_file" '@.domain')"; ddns_user="$(json_get_string "$payload_file" '@.username')"; ddns_password="$(json_get_string "$payload_file" '@.password')"; ddns_iface="$(json_get_string "$payload_file" '@.interface')"; rm -f "$payload_file"; ddns_ref="wrtmonitor_$ddns_name"
             uci set "ddns.$ddns_ref=service"; uci set "ddns.$ddns_ref.enabled=$( [ "$ddns_enabled" = true ] && echo 1 || echo 0 )"; uci set "ddns.$ddns_ref.service_name=$provider"; uci set "ddns.$ddns_ref.domain=$domain"; uci set "ddns.$ddns_ref.username=$ddns_user"; uci set "ddns.$ddns_ref.password=$ddns_password"; uci set "ddns.$ddns_ref.interface=$ddns_iface"; uci set "ddns.$ddns_ref.ip_source=network"; uci set "ddns.$ddns_ref.ip_network=$ddns_iface"
-            if uci commit ddns && /etc/init.d/ddns restart >/dev/null 2>&1; then result="$(command_success_result "DDNS service updated")"; else status=failed; result="$(command_failed_result "failed to update DDNS")"; fi
+            if uci commit ddns && service_action ddns restart 20 >/dev/null 2>&1; then result="$(command_success_result "DDNS service updated")"; else status=failed; result="$(command_failed_result "failed to update DDNS")"; fi
             ;;
         network.set_upnp)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; upnp_enabled="$(json_get_bool "$payload_file" '@.enabled')"; secure_mode="$(json_get_bool "$payload_file" '@.secure_mode')"; rm -f "$payload_file"; uci set "upnpd.config.enabled=$( [ "$upnp_enabled" = true ] && echo 1 || echo 0 )"; uci set "upnpd.config.secure_mode=$( [ "$secure_mode" = true ] && echo 1 || echo 0 )"
-            if uci commit upnpd && /etc/init.d/miniupnpd restart >/dev/null 2>&1; then result="$(command_success_result "UPnP configuration updated")"; else status=failed; result="$(command_failed_result "failed to update UPnP")"; fi
+            if uci commit upnpd && service_action miniupnpd restart 20 >/dev/null 2>&1; then result="$(command_success_result "UPnP configuration updated")"; else status=failed; result="$(command_failed_result "failed to update UPnP")"; fi
             ;;
         dhcp.set_lease)
             printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
@@ -229,7 +249,7 @@ handle_network_command() {
                 && uci set "dhcp.$lease_ref.ip=$lease_ip" \
                 && uci set "dhcp.$lease_ref.name=$lease_hostname" \
                 && uci commit dhcp \
-                && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then
+                && service_action dnsmasq restart 20 >/dev/null 2>&1; then
                 result="$(command_success_result "static DHCP lease saved" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$lease_mac")\",\"ip\":\"$(json_escape "$lease_ip")\"")"
             else
                 status="failed"
@@ -245,7 +265,7 @@ handle_network_command() {
             if [ -z "$backup_file" ]; then
                 status="failed"
                 result="$(command_failed_result "failed to create DHCP config backup")"
-            elif [ -n "$lease_ref" ] && uci -q delete "dhcp.$lease_ref" && uci commit dhcp && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then
+            elif [ -n "$lease_ref" ] && uci -q delete "dhcp.$lease_ref" && uci commit dhcp && service_action dnsmasq restart 20 >/dev/null 2>&1; then
                 result="$(command_success_result "static DHCP lease deleted" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$lease_mac")\"")"
             else
                 status="failed"
@@ -257,7 +277,7 @@ handle_network_command() {
             pool_interface="$(json_get_string "$payload_file" '@.interface')"; pool_start="$(json_get_number "$payload_file" '@.start')"; pool_limit="$(json_get_number "$payload_file" '@.limit')"; pool_leasetime="$(json_get_string "$payload_file" '@.leasetime')"; rm -f "$payload_file"
             [ -n "$pool_interface" ] || pool_interface="lan"
             backup_file="$(backup_config dhcp "$command_id" "$command_type" || true)"
-            if [ -n "$backup_file" ] && uci set "dhcp.$pool_interface=dhcp" && uci set "dhcp.$pool_interface.interface=$pool_interface" && uci set "dhcp.$pool_interface.start=$pool_start" && uci set "dhcp.$pool_interface.limit=$pool_limit" && uci set "dhcp.$pool_interface.leasetime=$pool_leasetime" && uci commit dhcp && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then
+            if [ -n "$backup_file" ] && uci set "dhcp.$pool_interface=dhcp" && uci set "dhcp.$pool_interface.interface=$pool_interface" && uci set "dhcp.$pool_interface.start=$pool_start" && uci set "dhcp.$pool_interface.limit=$pool_limit" && uci set "dhcp.$pool_interface.leasetime=$pool_leasetime" && uci commit dhcp && service_action dnsmasq restart 20 >/dev/null 2>&1; then
                 result="$(command_success_result "DHCP pool updated" "\"backup\":\"$(json_escape "$backup_file")\"")"
             else status="failed"; result="$(command_failed_result "failed to update DHCP pool")"; fi
             ;;
@@ -267,7 +287,7 @@ handle_network_command() {
             if [ -n "$backup_file" ] && [ -n "$dns_servers" ]; then
                 uci -q delete 'dhcp.@dnsmasq[0].server' || true
                 printf '%s\n' "$dns_servers" | while IFS= read -r server; do [ -z "$server" ] || uci add_list "dhcp.@dnsmasq[0].server=$server"; done
-                if uci commit dhcp && /etc/init.d/dnsmasq restart >/dev/null 2>&1; then result="$(command_success_result "DNS servers updated" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "failed to update DNS servers")"; fi
+                if uci commit dhcp && service_action dnsmasq restart 20 >/dev/null 2>&1; then result="$(command_success_result "DNS servers updated" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "DNS configuration was saved, but dnsmasq did not restart within 20 seconds")"; fi
             else status="failed"; result="$(command_failed_result "DNS servers or backup are unavailable")"; fi
             ;;
         dns.install_encrypted|dns.install_dot|dns.install_doh)
@@ -291,10 +311,10 @@ handle_network_command() {
             client_ref="wrtmonitor_block_$(printf '%s' "$client_mac" | tr -d ':')"; backup_file="$(backup_config firewall "$command_id" "$command_type" || true)"
             if [ -z "$backup_file" ]; then status="failed"; result="$(command_failed_result "failed to create firewall backup")"
             elif [ "$client_blocked" = "true" ]; then
-                if uci set "firewall.$client_ref=rule" && uci set "firewall.$client_ref.name=WrtMonitor block $client_mac" && uci set "firewall.$client_ref.src=lan" && uci set "firewall.$client_ref.dest=wan" && uci set "firewall.$client_ref.src_mac=$client_mac" && uci set "firewall.$client_ref.target=REJECT" && uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "client internet access blocked" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\"")"; else status="failed"; result="$(command_failed_result "failed to block client")"; fi
+                if uci set "firewall.$client_ref=rule" && uci set "firewall.$client_ref.name=WrtMonitor block $client_mac" && uci set "firewall.$client_ref.src=lan" && uci set "firewall.$client_ref.dest=wan" && uci set "firewall.$client_ref.src_mac=$client_mac" && uci set "firewall.$client_ref.target=REJECT" && uci commit firewall && service_action firewall reload 20 >/dev/null 2>&1; then result="$(command_success_result "client internet access blocked" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\"")"; else status="failed"; result="$(command_failed_result "failed to block client")"; fi
             else
                 uci -q delete "firewall.$client_ref" || true
-                if uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then result="$(command_success_result "client internet access restored" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\"")"; else status="failed"; result="$(command_failed_result "failed to unblock client")"; fi
+                if uci commit firewall && service_action firewall reload 20 >/dev/null 2>&1; then result="$(command_success_result "client internet access restored" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\"")"; else status="failed"; result="$(command_failed_result "failed to unblock client")"; fi
             fi
             ;;
         client.set_policy)
@@ -370,7 +390,7 @@ handle_network_command() {
                     uci set "firewall.$dot_ref.dest_port=853"
                     uci set "firewall.$dot_ref.target=REJECT"
                 fi
-                if [ "$status" = "done" ] && uci commit firewall && /etc/init.d/firewall reload >/dev/null 2>&1; then
+                if [ "$status" = "done" ] && uci commit firewall && service_action firewall reload 20 >/dev/null 2>&1; then
                     result="$(command_success_result "client policy applied" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\",\"qos_priority\":\"$(json_escape "$qos_priority")\",\"dns_provider\":\"$(json_escape "$dns_provider")\",\"download_kbps\":${download_kbps:-0},\"upload_kbps\":${upload_kbps:-0}")"
                 else
                     status="failed"; result="$(command_failed_result "failed to apply client policy")"
@@ -409,7 +429,7 @@ handle_network_command() {
                 && uci set "sqm.wrtmonitor.eqdisc_opts=$sqm_qdisc_options" \
                   && uci set "sqm.wrtmonitor.iqdisc_opts=$sqm_qdisc_options" \
                   && uci commit sqm \
-                  && /etc/init.d/sqm restart >/dev/null 2>&1; then
+                  && service_action sqm restart 20 >/dev/null 2>&1; then
                 sqm_crontab="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"
                 mkdir -p "$(dirname "$sqm_crontab")"
                 touch "$sqm_crontab"
@@ -425,7 +445,7 @@ handle_network_command() {
                     printf '%s %s * * %s /etc/init.d/sqm start # wrtmonitor-sqm-schedule\n' "$sqm_start_minute" "$sqm_start_hour" "$sqm_cron_days" >>"$sqm_crontab"
                     printf '%s %s * * %s /etc/init.d/sqm stop # wrtmonitor-sqm-schedule\n' "$sqm_stop_minute" "$sqm_stop_hour" "$sqm_cron_days" >>"$sqm_crontab"
                 fi
-                [ ! -x /etc/init.d/cron ] || /etc/init.d/cron restart >/dev/null 2>&1 || true
+                [ ! -x /etc/init.d/cron ] || service_action cron restart 20 >/dev/null 2>&1 || true
                 result="$(command_success_result "SQM configuration applied" "\"backup\":\"$(json_escape "$sqm_backup")\",\"profile\":\"$(json_escape "$sqm_profile")\",\"interface\":\"$(json_escape "$sqm_interface")\",\"download_kbps\":$sqm_download,\"upload_kbps\":$sqm_upload")"
             else
                 status="failed"; result="$(command_failed_result "failed to apply SQM configuration")"

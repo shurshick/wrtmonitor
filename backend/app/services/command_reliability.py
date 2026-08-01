@@ -54,9 +54,12 @@ def command_reliability(
     readonly = risk == READ_ONLY
     disruptive = risk == "level_4_disruptive"
     maintenance = command_type.startswith("maintenance.")
-    timeout_seconds = 900 if maintenance else 300 if disruptive else 120
+    # Configuration transactions perform read-after-write checks and may
+    # briefly restart network services. Keep enough room for two deliveries
+    # without treating an applied change as expired.
+    timeout_seconds = 900 if maintenance else 300 if disruptive else 180
     if readonly:
-        timeout_seconds = 45
+        timeout_seconds = 300 if maintenance else 180
 
     if readonly:
         post_condition = "result_payload"
@@ -93,7 +96,7 @@ def command_reliability(
             },
             "delivery": {
                 "timeout_seconds": timeout_seconds,
-                "lease_seconds": min(45, timeout_seconds),
+                "lease_seconds": 45,
                 "max_deliveries": 3 if readonly else 2,
             },
             "post_condition": post_condition,

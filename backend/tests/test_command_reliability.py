@@ -11,6 +11,9 @@ def test_all_commands_have_executable_reliability_policy():
         assert policy["idempotency"]["strategy"] == "command_uuid_result_cache"
         assert policy["delivery"]["timeout_seconds"] >= 30
         assert policy["delivery"]["max_deliveries"] in {2, 3}
+        assert policy["delivery"]["timeout_seconds"] > (
+            policy["delivery"]["lease_seconds"] * policy["delivery"]["max_deliveries"]
+        )
         assert policy["post_condition"]
         assert policy["verification"]["required"] is True
         assert policy["verification"]["fail_closed"] is True
@@ -29,6 +32,15 @@ def test_disruptive_commands_have_longer_timeout_and_explicit_rollback():
         policy = metadata["reliability"]
         assert policy["delivery"]["timeout_seconds"] >= 300
         assert policy["rollback"] != "not_required"
+
+
+def test_transactional_configuration_has_room_for_verification_and_redelivery():
+    for command_type in ("network.set_lan", "dns.set_servers", "wifi.set_radio"):
+        delivery = COMMAND_REGISTRY[command_type]["reliability"]["delivery"]
+        assert delivery["timeout_seconds"] >= 180
+        assert delivery["timeout_seconds"] > (
+            delivery["lease_seconds"] * delivery["max_deliveries"]
+        )
 
 
 def test_structured_agent_error_has_actionable_public_reason():

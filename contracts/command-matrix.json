@@ -17,7 +17,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "service_or_connectivity_state",
       "verification": {
@@ -47,7 +47,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "service_or_connectivity_state",
       "verification": {
@@ -74,7 +74,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "agent_state",
       "verification": {
@@ -101,7 +101,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "agent_state",
       "verification": {
@@ -128,7 +128,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "agent_state",
       "verification": {
@@ -155,7 +155,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "service_or_connectivity_state",
       "verification": {
@@ -182,7 +182,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -212,7 +212,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -242,7 +242,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -269,7 +269,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -296,7 +296,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -323,7 +323,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 180,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -350,7 +350,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "package_state",
       "verification": {
@@ -377,7 +377,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "package_state",
       "verification": {
@@ -404,7 +404,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -431,7 +431,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -458,7 +458,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -761,7 +761,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 300,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -815,7 +815,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 300,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -872,7 +872,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 300,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -899,7 +899,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 300,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -1034,7 +1034,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 300,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -1088,7 +1088,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 300,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -1199,7 +1199,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 300,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -1283,7 +1283,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1364,7 +1364,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "service_or_connectivity_state",
       "verification": {
@@ -1391,7 +1391,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 180,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -1445,7 +1445,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1553,7 +1553,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1607,7 +1607,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1688,7 +1688,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1715,7 +1715,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "service_or_connectivity_state",
       "verification": {
@@ -1742,7 +1742,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "service_state",
       "verification": {
@@ -1769,7 +1769,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1796,7 +1796,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1823,7 +1823,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1850,7 +1850,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1877,7 +1877,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 180,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -1931,7 +1931,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -1958,7 +1958,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2039,7 +2039,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2066,7 +2066,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 180,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -2120,7 +2120,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2147,7 +2147,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2174,7 +2174,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2201,7 +2201,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2228,7 +2228,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2255,7 +2255,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2336,7 +2336,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2363,7 +2363,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2390,7 +2390,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2417,7 +2417,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {
@@ -2444,7 +2444,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": true
       },
-      "timeout_seconds": 45,
+      "timeout_seconds": 180,
       "max_deliveries": 3,
       "post_condition": "result_payload",
       "verification": {
@@ -2474,7 +2474,7 @@
         "strategy": "command_uuid_result_cache",
         "semantic": false
       },
-      "timeout_seconds": 120,
+      "timeout_seconds": 180,
       "max_deliveries": 2,
       "post_condition": "read_after_write_config",
       "verification": {

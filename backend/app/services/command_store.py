@@ -241,21 +241,29 @@ def cleanup_device_command_history(
 
 def requeue_stale_sent_commands(db: Session) -> int:
     timestamp = now_utc()
-    result = db.execute(
-        update(DeviceCommand)
+    commands = db.scalars(
+        select(DeviceCommand)
         .where(
             DeviceCommand.status == "sent",
             DeviceCommand.updated_at < timestamp - COMMAND_DELIVERY_LEASE,
             DeviceCommand.expires_at.is_not(None),
             DeviceCommand.expires_at >= timestamp,
         )
-        .values(
-            status="queued",
-            updated_at=timestamp,
-            last_error="Delivery lease expired; command queued for retry",
-        )
-    )
-    return int(result.rowcount or 0)
+        .with_for_update(skip_locked=True)
+    ).all()
+    requeued = 0
+    for command in commands:
+        delivery = get_command_metadata(command.command_type)["reliability"]["delivery"]
+        if command.retry_count >= int(delivery["max_deliveries"]):
+            command.status = "failed"
+            command.completed_at = timestamp
+            command.last_error = "Command delivery attempts exhausted"
+        else:
+            command.status = "queued"
+            command.last_error = "Delivery lease expired; command queued for retry"
+            requeued += 1
+        command.updated_at = timestamp
+    return requeued
 
 
 __all__ = [

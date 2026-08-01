@@ -27,6 +27,7 @@ from ..services.telemetry import (
     record_device_telemetry_metric,
     telemetry_alerts,
 )
+from ..services.telemetry_security import sanitize_telemetry_payload
 from ..services.data_state import subsystem_data_state, telemetry_data_state
 from ..services.wan_events import record_wan_transition
 
@@ -152,6 +153,7 @@ def agent_telemetry(
         raise HTTPException(status_code=403, detail="Device is archived")
     if device.id != payload.device_id:
         raise HTTPException(status_code=403, detail="Device token mismatch")
+    clean_telemetry = sanitize_telemetry_payload(payload.telemetry)
     now = datetime.now(UTC)
     previous = db.scalars(
         select(DeviceTelemetry)
@@ -162,20 +164,20 @@ def agent_telemetry(
     device.status, device.last_seen_at, device.updated_at = "online", now, now
     db.add(
         DeviceTelemetry(
-            id=uuid4(), device_id=device.id, payload=payload.telemetry, created_at=now
+            id=uuid4(), device_id=device.id, payload=clean_telemetry, created_at=now
         )
     )
     db.flush()
-    record_device_telemetry_metric(db, device.id, payload.telemetry, now)
-    sync_client_inventory(db, device.id, payload.telemetry, now)
+    record_device_telemetry_metric(db, device.id, clean_telemetry, now)
+    sync_client_inventory(db, device.id, clean_telemetry, now)
     record_wan_transition(
         db,
         device.id,
         previous.payload if previous else None,
-        payload.telemetry,
+        clean_telemetry,
     )
     queue_automatic_agent_update(
-        db, device_id=device.id, telemetry=payload.telemetry, now=now
+        db, device_id=device.id, telemetry=clean_telemetry, now=now
     )
     cleanup_device_telemetry(db, device.id, settings().telemetry_retention_per_device)
     cleanup_device_telemetry_metrics(

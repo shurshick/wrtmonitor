@@ -31,7 +31,7 @@ handle_system_command() {
                     (sleep 2; /etc/init.d/network restart) >/dev/null 2>&1 &
                     ;;
                 dnsmasq|firewall|odhcpd)
-                    if [ -x "/etc/init.d/$service" ] && "/etc/init.d/$service" restart >/dev/null 2>&1; then
+                    if service_action "$service" restart 20 >/dev/null 2>&1; then
                         result="$(command_success_result "service restarted" "\"service\":\"$(json_escape "$service")\"")"
                     else
                         status="failed"
@@ -59,7 +59,7 @@ handle_system_command() {
                 fi
                 uci -q delete system.ntp.server || true
                 printf '%s\n' "$ntp_servers" | while IFS= read -r server; do [ -z "$server" ] || uci add_list "system.ntp.server=$server"; done
-                if uci commit system && /etc/init.d/sysntpd restart >/dev/null 2>&1; then result="$(command_success_result "NTP settings updated" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "failed to update NTP settings")"; fi
+                if uci commit system && service_action sysntpd restart 20 >/dev/null 2>&1; then result="$(command_success_result "NTP settings updated" "\"backup\":\"$(json_escape "$backup_file")\"")"; else status="failed"; result="$(command_failed_result "failed to update NTP settings")"; fi
             else status="failed"; result="$(command_failed_result "failed to create system backup")"; fi
             ;;
         *) return 1 ;;

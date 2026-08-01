@@ -70,7 +70,7 @@ handle_maintenance_command() {
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; process_pid="$(json_get_number "$payload_file" '@.pid')"; process_signal="$(json_get_string "$payload_file" '@.signal')"; rm -f "$payload_file"; if kill -"$process_signal" "$process_pid" 2>/dev/null; then result="$(command_success_result "signal sent to process")"; else status=failed; result="$(command_failed_result "failed to signal process")"; fi
             ;;
         maintenance.cron.set)
-            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; cron_content="$(json_get_string "$payload_file" '@.content')"; rm -f "$payload_file"; cron_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"; cp "$cron_path" "$cron_path.wrtmonitor.bak" 2>/dev/null || true; if printf '%s' "$cron_content" >"$cron_path" && /etc/init.d/cron restart >/dev/null 2>&1; then result="$(command_success_result "cron updated")"; else status=failed; result="$(command_failed_result "failed to update cron")"; fi
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; cron_content="$(json_get_string "$payload_file" '@.content')"; rm -f "$payload_file"; cron_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"; cp "$cron_path" "$cron_path.wrtmonitor.bak" 2>/dev/null || true; if printf '%s' "$cron_content" >"$cron_path" && service_action cron restart 20 >/dev/null 2>&1; then result="$(command_success_result "cron updated")"; else status=failed; result="$(command_failed_result "failed to update cron")"; fi
             ;;
         maintenance.cron.read)
             cron_path="${WRTMONITOR_SYSTEM_ROOT:-}/etc/crontabs/root"

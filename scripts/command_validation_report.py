@@ -43,7 +43,18 @@ def validate(report: dict) -> list[str]:
         errors.append(f"missing commands: {sorted(missing)}")
     if unknown := actual - expected:
         errors.append(f"unknown commands: {sorted(unknown)}")
-    allowed = {"not_run", "pass", "fail", "blocked", "not_applicable"}
+    outcome_values = {
+        "not_run",
+        "pass",
+        "fail",
+        "blocked",
+        "not_applicable",
+    }
+    rollback_values = outcome_values | {
+        "not_required",
+        "configuration_backup",
+        "paired_command",
+    }
     for name, result in (report.get("commands") or {}).items():
         for field in (
             "status",
@@ -53,6 +64,7 @@ def validate(report: dict) -> list[str]:
             "post_condition",
             "rollback",
         ):
+            allowed = rollback_values if field == "rollback" else outcome_values
             if result.get(field) not in allowed:
                 errors.append(f"{name}: invalid {field}={result.get(field)!r}")
         if result.get("status") == "pass" and not result.get("evidence"):

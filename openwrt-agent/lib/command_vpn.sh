@@ -14,7 +14,7 @@ handle_vpn_command() {
             else
                 ifdown "$wg_name" >/dev/null 2>&1 || true
                 for peer_ref in $(uci -q show network 2>/dev/null | sed -n "s/^network\.\([^.=]*\)=wireguard_$wg_name$/\1/p"); do uci -q delete "network.$peer_ref" || true; done
-                if uci -q delete "network.$wg_name" && uci commit network && /etc/init.d/network reload >/dev/null 2>&1; then result="$(command_success_result "WireGuard interface deleted")"; else status=failed; result="$(command_failed_result "failed to delete WireGuard interface")"; fi
+                if uci -q delete "network.$wg_name" && uci commit network && service_action network reload 30 >/dev/null 2>&1; then result="$(command_success_result "WireGuard interface deleted")"; else status=failed; result="$(command_failed_result "failed to delete WireGuard interface")"; fi
             fi
             ;;
         vpn.wireguard.set_peer)
@@ -31,14 +31,14 @@ handle_vpn_command() {
             ;;
         vpn.openvpn.set_client)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ovpn_name="$(json_get_string "$payload_file" '@.name')"; ovpn_enabled="$(json_get_bool "$payload_file" '@.enabled')"; ovpn_config="$(json_get_string "$payload_file" '@.config')"; rm -f "$payload_file"; ovpn_ref="wrtmonitor_$ovpn_name"; ovpn_b64="$(printf '%s\n' "$ovpn_config" | base64 | tr -d '\n')"; uci set "openvpn.$ovpn_ref=openvpn"; uci set "openvpn.$ovpn_ref.enabled=$( [ "$ovpn_enabled" = true ] && printf 1 || printf 0 )"; uci set "openvpn.$ovpn_ref.wrtmonitor_name=$ovpn_name"; uci set "openvpn.$ovpn_ref.wrtmonitor_config_b64=$ovpn_b64"
-            if openvpn_render_configs && /etc/init.d/openvpn restart >/dev/null 2>&1; then result="$(command_success_result "OpenVPN client imported")"; else status=failed; result="$(command_failed_result "failed to import OpenVPN client")"; fi
+            if openvpn_render_configs && service_action openvpn restart 20 >/dev/null 2>&1; then result="$(command_success_result "OpenVPN client imported")"; else status=failed; result="$(command_failed_result "failed to import OpenVPN client")"; fi
             ;;
         vpn.openvpn.delete_client)
-            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ovpn_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; ovpn_ref="wrtmonitor_$ovpn_name"; if uci -q delete "openvpn.$ovpn_ref" && uci commit openvpn; then rm -f "${WRTMONITOR_SYSTEM_ROOT:-}/etc/openvpn/wrtmonitor-$ovpn_ref.conf"; /etc/init.d/openvpn restart >/dev/null 2>&1 || true; result="$(command_success_result "OpenVPN client deleted")"; else status=failed; result="$(command_failed_result "OpenVPN client not found")"; fi
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ovpn_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; ovpn_ref="wrtmonitor_$ovpn_name"; if uci -q delete "openvpn.$ovpn_ref" && uci commit openvpn; then rm -f "${WRTMONITOR_SYSTEM_ROOT:-}/etc/openvpn/wrtmonitor-$ovpn_ref.conf"; service_action openvpn restart 20 >/dev/null 2>&1 || true; result="$(command_success_result "OpenVPN client deleted")"; else status=failed; result="$(command_failed_result "OpenVPN client not found")"; fi
             ;;
         vpn.openvpn.set_enabled)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ovpn_name="$(json_get_string "$payload_file" '@.name')"; ovpn_enabled="$(json_get_bool "$payload_file" '@.enabled')"; rm -f "$payload_file"; ovpn_ref="wrtmonitor_$ovpn_name"
-            if uci -q get "openvpn.$ovpn_ref" >/dev/null 2>&1 && uci set "openvpn.$ovpn_ref.enabled=$( [ "$ovpn_enabled" = true ] && printf 1 || printf 0 )" && uci commit openvpn && openvpn_render_configs && /etc/init.d/openvpn restart >/dev/null 2>&1; then result="$(command_success_result "OpenVPN profile state updated")"; else status=failed; result="$(command_failed_result "OpenVPN profile not found or service restart failed")"; fi
+            if uci -q get "openvpn.$ovpn_ref" >/dev/null 2>&1 && uci set "openvpn.$ovpn_ref.enabled=$( [ "$ovpn_enabled" = true ] && printf 1 || printf 0 )" && uci commit openvpn && openvpn_render_configs && service_action openvpn restart 20 >/dev/null 2>&1; then result="$(command_success_result "OpenVPN profile state updated")"; else status=failed; result="$(command_failed_result "OpenVPN profile not found or service restart failed")"; fi
             ;;
         vpn.openvpn.export_client)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; ovpn_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; ovpn_ref="wrtmonitor_$ovpn_name"; ovpn_b64="$(uci -q get "openvpn.$ovpn_ref.wrtmonitor_config_b64" 2>/dev/null || true)"
@@ -46,10 +46,10 @@ handle_vpn_command() {
             ;;
         vpn.policy.set)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; policy_section="$(json_get_string "$payload_file" '@.section')"; policy_name="$(json_get_string "$payload_file" '@.name')"; policy_enabled="$(json_get_bool "$payload_file" '@.enabled')"; policy_iface="$(json_get_string "$payload_file" '@.interface')"; policy_source="$(json_get_string "$payload_file" '@.source')"; policy_destination="$(json_get_string "$payload_file" '@.destination')"; policy_protocol="$(json_get_string "$payload_file" '@.protocol')"; rm -f "$payload_file"; policy_ref="${policy_section:-wrtmonitor_$policy_name}"; uci set "pbr.$policy_ref=policy"; uci set "pbr.$policy_ref.name=$policy_name"; uci set "pbr.$policy_ref.enabled=$( [ "$policy_enabled" = true ] && printf 1 || printf 0 )"; uci set "pbr.$policy_ref.interface=$policy_iface"; uci -q delete "pbr.$policy_ref.src_addr" || true; uci -q delete "pbr.$policy_ref.dest_addr" || true; [ -z "$policy_source" ] || uci set "pbr.$policy_ref.src_addr=$policy_source"; [ -z "$policy_destination" ] || uci set "pbr.$policy_ref.dest_addr=$policy_destination"; uci set "pbr.$policy_ref.proto=$policy_protocol"
-            if uci commit pbr && /etc/init.d/pbr restart >/dev/null 2>&1; then result="$(command_success_result "VPN policy updated")"; else status=failed; result="$(command_failed_result "failed to update VPN policy")"; fi
+            if uci commit pbr && service_action pbr restart 20 >/dev/null 2>&1; then result="$(command_success_result "VPN policy updated")"; else status=failed; result="$(command_failed_result "failed to update VPN policy")"; fi
             ;;
         vpn.policy.delete)
-            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; policy_section="$(json_get_string "$payload_file" '@.section')"; policy_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; policy_ref="${policy_section:-wrtmonitor_$policy_name}"; if uci -q delete "pbr.$policy_ref" && uci commit pbr; then /etc/init.d/pbr restart >/dev/null 2>&1 || true; result="$(command_success_result "VPN policy deleted")"; else status=failed; result="$(command_failed_result "VPN policy not found")"; fi
+            payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; policy_section="$(json_get_string "$payload_file" '@.section')"; policy_name="$(json_get_string "$payload_file" '@.name')"; rm -f "$payload_file"; policy_ref="${policy_section:-wrtmonitor_$policy_name}"; if uci -q delete "pbr.$policy_ref" && uci commit pbr; then service_action pbr restart 20 >/dev/null 2>&1 || true; result="$(command_success_result "VPN policy deleted")"; else status=failed; result="$(command_failed_result "VPN policy not found")"; fi
             ;;
         *) return 1 ;;
     esac
