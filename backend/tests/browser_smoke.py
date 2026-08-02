@@ -716,6 +716,17 @@ def run() -> None:
                         "node => node.scrollHeight > node.clientHeight"
                     )
                     assert page.get_by_text("Обновить каталог", exact=True).count() == 1
+                    updates = page.locator("details.package-updates")
+                    assert updates.count() == 1
+                    assert updates.get_attribute("open") is None
+                    updates.locator(":scope > summary").click()
+                    assert updates.get_attribute("open") is not None
+                    assert (
+                        updates.locator(".package-list--updates").evaluate(
+                            "node => getComputedStyle(node).overflowY"
+                        )
+                        == "auto"
+                    )
                     assert (
                         page.get_by_text("Создать резервную копию", exact=True).count()
                         == 1
