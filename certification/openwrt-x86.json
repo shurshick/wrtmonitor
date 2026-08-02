@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-02T15:33:25.117545+00:00",
-  "router": "openwrt-x86 / innotek GmbH VirtualBox / OpenWrt 22.03.5 r20134-5f15225c1e",
+  "generated_at": "2026-08-02T18:08:02.174710+00:00",
+  "router": "OpenWrt x86 / innotek GmbH VirtualBox / OpenWrt 22.03.5 r20134-5f15225c1e",
   "target": "openwrt-x86",
   "contract_version": 1,
   "commands": {

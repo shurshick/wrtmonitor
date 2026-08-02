@@ -1188,3 +1188,19 @@ def test_daemon_recovers_unfinished_transactions_after_restart():
     assert "transaction_runtime_ready" in transactions
     assert 'transaction_restore "$command_id"' in transactions
     assert "agent restarted before transaction confirmation" in transactions
+
+
+def test_encrypted_dns_install_restores_plain_dns_and_checks_resolution():
+    runtime = read_text(LIB_DIR / "command_runtime.sh")
+    network = read_text(LIB_DIR / "command_network.sh")
+    verification = read_text(LIB_DIR / "verification.sh")
+
+    assert "restore_package_dns_backup" in runtime
+    assert "doh_backup_noresolv" in runtime
+    assert "dns_resolution_works" in runtime
+    assert "configure_doh cloudflare false" in network
+    assert "configure_dot cloudflare false" in network
+    assert "encrypted_dns_install_ok" in network
+    assert "restore_plain_dns" in network
+    assert "did not preserve working name resolution" in network
+    assert "dns_resolution_works" in verification

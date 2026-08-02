@@ -304,9 +304,24 @@ handle_network_command() {
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; dns_mode="$(json_get_string "$payload_file" '@.mode')"; rm -f "$payload_file"
             [ -n "$dns_mode" ] || case "$command_type" in dns.install_dot) dns_mode="dot" ;; dns.install_doh) dns_mode="doh" ;; esac
             case "$dns_mode" in dot) dns_package=stubby ;; doh) dns_package=https-dns-proxy ;; *) dns_package="" ;; esac
-            if [ -n "$dns_package" ] && package_refresh_indexes >/dev/null 2>&1 && package_apply install "$dns_package" >/dev/null 2>&1; then
+            backup_plain_dns
+            encrypted_dns_install_ok=0
+            if [ -n "$dns_package" ] && package_refresh_indexes >/dev/null 2>&1 && package_apply install "$dns_package" >/dev/null 2>&1 \
+                && { [ "$dns_mode" != dot ] || configure_dot cloudflare false; } \
+                && { [ "$dns_mode" != doh ] || configure_doh cloudflare false; } \
+                && dns_resolution_works; then
+                encrypted_dns_install_ok=1
+            else
+                case "$dns_mode" in
+                    dot) configure_dot cloudflare false >/dev/null 2>&1 || true ;;
+                    doh) configure_doh cloudflare false >/dev/null 2>&1 || true ;;
+                esac
+                restore_plain_dns
+                service_action dnsmasq restart 20 >/dev/null 2>&1 || true
+            fi
+            if [ "$encrypted_dns_install_ok" = 1 ]; then
                 result="$(command_success_result "encrypted DNS package installed" "\"mode\":\"$(json_escape "$dns_mode")\",\"package\":\"$(json_escape "$dns_package")\"")"
-            else status="failed"; result="$(command_failed_result "failed to install encrypted DNS package")"; fi
+            else status="failed"; result="$(command_failed_result "encrypted DNS package installation did not preserve working name resolution" "post_condition_failed")"; fi
             ;;
         dns.set_encrypted|dns.set_dot|dns.set_doh)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; dns_mode="$(json_get_string "$payload_file" '@.mode')"; dns_provider="$(json_get_string "$payload_file" '@.provider')"; dns_enabled="$(json_get_bool "$payload_file" '@.enabled')"; rm -f "$payload_file"

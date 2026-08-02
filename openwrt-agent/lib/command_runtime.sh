@@ -99,18 +99,57 @@ backup_plain_dns() {
 }
 
 restore_plain_dns() {
-    [ "$(uci -q get wrtmonitor.main.dns_backup_present 2>/dev/null || true)" = 1 ] || return 0
+    if [ "$(uci -q get wrtmonitor.main.dns_backup_present 2>/dev/null || true)" != 1 ]; then
+        restore_package_dns_backup
+        return
+    fi
     uci -q delete 'dhcp.@dnsmasq[0].server' || true
     for server in $(uci -q get wrtmonitor.main.dns_backup_servers 2>/dev/null || true); do
         uci add_list "dhcp.@dnsmasq[0].server=$server"
     done
     old_noresolv="$(uci -q get wrtmonitor.main.dns_backup_noresolv 2>/dev/null || printf unset)"
     if [ "$old_noresolv" = unset ]; then uci -q delete 'dhcp.@dnsmasq[0].noresolv' || true; else uci set "dhcp.@dnsmasq[0].noresolv=$old_noresolv"; fi
+    uci -q delete 'dhcp.@dnsmasq[0].doh_backup_noresolv' || true
+    uci -q delete 'dhcp.@dnsmasq[0].doh_backup_server' || true
+    uci -q delete 'dhcp.@dnsmasq[0].doh_server' || true
     uci -q delete wrtmonitor.main.dns_backup_present || true
     uci -q delete wrtmonitor.main.dns_backup_noresolv || true
     uci -q delete wrtmonitor.main.dns_backup_servers || true
     uci commit wrtmonitor
     uci commit dhcp
+}
+
+restore_package_dns_backup() {
+    package_noresolv="$(uci -q get 'dhcp.@dnsmasq[0].doh_backup_noresolv' 2>/dev/null || printf unset)"
+    package_servers="$(uci -q get 'dhcp.@dnsmasq[0].doh_backup_server' 2>/dev/null || true)"
+    current_servers="$(uci -q get 'dhcp.@dnsmasq[0].server' 2>/dev/null || true)"
+    encrypted_server_found=0
+    for server in $current_servers; do
+        case "$server" in
+            127.0.0.1#5053|127.0.0.1#5054|127.0.0.1#5453) encrypted_server_found=1 ;;
+        esac
+    done
+    [ "$package_noresolv" != unset ] || [ -n "$package_servers" ] || [ "$encrypted_server_found" = 1 ] || return 0
+
+    uci -q delete 'dhcp.@dnsmasq[0].server' || true
+    for server in $package_servers; do
+        case "$server" in
+            127.0.0.1#5053|127.0.0.1#5054|127.0.0.1#5453) continue ;;
+        esac
+        uci add_list "dhcp.@dnsmasq[0].server=$server"
+    done
+    case "$package_noresolv" in
+        unset|-1) uci -q delete 'dhcp.@dnsmasq[0].noresolv' || true ;;
+        *) uci set "dhcp.@dnsmasq[0].noresolv=$package_noresolv" ;;
+    esac
+    uci -q delete 'dhcp.@dnsmasq[0].doh_backup_noresolv' || true
+    uci -q delete 'dhcp.@dnsmasq[0].doh_backup_server' || true
+    uci -q delete 'dhcp.@dnsmasq[0].doh_server' || true
+    uci commit dhcp
+}
+
+dns_resolution_works() {
+    nslookup openwrt.org 127.0.0.1 >/dev/null 2>&1
 }
 
 remove_dnsmasq_server() {
@@ -128,8 +167,8 @@ configure_dot() {
         service_action stubby stop 20 >/dev/null 2>&1 || true
         service_action stubby disable 20 >/dev/null 2>&1 || true
         restore_plain_dns
-        service_action dnsmasq restart 20 >/dev/null 2>&1
-        return
+        service_action dnsmasq restart 20 >/dev/null 2>&1 && dns_resolution_works
+        return $?
     fi
     provider_data="$(encrypted_dns_provider dot "$provider")" || return 1
     addresses="${provider_data%%|*}"
@@ -157,7 +196,7 @@ configure_dot() {
     [ ! -x /etc/init.d/https-dns-proxy ] || { service_action https-dns-proxy stop 20 >/dev/null 2>&1 || true; service_action https-dns-proxy disable 20 >/dev/null 2>&1 || true; }
     /etc/init.d/stubby enable >/dev/null 2>&1
     service_action stubby restart 20 >/dev/null 2>&1
-    service_action dnsmasq restart 20 >/dev/null 2>&1
+    service_action dnsmasq restart 20 >/dev/null 2>&1 && dns_resolution_works
 }
 
 configure_doh() {
@@ -168,8 +207,8 @@ configure_doh() {
         service_action https-dns-proxy stop 20 >/dev/null 2>&1 || true
         service_action https-dns-proxy disable 20 >/dev/null 2>&1 || true
         restore_plain_dns
-        service_action dnsmasq restart 20 >/dev/null 2>&1
-        return
+        service_action dnsmasq restart 20 >/dev/null 2>&1 && dns_resolution_works
+        return $?
     fi
     case "$provider" in
         cloudflare) resolver_url='https://cloudflare-dns.com/dns-query'; bootstrap_dns='1.1.1.1,1.0.0.1' ;;
@@ -194,7 +233,7 @@ configure_doh() {
     uci commit https-dns-proxy && uci commit dhcp
     /etc/init.d/https-dns-proxy enable >/dev/null 2>&1
     service_action https-dns-proxy restart 20 >/dev/null 2>&1
-    service_action dnsmasq restart 20 >/dev/null 2>&1
+    service_action dnsmasq restart 20 >/dev/null 2>&1 && dns_resolution_works
 }
 
 resolve_wifi_radio() {

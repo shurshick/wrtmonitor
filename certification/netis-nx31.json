@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-02T16:12:59.230340+00:00",
-  "router": "netis-nx31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
+  "generated_at": "2026-08-02T18:06:50.794978+00:00",
+  "router": "Netis NX31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
   "target": "netis-nx31",
   "contract_version": 1,
   "commands": {

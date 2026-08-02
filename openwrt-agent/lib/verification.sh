@@ -67,6 +67,8 @@ verify_package_postcondition() {
     package_list_installed 2>/dev/null | grep -Eq "^${package}([|[:space:]]|$)" && installed=1 || installed=0
     if [ "$command_type" = maintenance.package.remove ]; then
         [ "$installed" = 0 ]
+    elif [ "$command_type" = dns.install_dot ] || [ "$command_type" = dns.install_doh ]; then
+        [ "$installed" = 1 ] && dns_resolution_works
     else
         [ "$installed" = 1 ]
     fi
