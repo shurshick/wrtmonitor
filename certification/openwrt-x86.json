@@ -1,0 +1,827 @@
+{
+  "generated_at": "2026-08-02T15:33:25.117545+00:00",
+  "router": "openwrt-x86 / innotek GmbH VirtualBox / OpenWrt 22.03.5 r20134-5f15225c1e",
+  "target": "openwrt-x86",
+  "contract_version": 1,
+  "commands": {
+    "agent.disconnect": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.disconnect"
+    },
+    "agent.rollback": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.rollback"
+    },
+    "agent.rotate_token": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.rotate_token"
+    },
+    "agent.set_auto_update": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.set_auto_update"
+    },
+    "agent.set_interval": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.set_interval"
+    },
+    "agent.update": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.update"
+    },
+    "client.set_blocked": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/client.set_blocked"
+    },
+    "client.set_policy": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/client.set_policy"
+    },
+    "dhcp.delete_lease": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/dhcp.delete_lease"
+    },
+    "dhcp.set_lease": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/dhcp.set_lease"
+    },
+    "dhcp.set_pool": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/dhcp.set_pool"
+    },
+    "diagnostics.run": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/diagnostics.run"
+    },
+    "dns.install_doh": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/dns.install_doh"
+    },
+    "dns.install_dot": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/dns.install_dot"
+    },
+    "dns.set_doh": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/dns.set_doh"
+    },
+    "dns.set_dot": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/dns.set_dot"
+    },
+    "dns.set_servers": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/dns.set_servers"
+    },
+    "firewall.delete_forwarding": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.delete_forwarding"
+    },
+    "firewall.delete_port_forward": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.delete_port_forward"
+    },
+    "firewall.delete_redirect": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.delete_redirect"
+    },
+    "firewall.delete_rule": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.delete_rule"
+    },
+    "firewall.delete_zone": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.delete_zone"
+    },
+    "firewall.set_forwarding": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.set_forwarding"
+    },
+    "firewall.set_port_forward": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.set_port_forward"
+    },
+    "firewall.set_redirect": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.set_redirect"
+    },
+    "firewall.set_rule": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.set_rule"
+    },
+    "firewall.set_zone": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/firewall.set_zone"
+    },
+    "maintenance.backup.create": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.backup.create"
+    },
+    "maintenance.backup.restore": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.backup.restore"
+    },
+    "maintenance.cron.read": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.cron.read"
+    },
+    "maintenance.cron.set": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.cron.set"
+    },
+    "maintenance.diagnostics.bundle": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.diagnostics.bundle"
+    },
+    "maintenance.logs.read": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.logs.read"
+    },
+    "maintenance.module.configure": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.module.configure"
+    },
+    "maintenance.package.install": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.package.install"
+    },
+    "maintenance.package.remove": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.package.remove"
+    },
+    "maintenance.package.upgrade": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.package.upgrade"
+    },
+    "maintenance.packages.refresh": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.packages.refresh"
+    },
+    "maintenance.process.signal": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.process.signal"
+    },
+    "maintenance.processes.read": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.processes.read"
+    },
+    "maintenance.recovery.disable": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.recovery.disable"
+    },
+    "maintenance.recovery.enable": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.recovery.enable"
+    },
+    "maintenance.service.set": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.service.set"
+    },
+    "maintenance.services.read": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.services.read"
+    },
+    "maintenance.sysupgrade.apply": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.sysupgrade.apply"
+    },
+    "maintenance.sysupgrade.check": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/maintenance.sysupgrade.check"
+    },
+    "network.delete_route": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.delete_route"
+    },
+    "network.delete_segment": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.delete_segment"
+    },
+    "network.delete_vlan": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.delete_vlan"
+    },
+    "network.interface_restart": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.interface_restart"
+    },
+    "network.interfaces": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/network.interfaces"
+    },
+    "network.restart": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.restart"
+    },
+    "network.set_ddns": {
+      "status": "not_applicable",
+      "idempotency": "not_applicable",
+      "timeout": "not_applicable",
+      "redelivery": "not_applicable",
+      "post_condition": "not_applicable",
+      "rollback": "not_applicable",
+      "evidence": "certification/evidence/openwrt-x86/network.set_ddns"
+    },
+    "network.set_ipv6": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.set_ipv6"
+    },
+    "network.set_lan": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.set_lan"
+    },
+    "network.set_multiwan": {
+      "status": "not_applicable",
+      "idempotency": "not_applicable",
+      "timeout": "not_applicable",
+      "redelivery": "not_applicable",
+      "post_condition": "not_applicable",
+      "rollback": "not_applicable",
+      "evidence": "certification/evidence/openwrt-x86/network.set_multiwan"
+    },
+    "network.set_route": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.set_route"
+    },
+    "network.set_segment": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.set_segment"
+    },
+    "network.set_upnp": {
+      "status": "not_applicable",
+      "idempotency": "not_applicable",
+      "timeout": "not_applicable",
+      "redelivery": "not_applicable",
+      "post_condition": "not_applicable",
+      "rollback": "not_applicable",
+      "evidence": "certification/evidence/openwrt-x86/network.set_upnp"
+    },
+    "network.set_vlan": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.set_vlan"
+    },
+    "network.set_wan": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/network.set_wan"
+    },
+    "qos.set_sqm": {
+      "status": "not_applicable",
+      "idempotency": "not_applicable",
+      "timeout": "not_applicable",
+      "redelivery": "not_applicable",
+      "post_condition": "not_applicable",
+      "rollback": "not_applicable",
+      "evidence": "certification/evidence/openwrt-x86/qos.set_sqm"
+    },
+    "router.reboot": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/router.reboot"
+    },
+    "system.restart_service": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/system.restart_service"
+    },
+    "system.set_hostname": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/system.set_hostname"
+    },
+    "system.set_ntp": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/system.set_ntp"
+    },
+    "system.set_timezone": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/system.set_timezone"
+    },
+    "vpn.openvpn.delete_client": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.openvpn.delete_client"
+    },
+    "vpn.openvpn.export_client": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/vpn.openvpn.export_client"
+    },
+    "vpn.openvpn.set_client": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.openvpn.set_client"
+    },
+    "vpn.openvpn.set_enabled": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.openvpn.set_enabled"
+    },
+    "vpn.policy.delete": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.policy.delete"
+    },
+    "vpn.policy.set": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.policy.set"
+    },
+    "vpn.wireguard.delete_interface": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.wireguard.delete_interface"
+    },
+    "vpn.wireguard.delete_peer": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.wireguard.delete_peer"
+    },
+    "vpn.wireguard.export_peer": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/vpn.wireguard.export_peer"
+    },
+    "vpn.wireguard.set_interface": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.wireguard.set_interface"
+    },
+    "vpn.wireguard.set_peer": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/vpn.wireguard.set_peer"
+    },
+    "wifi.add_ssid": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.add_ssid"
+    },
+    "wifi.delete_ssid": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.delete_ssid"
+    },
+    "wifi.set_channel": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_channel"
+    },
+    "wifi.set_country": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_country"
+    },
+    "wifi.set_enabled": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_enabled"
+    },
+    "wifi.set_guest": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_guest"
+    },
+    "wifi.set_mesh": {
+      "status": "not_applicable",
+      "idempotency": "not_applicable",
+      "timeout": "not_applicable",
+      "redelivery": "not_applicable",
+      "post_condition": "not_applicable",
+      "rollback": "not_applicable",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_mesh"
+    },
+    "wifi.set_password": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_password"
+    },
+    "wifi.set_radio": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_radio"
+    },
+    "wifi.set_schedule": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_schedule"
+    },
+    "wifi.set_ssid": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.set_ssid"
+    },
+    "wifi.status": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/openwrt-x86/wifi.status"
+    },
+    "wifi.update_ssid": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "paired_command",
+      "evidence": "certification/evidence/openwrt-x86/wifi.update_ssid"
+    }
+  }
+}

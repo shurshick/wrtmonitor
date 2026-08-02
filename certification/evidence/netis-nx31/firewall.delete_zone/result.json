@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T15:52:59.944370+00:00",
+  "command": "firewall.delete_zone",
+  "payload": {
+    "section": "wrtmonitor_cert_zone",
+    "name": "wrtmonitor_cert"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "693bc07a-ab08-473c-abd3-deec3db0fccb",
+      "state": "confirmed",
+      "configs": "firewall",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 20.984,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "firewall",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

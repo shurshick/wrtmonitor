@@ -1,0 +1,55 @@
+{
+  "tested_at": "2026-08-02T14:59:13.865211+00:00",
+  "command": "client.set_policy",
+  "payload": {
+    "mac": "02:00:00:00:ce:01",
+    "blocked": false,
+    "schedule": {
+      "enabled": false,
+      "weekdays": [],
+      "start": "",
+      "stop": ""
+    },
+    "qos": {
+      "priority": "normal",
+      "download_kbps": 0,
+      "upload_kbps": 0
+    },
+    "dns": {
+      "provider": "none"
+    }
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "75841d3c-877a-4bcf-b0c2-1c100e294fec",
+      "state": "confirmed",
+      "configs": "firewall",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 15.812,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "client",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

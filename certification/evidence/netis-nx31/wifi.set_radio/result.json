@@ -1,0 +1,43 @@
+{
+  "tested_at": "2026-08-02T15:46:47.832333+00:00",
+  "command": "wifi.set_radio",
+  "payload": {
+    "radio": "radio0",
+    "channel": "1",
+    "country": "RU",
+    "htmode": "VHT160"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "799dbb25-4e48-4f6c-b1ee-5fde1c6151ac",
+      "state": "confirmed",
+      "configs": "wireless",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 19.047,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

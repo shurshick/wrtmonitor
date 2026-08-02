@@ -1,0 +1,37 @@
+{
+  "tested_at": "2026-08-02T16:03:13.240198+00:00",
+  "command": "maintenance.package.upgrade",
+  "payload": {
+    "package": "nano"
+  },
+  "status": "success",
+  "result": {
+    "output": "OK: 36.3 MiB in 205 packages",
+    "manager": "apk",
+    "message": "package upgraded",
+    "package": "nano"
+  },
+  "error": null,
+  "elapsed_seconds": 18.844,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "package_state",
+    "verification": {
+      "required": true,
+      "mode": "package_state",
+      "fail_closed": true
+    },
+    "rollback": "package_manager_transaction"
+  }
+}

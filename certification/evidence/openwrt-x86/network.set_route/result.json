@@ -1,0 +1,45 @@
+{
+  "tested_at": "2026-08-02T15:16:37.717527+00:00",
+  "command": "network.set_route",
+  "payload": {
+    "section": "wrtmonitor_cert_route",
+    "name": "wrtmonitor_cert_route",
+    "interface": "lan",
+    "target": "198.51.100.0/24",
+    "gateway": "",
+    "metric": 250
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "2227249a-aa3a-4384-9dea-1f45990b98b3",
+      "state": "confirmed",
+      "configs": "network",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 18.219,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

@@ -157,7 +157,7 @@ transaction_restore() {
         command -v openvpn_render_configs >/dev/null 2>&1 && openvpn_render_configs
         service_action openvpn restart 20 >/dev/null 2>&1 || restore_status=1
     fi
-    if printf '%s' "$configs" | grep -qw pbr; then service_action pbr restart 20 >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw pbr; then service_restart_if_enabled pbr config.enabled pbr >/dev/null 2>&1 || restore_status=1; fi
     transaction_set_state "$command_id" "rolled_back"
     return "$restore_status"
 }

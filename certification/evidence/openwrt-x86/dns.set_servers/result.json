@@ -1,0 +1,43 @@
+{
+  "tested_at": "2026-08-02T15:22:16.607421+00:00",
+  "command": "dns.set_servers",
+  "payload": {
+    "servers": [
+      "1.1.1.1",
+      "9.9.9.9"
+    ]
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "bca5101b-8528-42cf-a90e-30534b0bbe1d",
+      "state": "confirmed",
+      "configs": "dhcp",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 15.922,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "dns",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

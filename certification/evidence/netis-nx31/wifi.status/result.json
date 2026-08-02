@@ -1,0 +1,196 @@
+{
+  "tested_at": "2026-08-02T15:36:25.485819+00:00",
+  "command": "wifi.status",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "radios": [
+      {
+        "id": "radio0",
+        "up": true,
+        "band": "2g",
+        "name": "radio0",
+        "ssid": [
+          "NetisNX31"
+        ],
+        "htmode": "VHT160",
+        "survey": {
+          "rx_ms": 942734,
+          "state": "observed",
+          "tx_ms": 169969,
+          "reason": "",
+          "busy_ms": 5975737,
+          "active_ms": 63666326,
+          "interface": "phy0-ap0",
+          "noise_dbm": -74,
+          "frequency_mhz": 2412,
+          "utilization_percent": 9
+        },
+        "channel": "1",
+        "country": "RU",
+        "disabled": false,
+        "schedule": {
+          "stop": "",
+          "start": "",
+          "enabled": false,
+          "weekdays": []
+        },
+        "encryption": "none",
+        "interfaces": [
+          {
+            "id": "default_radio0",
+            "mode": "ap",
+            "ssid": "NetisNX31",
+            "index": 0,
+            "hidden": false,
+            "enabled": true,
+            "isolate": false,
+            "mesh_id": "",
+            "network": "lan",
+            "encryption": "none",
+            "ieee80211k": false,
+            "ieee80211r": false,
+            "bss_transition": false,
+            "mobility_domain": ""
+          }
+        ],
+        "supported_channels": [
+          "auto",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+        ]
+      },
+      {
+        "id": "radio1",
+        "up": true,
+        "band": "5g",
+        "name": "radio1",
+        "ssid": [
+          "NetisNX31"
+        ],
+        "htmode": "VHT160",
+        "survey": {
+          "rx_ms": 2267632,
+          "state": "observed",
+          "tx_ms": 196077,
+          "reason": "",
+          "busy_ms": 2491356,
+          "active_ms": 63667568,
+          "interface": "phy1-ap0",
+          "noise_dbm": -92,
+          "frequency_mhz": 5180,
+          "utilization_percent": 3
+        },
+        "channel": "36",
+        "country": "RU",
+        "disabled": false,
+        "schedule": {
+          "stop": "",
+          "start": "",
+          "enabled": false,
+          "weekdays": []
+        },
+        "encryption": "none",
+        "interfaces": [
+          {
+            "id": "default_radio1",
+            "mode": "ap",
+            "ssid": "NetisNX31",
+            "index": 1,
+            "hidden": false,
+            "enabled": true,
+            "isolate": false,
+            "mesh_id": "",
+            "network": "lan",
+            "encryption": "none",
+            "ieee80211k": false,
+            "ieee80211r": false,
+            "bss_transition": false,
+            "mobility_domain": ""
+          }
+        ],
+        "supported_channels": [
+          "auto",
+          "36",
+          "40",
+          "44",
+          "48",
+          "52",
+          "56",
+          "60",
+          "64",
+          "100",
+          "104",
+          "108",
+          "112",
+          "116",
+          "120",
+          "124",
+          "128",
+          "132",
+          "136",
+          "140",
+          "144",
+          "149",
+          "153",
+          "157",
+          "161",
+          "165",
+          "169",
+          "173",
+          "177"
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "band": "2g",
+        "ssid": "NetisNX31",
+        "clients": {},
+        "interface": "phy0-ap0"
+      },
+      {
+        "band": "5g",
+        "ssid": "NetisNX31",
+        "clients": {},
+        "interface": "phy1-ap0"
+      }
+    ],
+    "available": true
+  },
+  "error": null,
+  "elapsed_seconds": 23.297,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

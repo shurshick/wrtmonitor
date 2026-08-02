@@ -1,0 +1,32 @@
+{
+  "tested_at": "2026-08-02T15:24:17.493309+00:00",
+  "command": "maintenance.recovery.enable",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "message": "recovery mode enabled"
+  },
+  "error": null,
+  "elapsed_seconds": 7.531,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

@@ -1,0 +1,179 @@
+{
+  "tested_at": "2026-08-02T14:56:23.019581+00:00",
+  "command": "maintenance.services.read",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "message": "service list collected",
+    "services": [
+      {
+        "name": "boot",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "cron",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "dnsmasq",
+        "enabled": false,
+        "running": true
+      },
+      {
+        "name": "done",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "dropbear",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "firewall",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "gpio_switch",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "https-dns-proxy",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "led",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "log",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "network",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "nlbwmon",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "odhcpd",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "openssl",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "openvpn",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "pbr",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "rpcd",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "stubby",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "sysctl",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "sysfixtime",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "sysntpd",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "system",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "ucitrack",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "uhttpd",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "umount",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "urandom_seed",
+        "enabled": true,
+        "running": false
+      },
+      {
+        "name": "urngd",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "wpad",
+        "enabled": true,
+        "running": true
+      },
+      {
+        "name": "wrtmonitor",
+        "enabled": true,
+        "running": true
+      }
+    ]
+  },
+  "error": null,
+  "elapsed_seconds": 8.343,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

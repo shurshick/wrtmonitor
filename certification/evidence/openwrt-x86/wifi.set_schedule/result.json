@@ -1,0 +1,44 @@
+{
+  "tested_at": "2026-08-02T15:00:58.216822+00:00",
+  "command": "wifi.set_schedule",
+  "payload": {
+    "radio": "radio0",
+    "enabled": false,
+    "weekdays": [],
+    "start": "",
+    "stop": ""
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "84ba1d93-f7d6-41f0-be1e-da01da7dc57c",
+      "state": "confirmed",
+      "configs": "wireless wrtmonitor",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 13.813,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

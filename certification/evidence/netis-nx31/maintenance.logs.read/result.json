@@ -1,0 +1,35 @@
+{
+  "tested_at": "2026-08-02T15:37:12.027395+00:00",
+  "command": "maintenance.logs.read",
+  "payload": {
+    "lines": 50
+  },
+  "status": "success",
+  "result": {
+    "logs": "Sun Aug  2 17:38:21 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 17:38:22 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 17:38:23 2026 daemon.notice netifd: Interface 'wan6' has lost the connection\nSun Aug  2 17:38:23 2026 daemon.warn netifd: You have delegated IPv6-prefixes but haven't assigned them to any interface. Did you forget to set option ip6assign on your lan-interfaces?\nSun Aug  2 17:38:23 2026 daemon.notice netifd: Interface 'wan6' is now up\nSun Aug  2 17:38:24 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 17:38:24 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 17:38:27 2026 daemon.notice netifd: Interface 'wan6' has lost the connection\nSun Aug  2 17:38:29 2026 daemon.warn netifd: You have delegated IPv6-prefixes but haven't assigned them to any interface. Did you forget to set option ip6assign on your lan-interfaces?\nSun Aug  2 17:38:29 2026 daemon.notice netifd: Interface 'wan6' is now up\nSun Aug  2 17:38:29 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 17:38:30 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 17:38:39 2026 daemon.notice netifd: Interface 'wan6' has lost the connection\nSun Aug  2 17:38:39 2026 daemon.warn netifd: You have delegated IPv6-prefixes but haven't assigned them to any interface. Did you forget to set option ip6assign on your lan-interfaces?\nSun Aug  2 17:38:39 2026 daemon.notice netifd: Interface 'wan6' is now up\nSun Aug  2 17:38:39 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 17:38:41 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 17:40:39 2026 daemon.notice hostapd: phy1-ap0: AP-STA-DISCONNECTED 12:26:f5:bd:56:1e\nSun Aug  2 17:40:39 2026 daemon.info hostapd: phy1-ap0: STA 12:26:f5:bd:56:1e IEEE 802.11: disassociated due to inactivity\nSun Aug  2 17:40:40 2026 daemon.info hostapd: phy1-ap0: STA 12:26:f5:bd:56:1e IEEE 802.11: deauthenticated due to inactivity (timer DEAUTH/REMOVE)\nSun Aug  2 17:49:19 2026 daemon.info dnsmasq-dhcp[1]: DHCPREQUEST(br-lan) 192.168.31.221 00:e0:4c:68:06:9b\nSun Aug  2 17:49:19 2026 daemon.info dnsmasq-dhcp[1]: DHCPACK(br-lan) 192.168.31.221 00:e0:4c:68:06:9b odmin\nSun Aug  2 17:52:56 2026 authpriv.info dropbear[29030]: Child connection from 192.168.31.221:59440\nSun Aug  2 17:52:56 2026 authpriv.notice dropbear[29030]: Password auth succeeded for 'root' from 192.168.31.221:59440\nSun Aug  2 17:52:56 2026 authpriv.info dropbear[29030]: Exit (root) from <192.168.31.221:59440>: Exited normally\nSun Aug  2 18:23:04 2026 daemon.notice netifd: Interface 'wan6' has lost the connection\nSun Aug  2 18:23:05 2026 daemon.warn netifd: You have delegated IPv6-prefixes but haven't assigned them to any interface. Did you forget to set option ip6assign on your lan-interfaces?\nSun Aug  2 18:23:05 2026 daemon.notice netifd: Interface 'wan6' is now up\nSun Aug  2 18:23:06 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 18:23:07 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 18:23:09 2026 daemon.notice netifd: Interface 'wan6' has lost the connection\nSun Aug  2 18:23:09 2026 daemon.notice netifd: Interface 'wan6' is now up\nSun Aug  2 18:23:09 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 18:23:10 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 18:23:13 2026 daemon.notice netifd: Interface 'wan6' has lost the connection\nSun Aug  2 18:23:14 2026 daemon.notice netifd: Interface 'wan6' is now up\nSun Aug  2 18:23:14 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 18:23:16 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 18:23:25 2026 daemon.notice netifd: Interface 'wan6' has lost the connection\nSun Aug  2 18:23:25 2026 daemon.notice netifd: Interface 'wan6' is now up\nSun Aug  2 18:23:25 2026 user.notice firewall: Reloading firewall due to ifup of wan6 (eth1)\nSun Aug  2 18:23:26 2026 user.notice nlbwmon: Reloading nlbwmon due to ifup of wan6 (eth1)\nSun Aug  2 18:25:16 2026 daemon.notice netifd: wan (2284): udhcpc: sending renew to server 192.168.1.1\nSun Aug  2 18:25:16 2026 daemon.notice netifd: wan (2284): udhcpc: lease of 192.168.1.137 obtained from 192.168.1.1, lease time 25200\nSun Aug  2 18:35:03 2026 authpriv.info dropbear[27086]: Child connection from 192.168.31.221:51019\nSun Aug  2 18:35:03 2026 authpriv.notice dropbear[27086]: Password auth succeeded for 'root' from 192.168.31.221:51019\nSun Aug  2 18:35:03 2026 authpriv.info dropbear[27086]: Exit (root) from <192.168.31.221:51019>: Error reading: Connection reset by peer\nSun Aug  2 18:35:34 2026 authpriv.info dropbear[5490]: Child connection from 192.168.31.221:50986\nSun Aug  2 18:35:34 2026 authpriv.notice dropbear[5490]: Password auth succeeded for 'root' from 192.168.31.221:50986\nSun Aug  2 18:35:36 2026 user.info upgrade: Saving config files...",
+    "message": "system log collected"
+  },
+  "error": null,
+  "elapsed_seconds": 23.328,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T16:12:59.230340+00:00",
+  "command": "wifi.set_mesh",
+  "payload": {
+    "radio": "radio0",
+    "enabled": false
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "e01d7b7b-1eb1-47bf-acd3-4a7bc1db8e26",
+      "state": "confirmed",
+      "configs": "wireless",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 267.422,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T15:46:28.794575+00:00",
+  "command": "wifi.set_country",
+  "payload": {
+    "radio": "radio0",
+    "country": "RU"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "8420142f-c273-428b-aa12-4ff81c416dd6",
+      "state": "confirmed",
+      "configs": "wireless",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 19.062,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

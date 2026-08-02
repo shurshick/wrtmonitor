@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T16:01:37.099561+00:00",
+  "command": "network.set_wan",
+  "payload": {
+    "interface": "wan",
+    "protocol": "dhcp"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "8ef2c263-1879-4382-8b86-6d57f34a1a33",
+      "state": "confirmed",
+      "configs": "network",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 19.016,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

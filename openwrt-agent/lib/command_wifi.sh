@@ -49,6 +49,9 @@ handle_wifi_command() {
                 [ -n "$mesh_iface" ] || mesh_iface="$(uci add wireless wifi-iface)"
                 if uci set "wireless.$mesh_iface.device=$resolved_radio" && uci set "wireless.$mesh_iface.mode=mesh" && uci set "wireless.$mesh_iface.mesh_id=$mesh_id" && uci set "wireless.$mesh_iface.network=$network" && uci set "wireless.$mesh_iface.encryption=$encryption" && { [ "$encryption" = none ] || uci set "wireless.$mesh_iface.key=$wifi_key"; } && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi mesh enabled")"; else status="failed"; result="$(command_failed_result "failed to enable Wi-Fi mesh")"; fi
             elif [ "$enabled" = false ] && [ -n "$mesh_iface" ] && uci delete "wireless.$mesh_iface" && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi mesh disabled")"
+            elif [ "$enabled" = false ] && [ -z "$mesh_iface" ]; then
+                transaction_noop=1
+                result="$(command_success_result "Wi-Fi mesh is already disabled")"
             else status="failed"; result="$(command_failed_result "mesh interface or radio not found")"; fi
             ;;
         wifi.set_enabled)

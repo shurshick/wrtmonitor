@@ -1,0 +1,35 @@
+{
+  "tested_at": "2026-08-02T14:55:54.458360+00:00",
+  "command": "maintenance.logs.read",
+  "payload": {
+    "lines": 50
+  },
+  "status": "success",
+  "result": {
+    "logs": "Sun Aug  2 17:45:03 2026 authpriv.info dropbear[9255]: Exit (root) from <192.168.1.135:64519>: Error reading: Connection reset by peer\nSun Aug  2 17:45:27 2026 authpriv.info dropbear[6707]: Child connection from 192.168.1.135:64762\nSun Aug  2 17:45:27 2026 authpriv.notice dropbear[6707]: Password auth succeeded for 'root' from 192.168.1.135:64762\nSun Aug  2 17:45:28 2026 user.info upgrade: Saving config files...\nSun Aug  2 17:45:44 2026 authpriv.info dropbear[6707]: Exit (root) from <192.168.1.135:64762>: Exited normally\nSun Aug  2 17:46:10 2026 authpriv.info dropbear[10630]: Child connection from 192.168.1.135:55082\nSun Aug  2 17:46:10 2026 authpriv.notice dropbear[10630]: Password auth succeeded for 'root' from 192.168.1.135:55082\nSun Aug  2 17:46:10 2026 authpriv.info dropbear[10630]: Exit (root) from <192.168.1.135:55082>: Exited normally\nSun Aug  2 17:46:58 2026 authpriv.info dropbear[22411]: Child connection from 192.168.1.135:58122\nSun Aug  2 17:46:58 2026 authpriv.notice dropbear[22411]: Password auth succeeded for 'root' from 192.168.1.135:58122\nSun Aug  2 17:46:58 2026 authpriv.info dropbear[22411]: Exit (root) from <192.168.1.135:58122>: Error reading: Connection reset by peer\nSun Aug  2 17:48:50 2026 authpriv.info dropbear[16434]: Child connection from 192.168.1.135:50191\nSun Aug  2 17:48:50 2026 authpriv.notice dropbear[16434]: Password auth succeeded for 'root' from 192.168.1.135:50191\nSun Aug  2 17:48:52 2026 user.notice wrtmonitor: agent update failed: checksum or syntax verification failed\nSun Aug  2 17:48:58 2026 authpriv.info dropbear[16434]: Exit (root) from <192.168.1.135:50191>: Exited normally\nSun Aug  2 17:48:58 2026 authpriv.info dropbear[26951]: Child connection from 192.168.1.135:50199\nSun Aug  2 17:48:58 2026 authpriv.notice dropbear[26951]: Password auth succeeded for 'root' from 192.168.1.135:50199\nSun Aug  2 17:49:00 2026 user.info upgrade: Saving config files...\nSun Aug  2 17:49:03 2026 user.notice wrtmonitor: agent update failed: checksum or syntax verification failed\nSun Aug  2 17:49:34 2026 authpriv.info dropbear[26951]: Exit (root) from <192.168.1.135:50199>: Exited normally\nSun Aug  2 17:52:56 2026 authpriv.info dropbear[3205]: Child connection from 192.168.1.135:59442\nSun Aug  2 17:52:56 2026 authpriv.notice dropbear[3205]: Password auth succeeded for 'root' from 192.168.1.135:59442\nSun Aug  2 17:52:56 2026 authpriv.info dropbear[3205]: Exit (root) from <192.168.1.135:59442>: Error reading: Connection reset by peer\nSun Aug  2 17:53:07 2026 authpriv.info dropbear[15877]: Child connection from 192.168.1.135:53066\nSun Aug  2 17:53:07 2026 authpriv.notice dropbear[15877]: Password auth succeeded for 'root' from 192.168.1.135:53066\nSun Aug  2 17:53:09 2026 user.info upgrade: Saving config files...\nSun Aug  2 17:53:16 2026 user.notice wrtmonitor: agent update failed: checksum or syntax verification failed\nSun Aug  2 17:53:23 2026 user.notice wrtmonitor: agent rollback completed: rollback requested\nSun Aug  2 17:53:25 2026 user.notice wrtmonitor: agent update failed: checksum or syntax verification failed\nSun Aug  2 17:53:53 2026 authpriv.info dropbear[15877]: Exit (root) from <192.168.1.135:53066>: Exited normally\nSun Aug  2 17:54:11 2026 authpriv.info dropbear[6658]: Child connection from 192.168.1.135:58578\nSun Aug  2 17:54:11 2026 authpriv.notice dropbear[6658]: Password auth succeeded for 'root' from 192.168.1.135:58578\nSun Aug  2 17:54:11 2026 authpriv.info dropbear[6658]: Exit (root) from <192.168.1.135:58578>: Error reading: Connection reset by peer\nSun Aug  2 17:54:27 2026 authpriv.info dropbear[22941]: Child connection from 192.168.1.135:51947\nSun Aug  2 17:54:27 2026 authpriv.notice dropbear[22941]: Password auth succeeded for 'root' from 192.168.1.135:51947\nSun Aug  2 17:54:28 2026 user.notice wrtmonitor: agent update failed: checksum or syntax verification failed\nSun Aug  2 17:54:28 2026 authpriv.info dropbear[22941]: Exit (root) from <192.168.1.135:51947>: Error reading: Connection reset by peer\nSun Aug  2 17:54:55 2026 authpriv.info dropbear[12560]: Child connection from 192.168.1.135:57470\nSun Aug  2 17:54:55 2026 authpriv.notice dropbear[12560]: Password auth succeeded for 'root' from 192.168.1.135:57470\nSun Aug  2 17:54:57 2026 user.info upgrade: Saving config files...\nSun Aug  2 17:55:04 2026 daemon.err nlbwmon[23125]: The netlink receive buffer size of 524288 bytes will be capped to 212992 bytes\nSun Aug  2 17:55:04 2026 daemon.err nlbwmon[23125]: by the kernel. The net.core.rmem_max sysctl limit needs to be raised to\nSun Aug  2 17:55:04 2026 daemon.err nlbwmon[23125]: at least 524288 in order to sucessfully set the desired receive buffer size!\nSun Aug  2 17:55:04 2026 user.notice wrtmonitor: agent updated: 0.30.1 -> 0.30.1\nSun Aug  2 17:55:08 2026 user.notice wrtmonitor: agent rollback completed: rollback requested\nSun Aug  2 17:55:09 2026 user.notice wrtmonitor: agent update failed: checksum or syntax verification failed\nSun Aug  2 17:55:10 2026 authpriv.info dropbear[12560]: Exit (root) from <192.168.1.135:57470>: Exited normally\nSun Aug  2 17:55:23 2026 authpriv.info dropbear[12924]: Child connection from 192.168.1.135:56983\nSun Aug  2 17:55:24 2026 authpriv.notice dropbear[12924]: Password auth succeeded for 'root' from 192.168.1.135:56983\nSun Aug  2 17:55:25 2026 user.info upgrade: Saving config files...",
+    "message": "system log collected"
+  },
+  "error": null,
+  "elapsed_seconds": 9.5,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

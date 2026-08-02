@@ -1,0 +1,46 @@
+{
+  "tested_at": "2026-08-02T15:58:27.123100+00:00",
+  "command": "vpn.policy.set",
+  "payload": {
+    "section": "wrtmonitor_cert_policy",
+    "name": "cert_policy",
+    "enabled": false,
+    "interface": "wan",
+    "source": "198.51.100.1",
+    "destination": "",
+    "protocol": "all"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "c3edd091-a5ba-4198-8ec2-300d61fe395e",
+      "state": "confirmed",
+      "configs": "pbr",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 18.828,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

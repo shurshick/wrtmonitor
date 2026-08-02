@@ -1,0 +1,32 @@
+{
+  "tested_at": "2026-08-02T16:06:37.062647+00:00",
+  "command": "router.reboot",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "message": "reboot scheduled"
+  },
+  "error": null,
+  "elapsed_seconds": 20.875,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "router",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "service_or_connectivity_state",
+    "verification": {
+      "required": true,
+      "mode": "service_or_connectivity_state",
+      "fail_closed": true
+    },
+    "rollback": "not_safe_after_dispatch"
+  }
+}

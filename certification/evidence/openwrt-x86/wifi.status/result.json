@@ -1,0 +1,101 @@
+{
+  "tested_at": "2026-08-02T14:55:36.522165+00:00",
+  "command": "wifi.status",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "radios": [
+      {
+        "id": "radio0",
+        "up": true,
+        "band": "2g",
+        "name": "radio0",
+        "ssid": [
+          "WrtMonitor-Test"
+        ],
+        "htmode": "HT20",
+        "survey": {
+          "rx_ms": null,
+          "state": "unsupported",
+          "tx_ms": null,
+          "reason": "interface_unavailable",
+          "busy_ms": null,
+          "active_ms": null,
+          "interface": "",
+          "noise_dbm": null,
+          "frequency_mhz": null,
+          "utilization_percent": null
+        },
+        "channel": "1",
+        "country": "RU",
+        "disabled": false,
+        "schedule": {
+          "stop": "",
+          "start": "",
+          "enabled": false,
+          "weekdays": []
+        },
+        "interfaces": [
+          {
+            "id": "default_radio0",
+            "mode": "ap",
+            "ssid": "WrtMonitor-Test",
+            "index": 0,
+            "hidden": false,
+            "enabled": true,
+            "isolate": false,
+            "mesh_id": "",
+            "network": "lan",
+            "encryption": "psk2",
+            "ieee80211k": false,
+            "ieee80211r": false,
+            "bss_transition": false,
+            "mobility_domain": ""
+          },
+          {
+            "id": "wrtmonitor_guest",
+            "mode": "ap",
+            "ssid": "",
+            "index": 1,
+            "hidden": false,
+            "enabled": false,
+            "isolate": true,
+            "mesh_id": "",
+            "network": "wrtmonitor_guest",
+            "encryption": "",
+            "ieee80211k": false,
+            "ieee80211r": false,
+            "bss_transition": false,
+            "mobility_domain": ""
+          }
+        ],
+        "supported_channels": []
+      }
+    ],
+    "stations": [],
+    "available": true
+  },
+  "error": null,
+  "elapsed_seconds": 7.437,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

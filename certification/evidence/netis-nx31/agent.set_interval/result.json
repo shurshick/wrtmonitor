@@ -1,0 +1,575 @@
+{
+  "tested_at": "2026-08-02T15:40:47.657100+00:00",
+  "command": "agent.set_interval",
+  "payload": {
+    "interval_seconds": 5
+  },
+  "status": "success",
+  "result": {
+    "status": "running",
+    "version": "0.30.1",
+    "platform": "openwrt",
+    "capabilities": {
+      "qos.sqm": false,
+      "wifi.mesh": true,
+      "wifi.read": true,
+      "wifi.guest": true,
+      "wifi.enable": true,
+      "agent.status": true,
+      "agent.update": true,
+      "clients.read": true,
+      "network.read": true,
+      "wifi.disable": true,
+      "wifi.roaming": true,
+      "agent.disable": true,
+      "clients.block": true,
+      "dns.configure": true,
+      "network.write": true,
+      "system.reboot": true,
+      "telemetry.vpn": true,
+      "wifi.schedule": true,
+      "wifi.set_ssid": true,
+      "agent.rollback": true,
+      "clients.policy": true,
+      "dhcp.configure": true,
+      "dhcp.set_lease": true,
+      "system.set_ntp": true,
+      "telemetry.wifi": true,
+      "network.restart": true,
+      "vpn.policy.read": true,
+      "maintenance.cron": true,
+      "maintenance.logs": true,
+      "telemetry.system": true,
+      "vpn.openvpn.read": true,
+      "wifi.manage_ssid": true,
+      "wifi.set_channel": true,
+      "wifi.set_country": true,
+      "dhcp.delete_lease": true,
+      "dns.doh.configure": true,
+      "dns.dot.configure": true,
+      "telemetry.clients": true,
+      "telemetry.modules": true,
+      "telemetry.network": true,
+      "wifi.set_password": true,
+      "agent.dependencies": true,
+      "agent.rotate_token": true,
+      "agent.set_interval": true,
+      "config.transaction": true,
+      "maintenance.backup": true,
+      "telemetry.hardware": true,
+      "telemetry.services": true,
+      "vpn.wireguard.read": true,
+      "system.set_hostname": true,
+      "system.set_timezone": true,
+      "telemetry.perimeter": true,
+      "maintenance.recovery": true,
+      "vpn.policy.configure": true,
+      "wifi.radio.configure": true,
+      "diagnostics.check_dns": true,
+      "dns.encrypted.install": true,
+      "firewall.port_forward": true,
+      "maintenance.processes": true,
+      "network.lan.configure": true,
+      "network.wan.configure": true,
+      "telemetry.maintenance": true,
+      "vpn.openvpn.configure": true,
+      "diagnostics.check_wifi": true,
+      "network.ddns.configure": false,
+      "network.ipv6.configure": true,
+      "network.vlan.configure": true,
+      "system.restart_service": true,
+      "diagnostics.check_route": true,
+      "firewall.upnp.configure": false,
+      "telemetry.wifi.stations": true,
+      "vpn.wireguard.configure": true,
+      "diagnostics.check_server": true,
+      "firewall.rules.configure": true,
+      "firewall.zones.configure": true,
+      "maintenance.modules.read": true,
+      "network.routes.configure": true,
+      "maintenance.modules.write": true,
+      "maintenance.packages.read": true,
+      "network.interface_restart": true,
+      "telemetry.clients.traffic": true,
+      "maintenance.packages.write": true,
+      "network.multiwan.configure": false,
+      "network.segments.configure": true,
+      "maintenance.sysupgrade.apply": true,
+      "maintenance.sysupgrade.check": true,
+      "diagnostics.check_dependencies": true,
+      "maintenance.diagnostics.bundle": true
+    },
+    "dependencies": {
+      "nlbwmon": {
+        "status": "ready",
+        "running": true,
+        "installed": true
+      },
+      "required": [
+        {
+          "command": "curl",
+          "package": "curl",
+          "available": true
+        },
+        {
+          "command": "jsonfilter",
+          "package": "jsonfilter",
+          "available": true
+        },
+        {
+          "command": "uci",
+          "package": "uci",
+          "available": true
+        },
+        {
+          "command": "ubus",
+          "package": "ubus",
+          "available": true
+        },
+        {
+          "command": "ip",
+          "package": "ip-full",
+          "available": true
+        },
+        {
+          "command": "iw",
+          "package": "iw",
+          "available": true
+        },
+        {
+          "command": "iwinfo",
+          "package": "iwinfo",
+          "available": true
+        },
+        {
+          "command": "sha256sum",
+          "package": "coreutils-sha256sum",
+          "available": true
+        },
+        {
+          "command": "base64",
+          "package": "coreutils-base64",
+          "available": true
+        },
+        {
+          "command": "openssl",
+          "package": "openssl-util",
+          "available": true
+        },
+        {
+          "command": "tar",
+          "package": "tar",
+          "available": true
+        },
+        {
+          "command": "gzip",
+          "package": "gzip",
+          "available": true
+        },
+        {
+          "command": "sysupgrade",
+          "package": "base-files",
+          "available": true
+        },
+        {
+          "command": "nlbw",
+          "package": "nlbwmon",
+          "available": true
+        },
+        {
+          "command": "ethtool",
+          "package": "ethtool",
+          "available": true
+        }
+      ],
+      "ca_bundle": true
+    },
+    "update_source": "https://sync.bghitech.ru/downloads/openwrt",
+    "available_version": "0.30.1",
+    "last_update_check": "2026-08-02T15:30:51Z",
+    "last_update_error": "",
+    "capability_details": {
+      "qos.sqm": {
+        "reason": "sqm-scripts package or SQM init service is unavailable",
+        "supported": false
+      },
+      "wifi.mesh": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.guest": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.enable": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.status": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.update": {
+        "reason": "available",
+        "supported": true
+      },
+      "clients.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.disable": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.roaming": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.disable": {
+        "reason": "available",
+        "supported": true
+      },
+      "clients.block": {
+        "reason": "available",
+        "supported": true
+      },
+      "dns.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.write": {
+        "reason": "available",
+        "supported": true
+      },
+      "system.reboot": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.vpn": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.schedule": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.set_ssid": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.rollback": {
+        "reason": "available",
+        "supported": true
+      },
+      "clients.policy": {
+        "reason": "available",
+        "supported": true
+      },
+      "dhcp.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "dhcp.set_lease": {
+        "reason": "available",
+        "supported": true
+      },
+      "system.set_ntp": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.wifi": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.restart": {
+        "reason": "available",
+        "supported": true
+      },
+      "vpn.policy.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.cron": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.logs": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.system": {
+        "reason": "available",
+        "supported": true
+      },
+      "vpn.openvpn.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.manage_ssid": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.set_channel": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.set_country": {
+        "reason": "available",
+        "supported": true
+      },
+      "dhcp.delete_lease": {
+        "reason": "available",
+        "supported": true
+      },
+      "dns.doh.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "dns.dot.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.clients": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.modules": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.network": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.set_password": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.dependencies": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.rotate_token": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.set_interval": {
+        "reason": "available",
+        "supported": true
+      },
+      "config.transaction": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.backup": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.hardware": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.services": {
+        "reason": "available",
+        "supported": true
+      },
+      "vpn.wireguard.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "system.set_hostname": {
+        "reason": "available",
+        "supported": true
+      },
+      "system.set_timezone": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.perimeter": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.recovery": {
+        "reason": "available",
+        "supported": true
+      },
+      "vpn.policy.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "wifi.radio.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "diagnostics.check_dns": {
+        "reason": "available",
+        "supported": true
+      },
+      "dns.encrypted.install": {
+        "reason": "available",
+        "supported": true
+      },
+      "firewall.port_forward": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.processes": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.lan.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.wan.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.maintenance": {
+        "reason": "available",
+        "supported": true
+      },
+      "vpn.openvpn.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "diagnostics.check_wifi": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.ddns.configure": {
+        "reason": "network UCI configuration or init service is unavailable",
+        "supported": false
+      },
+      "network.ipv6.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.vlan.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "system.restart_service": {
+        "reason": "available",
+        "supported": true
+      },
+      "diagnostics.check_route": {
+        "reason": "available",
+        "supported": true
+      },
+      "firewall.upnp.configure": {
+        "reason": "capability requirements are unavailable",
+        "supported": false
+      },
+      "telemetry.wifi.stations": {
+        "reason": "available",
+        "supported": true
+      },
+      "vpn.wireguard.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "diagnostics.check_server": {
+        "reason": "available",
+        "supported": true
+      },
+      "firewall.rules.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "firewall.zones.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.modules.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.routes.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.modules.write": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.packages.read": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.interface_restart": {
+        "reason": "available",
+        "supported": true
+      },
+      "telemetry.clients.traffic": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.packages.write": {
+        "reason": "available",
+        "supported": true
+      },
+      "network.multiwan.configure": {
+        "reason": "network UCI configuration or init service is unavailable",
+        "supported": false
+      },
+      "network.segments.configure": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.sysupgrade.apply": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.sysupgrade.check": {
+        "reason": "available",
+        "supported": true
+      },
+      "diagnostics.check_dependencies": {
+        "reason": "available",
+        "supported": true
+      },
+      "maintenance.diagnostics.bundle": {
+        "reason": "available",
+        "supported": true
+      }
+    },
+    "last_update_status": "skipped",
+    "rollback_available": true,
+    "auto_update_enabled": true,
+    "capabilities_version": 16,
+    "last_successful_update": "2026-08-01T21:53:30Z",
+    "telemetry_interval_seconds": 5
+  },
+  "error": null,
+  "elapsed_seconds": 23.296,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "agent",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "agent_state",
+    "verification": {
+      "required": true,
+      "mode": "agent_state",
+      "fail_closed": true
+    },
+    "rollback": "agent_previous_version_or_config"
+  }
+}

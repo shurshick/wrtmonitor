@@ -1,0 +1,50 @@
+{
+  "tested_at": "2026-08-02T15:50:58.114155+00:00",
+  "command": "firewall.set_redirect",
+  "payload": {
+    "section": "wrtmonitor_cert_redirect",
+    "name": "wrtmonitor_cert",
+    "enabled": false,
+    "src": "wan",
+    "dest": "lan",
+    "protocol": "tcp",
+    "src_ip": "",
+    "src_port": "65529",
+    "dest_ip": "192.168.31.249",
+    "dest_port": "65529",
+    "target": "DNAT"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "2a5561dd-ce1b-4c84-b5f2-e8ccd6cf2217",
+      "state": "confirmed",
+      "configs": "firewall",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 21.031,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "firewall",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

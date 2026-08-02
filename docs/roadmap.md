@@ -63,3 +63,13 @@ SQM/QoS, клиентские DNS-политики, история Multi-WAN, ш
 USB, накопители, сетевые службы, принтеры и модемы с capability-driven интерфейсом.
 
 Статус: выпущен в canary.
+
+## v0.31.1 - Hardware Certification
+
+- полный прогон 91 команды на Netis NX31 и OpenWrt x86;
+- доказательства idempotency, timeout, redelivery, post-condition и rollback;
+- исправления mesh, VPN policy и PBR, найденные аппаратными тестами;
+- совместимая со старым OpenSSL подпись обновлений агента;
+- воспроизводимый certification runner и опубликованные обезличенные отчёты.
+
+Статус: `hardware verified`, тестовый релиз.

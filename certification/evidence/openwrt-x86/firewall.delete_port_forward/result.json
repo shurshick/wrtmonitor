@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T15:14:32.255728+00:00",
+  "command": "firewall.delete_port_forward",
+  "payload": {
+    "section": "wrtmonitor_cert_port",
+    "name": "wrtmonitor_cert"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "d18a93b5-b80b-4daa-ba39-def5d0ef2d6b",
+      "state": "confirmed",
+      "configs": "firewall",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 16.094,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "firewall",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

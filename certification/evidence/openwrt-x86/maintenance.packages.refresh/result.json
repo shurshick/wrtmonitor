@@ -1,0 +1,34 @@
+{
+  "tested_at": "2026-08-02T15:23:17.160636+00:00",
+  "command": "maintenance.packages.refresh",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "manager": "opkg",
+    "message": "package lists refreshed",
+    "upgradable": "luci-app-opkg|git-23.093.42303-e16f620|git-24.302.38942-7a420e0;luci-lib-ip|git-20.250.76529-62505bd|git-23.311.79310-704a335;bnx2-firmware|20220411-1|20230804-1;luci-mod-system|git-23.013.73113-588381e|git-24.067.02339-de5734b;r8169-firmware|20220411-1|20230804-1;luci-theme-bootstrap|git-23.093.42704-b47268a|git-24.208.65546-18f3914;procd-ujail|2022-06-01-7a009685-2|2022-06-01-7a009685-3;procd|2022-06-01-7a009685-2|2022-06-01-7a009685-3;luci-mod-status|git-23.093.42411-713f701|git-24.212.61256-910cf4d;luci-app-firewall|git-23.093.42704-1c01c64|git-24.067.02332-0337416;lua|5.1.5-10|5.1.5-11;procd-seccomp|2022-06-01-7a009685-2|2022-06-01-7a009685-3;luci-proto-ppp|git-21.158.38888-88b9d84|git-24.135.45225-e7a8d09;luci-base|git-23.093.57104-ce20b4a|git-24.208.65546-18f3914;luci-proto-ipv6|git-21.148.48881-79947af|git-23.355.78888-e047387;uhttpd|2022-10-31-23977554-1|2023-06-25-34a8a74d-1;liblua5.1.5|5.1.5-10|5.1.5-11;luci-lib-nixio|git-20.234.06894-c4a4e43|git-24.034.55122-b50146c;luci-lib-jsonc|git-22.097.61921-7513345|git-23.298.74581-7dfbbca;luci-mod-network|git-23.093.42704-52965f4|git-24.207.52566-2374216;uhttpd-mod-ubus|2022-10-31-23977554-1|2023-06-25-34a8a74d-1;urngd|2020-01-21-c7f7b6b6-1|2023-11-01-44365eb1-1;"
+  },
+  "error": null,
+  "elapsed_seconds": 14.062,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

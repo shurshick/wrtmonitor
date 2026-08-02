@@ -18,6 +18,10 @@ Chromium smoke-test авторизуется в Web UI, открывает сп�
 6. После истечения access token убедитесь, что Android обновил сессию без повторного ввода пароля, а повторное использование старого refresh-token возвращает `401`.
 7. Создайте PostgreSQL backup и выполните `python -m backend.app.backup_cli drill <файл>`.
 
+Полный аппаратный прогон 91 команды выполняется отдельным runner. Порядок запуска,
+требования к recovery-доступу и опубликованные отчёты описаны в
+[real-router-testing.md](real-router-testing.md).
+
 ## Релизные артефакты
 
 Перед публикацией формируются TrueNAS YAML, архив агента, Android APK и `SHA256SUMS.txt`. Контрольные суммы проверяются командой `sha256sum --check SHA256SUMS.txt`.

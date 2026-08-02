@@ -1,0 +1,35 @@
+{
+  "tested_at": "2026-08-02T14:57:50.523220+00:00",
+  "command": "system.restart_service",
+  "payload": {
+    "service": "dnsmasq"
+  },
+  "status": "success",
+  "result": {
+    "message": "service restarted",
+    "service": "dnsmasq"
+  },
+  "error": null,
+  "elapsed_seconds": 8.484,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "system",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "service_state",
+    "verification": {
+      "required": true,
+      "mode": "service_state",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

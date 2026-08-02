@@ -1,0 +1,45 @@
+{
+  "tested_at": "2026-08-02T15:22:34.513666+00:00",
+  "command": "network.set_ipv6",
+  "payload": {
+    "interface": "lan",
+    "enabled": true,
+    "assignment_length": 64,
+    "ra": "server",
+    "dhcpv6": "server",
+    "ndp": "disabled"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "0c831576-19c1-4d04-a96a-c515719335fd",
+      "state": "confirmed",
+      "configs": "network dhcp",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 17.891,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

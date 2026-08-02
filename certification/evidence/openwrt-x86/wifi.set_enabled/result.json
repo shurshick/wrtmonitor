@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T14:59:28.467775+00:00",
+  "command": "wifi.set_enabled",
+  "payload": {
+    "radio": "radio0",
+    "enabled": true
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "eb17d51e-87f2-4a2e-a713-7b79d5fabcc3",
+      "state": "confirmed",
+      "configs": "wireless",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 14.594,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

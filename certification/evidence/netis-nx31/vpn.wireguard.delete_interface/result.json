@@ -1,0 +1,40 @@
+{
+  "tested_at": "2026-08-02T15:56:50.724025+00:00",
+  "command": "vpn.wireguard.delete_interface",
+  "payload": {
+    "name": "wgcert"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "4cdfdc52-a575-4017-a18a-85263d85ccd6",
+      "state": "confirmed",
+      "configs": "network",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 18.813,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

@@ -108,6 +108,14 @@ def test_openvpn_and_policy_payloads_are_normalized():
     assert policy["source"] == "192.168.1.50"
 
 
+def test_policy_delete_preserves_actual_uci_section():
+    payload = validate_command_payload(
+        "vpn.policy.delete",
+        {"section": "@policy[4]", "name": "tv-via-vpn"},
+    )
+    assert payload == {"section": "@policy[4]", "name": "tv-via-vpn"}
+
+
 def test_vpn_secrets_are_masked_and_transactions_are_declared():
     interface = public_command_payload(
         "vpn.wireguard.set_interface", {"private_key": WG_KEY}

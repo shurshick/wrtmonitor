@@ -1,0 +1,45 @@
+{
+  "tested_at": "2026-08-02T15:14:16.156400+00:00",
+  "command": "firewall.set_port_forward",
+  "payload": {
+    "section": "wrtmonitor_cert_port",
+    "name": "wrtmonitor_cert",
+    "protocol": "tcp",
+    "external_port": 65530,
+    "internal_ip": "192.168.1.249",
+    "internal_port": 65530
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "22ddb7a0-9cc7-47a0-8a3e-7378fda4ad41",
+      "state": "confirmed",
+      "configs": "firewall",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 16.0,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "firewall",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

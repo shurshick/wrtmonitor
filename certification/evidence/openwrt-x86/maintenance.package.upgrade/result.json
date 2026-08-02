@@ -1,0 +1,37 @@
+{
+  "tested_at": "2026-08-02T15:23:32.964251+00:00",
+  "command": "maintenance.package.upgrade",
+  "payload": {
+    "package": "nano"
+  },
+  "status": "success",
+  "result": {
+    "output": "Package nano (8.0-1) installed in root is up to date.",
+    "manager": "opkg",
+    "message": "package upgraded",
+    "package": "nano"
+  },
+  "error": null,
+  "elapsed_seconds": 7.484,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "package_state",
+    "verification": {
+      "required": true,
+      "mode": "package_state",
+      "fail_closed": true
+    },
+    "rollback": "package_manager_transaction"
+  }
+}

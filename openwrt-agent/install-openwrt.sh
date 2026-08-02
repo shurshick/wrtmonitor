@@ -171,14 +171,48 @@ MCowBQYDK2VwAyEAbXo+FQit+3CFcc6Dwnww2gtXN5wOMlwxDdx/UIDth4A=
 EOF
 }
 
-verify_manifest_signature() {
+write_update_rsa_public_key() {
+    cat >"$1" <<'EOF'
+-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnk2nhDg1rLY7XmxMRA81
+ahLaHSD+SP3t0vaul5dnE9kKzFAMoOBWTkuhmECLJ+ZXgzHKpZCbC7K0uH1zJ/og
+xQDj9ok4z4DIhyXSkvUY4WUe1MMTYpxFa6Ow6E6+ke0oBxUMOHGhOKBm/7QPcTxp
+nbTSjxIHlwR2i7iyNDnjZ7xBZpep/b3FTX/O/ha1/5rGHeImd6SVRk8x2RCeCmQj
+w7fprDRD//2Ko350oojyinicZmU1tp61RyW78fgrQURQJjm5p8FPEyqjvmWkjLbw
+/cWDqGcZXiBsGwPCbxiXL4cYQR27FTjIDu1b30dyt4mJ80XQHuVVMqLHiwPcx1UV
+uW9/XV0g6YUzHcJxXFT47R3cOCvU0qiZixxItEFc+3mNZ4fhiOudZOq7H04yZq0E
+zgpi4sAWwz2IcbNj4sohxaV9hq8pPgnCzG6PYPRLpl6UmiKeLY6dmKGXFHx+GxcP
+gU3H/CMcfRH8Os4zX9nhqWj3aV2wDXHkgABOGHsiNbTXAgMBAAE=
+-----END PUBLIC KEY-----
+EOF
+}
+
+verify_ed25519_manifest_signature() {
     tree="$1"
     public_key="$tree/update-public-key.pem"
     signature="$tree/SHA256SUMS.sig.bin"
+    [ -r "$tree/SHA256SUMS.sig" ] || return 1
     write_update_public_key "$public_key"
     base64 -d <"$tree/SHA256SUMS.sig" >"$signature" 2>/dev/null || return 1
     openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin \
         -in "$tree/SHA256SUMS.txt" -sigfile "$signature" >/dev/null 2>&1
+}
+
+verify_rsa_manifest_signature() {
+    tree="$1"
+    public_key="$tree/update-rsa-public-key.pem"
+    signature="$tree/SHA256SUMS.rsa.sig.bin"
+    [ -r "$tree/SHA256SUMS.rsa.sig" ] || return 1
+    write_update_rsa_public_key "$public_key"
+    base64 -d <"$tree/SHA256SUMS.rsa.sig" >"$signature" 2>/dev/null || return 1
+    openssl dgst -sha256 -verify "$public_key" -signature "$signature" \
+        "$tree/SHA256SUMS.txt" >/dev/null 2>&1
+}
+
+verify_manifest_signature() {
+    tree="$1"
+    verify_ed25519_manifest_signature "$tree" && return 0
+    verify_rsa_manifest_signature "$tree"
 }
 
 validate_tree() {
@@ -187,10 +221,13 @@ validate_tree() {
     sums="$tree/SHA256SUMS.txt"
     [ -r "$manifest" ] || { echo "Manifest not found: $manifest" >&2; exit 1; }
     [ -r "$sums" ] || { echo "SHA256SUMS not found: $sums" >&2; exit 1; }
-    [ -r "$tree/SHA256SUMS.sig" ] || { echo "SHA256SUMS signature not found" >&2; exit 1; }
+    if [ ! -r "$tree/SHA256SUMS.sig" ] && [ ! -r "$tree/SHA256SUMS.rsa.sig" ]; then
+        echo "SHA256SUMS signature not found" >&2
+        exit 1
+    fi
     verify_manifest_signature "$tree" || { echo "Invalid update signature" >&2; exit 1; }
     for filename in $(manifest_entries "$manifest"); do
-        case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig) continue ;; esac
+        case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig|SHA256SUMS.rsa.sig) continue ;; esac
         [ -r "$tree/$filename" ] || { echo "Missing file in payload: $filename" >&2; exit 1; }
         verify_checksum "$sums" "$tree/$filename" "$filename" || { echo "Checksum mismatch: $filename" >&2; exit 1; }
     done
@@ -215,9 +252,10 @@ prepare_work_dir() {
         base="$(printf '%s' "$DOWNLOAD_BASE" | sed 's#/$##')"
         download_file "$base/openwrt-agent-files.txt" "$WORK_DIR/openwrt-agent-files.txt"
         download_file "$base/SHA256SUMS.txt" "$WORK_DIR/SHA256SUMS.txt"
-        download_file "$base/SHA256SUMS.sig" "$WORK_DIR/SHA256SUMS.sig"
+        download_file "$base/SHA256SUMS.sig" "$WORK_DIR/SHA256SUMS.sig" || rm -f "$WORK_DIR/SHA256SUMS.sig"
+        download_file "$base/SHA256SUMS.rsa.sig" "$WORK_DIR/SHA256SUMS.rsa.sig" || rm -f "$WORK_DIR/SHA256SUMS.rsa.sig"
         for filename in $(manifest_entries "$WORK_DIR/openwrt-agent-files.txt"); do
-            case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig) continue ;; esac
+            case "$filename" in SHA256SUMS.txt|SHA256SUMS.sig|SHA256SUMS.rsa.sig) continue ;; esac
             target="$WORK_DIR/$filename"
             mkdir -p "$(dirname "$target")"
             download_file "$base/$filename" "$target"
@@ -317,19 +355,21 @@ write_connection_config() {
 }
 
 stop_existing_agent() {
-    old_pid=""
-    [ ! -r /var/run/wrtmonitor-agent.pid ] \
-        || old_pid="$(cat /var/run/wrtmonitor-agent.pid 2>/dev/null || true)"
     /etc/init.d/wrtmonitor stop 2>/dev/null || true
+    old_pids="$(pidof wrtmonitor-agent 2>/dev/null || true)"
+    for old_pid in $old_pids; do
+        kill "$old_pid" 2>/dev/null || true
+    done
     wait_count=0
-    while [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null && [ "$wait_count" -lt 5 ]; do
+    while [ -n "$(pidof wrtmonitor-agent 2>/dev/null || true)" ] && [ "$wait_count" -lt 5 ]; do
         wait_count=$((wait_count + 1))
         sleep 1
     done
-    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+    for old_pid in $(pidof wrtmonitor-agent 2>/dev/null || true); do
         kill -9 "$old_pid" 2>/dev/null || true
-    fi
-    rmdir /tmp/wrtmonitor-agent.lock 2>/dev/null || true
+    done
+    rm -rf /tmp/wrtmonitor-agent.lock
+    rm -f /tmp/wrtmonitor-agent-update.lock
 }
 
 install_payload() {

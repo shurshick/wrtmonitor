@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T15:47:46.884251+00:00",
+  "command": "wifi.set_guest",
+  "payload": {
+    "radio": "radio0",
+    "enabled": false
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "1ecc09e6-b18a-405d-9ad2-222acdb0b76e",
+      "state": "confirmed",
+      "configs": "wireless network dhcp firewall",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 29.516,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "tested_at": "2026-08-02T14:57:23.938868+00:00",
+  "command": "system.set_hostname",
+  "payload": {
+    "hostname": "OpenWrt"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "cbf54d33-16e3-4d2e-99a9-1875b73d7af4",
+      "state": "confirmed",
+      "configs": "system",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 6.39,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "system",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

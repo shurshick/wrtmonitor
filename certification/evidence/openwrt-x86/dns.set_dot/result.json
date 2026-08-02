@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T15:21:06.052572+00:00",
+  "command": "dns.set_dot",
+  "payload": {
+    "provider": "cloudflare",
+    "enabled": false
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "1e900b3b-e152-448a-b1c4-7e5a73fef1a4",
+      "state": "confirmed",
+      "configs": "dhcp stubby",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 22.313,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "dns",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

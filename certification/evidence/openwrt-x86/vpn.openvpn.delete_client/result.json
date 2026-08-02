@@ -1,0 +1,40 @@
+{
+  "tested_at": "2026-08-02T15:19:38.721667+00:00",
+  "command": "vpn.openvpn.delete_client",
+  "payload": {
+    "name": "certclient"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "a010f498-b7e6-4754-a0cc-f7f320bf4a24",
+      "state": "confirmed",
+      "configs": "openvpn",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 18.204,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

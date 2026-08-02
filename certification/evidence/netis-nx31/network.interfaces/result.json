@@ -1,0 +1,227 @@
+{
+  "tested_at": "2026-08-02T15:36:48.693115+00:00",
+  "command": "network.interfaces",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "topology": {
+      "vlans": [],
+      "bridges": [
+        {
+          "stp": false,
+          "name": "br-lan",
+          "ports": [
+            "lan1",
+            "lan2",
+            "lan3"
+          ],
+          "section": "@device[0]",
+          "igmp_snooping": false,
+          "vlan_filtering": false
+        }
+      ],
+      "segments": [
+        {
+          "dhcp": {
+            "limit": "",
+            "start": "",
+            "enabled": false,
+            "leasetime": ""
+          },
+          "name": "loopback",
+          "proto": "static",
+          "device": "lo",
+          "policy": "isolated",
+          "enabled": true,
+          "ip6hint": "",
+          "netmask": "",
+          "ip6assign": "",
+          "ip_address": "127.0.0.1/8",
+          "bridge_section": ""
+        },
+        {
+          "dhcp": {
+            "limit": "150",
+            "start": "100",
+            "enabled": true,
+            "leasetime": "12h"
+          },
+          "name": "lan",
+          "proto": "static",
+          "device": "br-lan",
+          "policy": "trusted",
+          "enabled": true,
+          "ip6hint": "",
+          "netmask": "",
+          "ip6assign": "",
+          "ip_address": "192.168.31.1/24",
+          "bridge_section": "@device[0]"
+        },
+        {
+          "dhcp": {
+            "limit": "",
+            "start": "",
+            "enabled": false,
+            "leasetime": ""
+          },
+          "name": "wan",
+          "proto": "dhcp",
+          "device": "eth1",
+          "policy": "isolated",
+          "enabled": true,
+          "ip6hint": "",
+          "netmask": "",
+          "ip6assign": "",
+          "ip_address": "",
+          "bridge_section": ""
+        },
+        {
+          "dhcp": {
+            "limit": "",
+            "start": "",
+            "enabled": false,
+            "leasetime": ""
+          },
+          "name": "wan6",
+          "proto": "dhcpv6",
+          "device": "eth1",
+          "policy": "isolated",
+          "enabled": true,
+          "ip6hint": "",
+          "netmask": "",
+          "ip6assign": "",
+          "ip_address": "",
+          "bridge_section": ""
+        }
+      ]
+    },
+    "interfaces": [
+      {
+        "up": true,
+        "dns": [],
+        "ipv4": [
+          "192.168.31.1"
+        ],
+        "ipv6": [],
+        "proto": "static",
+        "device": "br-lan",
+        "errors": [],
+        "gateway": "",
+        "ip6hint": "",
+        "netmask": "",
+        "interface": "lan",
+        "ip6assign": "",
+        "ipv4_details": [
+          {
+            "address": "192.168.31.1",
+            "prefix_length": 24
+          }
+        ]
+      },
+      {
+        "up": true,
+        "dns": [],
+        "ipv4": [
+          "127.0.0.1"
+        ],
+        "ipv6": [],
+        "proto": "static",
+        "device": "lo",
+        "errors": [],
+        "gateway": "",
+        "ip6hint": "",
+        "netmask": "",
+        "interface": "loopback",
+        "ip6assign": "",
+        "ipv4_details": [
+          {
+            "address": "127.0.0.1",
+            "prefix_length": 8
+          }
+        ]
+      },
+      {
+        "up": true,
+        "dns": [
+          "192.168.1.1"
+        ],
+        "ipv4": [
+          "192.168.1.137"
+        ],
+        "ipv6": [],
+        "proto": "dhcp",
+        "device": "eth1",
+        "errors": [],
+        "gateway": "192.168.1.1",
+        "ip6hint": "",
+        "netmask": "",
+        "interface": "wan",
+        "ip6assign": "",
+        "ipv4_details": [
+          {
+            "address": "192.168.1.137",
+            "prefix_length": 24
+          }
+        ]
+      },
+      {
+        "up": true,
+        "dns": [
+          "fd90:c240:252c::1",
+          "fe80::d69c:53ff:fe0b:55c7"
+        ],
+        "ipv4": [],
+        "ipv6": [
+          "fd90:c240:252c::c73",
+          "fd49:6951:a044:0:de8e:8dff:fecd:fce8",
+          "2a02:ad8:49f2:e300:de8e:8dff:fecd:fce8",
+          "fd90:c240:252c:0:de8e:8dff:fecd:fce8"
+        ],
+        "proto": "dhcpv6",
+        "device": "eth1",
+        "errors": [],
+        "gateway": "",
+        "ip6hint": "",
+        "netmask": "",
+        "interface": "wan6",
+        "ip6assign": "",
+        "ipv4_details": []
+      }
+    ],
+    "dns_privacy": {
+      "doh": {
+        "running": true,
+        "installed": true,
+        "resolver_url": "https://cloudflare-dns.com/dns-query"
+      },
+      "dot": {
+        "running": true,
+        "provider": "cloudflare-dns.com",
+        "installed": true
+      }
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 23.203,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

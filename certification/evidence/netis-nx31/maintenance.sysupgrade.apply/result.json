@@ -1,0 +1,45 @@
+{
+  "tested_at": "2026-08-02T16:05:57.344470+00:00",
+  "command": "maintenance.sysupgrade.apply",
+  "payload": {
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "preserve_config": true
+  },
+  "status": "failed",
+  "result": {
+    "error": "validated firmware is not staged",
+    "error_detail": {
+      "code": "command_failed",
+      "message": "validated firmware is not staged",
+      "retryable": false
+    }
+  },
+  "error": {
+    "code": "command_failed",
+    "title": "Команда не выполнена",
+    "message": "validated firmware is not staged",
+    "retryable": false
+  },
+  "elapsed_seconds": 18.813,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "service_or_connectivity_state",
+    "verification": {
+      "required": true,
+      "mode": "service_or_connectivity_state",
+      "fail_closed": true
+    },
+    "rollback": "not_safe_after_dispatch"
+  }
+}

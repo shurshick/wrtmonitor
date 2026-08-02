@@ -1,0 +1,47 @@
+{
+  "tested_at": "2026-08-02T15:12:53.981641+00:00",
+  "command": "network.set_segment",
+  "payload": {
+    "name": "wrtmonitor_cert",
+    "protocol": "static",
+    "ip_address": "10.253.0.1",
+    "netmask": "255.255.255.0",
+    "device": "",
+    "bridge": false,
+    "dhcp_enabled": false,
+    "firewall_policy": "isolated"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "94117910-ffac-4aac-8dd1-4679a1d350af",
+      "state": "confirmed",
+      "configs": "network dhcp firewall",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 20.25,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

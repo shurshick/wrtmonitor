@@ -1,0 +1,34 @@
+{
+  "tested_at": "2026-08-02T15:24:01.588484+00:00",
+  "command": "maintenance.cron.set",
+  "payload": {
+    "content": ""
+  },
+  "status": "success",
+  "result": {
+    "message": "cron updated"
+  },
+  "error": null,
+  "elapsed_seconds": 8.469,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

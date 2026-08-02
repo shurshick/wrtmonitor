@@ -1,0 +1,35 @@
+{
+  "tested_at": "2026-08-02T14:56:07.160441+00:00",
+  "command": "maintenance.process.signal",
+  "payload": {
+    "pid": 13863,
+    "signal": "TERM"
+  },
+  "status": "success",
+  "result": {
+    "message": "signal sent to process"
+  },
+  "error": null,
+  "elapsed_seconds": 6.344,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "handler_result",
+    "verification": {
+      "required": true,
+      "mode": "handler_result",
+      "fail_closed": true
+    },
+    "rollback": "not_available"
+  }
+}

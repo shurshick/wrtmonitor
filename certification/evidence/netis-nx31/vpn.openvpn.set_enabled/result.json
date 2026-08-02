@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-08-02T15:57:30.610064+00:00",
+  "command": "vpn.openvpn.set_enabled",
+  "payload": {
+    "name": "certclient",
+    "enabled": false
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "78f0f925-8b73-499e-aa01-0283b59dd3d2",
+      "state": "confirmed",
+      "configs": "openvpn",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 18.938,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

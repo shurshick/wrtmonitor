@@ -1,0 +1,144 @@
+{
+  "tested_at": "2026-08-02T14:55:29.087731+00:00",
+  "command": "diagnostics.run",
+  "payload": {
+    "checks": [
+      "server",
+      "dns",
+      "route",
+      "wifi",
+      "dependencies"
+    ]
+  },
+  "status": "success",
+  "result": {
+    "dns": {
+      "status": "ok"
+    },
+    "wifi": {
+      "status": "ok",
+      "radio_count": 1,
+      "iwinfo_available": true,
+      "wifi_status_available": true
+    },
+    "route": {
+      "status": "ok",
+      "gateway": "192.168.1.1"
+    },
+    "server": {
+      "status": "ok",
+      "http_status": 200
+    },
+    "dependencies": {
+      "status": "ok",
+      "manifest": {
+        "nlbwmon": {
+          "status": "ready",
+          "running": true,
+          "installed": true
+        },
+        "required": [
+          {
+            "command": "curl",
+            "package": "curl",
+            "available": true
+          },
+          {
+            "command": "jsonfilter",
+            "package": "jsonfilter",
+            "available": true
+          },
+          {
+            "command": "uci",
+            "package": "uci",
+            "available": true
+          },
+          {
+            "command": "ubus",
+            "package": "ubus",
+            "available": true
+          },
+          {
+            "command": "ip",
+            "package": "ip-full",
+            "available": true
+          },
+          {
+            "command": "iw",
+            "package": "iw",
+            "available": true
+          },
+          {
+            "command": "iwinfo",
+            "package": "iwinfo",
+            "available": true
+          },
+          {
+            "command": "sha256sum",
+            "package": "coreutils-sha256sum",
+            "available": true
+          },
+          {
+            "command": "base64",
+            "package": "coreutils-base64",
+            "available": true
+          },
+          {
+            "command": "openssl",
+            "package": "openssl-util",
+            "available": true
+          },
+          {
+            "command": "tar",
+            "package": "tar",
+            "available": true
+          },
+          {
+            "command": "gzip",
+            "package": "gzip",
+            "available": true
+          },
+          {
+            "command": "sysupgrade",
+            "package": "base-files",
+            "available": true
+          },
+          {
+            "command": "nlbw",
+            "package": "nlbwmon",
+            "available": true
+          },
+          {
+            "command": "ethtool",
+            "package": "ethtool",
+            "available": true
+          }
+        ],
+        "ca_bundle": true
+      }
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 2.172,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "diagnostics",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}

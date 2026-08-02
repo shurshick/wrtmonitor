@@ -1,17 +1,53 @@
 # Проверка на реальном OpenWrt-роутере
 
-Автоматический CI и x86 harness не считаются испытанием физического роутера. Релиз получает отметку `hardware verified` только после заполнения отчёта для всех поддержанных устройством команд.
+Автоматический CI не заменяет испытание реального OpenWrt. Релиз получает отметку `hardware verified` только после полного запуска `hardware_certify.py` и прохождения финального gate.
 
-Создание отчёта:
+Установите зависимости в отдельное окружение:
 
 ```sh
-python scripts/command_validation_report.py certification/netis-nx31.json --init --router "Netis NX31 / OpenWrt 25.12"
+python -m venv .venv-certification
+.venv-certification/bin/pip install -r scripts/requirements-certification.txt
 ```
 
-Финальный gate:
+В PowerShell используйте `.venv-certification\Scripts\pip.exe`.
+
+Перед запуском задайте адрес сервера и учётные данные только через переменные окружения. Они не записываются в отчёт:
+
+```sh
+export WRTMONITOR_SERVER_URL='https://monitor.example.ru'
+export WRTMONITOR_ADMIN_USER='admin@example.ru'
+export WRTMONITOR_ADMIN_PASSWORD='...'
+export WRTMONITOR_ROUTER_PASSWORD='...'
+export WRTMONITOR_AGENT_UPDATE_URL='http://192.168.1.10:8799'
+```
+
+Полный прогон:
+
+```sh
+python scripts/hardware_certify.py \
+  --name netis-nx31 \
+  --host 192.168.1.1 \
+  --device-id DEVICE_UUID
+```
+
+`WRTMONITOR_AGENT_UPDATE_URL` нужен для безопасной проверки update/rollback на локально собранном агенте. Каталог `openwrt-agent/` должен раздаваться с указанного URL.
+
+Повторить отдельные команды и объединить результат с отчётом можно так:
+
+```sh
+python scripts/hardware_certify.py \
+  --name netis-nx31 \
+  --host 192.168.1.1 \
+  --device-id DEVICE_UUID \
+  --commands wifi.mesh.set,vpn.policy.delete \
+  --resume
+```
+
+Финальный gate для каждого стенда:
 
 ```sh
 python scripts/command_validation_report.py certification/netis-nx31.json --require-complete
+python scripts/command_validation_report.py certification/openwrt-x86.json --require-complete
 ```
 
 `not_applicable` допустим только для capability, которую роутер явно объявил неподдерживаемой. `pass` без ссылки на лог, JSON result или снимок UCI не принимается.
@@ -40,13 +76,13 @@ python scripts/command_validation_report.py certification/netis-nx31.json --requ
 | Guest Wi-Fi | сеть создаётся с изоляцией | | | |
 | System | hostname, timezone, NTP и restart service работают | | | |
 | Agent interval | принимаются значения от 5 секунд | | | |
-| Agent update | переход `0.1.1-rc9 -> 0.3.x` успешен | | | |
+| Agent update | установка текущего bundle и rollback успешны | | | |
 | Agent rollback | предыдущая версия восстанавливается | | | |
 | Command lifecycle | видны `sent`, `running` и terminal status | | | |
 
 ## Порядок
 
-1. Зафиксируйте модель, версию OpenWrt, target/platform, число radio и исходный SSID.
+1. Подключите стенд по кабелю и сохраните внешний recovery-доступ.
 2. Установите agent и выполните:
 
    ```sh
@@ -54,9 +90,9 @@ python scripts/command_validation_report.py certification/netis-nx31.json --requ
    wrtmonitor-agent diagnostics --json
    ```
 
-3. Проверьте latest telemetry в Web UI или API.
-4. Сначала сделайте безопасную смену SSID, затем Wi-Fi on/off и только потом reboot.
-5. После каждой Wi-Fi-команды проверьте:
+3. Запустите полный `hardware_certify.py`. Runner сам создаёт backup, применяет команды через сервер и восстанавливает исходную конфигурацию.
+4. Проверьте отчёт через `--require-complete`.
+5. Убедитесь, что agent снова отправляет telemetry и исходный адрес управления доступен.
 
    ```sh
    wrtmonitor-agent list-config-backups

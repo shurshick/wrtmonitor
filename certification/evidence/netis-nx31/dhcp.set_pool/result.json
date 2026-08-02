@@ -1,0 +1,43 @@
+{
+  "tested_at": "2026-08-02T15:43:35.204961+00:00",
+  "command": "dhcp.set_pool",
+  "payload": {
+    "interface": "lan",
+    "start": 100,
+    "limit": 150,
+    "leasetime": "12h"
+  },
+  "status": "success",
+  "result": {
+    "message": "configuration applied and verified",
+    "transaction": {
+      "id": "593af21a-12fb-4bb6-8ea5-984bc6d6590b",
+      "state": "confirmed",
+      "configs": "dhcp",
+      "rollback": false
+    }
+  },
+  "error": null,
+  "elapsed_seconds": 33.75,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "dhcp",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  }
+}

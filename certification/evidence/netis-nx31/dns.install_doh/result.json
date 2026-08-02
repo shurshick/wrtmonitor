@@ -1,0 +1,34 @@
+{
+  "tested_at": "2026-08-02T15:59:58.924864+00:00",
+  "command": "dns.install_doh",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "mode": "doh",
+    "message": "encrypted DNS package installed",
+    "package": "https-dns-proxy"
+  },
+  "error": null,
+  "elapsed_seconds": 18.782,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "dns",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "package_state",
+    "verification": {
+      "required": true,
+      "mode": "package_state",
+      "fail_closed": true
+    },
+    "rollback": "package_manager_transaction"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "tested_at": "2026-08-02T16:05:38.518985+00:00",
+  "command": "maintenance.sysupgrade.check",
+  "payload": {
+    "url": "https://example.invalid/wrtmonitor-certification.bin",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "expected_model": "WrtMonitor certification mismatch",
+    "preserve_config": true
+  },
+  "status": "failed",
+  "result": {
+    "error": "firmware model does not match router",
+    "error_detail": {
+      "code": "command_failed",
+      "message": "firmware model does not match router",
+      "retryable": false
+    }
+  },
+  "error": {
+    "code": "command_failed",
+    "title": "Команда не выполнена",
+    "message": "firmware model does not match router",
+    "retryable": false
+  },
+  "elapsed_seconds": 17.984,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "handler_result",
+    "verification": {
+      "required": true,
+      "mode": "handler_result",
+      "fail_closed": true
+    },
+    "rollback": "not_available"
+  }
+}

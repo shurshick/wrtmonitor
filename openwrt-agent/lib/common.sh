@@ -97,6 +97,15 @@ service_action() {
     run_with_deadline "$wrt_service_timeout" "$wrt_service_script" "$wrt_service_action"
 }
 
+service_restart_if_enabled() {
+    wrt_enabled_config="$1"
+    wrt_enabled_key="$2"
+    wrt_enabled_service="$3"
+    [ "$(uci -q get "$wrt_enabled_config.$wrt_enabled_key" 2>/dev/null || true)" = 1 ] \
+        || return 0
+    service_action "$wrt_enabled_service" restart 20
+}
+
 ipv4_netmask_prefix() {
     case "$1" in
         0.0.0.0) printf 0 ;; 128.0.0.0) printf 1 ;; 192.0.0.0) printf 2 ;;

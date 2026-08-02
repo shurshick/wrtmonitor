@@ -17,6 +17,8 @@ LIB_DIR = ROOT / "lib"
 MANIFEST = ROOT / "openwrt-agent-files.txt"
 SUMS = ROOT / "SHA256SUMS.txt"
 AGENT_VERSION = ROOT / "agent-version.txt"
+ED25519_PUBLIC_KEY = ROOT / "update-ed25519-public-key.pem"
+RSA_PUBLIC_KEY = ROOT / "update-rsa-public-key.pem"
 REQUIRED_LIBS = [
     "common.sh",
     "dependencies.sh",
@@ -194,8 +196,13 @@ def test_manifest_remains_compatible_with_legacy_updater():
     # SHA256SUMS. The detached signature is downloaded separately by current
     # agents and cannot checksum itself without creating a circular manifest.
     assert "SHA256SUMS.sig" not in entries
+    assert "SHA256SUMS.rsa.sig" not in entries
     assert 'download_file "$base/SHA256SUMS.sig"' in read_text(LIB_DIR / "update.sh")
     assert 'download_file "$base/SHA256SUMS.sig"' in read_text(INSTALLER)
+    assert 'download_file "$base/SHA256SUMS.rsa.sig"' in read_text(
+        LIB_DIR / "update.sh"
+    )
+    assert 'download_file "$base/SHA256SUMS.rsa.sig"' in read_text(INSTALLER)
     for name in entries:
         if name == "SHA256SUMS.txt":
             continue
@@ -692,6 +699,74 @@ def test_update_manifest_signature_is_required_and_valid(tmp_path: Path):
     assert completed.returncode != 0
 
 
+def test_rsa_manifest_signature_supports_legacy_openssl_path(tmp_path: Path):
+    shell = shell_path()
+    openssl = shutil.which("openssl")
+    if not shell or not openssl:
+        pytest.skip("sh or openssl is not available")
+    sums = tmp_path / "SHA256SUMS.txt"
+    signature = tmp_path / "SHA256SUMS.rsa.sig"
+    private_key = tmp_path / "private.pem"
+    public_key = tmp_path / "public.pem"
+    signature_binary = tmp_path / "signature.bin"
+    shutil.copy2(SUMS, sums)
+    subprocess.run(
+        [openssl, "genpkey", "-algorithm", "RSA", "-out", private_key],
+        check=True,
+    )
+    subprocess.run(
+        [openssl, "pkey", "-in", private_key, "-pubout", "-out", public_key],
+        check=True,
+    )
+    subprocess.run(
+        [
+            openssl,
+            "dgst",
+            "-sha256",
+            "-sign",
+            private_key,
+            "-out",
+            signature_binary,
+            sums,
+        ],
+        check=True,
+    )
+    signature.write_bytes(base64.b64encode(signature_binary.read_bytes()) + b"\n")
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "update.sh").as_posix()}"
+        write_update_rsa_public_key() {{ cp "{public_key.as_posix()}" "$1"; }}
+        verify_manifest_signature "{tmp_path.as_posix()}"
+    '''
+    subprocess.run([shell, "-c", script], check=True, env=shell_env())
+    sums.write_text(sums.read_text(encoding="utf-8") + "tampered\n", encoding="utf-8")
+    completed = subprocess.run([shell, "-c", script], env=shell_env())
+    assert completed.returncode != 0
+
+
+@pytest.mark.parametrize("release_key", [ED25519_PUBLIC_KEY, RSA_PUBLIC_KEY])
+def test_embedded_update_key_matches_release_key(release_key: Path):
+    expected = read_text(release_key).strip()
+    for source in (read_text(LIB_DIR / "update.sh"), read_text(INSTALLER)):
+        assert expected in source
+
+
+def test_installer_stops_all_stale_agent_processes_before_reinstall():
+    source = read_text(INSTALLER)
+    assert "old_pids=\"$(pidof wrtmonitor-agent" in source
+    assert "for old_pid in $old_pids" in source
+    assert "rm -rf /tmp/wrtmonitor-agent.lock" in source
+
+
+def test_disabled_pbr_does_not_turn_a_valid_policy_write_into_failure():
+    common = read_text(LIB_DIR / "common.sh")
+    vpn = read_text(LIB_DIR / "command_vpn.sh")
+    transactions = read_text(LIB_DIR / "transactions.sh")
+    assert "service_restart_if_enabled()" in common
+    assert "service_restart_if_enabled pbr config.enabled pbr" in vpn
+    assert "service_restart_if_enabled pbr config.enabled pbr" in transactions
+
+
 def test_terminal_command_result_is_cached_for_replay(tmp_path: Path):
     shell = shell_path()
     if not shell:
@@ -1023,6 +1098,13 @@ def test_management_commands_have_openwrt_handlers():
         assert f"{command})" in source
     assert 'backup_config sqm "$command_id" "$command_type"' in source
     assert "dhcp.@dnsmasq[0].server=127.0.0.1#5053" in source
+
+
+def test_disabling_absent_wifi_mesh_is_idempotent():
+    source = read_text(ROOT / "lib" / "command_wifi.sh")
+    assert '"$enabled" = false ] && [ -z "$mesh_iface"' in source
+    assert 'command_success_result "Wi-Fi mesh is already disabled"' in source
+    assert "transaction_noop=1" in source
 
 
 def test_network_topology_telemetry_reads_live_uci_sections():

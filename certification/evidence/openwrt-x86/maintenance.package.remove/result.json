@@ -1,0 +1,37 @@
+{
+  "tested_at": "2026-08-02T15:23:41.421882+00:00",
+  "command": "maintenance.package.remove",
+  "payload": {
+    "package": "nano"
+  },
+  "status": "success",
+  "result": {
+    "output": "Removing package nano from root...",
+    "manager": "opkg",
+    "message": "package operation completed",
+    "package": "nano"
+  },
+  "error": null,
+  "elapsed_seconds": 8.453,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "package_state",
+    "verification": {
+      "required": true,
+      "mode": "package_state",
+      "fail_closed": true
+    },
+    "rollback": "package_manager_transaction"
+  }
+}

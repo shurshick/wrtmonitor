@@ -163,7 +163,10 @@ def validate_command_payload(
     if command_type == "vpn.policy.set":
         return _normalize_vpn_policy_payload(normalized_payload)
     if command_type == "vpn.policy.delete":
-        return {"name": _name(normalized_payload)}
+        return {
+            "section": _uci_section(normalized_payload),
+            "name": _name(normalized_payload),
+        }
     if command_type in {
         "maintenance.packages.refresh",
         "maintenance.processes.read",

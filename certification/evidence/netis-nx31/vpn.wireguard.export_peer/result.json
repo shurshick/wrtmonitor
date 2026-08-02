@@ -1,0 +1,36 @@
+{
+  "tested_at": "2026-08-02T15:56:02.661101+00:00",
+  "command": "vpn.wireguard.export_peer",
+  "payload": {
+    "interface": "wgcert",
+    "name": "certpeer"
+  },
+  "status": "success",
+  "result": {
+    "config": "<redacted>",
+    "message": "WireGuard peer profile exported"
+  },
+  "error": null,
+  "elapsed_seconds": 8.531,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  }
+}
