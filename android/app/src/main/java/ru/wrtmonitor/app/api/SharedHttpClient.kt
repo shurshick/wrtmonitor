@@ -4,6 +4,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.sse.EventSource
+import okhttp3.sse.EventSourceListener
+import okhttp3.sse.EventSources
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -16,6 +19,20 @@ internal object SharedHttpClient {
         .writeTimeout(15, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
+    private val eventClient = client.newBuilder()
+        .readTimeout(0, TimeUnit.SECONDS)
+        .build()
+
+    fun eventSource(
+        url: String,
+        headers: Map<String, String>,
+        listener: EventSourceListener,
+    ): EventSource {
+        val request = Request.Builder().url(url).apply {
+            headers.forEach(::header)
+        }.build()
+        return EventSources.createFactory(eventClient).newEventSource(request, listener)
+    }
 
     fun request(
         url: String,

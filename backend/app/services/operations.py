@@ -22,6 +22,7 @@ from .telemetry_history import (
     cleanup_device_telemetry,
     cleanup_device_telemetry_metrics,
 )
+from .realtime import broker
 
 
 TERMINAL_COMMAND_STATES = ("done", "success", "failed", "expired", "cancelled")
@@ -90,6 +91,7 @@ def operation_metrics(db: Session) -> dict[str, Any]:
             "stale": sum(1 for item in freshness if not item["fresh"]),
             "items": freshness,
         },
+        "realtime": broker.metrics(),
     }
 
 

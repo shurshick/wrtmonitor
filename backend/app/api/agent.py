@@ -1,14 +1,15 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 import secrets
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import Settings
 from ..contracts import COMMAND_CONTRACT_VERSION
-from ..db import get_db
+from ..db import get_db, get_engine
 from ..models import Device, DeviceCommand
 from ..services.audit import audit
 from ..services.auth import bearer_token, device_from_token, settings
@@ -24,6 +25,7 @@ from ..services.commands import (
     expire_old_commands,
     requeue_stale_sent_commands,
 )
+from ..services.realtime import broker, queue_realtime_event
 
 
 router = APIRouter(prefix="/api/v1/agent")
@@ -111,38 +113,72 @@ def register_agent(
     raise HTTPException(status_code=401, detail="Unknown device token")
 
 
+def _authenticated_device_id(authorization: str | None) -> UUID:
+    with Session(get_engine()) as db:
+        return device_from_token(authorization, db).id
+
+
+def _claim_commands(device_id: UUID) -> list[dict]:
+    with Session(get_engine()) as db:
+        expire_old_commands(db)
+        requeue_stale_sent_commands(db)
+        commands = db.scalars(
+            select(DeviceCommand)
+            .where(
+                DeviceCommand.device_id == device_id,
+                DeviceCommand.status == "queued",
+            )
+            .order_by(DeviceCommand.created_at.asc())
+            .limit(5)
+            .with_for_update(skip_locked=True)
+        ).all()
+        now = datetime.now(UTC)
+        for command in commands:
+            (
+                command.status,
+                command.updated_at,
+                command.picked_at,
+                command.retry_count,
+            ) = (
+                "sent",
+                now,
+                now,
+                command.retry_count + 1,
+            )
+            queue_realtime_event(
+                db,
+                device_id,
+                "command.status",
+                {"command_id": str(command.id), "status": "sent"},
+            )
+        db.commit()
+        return [
+            {
+                "id": str(command.id),
+                "type": command.command_type,
+                "payload": command.payload,
+                "contract_version": COMMAND_CONTRACT_VERSION,
+            }
+            for command in commands
+        ]
+
+
 @router.get("/commands")
-def poll_commands(
-    authorization: str | None = Header(default=None), db: Session = Depends(get_db)
+async def poll_commands(
+    wait: int = Query(default=0, ge=0, le=30),
+    authorization: str | None = Header(default=None),
 ) -> list[dict]:
-    device = device_from_token(authorization, db)
-    expire_old_commands(db)
-    requeue_stale_sent_commands(db)
-    commands = db.scalars(
-        select(DeviceCommand)
-        .where(DeviceCommand.device_id == device.id, DeviceCommand.status == "queued")
-        .order_by(DeviceCommand.created_at.asc())
-        .limit(5)
-        .with_for_update(skip_locked=True)
-    ).all()
-    now = datetime.now(UTC)
-    for command in commands:
-        command.status, command.updated_at, command.picked_at, command.retry_count = (
-            "sent",
-            now,
-            now,
-            command.retry_count + 1,
-        )
-    db.commit()
-    return [
-        {
-            "id": str(command.id),
-            "type": command.command_type,
-            "payload": command.payload,
-            "contract_version": COMMAND_CONTRACT_VERSION,
-        }
-        for command in commands
-    ]
+    device_id = await asyncio.to_thread(_authenticated_device_id, authorization)
+    commands = await asyncio.to_thread(_claim_commands, device_id)
+    if commands or wait == 0:
+        return commands
+    generation = broker.generation(device_id)
+    # Close the commit-to-wait race before suspending the request.
+    commands = await asyncio.to_thread(_claim_commands, device_id)
+    if commands:
+        return commands
+    await broker.wait_for_change(device_id, generation, wait)
+    return await asyncio.to_thread(_claim_commands, device_id)
 
 
 @router.post("/commands/{command_id}/result")
@@ -212,5 +248,16 @@ def command_result(
             config.command_history_retention_days,
             config.command_history_max_per_device,
         )
+    queue_realtime_event(
+        db,
+        device.id,
+        "command.status",
+        {
+            "command_id": str(command.id),
+            "command_type": command.command_type,
+            "status": command.status,
+            "error": command.last_error,
+        },
+    )
     db.commit()
     return {"status": command.status}

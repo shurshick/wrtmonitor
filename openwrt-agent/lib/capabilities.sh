@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="16"
+CAPABILITIES_VERSION="17"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -6,7 +6,7 @@ capability_path() {
 
 capability_keys() {
     printf '%s\n' \
-        agent.status agent.update agent.set_interval agent.rotate_token agent.rollback agent.disable agent.dependencies config.transaction \
+        agent.status agent.update agent.set_interval agent.rotate_token agent.rollback agent.disable agent.dependencies agent.long_poll config.transaction \
         telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.wifi.stations telemetry.clients telemetry.clients.traffic telemetry.services \
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
@@ -140,6 +140,7 @@ has_config_transactions() {
 capability_supported() {
     case "$1" in
         agent.status) return 0 ;;
+        agent.long_poll) has_commands curl ;;
         agent.dependencies) package_manager_name >/dev/null 2>&1 ;;
         agent.update) has_commands curl sha256sum cp mv ;;
         agent.set_interval) has_uci_config wrtmonitor ;;

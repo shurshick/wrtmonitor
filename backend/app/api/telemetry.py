@@ -30,6 +30,7 @@ from ..services.telemetry import (
 from ..services.telemetry_security import sanitize_telemetry_payload
 from ..services.data_state import subsystem_data_state, telemetry_data_state
 from ..services.wan_events import record_wan_transition
+from ..services.realtime import queue_realtime_event
 
 
 router = APIRouter()
@@ -182,6 +183,12 @@ def agent_telemetry(
     cleanup_device_telemetry(db, device.id, settings().telemetry_retention_per_device)
     cleanup_device_telemetry_metrics(
         db, device.id, settings().telemetry_metric_retention_days
+    )
+    queue_realtime_event(
+        db,
+        device.id,
+        "telemetry.updated",
+        {"created_at": now.isoformat(), "status": "online"},
     )
     db.commit()
     return {"status": "ok"}

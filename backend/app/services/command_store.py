@@ -23,6 +23,7 @@ from .config_transactions import (
     ensure_preflight_valid,
     is_transactional_command,
 )
+from .realtime import queue_realtime_event
 
 
 def mask_secrets(value: Any, secret_fields: set[str]) -> Any:
@@ -151,6 +152,12 @@ def create_device_command(
         idempotency_key=idempotency_key,
     )
     db.add(command)
+    queue_realtime_event(
+        db,
+        device_id,
+        "command.queued",
+        {"command_id": str(command.id), "command_type": command.command_type},
+    )
     return command
 
 

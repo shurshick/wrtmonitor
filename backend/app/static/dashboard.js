@@ -197,12 +197,23 @@
         // The last valid snapshot remains visible while the connection recovers.
       }
     }
-    window.setTimeout(poll, 5000);
+    window.setTimeout(poll, 30000);
   };
+
+  window.addEventListener('wrtmonitor:telemetry', async () => {
+    if (document.hidden || rangeName !== 'live') return;
+    try {
+      await loadRange('live');
+      const updated = document.querySelector('[data-live-updated]');
+      if (updated && points.length) updated.textContent = 'только что';
+    } catch (_) {
+      // The fallback timer will retry after a transient disconnect.
+    }
+  });
 
   monitor.dataset.loadedRange = loadedRange;
   if (state) state.textContent = `Загружено: ${rangeLabels[loadedRange]}`;
   new ResizeObserver(renderChart).observe(canvas);
   render();
-  window.setTimeout(poll, 5000);
+  window.setTimeout(poll, 30000);
 })();

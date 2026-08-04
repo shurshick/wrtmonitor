@@ -112,6 +112,14 @@ POST /api/v1/agent/telemetry
 GET /api/v1/devices/{device_id}/telemetry/latest
 ```
 
+Открытые Web UI и Android-экраны получают уведомления через:
+
+```text
+GET /api/v1/devices/{device_id}/events
+```
+
+SSE не заменяет PostgreSQL и не переносит в событие полное состояние. После `telemetry.updated` или `command.status` клиент перечитывает актуальные данные из API. Брокер работает внутри единственного Uvicorn-процесса; при перезапуске клиент получает `snapshot` и выполняет полную синхронизацию.
+
 Для графиков сервер отдельно хранит компактные записи `device_telemetry_metrics`: RX/TX, load, память и число клиентов. Исходный JSON ограничен коротким диагностическим retention, метрики по умолчанию живут 45 дней и отдаются диапазонами `live`, `24h`, `7d`, `30d`.
 
 В latest telemetry теперь есть нормализованные блоки:

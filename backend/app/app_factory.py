@@ -19,6 +19,9 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        from .services.realtime import broker
+
+        broker.bind(asyncio.get_running_loop())
         ensure_openwrt_download_metadata()
         init_db()
         check_database()
@@ -73,6 +76,7 @@ def register_routers(app: FastAPI) -> None:
     from .api.clients import router as clients_router
     from .api.operations import router as operations_router
     from .api.mobile_pairing import router as mobile_pairing_router
+    from .api.realtime import router as realtime_router
 
     app.include_router(web_router)
     app.include_router(health_router)
@@ -85,6 +89,7 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(clients_router)
     app.include_router(operations_router)
     app.include_router(mobile_pairing_router)
+    app.include_router(realtime_router)
 
 
 def create_application() -> FastAPI:

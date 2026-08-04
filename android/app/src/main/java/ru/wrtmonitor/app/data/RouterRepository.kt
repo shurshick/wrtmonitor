@@ -1,9 +1,13 @@
 package ru.wrtmonitor.app.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
+import ru.wrtmonitor.app.api.SharedHttpClient
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
@@ -14,10 +18,15 @@ import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
+import ru.wrtmonitor.app.api.dto.DeviceEventDto
+import okhttp3.Response
+import okhttp3.sse.EventSource
+import okhttp3.sse.EventSourceListener
+import org.json.JSONObject
 
 class RouterRepository(
-    serverUrl: String,
-    accessToken: String,
+    private val serverUrl: String,
+    private val accessToken: String,
 ) {
     private val api = WrtMonitorApi(serverUrl, accessToken)
 
@@ -91,6 +100,45 @@ class RouterRepository(
         range: String,
     ): ApiResult<List<TelemetryHistoryPointDto>> =
         onIo { api.getTelemetryHistory(deviceId, 120, range) }
+
+    fun deviceEvents(deviceId: String): Flow<ApiResult<DeviceEventDto>> = callbackFlow {
+        val listener = object : EventSourceListener() {
+            override fun onEvent(
+                eventSource: EventSource,
+                id: String?,
+                type: String?,
+                data: String,
+            ) {
+                runCatching {
+                    val payload = JSONObject(data)
+                    DeviceEventDto(
+                        id = id.orEmpty(),
+                        type = type ?: payload.optString("type"),
+                        deviceId = payload.optString("device_id", deviceId),
+                        emittedAt = payload.optString("emitted_at"),
+                    )
+                }.onSuccess { trySend(ApiResult.Success(it)) }
+                    .onFailure { trySend(ApiResult.Error("Некорректное событие сервера", cause = it)) }
+            }
+
+            override fun onFailure(eventSource: EventSource, throwable: Throwable?, response: Response?) {
+                trySend(
+                    ApiResult.Error(
+                        message = if (response?.code == 401) "Сессия истекла" else "Поток событий отключён",
+                        statusCode = response?.code,
+                        cause = throwable,
+                    )
+                )
+                this@callbackFlow.close()
+            }
+        }
+        val source = SharedHttpClient.eventSource(
+            "${serverUrl.trim().trimEnd('/')}/api/v1/devices/$deviceId/events",
+            mapOf("Authorization" to "Bearer $accessToken"),
+            listener,
+        )
+        awaitClose { source.cancel() }
+    }
 
     private suspend fun <T> onIo(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 }

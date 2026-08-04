@@ -2,7 +2,7 @@
 {% block title %}WrtMonitor - {{ device.name or device.hostname or 'Роутер' }}{% endblock %}
 {% block page_class %}page--device{% endblock %}
 {% block content %}
-<div class="device-layout">
+<div class="device-layout" data-device-events="/api/v1/devices/{{ device.id }}/events">
   <aside class="device-sidebar">
     <a class="device-sidebar__back" href="/devices">&larr; Все роутеры</a>
     <div class="device-sidebar__identity">
@@ -85,6 +85,7 @@
 </dialog>
 {% endblock %}
 {% block scripts %}
+<script src="/static/realtime.js" defer></script>
 {% if section == 'overview' %}<script src="/static/dashboard.js" defer></script>{% endif %}
 {% if section == 'clients' %}<script src="/static/clients.js" defer></script>{% endif %}
 {% if section == 'management' %}<script src="/static/command-pagination.js" defer></script>{% endif %}

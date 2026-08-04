@@ -318,10 +318,18 @@ def test_installer_replaces_stale_connection_identity_and_probes_server():
 
 def test_daemon_handoffs_after_command_driven_update():
     source = read_text(LIB_DIR / "api.sh")
-    polling = source.index('poll_commands || log_notice "command polling failed"')
+    polling = source.index('if poll_commands "$wait_seconds"; then')
     handoff = source.index('if [ "$PENDING_AGENT_EXEC" = "1" ]; then', polling)
-    sleeping = source.index('sleep "$(telemetry_interval_seconds)"', polling)
-    assert polling < handoff < sleeping
+    failure = source.index('log_notice "command long-poll failed;', polling)
+    assert polling < handoff < failure
+
+
+def test_daemon_long_poll_preserves_telemetry_deadline_and_backoff():
+    source = read_text(LIB_DIR / "api.sh")
+    assert 'next_telemetry_at=$((now + $(telemetry_interval_seconds)))' in source
+    assert '[ "$wait_seconds" -le 25 ] || wait_seconds=25' in source
+    assert 'poll_backoff=$((poll_backoff * 2))' in source
+    assert 'poll_commands 0' in source
 
 
 def test_legacy_six_hour_update_interval_is_migrated():

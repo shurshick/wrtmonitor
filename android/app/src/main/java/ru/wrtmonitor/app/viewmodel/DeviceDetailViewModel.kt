@@ -26,12 +26,37 @@ class DeviceDetailViewModel(
     private val requestSerial = AtomicInteger(0)
     private var telemetryLoop: Job? = null
     private var historyLoop: Job? = null
+    private var realtimeLoop: Job? = null
+    private var realtimeRefresh: Job? = null
 
     fun start() {
         if (telemetryLoop == null) telemetryLoop = viewModelScope.launch {
             while (true) {
                 refreshTelemetry(showLoading = state.telemetry == null)
-                delay(5_000)
+                delay(30_000)
+            }
+        }
+        if (realtimeLoop == null) realtimeLoop = viewModelScope.launch {
+            var reconnectDelay = 1_000L
+            while (true) {
+                var sessionExpired = false
+                repository.deviceEvents(device.id).collect { result ->
+                    when (result) {
+                        is ApiResult.Success -> {
+                            reconnectDelay = 1_000L
+                            requestRealtimeRefresh()
+                        }
+                        is ApiResult.Error -> {
+                            if (result.isUnauthorized()) {
+                                state = state.copy(sessionExpired = true, error = result.message)
+                                sessionExpired = true
+                            }
+                        }
+                    }
+                }
+                if (sessionExpired) return@launch
+                delay(reconnectDelay)
+                reconnectDelay = (reconnectDelay * 2).coerceAtMost(30_000L)
             }
         }
         restartHistoryLoop()
@@ -53,8 +78,17 @@ class DeviceDetailViewModel(
         historyLoop = viewModelScope.launch {
             do {
                 refreshHistory(historyRange)
-                if (historyRange == "live") delay(5_000)
+                if (historyRange == "live") delay(30_000)
             } while (historyRange == "live")
+        }
+    }
+
+    private fun requestRealtimeRefresh() {
+        realtimeRefresh?.cancel()
+        realtimeRefresh = viewModelScope.launch {
+            delay(120)
+            refreshTelemetry(showLoading = false)
+            if (historyRange == "live") refreshHistory("live")
         }
     }
 

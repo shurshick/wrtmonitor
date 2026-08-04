@@ -35,10 +35,15 @@ register_device() {
 }
 
 poll_commands() {
+    wait_seconds="${1:-0}"
     agent_enabled || return 0
     [ -n "$(device_id)" ] || register_device
     require_json_tool || return 1
-    commands="$(api GET /api/v1/agent/commands)"
+    case "$wait_seconds" in ''|*[!0-9]*) wait_seconds=0 ;; esac
+    [ "$wait_seconds" -le 30 ] || wait_seconds=30
+    commands="$(curl -fsS --connect-timeout 5 --max-time $((wait_seconds + 10)) \
+        -X GET "$(server_url)/api/v1/agent/commands?wait=$wait_seconds" \
+        -H "Authorization: Bearer $(device_token)")" || return 1
     printf '%s' "$commands" >/tmp/wrtmonitor-commands
     index=0
     while true; do
@@ -66,6 +71,8 @@ daemon() {
     agent_enabled || exit 0
     transaction_recover_pending
     next_update_check=0
+    next_telemetry_at=0
+    poll_backoff=5
     while true; do
         now="$(date +%s 2>/dev/null || echo 0)"
         if [ "$now" -ge "$next_update_check" ]; then
@@ -75,13 +82,34 @@ daemon() {
             fi
             next_update_check=$((now + $(update_interval_seconds)))
         fi
-        apply_wifi_schedules || log_notice "wifi schedule check failed"
-        telemetry || log_notice "telemetry failed"
-        poll_commands || log_notice "command polling failed"
+        if [ "$now" -ge "$next_telemetry_at" ]; then
+            apply_wifi_schedules || log_notice "wifi schedule check failed"
+            telemetry || log_notice "telemetry failed"
+            now="$(date +%s 2>/dev/null || echo 0)"
+            next_telemetry_at=$((now + $(telemetry_interval_seconds)))
+        fi
         if [ "$PENDING_AGENT_EXEC" = "1" ]; then
             handoff_to_updated_agent
         fi
-        sleep "$(telemetry_interval_seconds)"
+        now="$(date +%s 2>/dev/null || echo 0)"
+        wait_seconds=$((next_telemetry_at - now))
+        [ "$wait_seconds" -gt 0 ] || wait_seconds=1
+        [ "$wait_seconds" -le 25 ] || wait_seconds=25
+        if poll_commands "$wait_seconds"; then
+            poll_backoff=5
+            if [ "$PENDING_AGENT_EXEC" = "1" ]; then
+                handoff_to_updated_agent
+            fi
+        else
+            log_notice "command long-poll failed; retrying in ${poll_backoff}s"
+            now="$(date +%s 2>/dev/null || echo 0)"
+            sleep_seconds=$((next_telemetry_at - now))
+            [ "$sleep_seconds" -gt 0 ] || sleep_seconds=1
+            [ "$sleep_seconds" -le "$poll_backoff" ] || sleep_seconds="$poll_backoff"
+            sleep "$sleep_seconds"
+            [ "$poll_backoff" -ge 60 ] || poll_backoff=$((poll_backoff * 2))
+            [ "$poll_backoff" -le 60 ] || poll_backoff=60
+        fi
     done
 }
 
@@ -174,7 +202,7 @@ main() {
             acquire_lock || exit 0
             apply_wifi_schedules || true
             telemetry
-            poll_commands
+            poll_commands 0
             release_run_lock
             ;;
         apply-wifi-schedules) apply_wifi_schedules ;;

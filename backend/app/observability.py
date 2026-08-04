@@ -62,6 +62,8 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
 
 
 def prometheus_metrics() -> str:
+    from .services.realtime import broker
+
     lines = [
         "# HELP wrtmonitor_http_requests_total HTTP requests processed.",
         "# TYPE wrtmonitor_http_requests_total counter",
@@ -83,4 +85,6 @@ def prometheus_metrics() -> str:
         lines.append(
             f"wrtmonitor_http_request_duration_seconds_sum{{{labels}}} {value:.6f}"
         )
+    for name, value in broker.metrics().items():
+        lines.append(f"wrtmonitor_realtime_{name} {value}")
     return "\n".join(lines) + "\n"

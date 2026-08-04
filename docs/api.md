@@ -52,6 +52,7 @@ Android подключается только к WrtMonitor Server. Pairing не
 - `DELETE /api/v1/devices/{device_id}` — безвозвратно удалить роутер и связанные данные
 - `GET /api/v1/devices/{device_id}/telemetry/latest`
 - `GET /api/v1/devices/{device_id}/telemetry/history?range=live|24h|7d|30d`
+- `GET /api/v1/devices/{device_id}/events` — SSE telemetry и статусов команд для авторизованного Web/Android-клиента
 - `GET /api/v1/devices/{device_id}/agent`
 - `GET /api/v1/devices/{device_id}/clients`
 - `PUT|PATCH /api/v1/devices/{device_id}/clients/{client_id}`
@@ -63,7 +64,7 @@ Android подключается только к WrtMonitor Server. Pairing не
 - `POST /api/v1/agent/token/rotate`
 - `POST /api/v1/agent/token/confirm` — завершить ротацию после записи UCI;
 - `POST /api/v1/agent/token/rollback` — аварийный откат по одноразовому rollback nonce при ошибке записи UCI
-- `GET /api/v1/agent/commands`
+- `GET /api/v1/agent/commands?wait=0..30` — короткий polling или ожидающий long-poll
 - `POST /api/v1/agent/commands/{command_id}/result`
 - `GET /api/v1/meta/contracts`
 
