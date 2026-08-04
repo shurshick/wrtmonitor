@@ -32,7 +32,7 @@ class RealtimeBroker:
     def bind(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
 
-    def publish(
+    def publish_local(
         self, device_id: UUID, event_type: str, data: dict[str, Any] | None = None
     ) -> None:
         loop = self._loop
@@ -119,7 +119,6 @@ class RealtimeBroker:
 
 
 broker = RealtimeBroker()
-_PENDING_KEY = "wrtmonitor_realtime_events"
 
 
 def queue_realtime_event(
@@ -128,20 +127,41 @@ def queue_realtime_event(
     event_type: str,
     data: dict[str, Any] | None = None,
 ) -> None:
-    info = getattr(db, "info", None)
-    if info is not None:
-        info.setdefault(_PENDING_KEY, []).append((device_id, event_type, data or {}))
+    from sqlalchemy import text
+    payload = json.dumps({"device_id": str(device_id), "type": event_type, "data": data or {}})
+    if hasattr(db, "execute"):
+        db.execute(
+            text("SELECT pg_notify('wrtmonitor_events', :payload)"),
+            {"payload": payload}
+        )
+    else:
+        # Mock mode for unit tests
+        broker.publish_local(device_id, event_type, data)
 
 
-@event.listens_for(Session, "after_commit")
-def _publish_after_commit(db: Session) -> None:
-    for device_id, event_type, data in db.info.pop(_PENDING_KEY, []):
-        broker.publish(device_id, event_type, data)
-
-
-@event.listens_for(Session, "after_rollback")
-def _discard_after_rollback(db: Session) -> None:
-    db.info.pop(_PENDING_KEY, None)
+async def listen_to_postgres(database_url: str) -> None:
+    import psycopg
+    from psycopg import AsyncConnection
+    
+    # We replace postgresql:// with postgres:// or postgresql+asyncpg:// but psycopg3 handles it natively
+    # psycopg 3 requires postgresql://
+    url = database_url.replace("postgresql+psycopg2://", "postgresql://").replace("postgres://", "postgresql://")
+    
+    while True:
+        try:
+            async with await AsyncConnection.connect(url, autocommit=True) as aconn:
+                await aconn.execute("LISTEN wrtmonitor_events")
+                async for notify in aconn.notifies():
+                    try:
+                        payload = json.loads(notify.payload)
+                        device_id = UUID(payload["device_id"])
+                        event_type = payload["type"]
+                        data = payload.get("data", {})
+                        broker.publish_local(device_id, event_type, data)
+                    except Exception:
+                        pass
+        except Exception:
+            await asyncio.sleep(5)
 
 
 def sse_message(event: dict[str, Any]) -> str:

@@ -19,9 +19,10 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        from .services.realtime import broker
+        from .services.realtime import broker, listen_to_postgres
 
         broker.bind(asyncio.get_running_loop())
+        pg_listener = asyncio.create_task(listen_to_postgres(settings.database_url))
         ensure_openwrt_download_metadata()
         init_db()
         check_database()
@@ -41,8 +42,10 @@ def create_app() -> FastAPI:
             yield
         finally:
             housekeeping.cancel()
+            pg_listener.cancel()
             with suppress(asyncio.CancelledError):
                 await housekeeping
+                await pg_listener
 
     app = FastAPI(
         title=APP_NAME,
@@ -77,6 +80,7 @@ def register_routers(app: FastAPI) -> None:
     from .api.operations import router as operations_router
     from .api.mobile_pairing import router as mobile_pairing_router
     from .api.realtime import router as realtime_router
+    from .api.metrics import router as metrics_router
 
     app.include_router(web_router)
     app.include_router(health_router)
@@ -90,6 +94,7 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(operations_router)
     app.include_router(mobile_pairing_router)
     app.include_router(realtime_router)
+    app.include_router(metrics_router)
 
 
 def create_application() -> FastAPI:

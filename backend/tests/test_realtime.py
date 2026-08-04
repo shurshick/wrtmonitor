@@ -15,7 +15,7 @@ def test_realtime_broker_broadcasts_without_consuming_another_subscriber_event()
         device_id = uuid4()
         async with broker.subscribe(device_id) as first:
             async with broker.subscribe(device_id) as second:
-                broker.publish(device_id, "telemetry.updated", {"status": "online"})
+                broker.publish_local(device_id, "telemetry.updated", {"status": "online"})
                 left, right = await asyncio.gather(
                     asyncio.wait_for(first.get(), 1),
                     asyncio.wait_for(second.get(), 1),
@@ -35,7 +35,7 @@ def test_long_poll_wakes_after_device_event():
         generation = broker.generation(device_id)
         waiter = asyncio.create_task(broker.wait_for_change(device_id, generation, 1))
         await asyncio.sleep(0)
-        broker.publish(device_id, "command.queued", {})
+        broker.publish_local(device_id, "command.queued", {})
         assert await waiter is True
         assert broker.metrics()["long_poll_wakeups"] == 1
 
@@ -55,7 +55,7 @@ def test_realtime_broker_wakes_one_hundred_waiting_agents():
         ]
         await asyncio.sleep(0)
         for device_id in devices:
-            broker.publish(device_id, "command.queued", {})
+            broker.publish_local(device_id, "command.queued", {})
         assert all(await asyncio.gather(*waiters))
         assert broker.metrics()["long_poll_active"] == 0
         assert broker.metrics()["long_poll_wakeups"] == 100

@@ -2,7 +2,24 @@ telemetry() {
     agent_enabled || return 0
     [ -n "$(device_id)" ] || register_device
     body="$(telemetry_payload)"
-    api POST /api/v1/agent/telemetry "$body" >/dev/null
+    
+    if ! api POST /api/v1/agent/telemetry "$body" >/dev/null; then
+        echo "$body" >> /tmp/wrtmonitor_telemetry_buffer.jsonl
+        tail -n 60 /tmp/wrtmonitor_telemetry_buffer.jsonl > /tmp/wrtmonitor_telemetry_buffer.tmp 2>/dev/null && mv /tmp/wrtmonitor_telemetry_buffer.tmp /tmp/wrtmonitor_telemetry_buffer.jsonl 2>/dev/null
+        return 0
+    fi
+    
+    if [ -s /tmp/wrtmonitor_telemetry_buffer.jsonl ]; then
+        mv /tmp/wrtmonitor_telemetry_buffer.jsonl /tmp/wrtmonitor_telemetry_buffer.sending 2>/dev/null
+        while read -r buffered_body; do
+            if ! api POST /api/v1/agent/telemetry "$buffered_body" >/dev/null; then
+                echo "$buffered_body" >> /tmp/wrtmonitor_telemetry_buffer.jsonl
+                cat /tmp/wrtmonitor_telemetry_buffer.sending >> /tmp/wrtmonitor_telemetry_buffer.jsonl 2>/dev/null
+                break
+            fi
+        done < /tmp/wrtmonitor_telemetry_buffer.sending
+        rm -f /tmp/wrtmonitor_telemetry_buffer.sending 2>/dev/null
+    fi
 }
 
 telemetry_payload() {
