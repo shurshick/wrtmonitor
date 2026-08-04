@@ -11,11 +11,14 @@ telemetry() {
     
     if [ -s /tmp/wrtmonitor_telemetry_buffer.jsonl ]; then
         mv /tmp/wrtmonitor_telemetry_buffer.jsonl /tmp/wrtmonitor_telemetry_buffer.sending 2>/dev/null
-        while read -r buffered_body; do
-            if ! api POST /api/v1/agent/telemetry "$buffered_body" >/dev/null; then
+        failed=0
+        while IFS= read -r buffered_body; do
+            [ -z "$buffered_body" ] && continue
+            if [ "$failed" -eq 1 ]; then
                 echo "$buffered_body" >> /tmp/wrtmonitor_telemetry_buffer.jsonl
-                cat /tmp/wrtmonitor_telemetry_buffer.sending >> /tmp/wrtmonitor_telemetry_buffer.jsonl 2>/dev/null
-                break
+            elif ! api POST /api/v1/agent/telemetry "$buffered_body" >/dev/null; then
+                echo "$buffered_body" >> /tmp/wrtmonitor_telemetry_buffer.jsonl
+                failed=1
             fi
         done < /tmp/wrtmonitor_telemetry_buffer.sending
         rm -f /tmp/wrtmonitor_telemetry_buffer.sending 2>/dev/null
