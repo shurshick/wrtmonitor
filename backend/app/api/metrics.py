@@ -11,7 +11,7 @@ router = APIRouter(tags=["Metrics"])
 def get_metrics() -> str:
     obs = ObservabilityMiddleware.metrics()
     rt = broker.metrics()
-    
+
     lines = [
         "# HELP wrtmonitor_http_requests_total Total HTTP requests",
         "# TYPE wrtmonitor_http_requests_total counter",

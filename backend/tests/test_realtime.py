@@ -15,7 +15,9 @@ def test_realtime_broker_broadcasts_without_consuming_another_subscriber_event()
         device_id = uuid4()
         async with broker.subscribe(device_id) as first:
             async with broker.subscribe(device_id) as second:
-                broker.publish_local(device_id, "telemetry.updated", {"status": "online"})
+                broker.publish_local(
+                    device_id, "telemetry.updated", {"status": "online"}
+                )
                 left, right = await asyncio.gather(
                     asyncio.wait_for(first.get(), 1),
                     asyncio.wait_for(second.get(), 1),

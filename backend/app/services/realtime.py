@@ -128,11 +128,14 @@ def queue_realtime_event(
     data: dict[str, Any] | None = None,
 ) -> None:
     from sqlalchemy import text
-    payload = json.dumps({"device_id": str(device_id), "type": event_type, "data": data or {}})
+
+    payload = json.dumps(
+        {"device_id": str(device_id), "type": event_type, "data": data or {}}
+    )
     if hasattr(db, "execute"):
         db.execute(
             text("SELECT pg_notify('wrtmonitor_events', :payload)"),
-            {"payload": payload}
+            {"payload": payload},
         )
     else:
         # Mock mode for unit tests
@@ -142,11 +145,13 @@ def queue_realtime_event(
 async def listen_to_postgres(database_url: str) -> None:
     import psycopg
     from psycopg import AsyncConnection
-    
+
     # We replace postgresql:// with postgres:// or postgresql+asyncpg:// but psycopg3 handles it natively
     # psycopg 3 requires postgresql://
-    url = database_url.replace("postgresql+psycopg2://", "postgresql://").replace("postgres://", "postgresql://")
-    
+    url = database_url.replace("postgresql+psycopg2://", "postgresql://").replace(
+        "postgres://", "postgresql://"
+    )
+
     while True:
         try:
             async with await AsyncConnection.connect(url, autocommit=True) as aconn:
