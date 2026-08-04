@@ -474,7 +474,8 @@ def prepare_router() -> str:
 
 
 def assert_page(page: Page, path: str, screenshot_name: str) -> None:
-    response = page.goto(f"{BASE_URL}{path}", wait_until="networkidle")
+    # Device pages keep an EventSource open, so networkidle is never reached.
+    response = page.goto(f"{BASE_URL}{path}", wait_until="domcontentloaded")
     assert response is not None and response.ok, (
         f"{path}: HTTP {response.status if response else 'none'}"
     )
