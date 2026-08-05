@@ -72,7 +72,9 @@ def device_page(
         return RedirectResponse("/setup", status_code=303)
     user = web_user_from_session(wrtmonitor_session, config, db)
     if not user:
-        return RedirectResponse("/login", status_code=303)
+        from urllib.parse import quote
+        next_url = quote(str(request.url.path) + ("?" + str(request.url.query) if request.url.query else ""), safe="")
+        return RedirectResponse(f"/login?next={next_url}", status_code=303)
     device = get_user_device_or_404(db, user, device_id)
     section = section if section in DEVICE_SECTIONS else "overview"
     csrf_token = generate_csrf_token(wrtmonitor_session or "", config.jwt_secret)
