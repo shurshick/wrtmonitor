@@ -40,6 +40,8 @@ class Settings:
     login_rate_limit_attempts: int = 10
     login_rate_limit_window_seconds: int = 15 * 60
     enable_metrics: bool = False
+    fcm_credentials_json: str | None = None
+    enable_push_notifications: bool = False
 
 
 def bool_from_env(value: str | None, default: bool = False) -> bool:
@@ -168,4 +170,6 @@ def load_settings() -> Settings:
             60, int(os.getenv("WRTMONITOR_LOGIN_RATE_LIMIT_WINDOW_SECONDS", "900"))
         ),
         enable_metrics=bool_from_env(os.getenv("WRTMONITOR_ENABLE_METRICS"), False),
+        fcm_credentials_json=os.getenv("WRTMONITOR_FCM_CREDENTIALS_JSON") or None,
+        enable_push_notifications=bool_from_env(os.getenv("WRTMONITOR_ENABLE_PUSH_NOTIFICATIONS"), False),
     )

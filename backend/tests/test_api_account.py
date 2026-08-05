@@ -1,0 +1,133 @@
+import pytest
+from fastapi.testclient import TestClient
+from uuid import uuid4
+from datetime import datetime, timezone
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+import json
+from unittest.mock import MagicMock
+
+from app.main import app
+from app.models import Base, AuditLog, UserSession, PushToken, User
+from app.db import get_db
+from app.services.auth import current_user
+
+
+@pytest.fixture
+def mock_fcm(monkeypatch):
+    class MockFCM:
+        def __init__(self):
+            self.calls = []
+
+        def send_push_notification_to_all(self, db, title, body, data=None):
+            self.calls.append({"title": title, "body": body, "data": data})
+            return 1
+            
+        def send_push_notification(self, db, user_id, title, body, data=None):
+            self.calls.append({"user_id": user_id, "title": title, "body": body, "data": data})
+            return 1
+
+    mock = MockFCM()
+    monkeypatch.setattr("backend.app.services.fcm.send_push_notification_to_all", mock.send_push_notification_to_all)
+    monkeypatch.setattr("backend.app.services.fcm.send_push_notification", mock.send_push_notification)
+    return mock
+
+
+@pytest.fixture(name="db_session")
+def db_session_fixture():
+    return MagicMock()
+
+
+@pytest.fixture
+def test_user():
+    user = User(
+        id=uuid4(),
+        username="admin",
+        password_hash="fake",
+        role="admin"
+    )
+    return user
+
+
+@pytest.fixture(name="client")
+def client_fixture(db_session, test_user):
+    def get_db_override():
+        yield db_session
+    def get_user_override():
+        return test_user
+
+    app.dependency_overrides[get_db] = get_db_override
+    app.dependency_overrides[current_user] = get_user_override
+    
+    yield TestClient(app)
+    
+    app.dependency_overrides.clear()
+
+
+def test_get_audit_logs(client, test_user, db_session):
+    log = AuditLog(
+        id=uuid4(),
+        user_id=test_user.id,
+        action="test_action",
+        created_at=datetime.now(timezone.utc)
+    )
+    
+    mock_result = MagicMock()
+    mock_result.__iter__.return_value = [log]
+    db_session.scalars.return_value = mock_result
+
+    resp = client.get("/api/v1/account/audit")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) >= 1
+    assert data[0]["action"] == "test_action"
+
+
+def test_get_sessions(client, test_user, db_session):
+    sess = UserSession(
+        id=uuid4(),
+        user_id=test_user.id,
+        client_type="web",
+        refresh_token_hash="hash",
+        created_at=datetime.now(timezone.utc),
+        expires_at=datetime.now(timezone.utc)
+    )
+    
+    mock_result = MagicMock()
+    mock_result.__iter__.return_value = [sess]
+    db_session.scalars.return_value = mock_result
+
+    resp = client.get("/api/v1/account/sessions")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) >= 1
+    assert data[0]["client_type"] == "web"
+
+
+def test_revoke_session(client, test_user, db_session):
+    session_id = uuid4()
+    sess = UserSession(
+        id=session_id,
+        user_id=test_user.id,
+        client_type="web",
+        refresh_token_hash="hash",
+        created_at=datetime.now(timezone.utc),
+        expires_at=datetime.now(timezone.utc)
+    )
+    db_session.get.return_value = sess
+
+    resp = client.post(f"/api/v1/account/sessions/{session_id}/revoke")
+    assert resp.status_code == 200
+    assert db_session.commit.called
+
+
+def test_register_push_token(client, test_user, db_session):
+    db_session.scalar.return_value = None
+
+    resp = client.post(
+        "/api/v1/account/push-tokens", 
+        json={"token": "test-token-123", "device_type": "android"}
+    )
+    assert resp.status_code == 200
+    assert db_session.add.called
+    assert db_session.commit.called

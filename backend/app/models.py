@@ -298,6 +298,26 @@ class ClientTrafficSample(Base):
     )
 
 
+class PushToken(Base):
+    __tablename__ = "push_tokens"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    device_type: Mapped[str] = mapped_column(String(40), nullable=False, default="android")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

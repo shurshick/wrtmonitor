@@ -20,8 +20,10 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         from .services.realtime import broker, listen_to_postgres
+        from .services.fcm import init_firebase
 
         broker.bind(asyncio.get_running_loop())
+        init_firebase(settings)
         pg_listener = asyncio.create_task(listen_to_postgres(settings.database_url))
         ensure_openwrt_download_metadata()
         init_db()
@@ -81,6 +83,7 @@ def register_routers(app: FastAPI) -> None:
     from .api.mobile_pairing import router as mobile_pairing_router
     from .api.realtime import router as realtime_router
     from .api.metrics import router as metrics_router
+    from .api.account import router as account_router
 
     app.include_router(web_router)
     app.include_router(health_router)
@@ -95,6 +98,7 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(mobile_pairing_router)
     app.include_router(realtime_router)
     app.include_router(metrics_router)
+    app.include_router(account_router, prefix="/api/v1")
 
 
 def create_application() -> FastAPI:
