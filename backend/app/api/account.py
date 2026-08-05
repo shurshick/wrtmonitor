@@ -20,7 +20,7 @@ class AuditLogResponse(BaseModel):
     object_id: str | None = None
     details: dict | None = None
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -32,7 +32,7 @@ class SessionResponse(BaseModel):
     created_at: datetime
     expires_at: datetime
     revoked_at: datetime | None = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -75,9 +75,9 @@ def revoke_session(
     session = db.get(UserSession, session_id)
     if not session or session.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Сессия не найдена")
-    
+
     if session.revoked_at is None:
         session.revoked_at = datetime.now(timezone.utc)
         db.commit()
-        
+
     return {"status": "ok"}
