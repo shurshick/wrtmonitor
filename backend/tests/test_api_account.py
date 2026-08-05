@@ -4,10 +4,10 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 
-from app.main import app
-from app.models import AuditLog, UserSession, User
-from app.db import get_db
-from app.services.auth import current_user
+from backend.app.main import app
+from backend.app.models import AuditLog, UserSession, User
+from backend.app.db import get_db
+from backend.app.services.auth import current_user
 
 
 @pytest.fixture(name="db_session")
