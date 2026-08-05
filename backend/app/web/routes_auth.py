@@ -135,12 +135,7 @@ def login_form(
             status_code=401,
         )
     record_login_attempt(db, config, username, request_host, accepted=True)
-    # Determine redirect destination — honour ?next= if safe (must start with /)
-    from urllib.parse import unquote
-    raw_next = request.query_params.get("next") or ""
-    safe_next = unquote(raw_next)
-    redirect_to = safe_next if safe_next.startswith("/") and not safe_next.startswith("//") else "/devices?login=1"
-    response = RedirectResponse(redirect_to, status_code=303)
+    response = RedirectResponse("/devices?login=1", status_code=303)
     response.set_cookie(
         "wrtmonitor_session",
         create_web_session_token(user.id, user.role, config),
