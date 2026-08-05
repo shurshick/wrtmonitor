@@ -81,6 +81,7 @@ def register_routers(app: FastAPI) -> None:
     from .api.mobile_pairing import router as mobile_pairing_router
     from .api.realtime import router as realtime_router
     from .api.metrics import router as metrics_router
+    from .api.account import router as account_router
 
     app.include_router(web_router)
     app.include_router(health_router)
@@ -95,6 +96,7 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(mobile_pairing_router)
     app.include_router(realtime_router)
     app.include_router(metrics_router)
+    app.include_router(account_router, prefix="/api/v1")
 
 
 def create_application() -> FastAPI:
