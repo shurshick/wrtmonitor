@@ -225,13 +225,6 @@ def run_housekeeping(db: Session, config: Settings) -> dict[str, int]:
                 )
             )
             counters[desired] += 1
-            
-            # Send push notification
-            from .fcm import send_push_notification_to_all
-            title = f"{device.name or device.hostname or 'Роутер'}: {'В сети' if desired == 'online' else 'Недоступен'}"
-            body = f"Состояние изменилось: {previous} → {desired}."
-            send_push_notification_to_all(db, title, body, {"type": "device_status", "device_id": str(device.id), "status": desired})
-
         counters["telemetry"] += (
             cleanup_device_telemetry(
                 db, device.id, config.telemetry_retention_per_device

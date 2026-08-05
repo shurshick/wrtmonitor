@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Query
+from fastapi import APIRouter
 from .route_shared import (
     APP_NAME,
     APP_VERSION,
@@ -82,29 +82,13 @@ def login_page(
     )
 
 
-def _send_login_push_task(user_id, request_host):
-    from ..services.fcm import send_push_notification
-    from ..db import get_engine
-    
-    with Session(get_engine()) as session:
-        send_push_notification(
-            session,
-            user_id,
-            "Новый вход",
-            f"Выполнен вход с IP: {request_host or 'неизвестно'}",
-            {"type": "login", "ip": request_host or ""}
-        )
-
-
 @router.post("/login")
 def login_form(
     request: Request,
-    background_tasks: BackgroundTasks,
     username: str = Form(...),
     password: str = Form(...),
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
-    next: str | None = Query(None),
 ):
     if is_setup_required(db, config):
         return RedirectResponse("/setup", status_code=303)
@@ -151,8 +135,6 @@ def login_form(
             status_code=401,
         )
     record_login_attempt(db, config, username, request_host, accepted=True)
-    background_tasks.add_task(_send_login_push_task, user.id, request_host)
-
     response = RedirectResponse("/devices?login=1", status_code=303)
     response.set_cookie(
         "wrtmonitor_session",
