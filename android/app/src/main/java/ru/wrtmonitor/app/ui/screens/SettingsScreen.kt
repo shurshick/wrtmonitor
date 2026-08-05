@@ -113,7 +113,7 @@ fun AppSettingsScreen(
                     checkingUpdate = false
                 }
             },
-            onOpenRelease = { openUrl(context, it) }
+            onOpenRelease = { downloadAndInstallApk(context, it) }
         )
         return
     }
@@ -155,19 +155,6 @@ fun AppSettingsScreen(
                     }
                 })
                 SecondaryActionButton(stringResource(R.string.logout), onLogout)
-            }
-        }
-        SectionCard(
-            title = stringResource(R.string.server_notifications),
-            subtitle = stringResource(R.string.server_notifications_summary),
-        ) {
-            if (notifications.isEmpty()) {
-                Text(stringResource(R.string.no_server_notifications), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                notifications.forEach { item ->
-                    Text(item.title, style = MaterialTheme.typography.titleSmall)
-                    Text(item.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
         }
         SectionCard(
@@ -237,6 +224,19 @@ fun AppSettingsScreen(
         ) {
             SecondaryActionButton(stringResource(R.string.open), { showAbout = true }, Modifier.align(Alignment.End))
         }
+        SectionCard(
+            title = stringResource(R.string.server_notifications),
+            subtitle = stringResource(R.string.server_notifications_summary),
+        ) {
+            if (notifications.isEmpty()) {
+                Text(stringResource(R.string.no_server_notifications), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                notifications.forEach { item ->
+                    Text(item.title, style = MaterialTheme.typography.titleSmall)
+                    Text(item.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
     }
 }
 
@@ -289,5 +289,49 @@ private fun checkForUpdate(currentVersion: String): UpdateState {
     val releases = JsonArray(response)
     val release = (0 until releases.length()).mapNotNull { releases.optJsonObject(it) }.firstOrNull { !it.optBoolean("draft", false) } ?: throw IllegalStateException("No published releases")
     val latestVersion = release.optString("tag_name").removePrefix("v")
-    return if (VersionComparator.compare(latestVersion, currentVersion) > 0) UpdateState.Available(latestVersion, release.optString("html_url")) else UpdateState.UpToDate(latestVersion)
+    val assets = release.optJSONArray("assets")
+    var apkUrl: String? = null
+    if (assets != null) {
+        for (i in 0 until assets.length()) {
+            val asset = assets.optJSONObject(i)
+            if (asset?.optString("name")?.endsWith(".apk") == true) {
+                apkUrl = asset.optString("browser_download_url")
+                break
+            }
+        }
+    }
+    return if (VersionComparator.compare(latestVersion, currentVersion) > 0) UpdateState.Available(latestVersion, apkUrl ?: release.optString("html_url")) else UpdateState.UpToDate(latestVersion)
+}
+
+private fun downloadAndInstallApk(context: android.content.Context, url: String) {
+    if (!url.endsWith(".apk")) {
+        openUrl(context, url)
+        return
+    }
+    val request = android.app.DownloadManager.Request(Uri.parse(url)).apply {
+        setMimeType("application/vnd.android.package-archive")
+        setTitle(context.getString(R.string.app_name) + " Update")
+        setDestinationInExternalFilesDir(context, android.os.Environment.DIRECTORY_DOWNLOADS, "update.apk")
+        setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+    }
+    val downloadManager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
+    val downloadId = downloadManager.enqueue(request)
+
+    val receiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: android.content.Context, intent: Intent) {
+            val id = intent.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (id == downloadId) {
+                val uri = downloadManager.getUriForDownloadedFile(downloadId)
+                if (uri != null) {
+                    val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/vnd.android.package-archive")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    }
+                    ctx.startActivity(installIntent)
+                }
+                ctx.unregisterReceiver(this)
+            }
+        }
+    }
+    context.registerReceiver(receiver, android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE))
 }
