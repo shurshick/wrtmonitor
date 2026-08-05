@@ -289,11 +289,11 @@ private fun checkForUpdate(currentVersion: String): UpdateState {
     val releases = JsonArray(response)
     val release = (0 until releases.length()).mapNotNull { releases.optJsonObject(it) }.firstOrNull { !it.optBoolean("draft", false) } ?: throw IllegalStateException("No published releases")
     val latestVersion = release.optString("tag_name").removePrefix("v")
-    val assets = release.optJSONArray("assets")
+    val assets = release.optJsonArray("assets")
     var apkUrl: String? = null
     if (assets != null) {
         for (i in 0 until assets.length()) {
-            val asset = assets.optJSONObject(i)
+            val asset = assets.optJsonObject(i)
             if (asset?.optString("name")?.endsWith(".apk") == true) {
                 apkUrl = asset.optString("browser_download_url")
                 break
@@ -333,5 +333,10 @@ private fun downloadAndInstallApk(context: android.content.Context, url: String)
             }
         }
     }
-    context.registerReceiver(receiver, android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+    androidx.core.content.ContextCompat.registerReceiver(
+        context,
+        receiver,
+        android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+        androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+    )
 }
