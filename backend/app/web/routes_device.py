@@ -217,6 +217,8 @@ def device_page(
 
     supports = {
         "agent_update": has("agent.update"),
+        "agent_ssh_session": has("agent.ssh_session"),
+        "agent_bash_script": has("agent.bash_script"),
         "agent_set_interval": has("agent.set_interval"),
         "agent_rotate_token": has("agent.rotate_token"),
         "agent_rollback": has("agent.rollback"),

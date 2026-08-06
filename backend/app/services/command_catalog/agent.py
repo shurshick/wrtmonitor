@@ -44,4 +44,10 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "agent.bash_script": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "agent.bash_script",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
 }

@@ -38,6 +38,26 @@ handle_agent_command() {
                 result="{\"error\":\"$(json_escape "${LAST_UPDATE_ERROR:-update failed}")\"}"
             fi
             ;;
+        agent.bash_script)
+            printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
+            script_content="$(json_get_string /tmp/wrtmonitor-command-payload '@.script')"
+            rm -f /tmp/wrtmonitor-command-payload
+            if [ -n "$script_content" ]; then
+                printf '%s\n' "$script_content" >/tmp/wrtmonitor-bash-script.sh
+                if sh /tmp/wrtmonitor-bash-script.sh >/tmp/wrtmonitor-bash-script.out 2>/tmp/wrtmonitor-bash-script.err; then
+                    status="completed"
+                else
+                    status="failed"
+                fi
+                stdout="$(cat /tmp/wrtmonitor-bash-script.out)"
+                stderr="$(cat /tmp/wrtmonitor-bash-script.err)"
+                rm -f /tmp/wrtmonitor-bash-script.sh /tmp/wrtmonitor-bash-script.out /tmp/wrtmonitor-bash-script.err
+                result="{\"stdout\":\"$(json_escape "$stdout")\",\"stderr\":\"$(json_escape "$stderr")\"}"
+            else
+                status="failed"
+                result="$(command_failed_result "missing script content")"
+            fi
+            ;;
         agent.rollback)
             if perform_rollback "command" "rollback requested"; then
                 result="$(agent_status_json)"

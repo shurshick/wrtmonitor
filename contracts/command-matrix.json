@@ -1,6 +1,33 @@
 {
-  "command_count": 91,
+  "command_count": 93,
   "commands": [
+    {
+      "command": "agent.bash_script",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "agent.bash_script",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 180,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup",
+      "surface_equivalents": {}
+    },
     {
       "command": "agent.disconnect",
       "subsystem": "agent",
@@ -137,6 +164,33 @@
         "fail_closed": true
       },
       "rollback": "agent_previous_version_or_config",
+      "surface_equivalents": {}
+    },
+    {
+      "command": "agent.ssh_session",
+      "subsystem": "agent",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "agent.ssh_session",
+      "risk": "level_2_safe_action",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 180,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup",
       "surface_equivalents": {}
     },
     {

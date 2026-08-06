@@ -298,6 +298,7 @@ internal fun AgentSection(
         agent?.lastUpdateError?.takeIf(String::isNotBlank)?.let { MessageBanner(it, error = true) }
         if (capabilities.isEmpty()) MessageBanner(stringResource(R.string.capabilities_missing_reinstall))
     }
+    // TODO: implement agent.ssh_session and agent.bash_script in android
     if (capabilities["agent.update"] == true || capabilities["agent.set_interval"] == true || capabilities["agent.rollback"] == true || capabilities["agent.rotate_token"] == true) {
         ExpandableSettingsCard(
             title = stringResource(R.string.agent_management),

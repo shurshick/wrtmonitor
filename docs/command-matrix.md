@@ -3,15 +3,17 @@
 Файл генерируется из исполнимого контракта и исходников командой
 `python scripts/generate_command_matrix.py --write`. Ручное редактирование запрещено.
 
-Всего команд: **91**.
+Всего команд: **93**.
 
 | Команда | Web | Android | API | Agent | Capability | Риск | Post-condition | Rollback |
 |---|:---:|:---:|:---:|:---:|---|---|---|---|
+| `agent.bash_script` | да | да | да | да | `agent.bash_script` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `agent.disconnect` | да | да | да | да | `agent.disable` | level_3_reversible_config | service_or_connectivity_state | not_safe_after_dispatch |
 | `agent.rollback` | да | да | да | да | `agent.rollback` | level_2_safe_action | service_or_connectivity_state | not_safe_after_dispatch |
 | `agent.rotate_token` | да | да | да | да | `agent.rotate_token` | level_2_safe_action | agent_state | agent_previous_version_or_config |
 | `agent.set_auto_update` | да | да | да | да | `agent.update` | level_2_safe_action | agent_state | agent_previous_version_or_config |
 | `agent.set_interval` | да | да | да | да | `agent.set_interval` | level_2_safe_action | agent_state | agent_previous_version_or_config |
+| `agent.ssh_session` | да | да | да | да | `agent.ssh_session` | level_2_safe_action | read_after_write_config | configuration_backup |
 | `agent.update` | да | да | да | да | `agent.update` | level_2_safe_action | service_or_connectivity_state | not_safe_after_dispatch |
 | `client.set_blocked` | да | да | да | да | `clients.block` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `client.set_policy` | да | да | да | да | `clients.policy` | level_3_reversible_config | read_after_write_config | configuration_backup |
