@@ -31,3 +31,4 @@ lib/command_maintenance.sh
 lib/command_modules.sh
 lib/command_agent.sh
 lib/api.sh
+lib/command_ssh.sh
