@@ -36,14 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
         term.reset();
         term.write('\r\n\x1b[33mConnecting to router terminal...\x1b[0m\r\n');
         
+        overlay.style.display = 'none';
+        btnConnect.style.display = 'none';
+        btnDisconnect.style.display = 'inline-block';
+        
         // Connect WS
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/devices/${deviceId}/ssh/ws`);
         
         ws.onopen = () => {
-            overlay.style.display = 'none';
-            btnConnect.style.display = 'none';
-            btnDisconnect.style.display = 'inline-block';
             term.write('\r\n\x1b[32mConnected.\x1b[0m\r\n');
         };
         

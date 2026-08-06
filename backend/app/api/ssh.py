@@ -43,8 +43,13 @@ async def browser_ssh_ws(
                 device_id=device_id,
                 command_type="agent.ssh_session",
                 payload={},
-                user_id=user.id,
+                created_by=user.id,
+                source="api"
             )
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
 
         while True:
             data = await websocket.receive_text()
