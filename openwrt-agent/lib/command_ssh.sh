@@ -1,7 +1,7 @@
 # Web SSH Handler for WrtMonitor Agent
 
 handle_command_agent_ssh_session() {
-    local cmd_id="$1"
+    cmd_id="$1"
     
     # Check if websocat is installed
     if ! command -v websocat >/dev/null 2>&1; then
@@ -14,11 +14,9 @@ handle_command_agent_ssh_session() {
         fi
     fi
     
-    local ws_url
     # Convert http:// to ws:// and https:// to wss://
     ws_url="$(cfg server_url | sed 's/^http/ws/')"
     
-    local device_id
     device_id="$(cfg device_id)"
     
     log_notice "Starting Web SSH session to $ws_url/api/v1/agent/ssh/ws/$device_id"
