@@ -48,6 +48,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_devices_group_id_device_groups", "devices", type_="foreignkey")
+    op.drop_constraint(
+        "fk_devices_group_id_device_groups", "devices", type_="foreignkey"
+    )
     op.drop_column("devices", "group_id")
     op.drop_table("device_groups")

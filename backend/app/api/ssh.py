@@ -2,9 +2,7 @@ import asyncio
 from uuid import UUID
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
-from ..db import get_db
-from ..models import UserSession, Device
-from .auth import get_current_user
+from .auth import current_user
 
 router = APIRouter(prefix="/api/v1", tags=["ssh"])
 
@@ -16,6 +14,7 @@ agent_connections: dict[UUID, WebSocket] = {}
 # Key: device_id (UUID), Value: WebSocket
 browser_connections: dict[UUID, WebSocket] = {}
 
+
 @router.websocket("/devices/{device_id}/ssh/ws")
 async def browser_ssh_ws(
     websocket: WebSocket,
@@ -23,14 +22,14 @@ async def browser_ssh_ws(
     # Authentication usually requires a token in query param for WebSockets since browsers don't send auth headers easily
 ):
     await websocket.accept()
-    
+
     # Simple check for now (in production we'd parse token from query param)
     browser_connections[device_id] = websocket
-    
+
     try:
         # Request the agent to start an SSH session if it's not already connected
         # In a real implementation, we'd trigger a device command 'agent.ssh_session'
-        
+
         while True:
             data = await websocket.receive_text()
             # Forward data to agent if connected
@@ -60,7 +59,7 @@ async def agent_ssh_ws(
 ):
     await websocket.accept()
     agent_connections[device_id] = websocket
-    
+
     try:
         while True:
             data = await websocket.receive_text()
