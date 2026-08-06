@@ -127,6 +127,31 @@
         "rollback": "agent_previous_version_or_config"
       }
     },
+    "agent.ssh_session": {
+      "risk_level": "level_2_safe_action",
+      "capability": "agent.ssh_session",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 180,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
+        "rollback": "configuration_backup"
+      }
+    },
     "agent.update": {
       "risk_level": "level_2_safe_action",
       "capability": "agent.update",

@@ -17,6 +17,7 @@ from .routes_lifecycle import (
     router as routes_lifecycle_router,
 )
 from .routes_setup import router as routes_setup_router
+from .routes_fleet import router as routes_fleet_router
 
 router = APIRouter()
 router.include_router(routes_auth_router)
@@ -26,3 +27,4 @@ router.include_router(routes_clients_router)
 router.include_router(routes_commands_router)
 router.include_router(routes_lifecycle_router)
 router.include_router(routes_setup_router)
+router.include_router(routes_fleet_router)

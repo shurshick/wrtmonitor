@@ -38,4 +38,10 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "agent.ssh_session": {
+        "risk_level": "level_2_safe_action",
+        "capability": "agent.ssh_session",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
 }

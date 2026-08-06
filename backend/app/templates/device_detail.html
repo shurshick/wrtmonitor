@@ -23,6 +23,7 @@
       <span class="device-nav__group">Управление</span>
       <a class="device-nav__item {{ 'is-active' if section == 'system' else '' }}" href="/devices/{{ device.id }}?section=system"><span>Система</span><small>Ресурсы и службы</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'management' else '' }}" href="/devices/{{ device.id }}?section=management"><span>Обслуживание</span><small>Агент и диагностика</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'terminal' else '' }}" href="/devices/{{ device.id }}?section=terminal"><span>Терминал</span><small>Web SSH</small></a>
     </nav>
   </aside>
   <div class="device-content">
@@ -73,6 +74,9 @@
           <form method="post" action="/devices/{{ device.id }}/delete" onsubmit="return confirm('Удалить роутер безвозвратно? Вся telemetry, команды и связанная история будут удалены из базы данных.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--danger" type="submit">Удалить навсегда</button></form>
         </div>
       </div>
+    {% elif section == 'terminal' %}
+      <div class="section-heading"><p class="eyebrow">Доступ</p><h2>Терминал</h2><p>Интерактивная командная строка роутера (Web SSH).</p></div>
+      {% include "partials/ssh.html" %}
     {% endif %}
   </div>
 </div>

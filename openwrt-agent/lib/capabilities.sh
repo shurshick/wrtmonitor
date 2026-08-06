@@ -6,7 +6,7 @@ capability_path() {
 
 capability_keys() {
     printf '%s\n' \
-        agent.status agent.update agent.set_interval agent.rotate_token agent.rollback agent.disable agent.dependencies agent.long_poll config.transaction \
+        agent.status agent.update agent.set_interval agent.rotate_token agent.rollback agent.disable agent.dependencies agent.long_poll agent.ssh_session config.transaction \
         telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.wifi.stations telemetry.clients telemetry.clients.traffic telemetry.services \
         wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
@@ -147,6 +147,7 @@ capability_supported() {
         agent.rotate_token) has_uci_config wrtmonitor && has_commands curl jsonfilter ;;
         agent.rollback) has_commands cp mv && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
         agent.disable) has_uci_config wrtmonitor && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
+        agent.ssh_session) return 0 ;;
         config.transaction) has_config_transactions ;;
         telemetry.system) [ -r "$(capability_path /proc/uptime)" ] && [ -r "$(capability_path /proc/loadavg)" ] ;;
         telemetry.hardware) [ -r "$(capability_path /proc/cpuinfo)" ] && has_commands df ;;

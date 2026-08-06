@@ -15,6 +15,14 @@ handle_agent_command() {
             result="$(command_success_result "agent disabled")"
             disconnect_after=1
             ;;
+        agent.ssh_session)
+            if handle_command_agent_ssh_session "$command_id"; then
+                # result is set in the handler
+                :
+            else
+                status="failed"
+            fi
+            ;;
         agent.update)
             printf '%s' "$command_payload" >/tmp/wrtmonitor-command-payload
             force="$(json_get_bool /tmp/wrtmonitor-command-payload '@.force')"

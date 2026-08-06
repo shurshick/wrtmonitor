@@ -108,20 +108,19 @@ jobs:
         run: |
           test -n "$OPENWRT_UPDATE_SIGNING_KEY_BASE64"
           echo "$OPENWRT_UPDATE_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/openwrt-update-private.pem"
-          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/openwrt-update-private.pem" -rawin -in openwrt-agent/SHA256SUMS.txt -out "$RUNNER_TEMP/SHA256SUMS.sig"
-          base64 -w 0 "$RUNNER_TEMP/SHA256SUMS.sig" > openwrt-agent/SHA256SUMS.sig
-          echo >> openwrt-agent/SHA256SUMS.sig
-          base64 --decode openwrt-agent/SHA256SUMS.sig > "$RUNNER_TEMP/verify.sig"
-          openssl pkeyutl -verify -pubin -inkey openwrt-agent/update-ed25519-public-key.pem -rawin -in openwrt-agent/SHA256SUMS.txt -sigfile "$RUNNER_TEMP/verify.sig"
           if [ -n "$OPENWRT_UPDATE_RSA_SIGNING_KEY_BASE64" ]; then
             echo "$OPENWRT_UPDATE_RSA_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/openwrt-update-rsa-private.pem"
-            openssl dgst -sha256 -sign "$RUNNER_TEMP/openwrt-update-rsa-private.pem" -out "$RUNNER_TEMP/SHA256SUMS.rsa.sig" openwrt-agent/SHA256SUMS.txt
-            base64 -w 0 "$RUNNER_TEMP/SHA256SUMS.rsa.sig" > openwrt-agent/SHA256SUMS.rsa.sig
-            echo >> openwrt-agent/SHA256SUMS.rsa.sig
+            python scripts/sign_agent.py openwrt-agent/SHA256SUMS.txt --ed25519-key "$RUNNER_TEMP/openwrt-update-private.pem" --rsa-key "$RUNNER_TEMP/openwrt-update-rsa-private.pem"
+          else
+            python scripts/sign_agent.py openwrt-agent/SHA256SUMS.txt --ed25519-key "$RUNNER_TEMP/openwrt-update-private.pem"
           fi
-          test -s openwrt-agent/SHA256SUMS.rsa.sig
-          base64 --decode openwrt-agent/SHA256SUMS.rsa.sig > "$RUNNER_TEMP/verify-rsa.sig"
-          openssl dgst -sha256 -verify openwrt-agent/update-rsa-public-key.pem -signature "$RUNNER_TEMP/verify-rsa.sig" openwrt-agent/SHA256SUMS.txt
+          # Verify signatures
+          base64 --decode openwrt-agent/SHA256SUMS.sig > "$RUNNER_TEMP/verify.sig"
+          openssl pkeyutl -verify -pubin -inkey openwrt-agent/update-ed25519-public-key.pem -rawin -in openwrt-agent/SHA256SUMS.txt -sigfile "$RUNNER_TEMP/verify.sig"
+          if [ -r openwrt-agent/SHA256SUMS.rsa.sig ]; then
+            base64 --decode openwrt-agent/SHA256SUMS.rsa.sig > "$RUNNER_TEMP/verify-rsa.sig"
+            openssl dgst -sha256 -verify openwrt-agent/update-rsa-public-key.pem -signature "$RUNNER_TEMP/verify-rsa.sig" openwrt-agent/SHA256SUMS.txt
+          fi
       - uses: actions/upload-artifact@v7
         with:
           name: signed-agent-metadata
