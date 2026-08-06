@@ -10,7 +10,7 @@ ANDROID_SOURCES = ROOT / "android" / "app" / "src" / "main" / "java"
 def test_android_exposes_current_management_contract() -> None:
     matrix = build_matrix()
 
-    assert matrix["command_count"] == 91
+    assert matrix["command_count"] == 93
     assert all(row["surfaces"]["web"] for row in matrix["commands"])
     assert all(row["surfaces"]["android"] for row in matrix["commands"])
     assert all(row["surfaces"]["api"] for row in matrix["commands"])
