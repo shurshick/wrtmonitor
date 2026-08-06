@@ -2,6 +2,31 @@
   "command_contract_version": 1,
   "telemetry_schema_version": 2,
   "commands": {
+    "agent.bash_script": {
+      "risk_level": "level_3_reversible_config",
+      "capability": "agent.bash_script",
+      "requires_confirmation": true,
+      "secret_fields": [],
+      "reliability": {
+        "subsystem": "agent",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": false
+        },
+        "delivery": {
+          "timeout_seconds": 180,
+          "lease_seconds": 45,
+          "max_deliveries": 2
+        },
+        "post_condition": "read_after_write_config",
+        "verification": {
+          "required": true,
+          "mode": "read_after_write_config",
+          "fail_closed": true
+        },
+        "rollback": "configuration_backup"
+      }
+    },
     "agent.disconnect": {
       "risk_level": "level_3_reversible_config",
       "capability": "agent.disable",
