@@ -130,9 +130,7 @@ class Api:
             timeout=30,
         )
         response.raise_for_status()
-        self.headers = {
-            "Authorization": f"Bearer {response.json()['access_token']}"
-        }
+        self.headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
 
     def request(
         self, method: str, path: str, payload: dict[str, Any] | None = None
@@ -196,9 +194,7 @@ class Api:
     ) -> dict[str, Any]:
         deadline = time.monotonic() + timeout_seconds + 30
         while time.monotonic() < deadline:
-            rows = self.get(
-                f"/api/v1/devices/{device_id}/commands?limit=100"
-            )
+            rows = self.get(f"/api/v1/devices/{device_id}/commands?limit=100")
             row = next((item for item in rows if item["id"] == command_id), None)
             if row and row.get("status") in TERMINAL:
                 return row
@@ -232,7 +228,9 @@ def fresh_report(target: Target, router_description: str) -> dict[str, Any]:
     }
 
 
-def load_report(target: Target, router_description: str, resume: bool) -> dict[str, Any]:
+def load_report(
+    target: Target, router_description: str, resume: bool
+) -> dict[str, Any]:
     path = ROOT / "certification" / f"{slug(target.name)}.json"
     if resume and path.is_file():
         report = json.loads(path.read_text(encoding="utf-8"))
@@ -318,9 +316,7 @@ def target_facts(api: Api, target: Target, ssh: Ssh) -> dict[str, Any]:
         "ipv6_dhcpv6": uci(ssh, "dhcp.lan.dhcpv6", "disabled"),
         "ipv6_ndp": uci(ssh, "dhcp.lan.ndp", "disabled"),
         "client_mac": mac,
-        "package_manager": "apk"
-        if ssh.run("command -v apk", check=False)
-        else "opkg",
+        "package_manager": "apk" if ssh.run("command -v apk", check=False) else "opkg",
         "bridge_port": (
             ssh.run("uci -q get network.@device[0].ports", check=False).split()
             or ["eth0"]
@@ -334,8 +330,8 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
     wg_public = base64.b64encode(secrets.token_bytes(32)).decode()
     backup_base64 = ssh.run(
         "p=/tmp/wrtmonitor-certification-backup.tar.gz; "
-        "sysupgrade -b \"$p\" >/dev/null && base64 <\"$p\" | tr -d '\\n'; "
-        "rc=$?; rm -f \"$p\"; exit $rc",
+        'sysupgrade -b "$p" >/dev/null && base64 <"$p" | tr -d \'\\n\'; '
+        'rc=$?; rm -f "$p"; exit $rc',
         timeout=120,
     )
     return {
@@ -343,67 +339,272 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
         "agent.set_interval": {"interval_seconds": 5},
         "agent.update": {"force": bool(os.environ.get("WRTMONITOR_AGENT_UPDATE_URL"))},
         "agent.rotate_token": {},
-        "diagnostics.run": {"checks": ["server", "dns", "route", "wifi", "dependencies"]},
+        "diagnostics.run": {
+            "checks": ["server", "dns", "route", "wifi", "dependencies"]
+        },
         "wifi.status": {},
         "wifi.set_enabled": {"radio": f["radio"], "enabled": True},
         "wifi.set_ssid": {"iface": f["iface"], "ssid": f["ssid"]},
         "wifi.set_password": {"iface": f["iface"], "password": f["wifi_key"]},
         "wifi.set_channel": {"radio": f["radio"], "channel": f["wifi_channel"]},
         "wifi.set_country": {"radio": f["radio"], "country": f["wifi_country"]},
-        "wifi.set_radio": {"radio": f["radio"], "channel": f["wifi_channel"], "country": f["wifi_country"], "htmode": f["wifi_htmode"]},
-        "wifi.add_ssid": {"radio": f["radio"], "ssid": "WrtMonitor-Cert", "network": "lan", "encryption": "sae", "key": "WrtMonitor-Cert-Only", "hidden": True, "isolate": True},
-        "wifi.update_ssid": {"iface": "wrtmonitor_cert_wifi", "ssid": "WrtMonitor-Cert-Updated", "network": "lan", "encryption": "sae", "key": "WrtMonitor-Cert-Only", "enabled": False, "hidden": True, "isolate": True, "ieee80211r": False, "ieee80211k": False, "bss_transition": False},
+        "wifi.set_radio": {
+            "radio": f["radio"],
+            "channel": f["wifi_channel"],
+            "country": f["wifi_country"],
+            "htmode": f["wifi_htmode"],
+        },
+        "wifi.add_ssid": {
+            "radio": f["radio"],
+            "ssid": "WrtMonitor-Cert",
+            "network": "lan",
+            "encryption": "sae",
+            "key": "WrtMonitor-Cert-Only",
+            "hidden": True,
+            "isolate": True,
+        },
+        "wifi.update_ssid": {
+            "iface": "wrtmonitor_cert_wifi",
+            "ssid": "WrtMonitor-Cert-Updated",
+            "network": "lan",
+            "encryption": "sae",
+            "key": "WrtMonitor-Cert-Only",
+            "enabled": False,
+            "hidden": True,
+            "isolate": True,
+            "ieee80211r": False,
+            "ieee80211k": False,
+            "bss_transition": False,
+        },
         "wifi.delete_ssid": {"iface": "wrtmonitor_cert_wifi"},
-        "wifi.set_schedule": {"radio": f["radio"], "enabled": False, "weekdays": [], "start": "", "stop": ""},
+        "wifi.set_schedule": {
+            "radio": f["radio"],
+            "enabled": False,
+            "weekdays": [],
+            "start": "",
+            "stop": "",
+        },
         "wifi.set_mesh": {"radio": f["radio"], "enabled": False},
         "wifi.set_guest": {"radio": f["radio"], "enabled": False},
         "network.interfaces": {},
         "network.interface_restart": {"interface": "lan"},
-        "network.set_wan": {"interface": "wan", "protocol": f["wan_proto"] if f["wan_proto"] in {"dhcp", "static", "pppoe"} else "dhcp"},
-        "network.set_lan": {"interface": "lan", "ip_address": f["lan_ip"], "netmask": f["lan_mask"]},
-        "network.set_ipv6": {"interface": "lan", "enabled": f["ipv6_enabled"], "assignment_length": f["ipv6_assignment"], "ra": f["ipv6_ra"], "dhcpv6": f["ipv6_dhcpv6"], "ndp": f["ipv6_ndp"]},
-        "network.set_segment": {"name": cert_name, "protocol": "static", "ip_address": "10.253.0.1", "netmask": "255.255.255.0", "device": "", "bridge": False, "dhcp_enabled": False, "firewall_policy": "isolated"},
+        "network.set_wan": {
+            "interface": "wan",
+            "protocol": f["wan_proto"]
+            if f["wan_proto"] in {"dhcp", "static", "pppoe"}
+            else "dhcp",
+        },
+        "network.set_lan": {
+            "interface": "lan",
+            "ip_address": f["lan_ip"],
+            "netmask": f["lan_mask"],
+        },
+        "network.set_ipv6": {
+            "interface": "lan",
+            "enabled": f["ipv6_enabled"],
+            "assignment_length": f["ipv6_assignment"],
+            "ra": f["ipv6_ra"],
+            "dhcpv6": f["ipv6_dhcpv6"],
+            "ndp": f["ipv6_ndp"],
+        },
+        "network.set_segment": {
+            "name": cert_name,
+            "protocol": "static",
+            "ip_address": "10.253.0.1",
+            "netmask": "255.255.255.0",
+            "device": "",
+            "bridge": False,
+            "dhcp_enabled": False,
+            "firewall_policy": "isolated",
+        },
         "network.delete_segment": {"name": cert_name},
-        "network.set_vlan": {"section": "wrtmonitor_cert_vlan", "device": "br-cert", "vlan_id": 4093, "ports": ["cert0:t"]},
-        "network.delete_vlan": {"section": "wrtmonitor_cert_vlan", "device": "br-cert", "vlan_id": 4093, "ports": ["cert0:t"]},
-        "network.set_route": {"section": "wrtmonitor_cert_route", "name": "wrtmonitor_cert_route", "interface": "lan", "target": "198.51.100.0/24", "gateway": "", "metric": 250},
-        "network.delete_route": {"section": "wrtmonitor_cert_route", "name": "wrtmonitor_cert_route"},
+        "network.set_vlan": {
+            "section": "wrtmonitor_cert_vlan",
+            "device": "br-cert",
+            "vlan_id": 4093,
+            "ports": ["cert0:t"],
+        },
+        "network.delete_vlan": {
+            "section": "wrtmonitor_cert_vlan",
+            "device": "br-cert",
+            "vlan_id": 4093,
+            "ports": ["cert0:t"],
+        },
+        "network.set_route": {
+            "section": "wrtmonitor_cert_route",
+            "name": "wrtmonitor_cert_route",
+            "interface": "lan",
+            "target": "198.51.100.0/24",
+            "gateway": "",
+            "metric": 250,
+        },
+        "network.delete_route": {
+            "section": "wrtmonitor_cert_route",
+            "name": "wrtmonitor_cert_route",
+        },
         "network.restart": {},
-        "network.set_ddns": {"name": cert_name, "enabled": False, "provider": "cloudflare.com-v4", "domain": "cert.invalid", "username": "", "password": "", "interface": "wan"},
+        "network.set_ddns": {
+            "name": cert_name,
+            "enabled": False,
+            "provider": "cloudflare.com-v4",
+            "domain": "cert.invalid",
+            "username": "",
+            "password": "",
+            "interface": "wan",
+        },
         "network.set_upnp": {"enabled": False, "secure_mode": True},
-        "network.set_multiwan": {"enabled": False, "primary_interface": "wan", "secondary_interface": "wan6", "primary_metric": 10, "secondary_metric": 20, "track_ips": ["1.1.1.1"], "check_interval": 5, "failure_interval": 3, "recovery_interval": 3},
-        "dhcp.set_lease": {"mac": "02:00:00:00:ce:01", "ip": f["lan_ip"].rsplit(".", 1)[0] + ".249", "hostname": "wrtmonitor-cert"},
+        "network.set_multiwan": {
+            "enabled": False,
+            "primary_interface": "wan",
+            "secondary_interface": "wan6",
+            "primary_metric": 10,
+            "secondary_metric": 20,
+            "track_ips": ["1.1.1.1"],
+            "check_interval": 5,
+            "failure_interval": 3,
+            "recovery_interval": 3,
+        },
+        "dhcp.set_lease": {
+            "mac": "02:00:00:00:ce:01",
+            "ip": f["lan_ip"].rsplit(".", 1)[0] + ".249",
+            "hostname": "wrtmonitor-cert",
+        },
         "dhcp.delete_lease": {"mac": "02:00:00:00:ce:01"},
-        "dhcp.set_pool": {"interface": "lan", "start": f["dhcp_start"], "limit": f["dhcp_limit"], "leasetime": f["dhcp_leasetime"]},
+        "dhcp.set_pool": {
+            "interface": "lan",
+            "start": f["dhcp_start"],
+            "limit": f["dhcp_limit"],
+            "leasetime": f["dhcp_leasetime"],
+        },
         "dns.set_servers": {"servers": ["1.1.1.1", "9.9.9.9"]},
         "dns.install_dot": {},
         "dns.install_doh": {},
         "dns.set_dot": {"provider": "cloudflare", "enabled": False},
         "dns.set_doh": {"provider": "cloudflare", "enabled": False},
         "client.set_blocked": {"mac": f["client_mac"], "blocked": False},
-        "client.set_policy": {"mac": f["client_mac"], "blocked": False, "schedule": {"enabled": False, "weekdays": [], "start": "", "stop": ""}, "qos": {"priority": "normal", "download_kbps": 0, "upload_kbps": 0}, "dns": {"provider": "none"}},
-        "qos.set_sqm": {"enabled": False, "interface": "wan", "profile": "balanced", "download_kbps": 100000, "upload_kbps": 50000, "qdisc": "cake", "script": "piece_of_cake.qos", "schedule": {"enabled": False, "weekdays": [], "start": "", "stop": ""}},
-        "firewall.set_zone": {"section": "wrtmonitor_cert_zone", "name": cert_name, "networks": [cert_name], "input": "REJECT", "output": "ACCEPT", "forward": "REJECT", "masquerade": False},
+        "client.set_policy": {
+            "mac": f["client_mac"],
+            "blocked": False,
+            "schedule": {"enabled": False, "weekdays": [], "start": "", "stop": ""},
+            "qos": {"priority": "normal", "download_kbps": 0, "upload_kbps": 0},
+            "dns": {"provider": "none"},
+        },
+        "qos.set_sqm": {
+            "enabled": False,
+            "interface": "wan",
+            "profile": "balanced",
+            "download_kbps": 100000,
+            "upload_kbps": 50000,
+            "qdisc": "cake",
+            "script": "piece_of_cake.qos",
+            "schedule": {"enabled": False, "weekdays": [], "start": "", "stop": ""},
+        },
+        "firewall.set_zone": {
+            "section": "wrtmonitor_cert_zone",
+            "name": cert_name,
+            "networks": [cert_name],
+            "input": "REJECT",
+            "output": "ACCEPT",
+            "forward": "REJECT",
+            "masquerade": False,
+        },
         "firewall.delete_zone": {"section": "wrtmonitor_cert_zone", "name": cert_name},
-        "firewall.set_forwarding": {"section": "wrtmonitor_cert_forward", "src": cert_name, "dest": "lan", "enabled": True},
-        "firewall.delete_forwarding": {"section": "wrtmonitor_cert_forward", "src": cert_name, "dest": "lan"},
-        "firewall.set_rule": {"section": "wrtmonitor_cert_rule", "name": cert_name, "src": "lan", "dest": "*", "protocol": "icmp", "src_ip": "", "dest_ip": "", "src_port": "", "dest_port": "", "target": "ACCEPT"},
+        "firewall.set_forwarding": {
+            "section": "wrtmonitor_cert_forward",
+            "src": cert_name,
+            "dest": "lan",
+            "enabled": True,
+        },
+        "firewall.delete_forwarding": {
+            "section": "wrtmonitor_cert_forward",
+            "src": cert_name,
+            "dest": "lan",
+        },
+        "firewall.set_rule": {
+            "section": "wrtmonitor_cert_rule",
+            "name": cert_name,
+            "src": "lan",
+            "dest": "*",
+            "protocol": "icmp",
+            "src_ip": "",
+            "dest_ip": "",
+            "src_port": "",
+            "dest_port": "",
+            "target": "ACCEPT",
+        },
         "firewall.delete_rule": {"section": "wrtmonitor_cert_rule", "name": cert_name},
-        "firewall.set_redirect": {"section": "wrtmonitor_cert_redirect", "name": cert_name, "enabled": False, "src": "wan", "dest": "lan", "protocol": "tcp", "src_ip": "", "src_port": "65529", "dest_ip": f["lan_ip"].rsplit(".", 1)[0] + ".249", "dest_port": "65529", "target": "DNAT"},
-        "firewall.delete_redirect": {"section": "wrtmonitor_cert_redirect", "name": cert_name},
-        "firewall.set_port_forward": {"section": "wrtmonitor_cert_port", "name": cert_name, "protocol": "tcp", "external_port": 65530, "internal_ip": f["lan_ip"].rsplit(".", 1)[0] + ".249", "internal_port": 65530},
-        "firewall.delete_port_forward": {"section": "wrtmonitor_cert_port", "name": cert_name},
-        "vpn.wireguard.set_interface": {"name": "wgcert", "enabled": False, "mode": "server", "addresses": ["10.254.0.1/24"], "listen_port": 51829, "private_key": wg_private, "mtu": 1420},
-        "vpn.wireguard.set_peer": {"interface": "wgcert", "name": "certpeer", "public_key": wg_public, "preshared_key": "", "allowed_ips": ["10.254.0.2/32"], "endpoint": "", "persistent_keepalive": 0, "route_allowed_ips": False},
+        "firewall.set_redirect": {
+            "section": "wrtmonitor_cert_redirect",
+            "name": cert_name,
+            "enabled": False,
+            "src": "wan",
+            "dest": "lan",
+            "protocol": "tcp",
+            "src_ip": "",
+            "src_port": "65529",
+            "dest_ip": f["lan_ip"].rsplit(".", 1)[0] + ".249",
+            "dest_port": "65529",
+            "target": "DNAT",
+        },
+        "firewall.delete_redirect": {
+            "section": "wrtmonitor_cert_redirect",
+            "name": cert_name,
+        },
+        "firewall.set_port_forward": {
+            "section": "wrtmonitor_cert_port",
+            "name": cert_name,
+            "protocol": "tcp",
+            "external_port": 65530,
+            "internal_ip": f["lan_ip"].rsplit(".", 1)[0] + ".249",
+            "internal_port": 65530,
+        },
+        "firewall.delete_port_forward": {
+            "section": "wrtmonitor_cert_port",
+            "name": cert_name,
+        },
+        "vpn.wireguard.set_interface": {
+            "name": "wgcert",
+            "enabled": False,
+            "mode": "server",
+            "addresses": ["10.254.0.1/24"],
+            "listen_port": 51829,
+            "private_key": wg_private,
+            "mtu": 1420,
+        },
+        "vpn.wireguard.set_peer": {
+            "interface": "wgcert",
+            "name": "certpeer",
+            "public_key": wg_public,
+            "preshared_key": "",
+            "allowed_ips": ["10.254.0.2/32"],
+            "endpoint": "",
+            "persistent_keepalive": 0,
+            "route_allowed_ips": False,
+        },
         "vpn.wireguard.export_peer": {"interface": "wgcert", "name": "certpeer"},
         "vpn.wireguard.delete_peer": {"interface": "wgcert", "name": "certpeer"},
         "vpn.wireguard.delete_interface": {"name": "wgcert"},
-        "vpn.openvpn.set_client": {"name": "certclient", "enabled": False, "config": "client\ndev tun\nproto udp\nremote 192.0.2.1 1194\nnobind\n"},
+        "vpn.openvpn.set_client": {
+            "name": "certclient",
+            "enabled": False,
+            "config": "client\ndev tun\nproto udp\nremote 192.0.2.1 1194\nnobind\n",
+        },
         "vpn.openvpn.set_enabled": {"name": "certclient", "enabled": False},
         "vpn.openvpn.export_client": {"name": "certclient"},
         "vpn.openvpn.delete_client": {"name": "certclient"},
-        "vpn.policy.set": {"section": "wrtmonitor_cert_policy", "name": "cert_policy", "enabled": False, "interface": "wan", "source": "198.51.100.1", "destination": "", "protocol": "all"},
-        "vpn.policy.delete": {"section": "wrtmonitor_cert_policy", "name": "cert_policy"},
+        "vpn.policy.set": {
+            "section": "wrtmonitor_cert_policy",
+            "name": "cert_policy",
+            "enabled": False,
+            "interface": "wan",
+            "source": "198.51.100.1",
+            "destination": "",
+            "protocol": "all",
+        },
+        "vpn.policy.delete": {
+            "section": "wrtmonitor_cert_policy",
+            "name": "cert_policy",
+        },
         "system.set_hostname": {"hostname": f["hostname"]},
         "system.set_timezone": {"zonename": f["zonename"], "timezone": f["timezone"]},
         "system.set_ntp": {"enabled": f["ntp_enabled"], "servers": f["ntp_servers"]},
@@ -419,7 +620,9 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
         "maintenance.processes.read": {},
         "maintenance.process.signal": {"pid": 2, "signal": "HUP"},
         "maintenance.cron.read": {},
-        "maintenance.cron.set": {"content": ssh.run("cat /etc/crontabs/root 2>/dev/null", check=False)},
+        "maintenance.cron.set": {
+            "content": ssh.run("cat /etc/crontabs/root 2>/dev/null", check=False)
+        },
         "maintenance.services.read": {},
         "maintenance.service.set": {"service": "cron", "action": "restart"},
         "maintenance.diagnostics.bundle": {},
@@ -440,34 +643,97 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
 
 
 ORDER = [
-    "diagnostics.run", "wifi.status", "network.interfaces",
-    "maintenance.logs.read", "maintenance.processes.read", "maintenance.process.signal",
-    "maintenance.cron.read", "maintenance.services.read", "maintenance.backup.create",
-    "maintenance.backup.restore", "maintenance.diagnostics.bundle",
-    "agent.set_auto_update", "agent.set_interval", "agent.update", "agent.rollback",
+    "diagnostics.run",
+    "wifi.status",
+    "network.interfaces",
+    "maintenance.logs.read",
+    "maintenance.processes.read",
+    "maintenance.process.signal",
+    "maintenance.cron.read",
+    "maintenance.services.read",
+    "maintenance.backup.create",
+    "maintenance.backup.restore",
+    "maintenance.diagnostics.bundle",
+    "agent.set_auto_update",
+    "agent.set_interval",
+    "agent.update",
+    "agent.rollback",
     "agent.rotate_token",
-    "system.set_hostname", "system.set_timezone", "system.set_ntp", "system.restart_service",
-    "dhcp.set_pool", "dhcp.set_lease", "dhcp.delete_lease", "client.set_blocked", "client.set_policy",
-    "wifi.set_enabled", "wifi.set_ssid", "wifi.set_password", "wifi.set_channel",
-    "wifi.set_country", "wifi.set_radio", "wifi.set_schedule", "wifi.set_guest", "wifi.set_mesh",
-    "wifi.add_ssid", "wifi.update_ssid", "wifi.delete_ssid",
-    "network.set_segment", "firewall.set_zone", "firewall.set_forwarding",
-    "firewall.set_rule", "firewall.set_redirect", "firewall.set_port_forward",
-    "firewall.delete_port_forward", "firewall.delete_redirect", "firewall.delete_rule",
-    "firewall.delete_forwarding", "firewall.delete_zone", "network.delete_segment",
-    "network.set_route", "network.delete_route", "network.set_vlan", "network.delete_vlan",
-    "vpn.wireguard.set_interface", "vpn.wireguard.set_peer", "vpn.wireguard.export_peer",
-    "vpn.wireguard.delete_peer", "vpn.wireguard.delete_interface",
-    "vpn.openvpn.set_client", "vpn.openvpn.set_enabled", "vpn.openvpn.export_client",
-    "vpn.openvpn.delete_client", "vpn.policy.set", "vpn.policy.delete",
-    "dns.install_dot", "dns.set_dot", "dns.install_doh", "dns.set_doh", "dns.set_servers",
-    "qos.set_sqm", "network.set_ddns", "network.set_upnp", "network.set_multiwan",
-    "network.set_ipv6", "network.set_wan", "network.set_lan", "network.interface_restart",
-    "maintenance.packages.refresh", "maintenance.package.install", "maintenance.package.upgrade",
-    "maintenance.package.remove", "maintenance.module.configure", "maintenance.cron.set",
-    "maintenance.service.set", "maintenance.recovery.enable", "maintenance.recovery.disable",
-    "maintenance.sysupgrade.check", "maintenance.sysupgrade.apply",
-    "network.restart", "router.reboot", "agent.disconnect",
+    "system.set_hostname",
+    "system.set_timezone",
+    "system.set_ntp",
+    "system.restart_service",
+    "dhcp.set_pool",
+    "dhcp.set_lease",
+    "dhcp.delete_lease",
+    "client.set_blocked",
+    "client.set_policy",
+    "wifi.set_enabled",
+    "wifi.set_ssid",
+    "wifi.set_password",
+    "wifi.set_channel",
+    "wifi.set_country",
+    "wifi.set_radio",
+    "wifi.set_schedule",
+    "wifi.set_guest",
+    "wifi.set_mesh",
+    "wifi.add_ssid",
+    "wifi.update_ssid",
+    "wifi.delete_ssid",
+    "network.set_segment",
+    "firewall.set_zone",
+    "firewall.set_forwarding",
+    "firewall.set_rule",
+    "firewall.set_redirect",
+    "firewall.set_port_forward",
+    "firewall.delete_port_forward",
+    "firewall.delete_redirect",
+    "firewall.delete_rule",
+    "firewall.delete_forwarding",
+    "firewall.delete_zone",
+    "network.delete_segment",
+    "network.set_route",
+    "network.delete_route",
+    "network.set_vlan",
+    "network.delete_vlan",
+    "vpn.wireguard.set_interface",
+    "vpn.wireguard.set_peer",
+    "vpn.wireguard.export_peer",
+    "vpn.wireguard.delete_peer",
+    "vpn.wireguard.delete_interface",
+    "vpn.openvpn.set_client",
+    "vpn.openvpn.set_enabled",
+    "vpn.openvpn.export_client",
+    "vpn.openvpn.delete_client",
+    "vpn.policy.set",
+    "vpn.policy.delete",
+    "dns.install_dot",
+    "dns.set_dot",
+    "dns.install_doh",
+    "dns.set_doh",
+    "dns.set_servers",
+    "qos.set_sqm",
+    "network.set_ddns",
+    "network.set_upnp",
+    "network.set_multiwan",
+    "network.set_ipv6",
+    "network.set_wan",
+    "network.set_lan",
+    "network.interface_restart",
+    "maintenance.packages.refresh",
+    "maintenance.package.install",
+    "maintenance.package.upgrade",
+    "maintenance.package.remove",
+    "maintenance.module.configure",
+    "maintenance.cron.set",
+    "maintenance.service.set",
+    "maintenance.recovery.enable",
+    "maintenance.recovery.disable",
+    "maintenance.sysupgrade.check",
+    "maintenance.sysupgrade.apply",
+    "network.restart",
+    "router.reboot",
+    "agent.disconnect",
 ]
 
 
@@ -480,18 +746,32 @@ EXPECTED_FAILURES = {
 }
 
 
-def redact(command: str, payload: dict[str, Any], result: Any) -> tuple[dict[str, Any], Any]:
+def redact(
+    command: str, payload: dict[str, Any], result: Any
+) -> tuple[dict[str, Any], Any]:
     metadata = contract()["commands"][command]
     clean_payload = dict(payload)
     for field in metadata.get("secret_fields", []):
         if field in clean_payload:
             clean_payload[field] = "<redacted>"
     clean_result = json.loads(json.dumps(result))
-    secret_names = {"archive_base64", "bundle_base64", "config_base64", "config", "private_key", "preshared_key", "key", "password"}
+    secret_names = {
+        "archive_base64",
+        "bundle_base64",
+        "config_base64",
+        "config",
+        "private_key",
+        "preshared_key",
+        "key",
+        "password",
+    }
 
     def walk(value: Any) -> Any:
         if isinstance(value, dict):
-            return {key: "<redacted>" if key in secret_names else walk(item) for key, item in value.items()}
+            return {
+                key: "<redacted>" if key in secret_names else walk(item)
+                for key, item in value.items()
+            }
         if isinstance(value, list):
             return [walk(item) for item in value]
         return value
@@ -579,7 +859,11 @@ def restore_baseline(ssh: Ssh, archive: bytes) -> None:
 
 
 def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
-    api = Api(env("WRTMONITOR_SERVER_URL"), env("WRTMONITOR_ADMIN_USER"), env("WRTMONITOR_ADMIN_PASSWORD"))
+    api = Api(
+        env("WRTMONITOR_SERVER_URL"),
+        env("WRTMONITOR_ADMIN_USER"),
+        env("WRTMONITOR_ADMIN_PASSWORD"),
+    )
     ssh = Ssh(target, env("WRTMONITOR_ROUTER_PASSWORD"))
     baseline_archive: bytes | None = None
     try:
@@ -590,7 +874,9 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
                 [
                     target.name,
                     ssh.run("cat /tmp/sysinfo/model 2>/dev/null", check=False),
-                    ssh.run(". /etc/openwrt_release; echo $DISTRIB_DESCRIPTION", check=False),
+                    ssh.run(
+                        ". /etc/openwrt_release; echo $DISTRIB_DESCRIPTION", check=False
+                    ),
                 ],
             )
         )
@@ -610,7 +896,17 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
             evidence_dir = ROOT / "certification" / "evidence" / target_slug / command
             evidence_dir.mkdir(parents=True, exist_ok=True)
             (evidence_dir / "result.json").write_text(
-                json.dumps({"tested_at": now_iso(), "command": command, "status": "not_applicable", "reason": reason}, ensure_ascii=False, indent=2) + "\n",
+                json.dumps(
+                    {
+                        "tested_at": now_iso(),
+                        "command": command,
+                        "status": "not_applicable",
+                        "reason": reason,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
                 encoding="utf-8",
             )
             report["commands"][command].update(
@@ -628,15 +924,31 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
                 continue
             capability = spec[command]["capability"]
             if f["capabilities"] and not bool(f["capabilities"].get(capability, False)):
-                evidence_dir = ROOT / "certification" / "evidence" / target_slug / command
+                evidence_dir = (
+                    ROOT / "certification" / "evidence" / target_slug / command
+                )
                 evidence_dir.mkdir(parents=True, exist_ok=True)
                 (evidence_dir / "result.json").write_text(
-                    json.dumps({"tested_at": now_iso(), "command": command, "status": "not_applicable", "reason": f"router reported capability {capability}=false"}, ensure_ascii=False, indent=2) + "\n",
+                    json.dumps(
+                        {
+                            "tested_at": now_iso(),
+                            "command": command,
+                            "status": "not_applicable",
+                            "reason": f"router reported capability {capability}=false",
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                    + "\n",
                     encoding="utf-8",
                 )
                 report["commands"][command].update(
-                    status="not_applicable", idempotency="not_applicable", timeout="not_applicable",
-                    redelivery="not_applicable", post_condition="not_applicable", rollback="not_applicable",
+                    status="not_applicable",
+                    idempotency="not_applicable",
+                    timeout="not_applicable",
+                    redelivery="not_applicable",
+                    post_condition="not_applicable",
+                    rollback="not_applicable",
                     evidence=str(evidence_dir.relative_to(ROOT)).replace("\\", "/"),
                 )
                 print(f"NA   {target.name}: {command} ({capability})", flush=True)
@@ -663,11 +975,11 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
             if command == "agent.rollback":
                 ssh.run(
                     "set -eu; backup=/etc/wrtmonitor/backup; "
-                    "rm -rf \"$backup\"; mkdir -p \"$backup/lib.previous\"; "
-                    "cp /usr/bin/wrtmonitor-agent \"$backup/wrtmonitor-agent.previous\"; "
-                    "cp /etc/init.d/wrtmonitor \"$backup/wrtmonitor.init.previous\"; "
-                    "cp /usr/lib/wrtmonitor/*.sh \"$backup/lib.previous/\"; "
-                    "wrtmonitor-agent version >\"$backup/VERSION.previous\""
+                    'rm -rf "$backup"; mkdir -p "$backup/lib.previous"; '
+                    'cp /usr/bin/wrtmonitor-agent "$backup/wrtmonitor-agent.previous"; '
+                    'cp /etc/init.d/wrtmonitor "$backup/wrtmonitor.init.previous"; '
+                    'cp /usr/lib/wrtmonitor/*.sh "$backup/lib.previous/"; '
+                    'wrtmonitor-agent version >"$backup/VERSION.previous"'
                 )
             if command == "network.set_vlan":
                 ssh.run(
@@ -698,15 +1010,21 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
             key = f"hardware-{target_slug}-{command}-{secrets.token_hex(6)}"
             started = time.monotonic()
             try:
-                command_id, duplicate_same_id = api.create_command(target.device_id, command, payload, key)
-                row = api.wait_command(target.device_id, command_id, int(spec[command]["reliability"]["delivery"]["timeout_seconds"]))
+                command_id, duplicate_same_id = api.create_command(
+                    target.device_id, command, payload, key
+                )
+                row = api.wait_command(
+                    target.device_id,
+                    command_id,
+                    int(spec[command]["reliability"]["delivery"]["timeout_seconds"]),
+                )
                 elapsed = time.monotonic() - started
-                evidence = write_evidence(target_slug, command, payload, row, elapsed, duplicate_same_id)
+                evidence = write_evidence(
+                    target_slug, command, payload, row, elapsed, duplicate_same_id
+                )
                 expected_error = EXPECTED_FAILURES.get(command)
                 actual_error = str(
-                    row.get("error")
-                    or (row.get("result") or {}).get("error")
-                    or ""
+                    row.get("error") or (row.get("result") or {}).get("error") or ""
                 )
                 passed = (
                     row.get("status") == "success"
@@ -714,20 +1032,34 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
                     else row.get("status") == "failed"
                     and expected_error in actual_error
                 )
-                rollback_kind = spec[command]["reliability"].get("rollback", "not_required")
+                rollback_kind = spec[command]["reliability"].get(
+                    "rollback", "not_required"
+                )
                 rollback = "not_required"
                 if rollback_kind not in {"not_required", "none"}:
-                    rollback = "paired_command" if command.startswith(("firewall.", "vpn.", "network.", "wifi.", "dhcp.")) else "configuration_backup"
+                    rollback = (
+                        "paired_command"
+                        if command.startswith(
+                            ("firewall.", "vpn.", "network.", "wifi.", "dhcp.")
+                        )
+                        else "configuration_backup"
+                    )
                 report["commands"][command].update(
                     status="pass" if passed else "fail",
                     idempotency="pass" if duplicate_same_id else "fail",
-                    timeout="pass" if elapsed <= int(spec[command]["reliability"]["delivery"]["timeout_seconds"]) else "fail",
+                    timeout="pass"
+                    if elapsed
+                    <= int(spec[command]["reliability"]["delivery"]["timeout_seconds"])
+                    else "fail",
                     redelivery="pass" if duplicate_same_id else "fail",
                     post_condition="pass" if passed else "fail",
                     rollback=rollback,
                     evidence=evidence,
                 )
-                print(f"{'PASS' if passed else 'FAIL'} {target.name}: {command} ({elapsed:.1f}s)", flush=True)
+                print(
+                    f"{'PASS' if passed else 'FAIL'} {target.name}: {command} ({elapsed:.1f}s)",
+                    flush=True,
+                )
                 if command == "wifi.add_ssid" and passed:
                     created_iface = ssh.run(
                         "uci -q show wireless | sed -n "
@@ -756,19 +1088,38 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
                     wait_online(api, target)
                 if command == "agent.disconnect" and passed:
                     time.sleep(3)
-                    ssh.run("uci set wrtmonitor.main.enabled=1; uci commit wrtmonitor; /etc/init.d/wrtmonitor restart")
+                    ssh.run(
+                        "uci set wrtmonitor.main.enabled=1; uci commit wrtmonitor; /etc/init.d/wrtmonitor restart"
+                    )
                     wait_online(api, target)
             except Exception as exc:
                 elapsed = time.monotonic() - started
-                evidence_dir = ROOT / "certification" / "evidence" / target_slug / command
+                evidence_dir = (
+                    ROOT / "certification" / "evidence" / target_slug / command
+                )
                 evidence_dir.mkdir(parents=True, exist_ok=True)
                 (evidence_dir / "result.json").write_text(
-                    json.dumps({"tested_at": now_iso(), "command": command, "status": "failed", "error": str(exc), "elapsed_seconds": round(elapsed, 3)}, ensure_ascii=False, indent=2) + "\n",
+                    json.dumps(
+                        {
+                            "tested_at": now_iso(),
+                            "command": command,
+                            "status": "failed",
+                            "error": str(exc),
+                            "elapsed_seconds": round(elapsed, 3),
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                    + "\n",
                     encoding="utf-8",
                 )
                 report["commands"][command].update(
-                    status="fail", idempotency="fail", timeout="fail", redelivery="fail",
-                    post_condition="fail", rollback="not_run",
+                    status="fail",
+                    idempotency="fail",
+                    timeout="fail",
+                    redelivery="fail",
+                    post_condition="fail",
+                    rollback="not_run",
                     evidence=str(evidence_dir.relative_to(ROOT)).replace("\\", "/"),
                 )
                 print(f"FAIL {target.name}: {command}: {exc}", flush=True)
@@ -781,13 +1132,14 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
                             + "'"
                         )
                     else:
-                        restore = (
-                            "uci -q delete wrtmonitor.main.update_source || true"
-                        )
+                        restore = "uci -q delete wrtmonitor.main.update_source || true"
                     ssh.run(restore + "; uci commit wrtmonitor", check=False)
             report["generated_at"] = now_iso()
             report_path = ROOT / "certification" / f"{target_slug}.json"
-            report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            report_path.write_text(
+                json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
 
         return ROOT / "certification" / f"{target_slug}.json"
     finally:
@@ -797,12 +1149,21 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run WrtMonitor commands through real server and OpenWrt hardware")
+    parser = argparse.ArgumentParser(
+        description="Run WrtMonitor commands through real server and OpenWrt hardware"
+    )
     parser.add_argument("--name", required=True)
     parser.add_argument("--host", required=True)
     parser.add_argument("--device-id", required=True)
-    parser.add_argument("--commands", help="comma-separated command names; default is the complete contract")
-    parser.add_argument("--resume", action="store_true", help="merge selected results into the existing report")
+    parser.add_argument(
+        "--commands",
+        help="comma-separated command names; default is the complete contract",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="merge selected results into the existing report",
+    )
     args = parser.parse_args()
     selected = set(filter(None, (args.commands or "").split(","))) or None
     path = certify(Target(args.name, args.host, args.device_id), selected, args.resume)
