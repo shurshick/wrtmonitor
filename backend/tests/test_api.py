@@ -21,6 +21,7 @@ from backend.app.models import (
     ClientTrafficSample,
     MobilePairingAttempt,
     Device,
+    DeviceGroup,
     DeviceCommand,
     DeviceTelemetry,
     User,
@@ -499,6 +500,7 @@ def clear_database():
             DeviceTelemetry,
             AuditLog,
             Device,
+            DeviceGroup,
             AppSetting,
             User,
         ):

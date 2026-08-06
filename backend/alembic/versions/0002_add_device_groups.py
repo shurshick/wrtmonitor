@@ -20,6 +20,11 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if inspector.has_table("device_groups"):
+        return
+
     # Create device_groups table
     op.create_table(
         "device_groups",
