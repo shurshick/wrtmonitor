@@ -44,7 +44,7 @@ async def browser_ssh_ws(
                 command_type="agent.ssh_session",
                 payload={},
                 created_by=user.id,
-                source="api"
+                source="api",
             )
             try:
                 db.commit()
