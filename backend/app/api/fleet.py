@@ -1,4 +1,4 @@
-﻿from uuid import UUID
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
