@@ -127,6 +127,7 @@ DEVICE_SECTIONS = {
     "vpn",
     "system",
     "management",
+    "terminal",
 }
 
 
