@@ -5,7 +5,6 @@ from ..config import Settings, load_settings
 from ..db import get_db
 from ..services.auth import web_user_from_session, device_from_token
 from ..services.commands import create_device_command
-from ..services.realtime import notify_command_created
 
 router = APIRouter(prefix="/api/v1", tags=["ssh"])
 
@@ -46,7 +45,6 @@ async def browser_ssh_ws(
                 payload={},
                 user_id=user.id,
             )
-            notify_command_created(device_id)
 
         while True:
             data = await websocket.receive_text()
