@@ -101,7 +101,7 @@
     <string name="about_app">О приложении</string>
     <string name="about_app_summary">Версия, сведения о проекте и обновления</string>
     <string name="app_version">Версия</string>
-    <string name="copyright">© 2026 shurshick. Самостоятельно разворачиваемый мониторинг и управление OpenWrt.</string>
+    <string name="copyright">Copyright © 2026 Alexandr Kovalenko, Самостоятельно разворачиваемый мониторинг и управление OpenWrt.</string>
     <string name="project_page">Страница проекта</string>
     <string name="updates">Обновления</string>
     <string name="update_check_hint">Проверка последнего тестового релиза на GitHub.</string>

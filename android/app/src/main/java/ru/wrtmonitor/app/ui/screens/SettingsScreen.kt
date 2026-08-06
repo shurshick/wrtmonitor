@@ -76,6 +76,7 @@ fun AppSettingsScreen(
     var serverUrl by remember(currentServerUrl) { mutableStateOf(currentServerUrl) }
     var serverUrlError by remember { mutableStateOf("") }
     var showAbout by remember { mutableStateOf(false) }
+    var showSessions by remember { mutableStateOf(false) }
     var updateState by remember { mutableStateOf<UpdateState?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
     var notifications by remember { mutableStateOf<List<WrtMonitorApi.OperationNotificationDto>>(emptyList()) }
@@ -114,6 +115,19 @@ fun AppSettingsScreen(
                 }
             },
             onOpenRelease = { downloadAndInstallApk(context, it) }
+        )
+        return
+    }
+    if (showSessions) {
+        ActiveSessionsScreen(
+            sessions = sessions,
+            onRevoke = { sessionId ->
+                scope.launch {
+                    withContext(Dispatchers.IO) { api.revokeSession(sessionId) }
+                    reloadAccount()
+                }
+            },
+            onBack = { showSessions = false }
         )
         return
     }
@@ -161,28 +175,7 @@ fun AppSettingsScreen(
             title = stringResource(R.string.active_sessions),
             subtitle = stringResource(R.string.active_sessions_summary),
         ) {
-            sessions.filterNot { it.revoked }.forEach { session ->
-                val sessionType = if (session.clientType == "mobile_pairing") {
-                    stringResource(R.string.session_type_qr)
-                } else {
-                    stringResource(R.string.session_type_password)
-                }
-                InfoRow(
-                    session.clientName,
-                    listOfNotNull(
-                        sessionType,
-                        session.ipAddress.ifBlank { null },
-                        formatSessionTimestamp(session.lastUsedAt)
-                            ?: formatSessionTimestamp(session.createdAt),
-                    ).joinToString(" · "),
-                )
-                SecondaryActionButton(stringResource(R.string.revoke_session), {
-                    scope.launch {
-                        withContext(Dispatchers.IO) { api.revokeSession(session.id) }
-                        reloadAccount()
-                    }
-                }, Modifier.align(Alignment.End))
-            }
+            SecondaryActionButton(stringResource(R.string.open), { showSessions = true }, Modifier.align(Alignment.End))
         }
         SectionCard(
             title = stringResource(R.string.change_owner_password),
@@ -339,4 +332,42 @@ private fun downloadAndInstallApk(context: android.content.Context, url: String)
         android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE),
         androidx.core.content.ContextCompat.RECEIVER_EXPORTED
     )
+}
+
+@Composable
+private fun ActiveSessionsScreen(
+    sessions: List<WrtMonitorApi.UserSessionDto>,
+    onRevoke: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    BackHandler(onBack = onBack)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+            Text(stringResource(R.string.active_sessions), style = MaterialTheme.typography.titleLarge)
+        }
+        
+        sessions.filterNot { it.revoked }.forEach { session ->
+            SectionCard(session.clientName) {
+                val sessionType = if (session.clientType == "mobile_pairing") {
+                    stringResource(R.string.session_type_qr)
+                } else {
+                    stringResource(R.string.session_type_password)
+                }
+                InfoRow(
+                    sessionType,
+                    listOfNotNull(
+                        session.ipAddress.ifBlank { null },
+                        formatSessionTimestamp(session.lastUsedAt)
+                            ?: formatSessionTimestamp(session.createdAt),
+                    ).joinToString(" · "),
+                )
+                SecondaryActionButton(
+                    label = stringResource(R.string.revoke_session),
+                    onClick = { onRevoke(session.id) },
+                    modifier = Modifier.align(Alignment.End)
+                )
+            }
+        }
+    }
 }
