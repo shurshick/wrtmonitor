@@ -1,11 +1,11 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 from datetime import datetime
 
 from ..db import get_db
-from ..models import DeviceGroup, Device, UserSession, DeviceCommand
+from ..models import DeviceGroup, Device, UserSession
 from .auth import current_user
 from ..schemas import CommandCreateRequest
 from ..services.commands import (

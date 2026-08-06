@@ -45,13 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnConnect.style.display = 'none';
             btnDisconnect.style.display = 'inline-block';
             term.write('\r\n\x1b[32mConnected.\x1b[0m\r\n');
-            
-            // Send command to wake up agent SSH session
-            fetch(`/api/v1/devices/${deviceId}/commands`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({command_type: 'agent.ssh_session', payload: {}, confirmed: true})
-            });
         };
         
         ws.onmessage = (event) => {

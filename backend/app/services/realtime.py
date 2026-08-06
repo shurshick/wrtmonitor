@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from typing import Any, AsyncIterator
 from uuid import UUID
 
-from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 
@@ -143,7 +142,6 @@ def queue_realtime_event(
 
 
 async def listen_to_postgres(database_url: str) -> None:
-    import psycopg
     from psycopg import AsyncConnection
 
     # We replace postgresql:// with postgres:// or postgresql+asyncpg:// but psycopg3 handles it natively

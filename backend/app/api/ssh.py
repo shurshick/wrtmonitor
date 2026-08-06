@@ -1,8 +1,11 @@
-import asyncio
 from uuid import UUID
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Cookie, Header
 from sqlalchemy.orm import Session
-from .auth import current_user
+from ..config import Settings, load_settings
+from ..db import get_db
+from ..services.auth import web_user_from_session, device_from_token
+from ..services.commands import create_device_command
+from ..services.realtime import notify_command_created
 
 router = APIRouter(prefix="/api/v1", tags=["ssh"])
 
@@ -19,16 +22,31 @@ browser_connections: dict[UUID, WebSocket] = {}
 async def browser_ssh_ws(
     websocket: WebSocket,
     device_id: UUID,
-    # Authentication usually requires a token in query param for WebSockets since browsers don't send auth headers easily
+    wrtmonitor_session: str | None = Cookie(default=None),
+    config: Settings = Depends(load_settings),
+    db: Session = Depends(get_db),
 ):
-    await websocket.accept()
+    # Authenticate the user from the session cookie
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        await websocket.close(code=1008)
+        return
 
-    # Simple check for now (in production we'd parse token from query param)
+    await websocket.accept()
     browser_connections[device_id] = websocket
 
     try:
         # Request the agent to start an SSH session if it's not already connected
-        # In a real implementation, we'd trigger a device command 'agent.ssh_session'
+        if device_id not in agent_connections:
+            # Wake up the agent
+            create_device_command(
+                db=db,
+                device_id=device_id,
+                command_type="agent.ssh_session",
+                payload={},
+                user_id=user.id,
+            )
+            notify_command_created(device_id)
 
         while True:
             data = await websocket.receive_text()
@@ -55,8 +73,16 @@ async def browser_ssh_ws(
 async def agent_ssh_ws(
     websocket: WebSocket,
     device_id: UUID,
-    # Authentication usually requires token header, which curl/websocat can provide
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
 ):
+    try:
+        # Authenticate the agent from the Authorization header
+        device_from_token(authorization, db)
+    except Exception:
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     agent_connections[device_id] = websocket
 

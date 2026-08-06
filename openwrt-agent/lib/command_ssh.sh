@@ -25,7 +25,7 @@ handle_command_agent_ssh_session() {
     # websocat bridges the WebSocket to an interactive ash shell
     # --ping-interval 30 to keep connection alive
     # sh-c:'exec /bin/ash -i 2>&1' connects stderr and stdout
-    websocat --ping-interval 30 "$ws_url/api/v1/agent/ssh/ws/$device_id" sh-c:'exec /bin/ash -i 2>&1' &
+    websocat --header "Authorization: Bearer $(cfg device_token)" --ping-interval 30 "$ws_url/api/v1/agent/ssh/ws/$device_id" sh-c:'exec /bin/ash -i 2>&1' &
     
     submit_command_result "$cmd_id" "success" "{\"status\": \"ssh_started\"}"
 }
