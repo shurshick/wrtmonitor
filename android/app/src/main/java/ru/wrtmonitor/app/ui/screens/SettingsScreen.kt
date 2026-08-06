@@ -79,7 +79,6 @@ fun AppSettingsScreen(
     var showSessions by remember { mutableStateOf(false) }
     var updateState by remember { mutableStateOf<UpdateState?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
-    var notifications by remember { mutableStateOf<List<WrtMonitorApi.OperationNotificationDto>>(emptyList()) }
     var sessions by remember { mutableStateOf<List<WrtMonitorApi.UserSessionDto>>(emptyList()) }
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -88,10 +87,6 @@ fun AppSettingsScreen(
 
     fun reloadAccount() {
         scope.launch {
-            when (val result = withContext(Dispatchers.IO) { api.getOperationNotifications() }) {
-                is ApiResult.Success -> notifications = result.data
-                is ApiResult.Error -> accountMessage = result.message
-            }
             when (val result = withContext(Dispatchers.IO) { api.getSessions() }) {
                 is ApiResult.Success -> sessions = result.data
                 is ApiResult.Error -> accountMessage = result.message
@@ -217,19 +212,7 @@ fun AppSettingsScreen(
         ) {
             SecondaryActionButton(stringResource(R.string.open), { showAbout = true }, Modifier.align(Alignment.End))
         }
-        SectionCard(
-            title = stringResource(R.string.server_notifications),
-            subtitle = stringResource(R.string.server_notifications_summary),
-        ) {
-            if (notifications.isEmpty()) {
-                Text(stringResource(R.string.no_server_notifications), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                notifications.forEach { item ->
-                    Text(item.title, style = MaterialTheme.typography.titleSmall)
-                    Text(item.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
+
     }
 }
 
