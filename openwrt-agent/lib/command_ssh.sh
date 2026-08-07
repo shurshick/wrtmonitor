@@ -1,5 +1,5 @@
 # Web SSH Handler for WrtMonitor Agent
-
+# shellcheck disable=SC2034,SC2154
 handle_command_agent_ssh_session() {
     cmd_id="$1"
     
