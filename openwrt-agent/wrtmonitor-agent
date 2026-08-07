@@ -4,8 +4,11 @@ PATH="/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 export PATH
 
 # Set environment variables for the agent script path, name, and version
+# shellcheck disable=SC2034
 AGENT_SCRIPT="/usr/bin/wrtmonitor-agent"
+# shellcheck disable=SC2034
 AGENT_NAME="wrtmonitor-agent"
+# shellcheck disable=SC2034
 AGENT_VERSION="0.35.12"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
