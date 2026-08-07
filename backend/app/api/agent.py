@@ -228,13 +228,19 @@ def command_result(
     if command.command_type == "agent.disconnect" and command.status == "success":
         device.status = "disabled"
         device.updated_at = now
-    
+
     if command.command_type == "agent.ssh_session" and command.status == "failed":
         from .ssh import browser_connections
+
         if device.id in browser_connections:
             ws = browser_connections[device.id]
-            error_msg = "\r\n\x1b[31mAgent Error: " + str((payload.result or {}).get("error", "Unknown error")) + "\x1b[0m\r\n"
+            error_msg = (
+                "\r\n\x1b[31mAgent Error: "
+                + str((payload.result or {}).get("error", "Unknown error"))
+                + "\x1b[0m\r\n"
+            )
             import asyncio
+
             asyncio.create_task(ws.send_text(error_msg))
             asyncio.create_task(ws.close())
 
