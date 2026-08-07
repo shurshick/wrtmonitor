@@ -31,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    btnConnect.addEventListener('click', () => {
+    btnConnect.addEventListener('click', (event) => {
+        event.preventDefault();
         initTerminal();
         term.reset();
         term.write('\r\n\x1b[33mConnecting to router terminal...\x1b[0m\r\n');
@@ -66,7 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    btnDisconnect.addEventListener('click', () => {
+    btnDisconnect.addEventListener('click', (event) => {
+        event.preventDefault();
         if (ws) {
             ws.close();
             ws = null;
