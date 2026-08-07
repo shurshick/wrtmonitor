@@ -97,7 +97,7 @@ async def agent_ssh_down(
     return StreamingResponse(event_generator(), media_type="application/octet-stream")
 
 
-@router.post("/agent/ssh/up/{device_id}")
+@router.put("/agent/ssh/up/{device_id}")
 async def agent_ssh_up(
     device_id: UUID,
     request: Request,
