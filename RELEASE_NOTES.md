@@ -1,3 +1,10 @@
+## [0.35.9] - 2026-08-07
+
+### Fixed
+- Fixed Web SSH button triggering a full page reload.
+- Added proper error handling in UI when agent fails to install websocat.
+
+
 # v0.35.8 — Advanced Device Management (Продвинутое управление)
 
 Расширение возможностей управления самими роутерами OpenWrt, превращение WrtMonitor в полноценный Fleet Manager.
