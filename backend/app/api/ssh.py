@@ -1,4 +1,5 @@
 import asyncio
+from uuid import UUID
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Cookie, Header, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
