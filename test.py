@@ -44,6 +44,10 @@ for dev in devices:
     req = urllib.request.Request(f"{base_url}/devices/{dev['id']}/commands", headers=headers)
     with urllib.request.urlopen(req) as response:
         commands = json.loads(response.read())
-        for c in commands[:10]:
-            if c.get('capability') == 'agent.ssh_session':
-                print(f"  Command: {c.get('capability')} - Status: {c.get('status')} - Result: {c.get('result')}")
+        count = 0
+        for c in commands:
+            if c.get('capability') == 'agent.update':
+                print(f"  Command: {c.get('capability')} - Status: {c.get('status')} - Result: {c.get('result')} - Error: {c.get('last_error')} - Created: {c.get('created_at')} - Picked: {c.get('picked_at')}")
+                count += 1
+                if count >= 3:
+                    break
