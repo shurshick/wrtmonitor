@@ -45,7 +45,7 @@ jobs:
       - run: python scripts/validate_architecture.py
       - run: python scripts/generate_command_matrix.py
       - run: python scripts/command_validation_report.py artifacts/command-validation.json --init --router ci-harness
-      - run: pytest backend/tests openwrt-agent/tests
+      - run: pytest backend/tests openwrt-agent/tests --junitxml=pytest-results.xml
         env:
           PYTHONPATH: ${{ github.workspace }}
           WRTMONITOR_DATABASE_URL: postgresql+psycopg://wrtmonitor:change-me-db-password@localhost:5432/wrtmonitor_test
@@ -53,6 +53,11 @@ jobs:
           WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS: "true"
           WRTMONITOR_JWT_SECRET: ci-test-secret-value-with-more-than-32-characters
           WRTMONITOR_SKIP_E2E: "0"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pytest-logs
+          path: pytest-results.xml
       - run: sh openwrt-agent/tests/harness/run.sh
       - name: Verify PostgreSQL disaster recovery
         env:
