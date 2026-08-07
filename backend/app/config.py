@@ -23,6 +23,7 @@ APP_VERSION = read_repo_version()
 
 @dataclass(frozen=True)
 class Settings:
+    VERSION: str = "0.35.11"
     public_server_url: str | None
     database_url: str
     bind_host: str
