@@ -3,30 +3,37 @@
 handle_command_agent_ssh_session() {
     cmd_id="$1"
     
-    # Check if websocat is installed
-    if ! command -v websocat >/dev/null 2>&1; then
-        log_notice "websocat not found, attempting to install..."
-        opkg update >/dev/null 2>&1
-        opkg install websocat >/dev/null 2>&1
-        if ! command -v websocat >/dev/null 2>&1; then
-            status="failed"
-            result="$(command_failed_result "websocat is required for Web SSH but could not be installed.")"
-            return 0
-        fi
-    fi
-    
-    # Convert http:// to ws:// and https:// to wss://
-    ws_url="$(cfg server_url | sed 's/^http/ws/')"
-    
+    # We use curl with chunked upload (named pipe) and infinite download.
     device_id="$(cfg device_id)"
+    server_url="$(cfg server_url)"
+    token="$(cfg device_token)"
     
-    log_notice "Starting Web SSH session to $ws_url/api/v1/agent/ssh/ws/$device_id"
+    log_notice "Starting Web SSH session via curl streams..."
     
-    # Run in background so it doesn't block the agent loop
-    # websocat bridges the WebSocket to an interactive ash shell
-    # --ping-interval 30 to keep connection alive
-    # sh-c:'exec /bin/ash -i 2>&1' connects stderr and stdout
-    websocat -H "Authorization: Bearer $(cfg device_token)" --ping-interval 30 "$ws_url/api/v1/agent/ssh/ws/$device_id" sh-c:'exec /bin/ash -i 2>&1' &
+    # Clean up any previous session pipes
+    rm -f /tmp/wrtmonitor_ssh_in /tmp/wrtmonitor_ssh_out 2>/dev/null
+    
+    # Create named pipes
+    mkfifo /tmp/wrtmonitor_ssh_in
+    mkfifo /tmp/wrtmonitor_ssh_out
+    
+    # Start download stream in background (reads from server, writes to pipe)
+    # Using uclient-fetch if curl is somehow missing, but curl is a hard dependency so curl is preferred.
+    curl -sN -H "Authorization: Bearer $token" "$server_url/api/v1/agent/ssh/down/$device_id" > /tmp/wrtmonitor_ssh_in &
+    pid_down=$!
+    
+    # Start upload stream in background (reads from pipe, sends to server chunked)
+    curl -sN -T /tmp/wrtmonitor_ssh_out -H "Authorization: Bearer $token" -H "Expect:" "$server_url/api/v1/agent/ssh/up/$device_id" &
+    pid_up=$!
+    
+    # Connect interactive shell to the pipes in background
+    (
+        /bin/ash -i < /tmp/wrtmonitor_ssh_in > /tmp/wrtmonitor_ssh_out 2>&1
+        
+        # When shell exits, kill the curl streams
+        kill -9 "$pid_down" "$pid_up" 2>/dev/null
+        rm -f /tmp/wrtmonitor_ssh_in /tmp/wrtmonitor_ssh_out 2>/dev/null
+    ) &
     
     status="done"
     result="$(command_success_result "Web SSH session started" "\"status\":\"ssh_started\"")"
