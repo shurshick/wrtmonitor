@@ -1,3 +1,18 @@
+## [0.35.12] - 2026-08-07
+
+### Fixed
+- Fixed Web SSH upload stream failing instantly due to `PUT` method from `curl -T` being rejected by a `POST` endpoint on the FastAPI backend.
+
+## [0.35.11] - 2026-08-07
+
+### Fixed
+- Fixed agent version reporting (agent was stuck reporting `0.35.8`).
+
+## [0.35.10] - 2026-08-07
+
+### Changed
+- Removed `websocat` dependency from the OpenWrt-agent script. Web SSH now works via standard `curl` streams natively on OpenWrt, increasing stability and compatibility with older firmwares.
+
 ## [0.35.9] - 2026-08-07
 
 ### Fixed

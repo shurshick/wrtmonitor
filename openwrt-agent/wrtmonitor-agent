@@ -3,9 +3,10 @@ set -eu
 PATH="/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 export PATH
 
-# Used by sourced libraries from lib/*.sh.
-# shellcheck disable=SC2034
-AGENT_VERSION="0.35.10"
+# Set environment variables for the agent script path, name, and version
+AGENT_SCRIPT="/usr/bin/wrtmonitor-agent"
+AGENT_NAME="wrtmonitor-agent"
+AGENT_VERSION="0.35.12"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
