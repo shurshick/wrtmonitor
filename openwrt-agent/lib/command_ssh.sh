@@ -9,8 +9,9 @@ handle_command_agent_ssh_session() {
         opkg update >/dev/null 2>&1
         opkg install websocat >/dev/null 2>&1
         if ! command -v websocat >/dev/null 2>&1; then
-            submit_command_result "$cmd_id" "error" "websocat is required for Web SSH but could not be installed."
-            return 1
+            status="failed"
+            result="$(command_failed_result "websocat is required for Web SSH but could not be installed.")"
+            return 0
         fi
     fi
     
@@ -27,5 +28,7 @@ handle_command_agent_ssh_session() {
     # sh-c:'exec /bin/ash -i 2>&1' connects stderr and stdout
     websocat -H "Authorization: Bearer $(cfg device_token)" --ping-interval 30 "$ws_url/api/v1/agent/ssh/ws/$device_id" sh-c:'exec /bin/ash -i 2>&1' &
     
-    submit_command_result "$cmd_id" "success" "{\"status\": \"ssh_started\"}"
+    status="done"
+    result="$(command_success_result "Web SSH session started" "\"status\":\"ssh_started\"")"
+    return 0
 }
