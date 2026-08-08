@@ -916,6 +916,14 @@ def test_terminal_command_reports_supervisor_startup_failure(tmp_path: Path):
     if not shell:
         pytest.skip("sh is not available")
     session_id = "12345678-1234-1234-1234-123456789abc"
+    daemon_stub = tmp_path / "start-stop-daemon"
+    daemon_stub.write_text(
+        "#!/bin/sh\n"
+        f"printf '%s\\n' 'failed: PTY transport rejected by server' "
+        f">'/tmp/wrtmonitor-terminal-{session_id}.launch'\n",
+        encoding="utf-8",
+    )
+    daemon_stub.chmod(0o755)
     script = f'''
         set -eu
         . "{(LIB_DIR / "command_ssh.sh").as_posix()}"
@@ -925,11 +933,6 @@ def test_terminal_command_reports_supervisor_startup_failure(tmp_path: Path):
         json_get_number() {{ printf '80'; }}
         command_failed_result() {{ printf '{{"message":"%s"}}' "$1"; }}
         command_success_result() {{ printf '{{"message":"%s"}}' "$1"; }}
-        start-stop-daemon() {{
-            printf '%s\n' 'failed: PTY transport rejected by server' \
-                >'/tmp/wrtmonitor-terminal-{session_id}.launch'
-            return 0
-        }}
         payload='{{"session_id":"{session_id}","columns":80,"rows":24}}'
         if handle_command_agent_ssh_session '87654321-4321-4321-4321-cba987654321' "$payload"; then
             exit 1
@@ -937,7 +940,9 @@ def test_terminal_command_reports_supervisor_startup_failure(tmp_path: Path):
         test "$status" = failed
         case "$result" in *'PTY transport rejected by server'*) ;; *) exit 1 ;; esac
     '''
-    subprocess.run([shell, "-c", script], check=True, env=shell_env(), timeout=10)
+    env = shell_env()
+    env["PATH"] = f"{tmp_path.as_posix()}:{env['PATH']}"
+    subprocess.run([shell, "-c", script], check=True, env=env, timeout=10)
 
 
 def test_command_execution_does_not_run_competing_telemetry_refresh():
