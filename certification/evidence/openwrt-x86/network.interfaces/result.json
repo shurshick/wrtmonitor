@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:55:44.956324+00:00",
+  "tested_at": "2026-08-08T13:37:47.482239+00:00",
   "command": "network.interfaces",
   "payload": {},
   "status": "success",
@@ -90,24 +90,6 @@
           "ip6assign": "",
           "ip_address": "",
           "bridge_section": ""
-        },
-        {
-          "dhcp": {
-            "limit": "150",
-            "start": "100",
-            "enabled": true,
-            "leasetime": "12h"
-          },
-          "name": "wrtmonitor_guest",
-          "proto": "static",
-          "device": "",
-          "policy": "guest",
-          "enabled": true,
-          "ip6hint": "",
-          "netmask": "255.255.255.0",
-          "ip6assign": "",
-          "ip_address": "192.168.2.1",
-          "bridge_section": ""
         }
       ]
     },
@@ -187,38 +169,23 @@
         "interface": "wan6",
         "ip6assign": "",
         "ipv4_details": []
-      },
-      {
-        "up": false,
-        "dns": [],
-        "ipv4": [],
-        "ipv6": [],
-        "proto": "static",
-        "device": "",
-        "errors": [],
-        "gateway": "",
-        "ip6hint": "",
-        "netmask": "255.255.255.0",
-        "interface": "wrtmonitor_guest",
-        "ip6assign": "",
-        "ipv4_details": []
       }
     ],
     "dns_privacy": {
       "doh": {
-        "running": true,
+        "running": false,
         "installed": true,
         "resolver_url": "https://cloudflare-dns.com/dns-query"
       },
       "dot": {
-        "running": true,
+        "running": false,
         "provider": "cloudflare-dns.com",
         "installed": true
       }
     }
   },
   "error": null,
-  "elapsed_seconds": 8.438,
+  "elapsed_seconds": 2.266,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

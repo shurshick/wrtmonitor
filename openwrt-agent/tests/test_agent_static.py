@@ -132,10 +132,10 @@ def test_lan_postcondition_checks_static_address_and_netmask():
 
 def test_lan_noop_does_not_restart_the_network_stack():
     source = read_text(ROOT / "lib" / "command_network.sh")
-    assert 'transaction_noop=1' in source
-    assert 'LAN configuration already matches' in source
+    assert "transaction_noop=1" in source
+    assert "LAN configuration already matches" in source
     assert 'network_interface_cycle "$lan_interface"' in source
-    assert '(sleep 3; /etc/init.d/network restart)' not in source
+    assert "(sleep 3; /etc/init.d/network restart)" not in source
 
 
 def test_uci_verifier_does_not_clobber_postcondition_values():
@@ -144,9 +144,9 @@ def test_uci_verifier_does_not_clobber_postcondition_values():
 
     assert 'verify_uci_key="$1"' in helper
     assert 'verify_uci_expected="$2"' in helper
-    assert 'verify_uci_actual=' in helper
+    assert "verify_uci_actual=" in helper
     assert '\n    expected="$2"' not in helper
-    assert '\n    actual=' not in helper
+    assert "\n    actual=" not in helper
 
 
 def test_dns_server_postcondition_checks_dhcp_values_not_unrelated_network_config():
@@ -160,7 +160,7 @@ def test_run_lock_survives_command_substitutions_and_tracks_owner_pid():
     common = read_text(LIB_DIR / "common.sh")
     api = read_text(LIB_DIR / "api.sh")
     assert 'printf \'%s\\n\' "$$" >"$RUN_LOCK_DIR/pid"' in common
-    assert 'trap \'release_run_lock; exit 0\' INT TERM HUP' in common
+    assert "trap 'release_run_lock; exit 0' INT TERM HUP" in common
     acquire_source = common.split("acquire_lock()", 1)[1].split(
         "release_run_lock()", 1
     )[0]
@@ -281,6 +281,12 @@ def test_agent_and_libs_pass_shell_syntax():
         subprocess.run([shell, "-n", str(path)], check=True, env=shell_env())
 
 
+def test_bash_script_reports_the_protocol_success_status():
+    source = read_text(LIB_DIR / "command_agent.sh")
+    assert "agent.bash_script)" in source
+    assert 'status="completed"' not in source
+
+
 def test_openwrt_command_harness():
     shell = shell_path()
     if not shell:
@@ -327,10 +333,10 @@ def test_daemon_handoffs_after_command_driven_update():
 
 def test_daemon_long_poll_preserves_telemetry_deadline_and_backoff():
     source = read_text(LIB_DIR / "api.sh")
-    assert 'next_telemetry_at=$((now + $(telemetry_interval_seconds)))' in source
+    assert "next_telemetry_at=$((now + $(telemetry_interval_seconds)))" in source
     assert '[ "$wait_seconds" -le 25 ] || wait_seconds=25' in source
-    assert 'poll_backoff=$((poll_backoff * 2))' in source
-    assert 'poll_commands 0' in source
+    assert "poll_backoff=$((poll_backoff * 2))" in source
+    assert "poll_commands 0" in source
 
 
 def test_legacy_six_hour_update_interval_is_migrated():
@@ -806,7 +812,7 @@ def test_embedded_update_key_matches_release_key(release_key: Path):
 
 def test_installer_stops_all_stale_agent_processes_before_reinstall():
     source = read_text(INSTALLER)
-    assert "old_pids=\"$(pidof wrtmonitor-agent" in source
+    assert 'old_pids="$(pidof wrtmonitor-agent' in source
     assert "for old_pid in $old_pids" in source
     assert "rm -rf /tmp/wrtmonitor-agent.lock" in source
 

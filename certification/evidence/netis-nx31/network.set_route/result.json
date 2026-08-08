@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:53:43.936282+00:00",
+  "tested_at": "2026-08-08T13:24:35.954668+00:00",
   "command": "network.set_route",
   "payload": {
     "section": "wrtmonitor_cert_route",
@@ -13,14 +13,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "7f97de24-fec1-47f9-9f13-a9228ef5c28c",
+      "id": "edc5cbf4-219f-4f42-a41d-1f7477168a77",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 18.907,
+  "elapsed_seconds": 14.797,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

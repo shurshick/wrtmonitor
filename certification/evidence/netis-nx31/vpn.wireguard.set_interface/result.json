@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:55:37.315233+00:00",
+  "tested_at": "2026-08-08T13:26:10.502425+00:00",
   "command": "vpn.wireguard.set_interface",
   "payload": {
     "name": "wgcert",
@@ -16,14 +16,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "9fe0bd6d-20f0-4153-a741-9caa7773fb0d",
+      "id": "557dba87-5754-4845-b395-84cd4a03a1f0",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 18.906,
+  "elapsed_seconds": 12.844,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:58:27.123100+00:00",
+  "tested_at": "2026-08-08T13:28:20.597300+00:00",
   "command": "vpn.policy.set",
   "payload": {
     "section": "wrtmonitor_cert_policy",
@@ -14,14 +14,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "c3edd091-a5ba-4198-8ec2-300d61fe395e",
+      "id": "d95b08c8-2130-49de-b595-4a9034767b76",
       "state": "confirmed",
       "configs": "pbr",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 18.828,
+  "elapsed_seconds": 14.891,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

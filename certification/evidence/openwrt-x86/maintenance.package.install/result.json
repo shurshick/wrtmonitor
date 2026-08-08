@@ -1,18 +1,18 @@
 {
-  "tested_at": "2026-08-02T15:23:25.482013+00:00",
+  "tested_at": "2026-08-08T13:51:59.997571+00:00",
   "command": "maintenance.package.install",
   "payload": {
     "package": "nano"
   },
   "status": "success",
   "result": {
-    "output": "Installing nano (8.0-1) to root...\nDownloading https://downloads.openwrt.org/releases/22.03.5/packages/x86_64/packages/nano_8.0-1_x86_64.ipk\nInstalling terminfo (6.3-2) to root...\nDownloading https://downloads.openwrt.org/releases/22.03.5/packages/x86_64/base/terminfo_6.3-2_x86_64.ipk\nInstalling libncurses6 (6.3-2) to root...\nDownloading https://downloads.openwrt.org/releases/22.03.5/packages/x86_64/base/libncurses6_6.3-2_x86_64.ipk\nConfiguring terminfo.\nConfiguring libncurses6.\nConfiguring nano.",
+    "output": "Installing nano (8.0-1) to root...\nDownloading https://downloads.openwrt.org/releases/22.03.5/packages/x86_64/packages/nano_8.0-1_x86_64.ipk\nConfiguring nano.",
     "manager": "opkg",
     "message": "package operation completed",
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 8.313,
+  "elapsed_seconds": 2.453,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

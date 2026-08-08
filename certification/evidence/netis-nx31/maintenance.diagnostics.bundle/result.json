@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:39:58.887463+00:00",
+  "tested_at": "2026-08-08T13:13:28.776380+00:00",
   "command": "maintenance.diagnostics.bundle",
   "payload": {},
   "status": "success",
@@ -9,7 +9,7 @@
     "bundle_base64": "<redacted>"
   },
   "error": null,
-  "elapsed_seconds": 25.313,
+  "elapsed_seconds": 14.718,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

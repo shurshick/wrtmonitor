@@ -1,6 +1,10 @@
 # Operational parity
 
-WrtMonitor использует единый реестр 91 команды для API, Web UI, Android и OpenWrt-агента.
+WrtMonitor использует единый реестр 93 команд для API, Web UI, Android и OpenWrt-агента.
+Две низкоуровневые операции агента осознанно не выставлены в Android:
+интерактивный SSH-терминал и произвольный shell-script. Исключения записаны в
+`contracts/surface-exclusions.json` и явно видны в матрице как `искл.`, а не как
+ложная реализация.
 
 ## Проверка поверхностей
 

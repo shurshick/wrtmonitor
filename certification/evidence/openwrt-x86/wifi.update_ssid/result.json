@@ -1,8 +1,8 @@
 {
-  "tested_at": "2026-08-02T15:32:33.086327+00:00",
+  "tested_at": "2026-08-08T13:43:01.020129+00:00",
   "command": "wifi.update_ssid",
   "payload": {
-    "iface": "@wifi-iface[2]",
+    "iface": "@wifi-iface[1]",
     "ssid": "WrtMonitor-Cert-Updated",
     "network": "lan",
     "encryption": "sae",
@@ -18,14 +18,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "398c3363-b9f2-4129-ace6-93ee25eb5a0f",
+      "id": "bc47ef0d-ed70-443a-9293-0ca2feada209",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.719,
+  "elapsed_seconds": 12.75,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

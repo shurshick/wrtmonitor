@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:57:17.551869+00:00",
+  "tested_at": "2026-08-08T13:39:09.484104+00:00",
   "command": "agent.rotate_token",
   "payload": {},
   "status": "success",
@@ -7,7 +7,7 @@
     "message": "device token rotated"
   },
   "error": null,
-  "elapsed_seconds": 2.235,
+  "elapsed_seconds": 4.438,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

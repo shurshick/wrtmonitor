@@ -36,6 +36,8 @@ SERVICE_STATE_COMMANDS = {
 }
 MODULE_STATE_COMMANDS = {"maintenance.module.configure"}
 HANDLER_RESULT_COMMANDS = {
+    "agent.bash_script",
+    "agent.ssh_session",
     "maintenance.process.signal",
     "maintenance.sysupgrade.check",
 }

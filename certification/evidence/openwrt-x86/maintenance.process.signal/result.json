@@ -1,8 +1,8 @@
 {
-  "tested_at": "2026-08-02T14:56:07.160441+00:00",
+  "tested_at": "2026-08-08T13:38:10.905808+00:00",
   "command": "maintenance.process.signal",
   "payload": {
-    "pid": 13863,
+    "pid": 12755,
     "signal": "TERM"
   },
   "status": "success",
@@ -10,7 +10,7 @@
     "message": "signal sent to process"
   },
   "error": null,
-  "elapsed_seconds": 6.344,
+  "elapsed_seconds": 10.546,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:23:41.421882+00:00",
+  "tested_at": "2026-08-08T13:52:06.665622+00:00",
   "command": "maintenance.package.remove",
   "payload": {
     "package": "nano"
@@ -12,7 +12,7 @@
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 8.453,
+  "elapsed_seconds": 2.297,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

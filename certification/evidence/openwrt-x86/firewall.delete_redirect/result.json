@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:15:09.611400+00:00",
+  "tested_at": "2026-08-08T13:45:20.454003+00:00",
   "command": "firewall.delete_redirect",
   "payload": {
     "section": "wrtmonitor_cert_redirect",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "2cb7039f-61b5-4ecc-8d2e-8157f57f93b4",
+      "id": "5b5c0596-c400-4df7-b547-72d25d196c35",
       "state": "confirmed",
       "configs": "firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 37.359,
+  "elapsed_seconds": 14.781,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

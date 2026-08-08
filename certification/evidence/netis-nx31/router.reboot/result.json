@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T16:06:37.062647+00:00",
+  "tested_at": "2026-08-08T13:35:00.010404+00:00",
   "command": "router.reboot",
   "payload": {},
   "status": "success",
@@ -7,9 +7,9 @@
     "message": "reboot scheduled"
   },
   "error": null,
-  "elapsed_seconds": 20.875,
+  "elapsed_seconds": 52.11,
   "idempotency_duplicate_returned_same_command": true,
-  "retry_count": 1,
+  "retry_count": 2,
   "reliability": {
     "subsystem": "router",
     "idempotency": {

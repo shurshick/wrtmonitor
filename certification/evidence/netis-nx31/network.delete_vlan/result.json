@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:55:18.314854+00:00",
+  "tested_at": "2026-08-08T13:25:57.573979+00:00",
   "command": "network.delete_vlan",
   "payload": {
     "section": "wrtmonitor_cert_vlan",
@@ -13,14 +13,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "e329f7e7-857e-435c-a256-23df5be37dd7",
+      "id": "c28a1a56-75fe-4be4-b066-faf9146981b3",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 18.906,
+  "elapsed_seconds": 19.078,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

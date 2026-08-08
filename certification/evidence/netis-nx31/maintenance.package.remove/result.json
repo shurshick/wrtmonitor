@@ -1,18 +1,18 @@
 {
-  "tested_at": "2026-08-02T16:03:32.037581+00:00",
+  "tested_at": "2026-08-08T13:32:40.769550+00:00",
   "command": "maintenance.package.remove",
   "payload": {
     "package": "nano"
   },
   "status": "success",
   "result": {
-    "output": "(1/1) Purging nano (9.0-r1)\n  Executing nano-9.0-r1.pre-deinstall\nOK: 36.1 MiB in 204 packages",
+    "output": "(1/1) Purging nano (9.2-r1)\n  Executing nano-9.2-r1.pre-deinstall\nOK: 36.2 MiB in 205 packages",
     "manager": "apk",
     "message": "package operation completed",
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 18.797,
+  "elapsed_seconds": 12.75,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

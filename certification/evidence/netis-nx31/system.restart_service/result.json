@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:43:01.466867+00:00",
+  "tested_at": "2026-08-08T13:15:23.367468+00:00",
   "command": "system.restart_service",
   "payload": {
     "service": "dnsmasq"
@@ -10,7 +10,7 @@
     "service": "dnsmasq"
   },
   "error": null,
-  "elapsed_seconds": 21.188,
+  "elapsed_seconds": 16.953,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

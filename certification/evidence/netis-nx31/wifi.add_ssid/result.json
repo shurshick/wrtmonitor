@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:48:35.218266+00:00",
+  "tested_at": "2026-08-08T13:19:54.046919+00:00",
   "command": "wifi.add_ssid",
   "payload": {
     "radio": "radio0",
@@ -14,14 +14,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "a7eedbea-79d7-4cd2-8b55-642e51f92296",
+      "id": "c47c1df3-6f45-47ef-8dae-56d26f115c05",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 29.391,
+  "elapsed_seconds": 17.109,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

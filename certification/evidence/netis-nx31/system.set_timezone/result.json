@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:42:21.284908+00:00",
+  "tested_at": "2026-08-08T13:14:59.912542+00:00",
   "command": "system.set_timezone",
   "payload": {
     "zonename": "Europe/Moscow",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "e81afd0c-bc55-4e57-8bee-6ad786f23b0f",
+      "id": "d5931228-193b-4488-967d-ab7982c41cf1",
       "state": "confirmed",
       "configs": "system",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 16.906,
+  "elapsed_seconds": 12.687,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

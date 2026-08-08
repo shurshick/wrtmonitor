@@ -19,7 +19,7 @@ postcondition_mode_for_command() {
             printf service_state ;;
         maintenance.module.configure)
             printf module_state ;;
-        maintenance.process.signal|maintenance.sysupgrade.check)
+        agent.bash_script|agent.ssh_session|maintenance.process.signal|maintenance.sysupgrade.check)
             printf handler_result ;;
         client.set_blocked|client.set_policy|dhcp.delete_lease|dhcp.set_lease|dhcp.set_pool|dns.set_doh|dns.set_dot|dns.set_servers|firewall.delete_forwarding|firewall.delete_port_forward|firewall.delete_redirect|firewall.delete_rule|firewall.delete_zone|firewall.set_forwarding|firewall.set_port_forward|firewall.set_redirect|firewall.set_rule|firewall.set_zone|maintenance.cron.set|maintenance.recovery.disable|maintenance.recovery.enable|network.delete_route|network.delete_segment|network.delete_vlan|network.set_ddns|network.set_ipv6|network.set_lan|network.set_multiwan|network.set_route|network.set_segment|network.set_upnp|network.set_vlan|network.set_wan|qos.set_sqm|system.set_hostname|system.set_ntp|system.set_timezone|vpn.openvpn.delete_client|vpn.openvpn.set_client|vpn.openvpn.set_enabled|vpn.policy.delete|vpn.policy.set|vpn.wireguard.delete_interface|vpn.wireguard.delete_peer|vpn.wireguard.set_interface|vpn.wireguard.set_peer|wifi.add_ssid|wifi.delete_ssid|wifi.set_channel|wifi.set_country|wifi.set_enabled|wifi.set_guest|wifi.set_mesh|wifi.set_password|wifi.set_radio|wifi.set_schedule|wifi.set_ssid|wifi.update_ssid)
             printf read_after_write_config ;;

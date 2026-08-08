@@ -1,21 +1,21 @@
 {
-  "tested_at": "2026-08-02T15:32:47.849686+00:00",
+  "tested_at": "2026-08-08T13:43:13.759527+00:00",
   "command": "wifi.delete_ssid",
   "payload": {
-    "iface": "@wifi-iface[2]"
+    "iface": "@wifi-iface[1]"
   },
   "status": "success",
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "2937619e-632b-44ba-be42-828262ec2571",
+      "id": "14c7e488-7852-4b77-ad4c-0a391dc0b4f4",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.766,
+  "elapsed_seconds": 12.735,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:48:54.394918+00:00",
+  "tested_at": "2026-08-08T13:20:13.130663+00:00",
   "command": "wifi.update_ssid",
   "payload": {
     "iface": "@wifi-iface[3]",
@@ -18,14 +18,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "3bcf5d2b-4e2d-4fd7-8caa-9357ea4c198e",
+      "id": "190d6cbd-08a6-4ccb-9060-45b7109491ef",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 17.046,
+  "elapsed_seconds": 16.953,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

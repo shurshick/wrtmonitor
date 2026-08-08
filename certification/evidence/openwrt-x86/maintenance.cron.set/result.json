@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:24:01.588484+00:00",
+  "tested_at": "2026-08-08T13:52:18.665164+00:00",
   "command": "maintenance.cron.set",
   "payload": {
     "content": ""
@@ -9,7 +9,7 @@
     "message": "cron updated"
   },
   "error": null,
-  "elapsed_seconds": 8.469,
+  "elapsed_seconds": 4.344,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

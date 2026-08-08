@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T16:07:36.965506+00:00",
+  "tested_at": "2026-08-08T13:36:01.954577+00:00",
   "command": "agent.disconnect",
   "payload": {},
   "status": "success",
@@ -7,7 +7,7 @@
     "message": "agent disabled"
   },
   "error": null,
-  "elapsed_seconds": 47.875,
+  "elapsed_seconds": 49.922,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:57:39.059420+00:00",
+  "tested_at": "2026-08-08T13:27:48.573186+00:00",
   "command": "vpn.openvpn.export_client",
   "payload": {
     "name": "certclient"
@@ -11,7 +11,7 @@
     "config_base64": "<redacted>"
   },
   "error": null,
-  "elapsed_seconds": 8.438,
+  "elapsed_seconds": 6.547,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

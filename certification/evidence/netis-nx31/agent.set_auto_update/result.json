@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:40:24.351553+00:00",
+  "tested_at": "2026-08-08T13:13:39.365590+00:00",
   "command": "agent.set_auto_update",
   "payload": {
     "enabled": true
@@ -7,7 +7,7 @@
   "status": "success",
   "result": {
     "status": "running",
-    "version": "0.30.1",
+    "version": "0.35.15",
     "platform": "openwrt",
     "capabilities": {
       "qos.sqm": false,
@@ -35,6 +35,7 @@
       "dhcp.set_lease": true,
       "system.set_ntp": true,
       "telemetry.wifi": true,
+      "agent.long_poll": true,
       "network.restart": true,
       "vpn.policy.read": true,
       "maintenance.cron": true,
@@ -44,6 +45,8 @@
       "wifi.manage_ssid": true,
       "wifi.set_channel": true,
       "wifi.set_country": true,
+      "agent.bash_script": true,
+      "agent.ssh_session": true,
       "dhcp.delete_lease": true,
       "dns.doh.configure": true,
       "dns.dot.configure": true,
@@ -185,9 +188,10 @@
       "ca_bundle": true
     },
     "update_source": "https://sync.bghitech.ru/downloads/openwrt",
-    "available_version": "0.30.1",
-    "last_update_check": "2026-08-02T15:30:51Z",
-    "last_update_error": "",
+    "connection_type": "long_poll",
+    "available_version": "0.35.12",
+    "last_update_check": "2026-08-08T13:10:50Z",
+    "last_update_error": "downgrade blocked",
     "capability_details": {
       "qos.sqm": {
         "reason": "sqm-scripts package or SQM init service is unavailable",
@@ -289,6 +293,10 @@
         "reason": "available",
         "supported": true
       },
+      "agent.long_poll": {
+        "reason": "available",
+        "supported": true
+      },
       "network.restart": {
         "reason": "available",
         "supported": true
@@ -322,6 +330,14 @@
         "supported": true
       },
       "wifi.set_country": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.bash_script": {
+        "reason": "available",
+        "supported": true
+      },
+      "agent.ssh_session": {
         "reason": "available",
         "supported": true
       },
@@ -545,12 +561,12 @@
     "last_update_status": "skipped",
     "rollback_available": true,
     "auto_update_enabled": true,
-    "capabilities_version": 16,
-    "last_successful_update": "2026-08-01T21:53:30Z",
+    "capabilities_version": 17,
+    "last_successful_update": "2026-08-07T21:09:26Z",
     "telemetry_interval_seconds": 10
   },
   "error": null,
-  "elapsed_seconds": 25.469,
+  "elapsed_seconds": 10.594,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

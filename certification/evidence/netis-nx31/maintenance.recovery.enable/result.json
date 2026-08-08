@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T16:05:01.746111+00:00",
+  "tested_at": "2026-08-08T13:33:31.740661+00:00",
   "command": "maintenance.recovery.enable",
   "payload": {},
   "status": "success",
@@ -7,7 +7,7 @@
     "message": "recovery mode enabled"
   },
   "error": null,
-  "elapsed_seconds": 20.906,
+  "elapsed_seconds": 14.765,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

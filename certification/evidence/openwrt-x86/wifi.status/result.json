@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:55:36.522165+00:00",
+  "tested_at": "2026-08-08T13:37:45.208047+00:00",
   "command": "wifi.status",
   "payload": {},
   "status": "success",
@@ -11,7 +11,8 @@
         "band": "2g",
         "name": "radio0",
         "ssid": [
-          "WrtMonitor-Test"
+          "WrtMonitor-Test",
+          "WrtMonitor-Cert"
         ],
         "htmode": "HT20",
         "survey": {
@@ -35,6 +36,7 @@
           "enabled": false,
           "weekdays": []
         },
+        "encryption": "sae",
         "interfaces": [
           {
             "id": "default_radio0",
@@ -53,16 +55,16 @@
             "mobility_domain": ""
           },
           {
-            "id": "wrtmonitor_guest",
+            "id": "@wifi-iface[1]",
             "mode": "ap",
-            "ssid": "",
+            "ssid": "WrtMonitor-Cert",
             "index": 1,
-            "hidden": false,
-            "enabled": false,
+            "hidden": true,
+            "enabled": true,
             "isolate": true,
             "mesh_id": "",
-            "network": "wrtmonitor_guest",
-            "encryption": "",
+            "network": "lan",
+            "encryption": "sae",
             "ieee80211k": false,
             "ieee80211r": false,
             "bss_transition": false,
@@ -76,7 +78,7 @@
     "available": true
   },
   "error": null,
-  "elapsed_seconds": 7.437,
+  "elapsed_seconds": 10.516,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

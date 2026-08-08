@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:14:32.255728+00:00",
+  "tested_at": "2026-08-08T13:45:05.660722+00:00",
   "command": "firewall.delete_port_forward",
   "payload": {
     "section": "wrtmonitor_cert_port",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "d18a93b5-b80b-4daa-ba39-def5d0ef2d6b",
+      "id": "85cf5fc4-bd4d-4f5d-b64a-0d53d4ee7c98",
       "state": "confirmed",
       "configs": "firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 16.094,
+  "elapsed_seconds": 16.812,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

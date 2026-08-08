@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:59:13.865211+00:00",
+  "tested_at": "2026-08-08T13:40:39.280187+00:00",
   "command": "client.set_policy",
   "payload": {
     "mac": "02:00:00:00:ce:01",
@@ -23,14 +23,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "75841d3c-877a-4bcf-b0c2-1c100e294fec",
+      "id": "dccf3134-964b-4093-90c7-954f5ec2ad42",
       "state": "confirmed",
       "configs": "firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 15.812,
+  "elapsed_seconds": 14.843,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

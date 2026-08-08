@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:51:17.102827+00:00",
+  "tested_at": "2026-08-08T13:22:22.527852+00:00",
   "command": "firewall.set_port_forward",
   "payload": {
     "section": "wrtmonitor_cert_port",
@@ -13,14 +13,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "8ab023af-a889-425a-b166-7b5f344e8998",
+      "id": "fa59be2b-1ad6-4606-a260-56367ac5e8c5",
       "state": "confirmed",
       "configs": "firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 18.985,
+  "elapsed_seconds": 19.062,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,9 +1,18 @@
 {
-  "generated_at": "2026-08-02T18:08:02.174710+00:00",
-  "router": "OpenWrt x86 / innotek GmbH VirtualBox / OpenWrt 22.03.5 r20134-5f15225c1e",
+  "generated_at": "2026-08-08T13:53:30.759731+00:00",
+  "router": "openwrt-x86 / innotek GmbH VirtualBox / OpenWrt 22.03.5 r20134-5f15225c1e",
   "target": "openwrt-x86",
   "contract_version": 1,
   "commands": {
+    "agent.bash_script": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.bash_script"
+    },
     "agent.disconnect": {
       "status": "pass",
       "idempotency": "pass",
@@ -48,6 +57,15 @@
       "post_condition": "pass",
       "rollback": "configuration_backup",
       "evidence": "certification/evidence/openwrt-x86/agent.set_interval"
+    },
+    "agent.ssh_session": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/openwrt-x86/agent.ssh_session"
     },
     "agent.update": {
       "status": "pass",
@@ -823,5 +841,7 @@
       "rollback": "paired_command",
       "evidence": "certification/evidence/openwrt-x86/wifi.update_ssid"
     }
-  }
+  },
+  "agent_source": "worktree",
+  "agent_version": "0.35.15"
 }

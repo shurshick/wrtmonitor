@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:39:33.570075+00:00",
+  "tested_at": "2026-08-08T13:13:14.047518+00:00",
   "command": "maintenance.backup.restore",
   "payload": {
     "archive_base64": "<redacted>"
@@ -9,7 +9,7 @@
     "message": "configuration backup restored; reboot recommended"
   },
   "error": null,
-  "elapsed_seconds": 23.375,
+  "elapsed_seconds": 8.578,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

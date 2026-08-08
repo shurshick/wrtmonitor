@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:23:03.095845+00:00",
+  "tested_at": "2026-08-08T13:51:51.069815+00:00",
   "command": "network.interface_restart",
   "payload": {
     "interface": "lan"
@@ -10,7 +10,7 @@
     "interface": "lan"
   },
   "error": null,
-  "elapsed_seconds": 8.391,
+  "elapsed_seconds": 4.437,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

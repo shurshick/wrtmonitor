@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T16:02:35.585507+00:00",
+  "tested_at": "2026-08-08T13:32:08.742139+00:00",
   "command": "maintenance.packages.refresh",
   "payload": {},
   "status": "success",
@@ -9,7 +9,7 @@
     "upgradable": ""
   },
   "error": null,
-  "elapsed_seconds": 31.188,
+  "elapsed_seconds": 27.39,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -74,6 +74,17 @@ USB, накопители, сетевые службы, принтеры и мо
 
 Статус: `hardware verified`, тестовый релиз.
 
+## v0.35.15 - Hardware Recertification
+
+- контракт расширен до 93 команд, включая SSH-сессию и ограниченный shell-script;
+- полный повторный прогон на Netis NX31 и OpenWrt x86;
+- для каждой применимой команды проверены повторная доставка, timeout,
+  post-condition и восстановление исходной конфигурации;
+- Netis NX31: 89 PASS, 4 `not_applicable`, 0 ошибок;
+- OpenWrt x86: 88 PASS, 5 `not_applicable`, 0 ошибок.
+
+Статус: `hardware verified`, тестовый релиз.
+
 ## v0.31.2 - DNS Recovery
 
 - безопасная установка компонентов DoH/DoT без потери системного DNS;

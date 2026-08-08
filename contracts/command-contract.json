@@ -18,13 +18,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_config",
+        "post_condition": "handler_result",
         "verification": {
           "required": true,
-          "mode": "read_after_write_config",
+          "mode": "handler_result",
           "fail_closed": true
         },
-        "rollback": "configuration_backup"
+        "rollback": "not_available"
       }
     },
     "agent.disconnect": {
@@ -168,13 +168,13 @@
           "lease_seconds": 45,
           "max_deliveries": 2
         },
-        "post_condition": "read_after_write_config",
+        "post_condition": "handler_result",
         "verification": {
           "required": true,
-          "mode": "read_after_write_config",
+          "mode": "handler_result",
           "fail_closed": true
         },
-        "rollback": "configuration_backup"
+        "rollback": "not_available"
       }
     },
     "agent.update": {

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:47:17.362857+00:00",
+  "tested_at": "2026-08-08T13:19:00.915495+00:00",
   "command": "wifi.set_schedule",
   "payload": {
     "radio": "radio0",
@@ -12,14 +12,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "08e636f0-280d-433f-8e93-8a0338ed1298",
+      "id": "bfe97d84-82ad-4826-93b8-0d62459f20cc",
       "state": "confirmed",
       "configs": "wireless wrtmonitor",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 29.531,
+  "elapsed_seconds": 16.891,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

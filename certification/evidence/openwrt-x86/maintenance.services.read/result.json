@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:56:23.019581+00:00",
+  "tested_at": "2026-08-08T13:38:24.020156+00:00",
   "command": "maintenance.services.read",
   "payload": {},
   "status": "success",
@@ -14,12 +14,12 @@
       {
         "name": "cron",
         "enabled": true,
-        "running": false
+        "running": true
       },
       {
         "name": "dnsmasq",
         "enabled": false,
-        "running": true
+        "running": false
       },
       {
         "name": "done",
@@ -43,8 +43,8 @@
       },
       {
         "name": "https-dns-proxy",
-        "enabled": true,
-        "running": true
+        "enabled": false,
+        "running": false
       },
       {
         "name": "led",
@@ -93,8 +93,8 @@
       },
       {
         "name": "stubby",
-        "enabled": true,
-        "running": true
+        "enabled": false,
+        "running": false
       },
       {
         "name": "sysctl",
@@ -142,6 +142,11 @@
         "running": true
       },
       {
+        "name": "vsftpd",
+        "enabled": true,
+        "running": true
+      },
+      {
         "name": "wpad",
         "enabled": true,
         "running": true
@@ -154,7 +159,7 @@
     ]
   },
   "error": null,
-  "elapsed_seconds": 8.343,
+  "elapsed_seconds": 10.859,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:23:32.964251+00:00",
+  "tested_at": "2026-08-08T13:52:04.370523+00:00",
   "command": "maintenance.package.upgrade",
   "payload": {
     "package": "nano"
@@ -12,7 +12,7 @@
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 7.484,
+  "elapsed_seconds": 4.375,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -17,6 +17,9 @@ from backend.app.services.command_registry import COMMAND_REGISTRY  # noqa: E402
 SURFACE_EQUIVALENTS = json.loads(
     (ROOT / "contracts" / "surface-equivalents.json").read_text(encoding="utf-8")
 )
+SURFACE_EXCLUSIONS = json.loads(
+    (ROOT / "contracts" / "surface-exclusions.json").read_text(encoding="utf-8")
+)
 
 
 def source_text(*parts: str) -> str:
@@ -36,44 +39,52 @@ def exact_reference(source: str, command: str) -> bool:
     )
 
 
+def without_line_comments(source: str) -> str:
+    return "\n".join(line.split("//", 1)[0] for line in source.splitlines())
+
+
 def build_matrix() -> dict[str, Any]:
     web = source_text("backend", "app", "templates") + source_text(
         "backend", "app", "web"
     )
-    android = source_text("android", "app", "src", "main", "java")
+    android = without_line_comments(
+        source_text("android", "app", "src", "main", "java")
+    )
     agent = source_text("openwrt-agent", "lib")
     rows: list[dict[str, Any]] = []
     for command, metadata in sorted(COMMAND_REGISTRY.items()):
         reliability = metadata["reliability"]
         equivalents = SURFACE_EQUIVALENTS.get(command, {})
+        exclusions = SURFACE_EXCLUSIONS.get(command, {})
         web_reference = exact_reference(web, command)
         android_reference = exact_reference(android, command)
         if equivalents.get("web"):
             web_reference = web_reference or equivalents["web"] in web
         if equivalents.get("android"):
             android_reference = android_reference or equivalents["android"] in android
-        rows.append(
-            {
-                "command": command,
-                "subsystem": reliability["subsystem"],
-                "surfaces": {
-                    "api": True,
-                    "web": web_reference,
-                    "android": android_reference,
-                    "agent": exact_reference(agent, command),
-                },
-                "capability": metadata["capability"],
-                "risk": metadata["risk_level"],
-                "confirmation": metadata["requires_confirmation"],
-                "idempotency": reliability["idempotency"],
-                "timeout_seconds": reliability["delivery"]["timeout_seconds"],
-                "max_deliveries": reliability["delivery"]["max_deliveries"],
-                "post_condition": reliability["post_condition"],
-                "verification": reliability["verification"],
-                "rollback": reliability["rollback"],
-                "surface_equivalents": equivalents,
-            }
-        )
+        row = {
+            "command": command,
+            "subsystem": reliability["subsystem"],
+            "surfaces": {
+                "api": True,
+                "web": web_reference,
+                "android": android_reference,
+                "agent": exact_reference(agent, command),
+            },
+            "capability": metadata["capability"],
+            "risk": metadata["risk_level"],
+            "confirmation": metadata["requires_confirmation"],
+            "idempotency": reliability["idempotency"],
+            "timeout_seconds": reliability["delivery"]["timeout_seconds"],
+            "max_deliveries": reliability["delivery"]["max_deliveries"],
+            "post_condition": reliability["post_condition"],
+            "verification": reliability["verification"],
+            "rollback": reliability["rollback"],
+            "surface_equivalents": equivalents,
+        }
+        if exclusions:
+            row["surface_exclusions"] = exclusions
+        rows.append(row)
     return {"command_count": len(rows), "commands": rows}
 
 
@@ -90,19 +101,22 @@ def markdown(matrix: dict[str, Any]) -> str:
         "|---|:---:|:---:|:---:|:---:|---|---|---|---|",
     ]
 
-    def mark(value: bool) -> str:
+    def mark(value: bool, excluded: bool) -> str:
+        if excluded:
+            return "искл."
         return "да" if value else "нет"
 
     for row in matrix["commands"]:
         surfaces = row["surfaces"]
+        exclusions = row.get("surface_exclusions", {})
         lines.append(
             "| {command} | {web} | {android} | {api} | {agent} | {capability} | "
             "{risk} | {post_condition} | {rollback} |".format(
                 command=f"`{row['command']}`",
-                web=mark(surfaces["web"]),
-                android=mark(surfaces["android"]),
-                api=mark(surfaces["api"]),
-                agent=mark(surfaces["agent"]),
+                web=mark(surfaces["web"], "web" in exclusions),
+                android=mark(surfaces["android"], "android" in exclusions),
+                api=mark(surfaces["api"], "api" in exclusions),
+                agent=mark(surfaces["agent"], "agent" in exclusions),
                 capability=f"`{row['capability']}`",
                 risk=row["risk"],
                 post_condition=row["post_condition"],
@@ -143,7 +157,10 @@ def main() -> int:
         return 1
     missing_user_surfaces = {
         surface: [
-            row["command"] for row in matrix["commands"] if not row["surfaces"][surface]
+            row["command"]
+            for row in matrix["commands"]
+            if not row["surfaces"][surface]
+            and surface not in row.get("surface_exclusions", {})
         ]
         for surface in ("web", "android")
     }

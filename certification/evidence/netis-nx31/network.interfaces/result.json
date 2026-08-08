@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:36:48.693115+00:00",
+  "tested_at": "2026-08-08T13:11:53.840077+00:00",
   "command": "network.interfaces",
   "payload": {},
   "status": "success",
@@ -143,7 +143,8 @@
       {
         "up": true,
         "dns": [
-          "192.168.1.1"
+          "1.1.1.1",
+          "8.8.8.8"
         ],
         "ipv4": [
           "192.168.1.137"
@@ -174,7 +175,7 @@
         "ipv6": [
           "fd90:c240:252c::c73",
           "fd49:6951:a044:0:de8e:8dff:fecd:fce8",
-          "2a02:ad8:49f2:e300:de8e:8dff:fecd:fce8",
+          "2a02:ad8:459a:a400:de8e:8dff:fecd:fce8",
           "fd90:c240:252c:0:de8e:8dff:fecd:fce8"
         ],
         "proto": "dhcpv6",
@@ -190,19 +191,19 @@
     ],
     "dns_privacy": {
       "doh": {
-        "running": true,
+        "running": false,
         "installed": true,
         "resolver_url": "https://cloudflare-dns.com/dns-query"
       },
       "dot": {
-        "running": true,
+        "running": false,
         "provider": "cloudflare-dns.com",
         "installed": true
       }
     }
   },
   "error": null,
-  "elapsed_seconds": 23.203,
+  "elapsed_seconds": 14.609,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

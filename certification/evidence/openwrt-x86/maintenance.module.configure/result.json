@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:23:53.113635+00:00",
+  "tested_at": "2026-08-08T13:52:14.320136+00:00",
   "command": "maintenance.module.configure",
   "payload": {
     "module": "ftp",
@@ -12,7 +12,7 @@
     "message": "OpenWrt module installed"
   },
   "error": null,
-  "elapsed_seconds": 11.687,
+  "elapsed_seconds": 7.656,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

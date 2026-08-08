@@ -45,7 +45,7 @@ handle_agent_command() {
             if [ -n "$script_content" ]; then
                 printf '%s\n' "$script_content" >/tmp/wrtmonitor-bash-script.sh
                 if sh /tmp/wrtmonitor-bash-script.sh >/tmp/wrtmonitor-bash-script.out 2>/tmp/wrtmonitor-bash-script.err; then
-                    status="completed"
+                    status="done"
                 else
                     status="failed"
                 fi

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:56:31.489215+00:00",
+  "tested_at": "2026-08-08T13:38:26.304851+00:00",
   "command": "maintenance.backup.create",
   "payload": {},
   "status": "success",
@@ -9,7 +9,7 @@
     "archive_base64": "<redacted>"
   },
   "error": null,
-  "elapsed_seconds": 8.469,
+  "elapsed_seconds": 2.282,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

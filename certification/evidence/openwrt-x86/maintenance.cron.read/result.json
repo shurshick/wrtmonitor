@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:56:14.671283+00:00",
+  "tested_at": "2026-08-08T13:38:13.170387+00:00",
   "command": "maintenance.cron.read",
   "payload": {},
   "status": "success",
@@ -8,7 +8,7 @@
     "message": "cron schedule collected"
   },
   "error": null,
-  "elapsed_seconds": 7.5,
+  "elapsed_seconds": 2.25,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

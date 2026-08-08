@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:22:16.610421+00:00",
+  "tested_at": "2026-08-08T13:51:16.549758+00:00",
   "command": "network.set_upnp",
   "status": "not_applicable",
   "reason": "router reported capability firewall.upnp.configure=false"

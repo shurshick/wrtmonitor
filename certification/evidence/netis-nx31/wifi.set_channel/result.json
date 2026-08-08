@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:46:09.718524+00:00",
+  "tested_at": "2026-08-08T13:18:08.116106+00:00",
   "command": "wifi.set_channel",
   "payload": {
     "radio": "radio0",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "7640d81a-3ced-4df2-8914-92438351a758",
+      "id": "e0ded9f7-fb6d-4638-a50a-966aa75a795e",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 16.938,
+  "elapsed_seconds": 19.094,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

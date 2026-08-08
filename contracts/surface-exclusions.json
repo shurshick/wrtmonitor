@@ -1,0 +1,8 @@
+{
+  "agent.bash_script": {
+    "android": "Произвольный shell-script намеренно не выполняется из мобильного интерфейса."
+  },
+  "agent.ssh_session": {
+    "android": "Интерактивный SSH-терминал доступен только в Web UI."
+  }
+}

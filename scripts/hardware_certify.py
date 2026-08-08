@@ -206,6 +206,18 @@ def contract() -> dict[str, Any]:
     return json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
 
+def empty_command_result(command: str) -> dict[str, Any]:
+    return {
+        "status": "not_run",
+        "idempotency": "not_run",
+        "timeout": "not_run",
+        "redelivery": "not_run",
+        "post_condition": "not_run",
+        "rollback": "not_run",
+        "evidence": None,
+    }
+
+
 def fresh_report(target: Target, router_description: str) -> dict[str, Any]:
     spec = contract()
     return {
@@ -213,18 +225,7 @@ def fresh_report(target: Target, router_description: str) -> dict[str, Any]:
         "router": router_description,
         "target": target.name,
         "contract_version": spec["command_contract_version"],
-        "commands": {
-            name: {
-                "status": "not_run",
-                "idempotency": "not_run",
-                "timeout": "not_run",
-                "redelivery": "not_run",
-                "post_condition": "not_run",
-                "rollback": "not_run",
-                "evidence": None,
-            }
-            for name in spec["commands"]
-        },
+        "commands": {name: empty_command_result(name) for name in spec["commands"]},
     }
 
 
@@ -335,6 +336,11 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
         timeout=120,
     )
     return {
+        "agent.ssh_session": {},
+        "agent.bash_script": {
+            "script": "printf 'wrtmonitor-certification\\n'; "
+            "uci -q get system.@system[0].hostname >/dev/null"
+        },
         "agent.set_auto_update": {"enabled": True},
         "agent.set_interval": {"interval_seconds": 5},
         "agent.update": {"force": bool(os.environ.get("WRTMONITOR_AGENT_UPDATE_URL"))},
@@ -644,6 +650,8 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
 
 ORDER = [
     "diagnostics.run",
+    "agent.bash_script",
+    "agent.ssh_session",
     "wifi.status",
     "network.interfaces",
     "maintenance.logs.read",
@@ -858,7 +866,30 @@ def restore_baseline(ssh: Ssh, archive: bytes) -> None:
     )
 
 
-def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
+def deploy_worktree_agent(ssh: Ssh) -> None:
+    source = ROOT / "openwrt-agent"
+    remote_root = "/tmp/wrtmonitor-cert-agent"
+    ssh.run(f"rm -rf {remote_root}; mkdir -p {remote_root}/lib")
+    for name in ("wrtmonitor-agent", "wrtmonitor.init"):
+        ssh.put_bytes(f"{remote_root}/{name}", (source / name).read_bytes())
+    for path in sorted((source / "lib").glob("*.sh")):
+        ssh.put_bytes(f"{remote_root}/lib/{path.name}", path.read_bytes())
+    ssh.run(
+        "/etc/init.d/wrtmonitor stop >/dev/null 2>&1 || true; "
+        f"cp {remote_root}/wrtmonitor-agent /usr/bin/wrtmonitor-agent; "
+        f"cp {remote_root}/wrtmonitor.init /etc/init.d/wrtmonitor; "
+        "mkdir -p /usr/lib/wrtmonitor; rm -f /usr/lib/wrtmonitor/*.sh; "
+        f"cp {remote_root}/lib/*.sh /usr/lib/wrtmonitor/; "
+        "chmod 0755 /usr/bin/wrtmonitor-agent /etc/init.d/wrtmonitor "
+        "/usr/lib/wrtmonitor/*.sh; "
+        "/etc/init.d/wrtmonitor enable; /etc/init.d/wrtmonitor start",
+        timeout=120,
+    )
+
+
+def certify(
+    target: Target, selected: set[str] | None, resume: bool, deploy_worktree: bool
+) -> Path:
     api = Api(
         env("WRTMONITOR_SERVER_URL"),
         env("WRTMONITOR_ADMIN_USER"),
@@ -867,6 +898,9 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
     ssh = Ssh(target, env("WRTMONITOR_ROUTER_PASSWORD"))
     baseline_archive: bytes | None = None
     try:
+        if deploy_worktree:
+            deploy_worktree_agent(ssh)
+            time.sleep(5)
         f = target_facts(api, target, ssh)
         description = " / ".join(
             filter(
@@ -881,6 +915,8 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
             )
         )
         report = load_report(target, description, resume)
+        report["agent_source"] = "worktree" if deploy_worktree else "installed"
+        report["agent_version"] = ssh.run("wrtmonitor-agent version", check=False)
         target_slug = slug(target.name)
         recipes = payloads(f, ssh)
         baseline_archive = base64.b64decode(
@@ -889,6 +925,11 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
         pin_control_plane_host(ssh)
         spec = contract()["commands"]
         selected_commands = selected or set(spec)
+
+        # Older reports can legitimately contain fewer commands than the
+        # current contract. Keep their evidence while extending the report.
+        for command in spec:
+            report["commands"].setdefault(command, empty_command_result(command))
 
         for command, reason in NOT_APPLICABLE.items():
             if command not in selected_commands:
@@ -1086,6 +1127,13 @@ def certify(target: Target, selected: set[str] | None, resume: bool) -> Path:
                 if command == "router.reboot" and passed:
                     time.sleep(12)
                     wait_online(api, target)
+                if command == "agent.ssh_session":
+                    ssh.run(
+                        "kill $(pgrep -f 'api/v1/agent/ssh/' 2>/dev/null) "
+                        ">/dev/null 2>&1 || true; "
+                        "rm -f /tmp/wrtmonitor_ssh_in /tmp/wrtmonitor_ssh_out",
+                        check=False,
+                    )
                 if command == "agent.disconnect" and passed:
                     time.sleep(3)
                     ssh.run(
@@ -1164,9 +1212,19 @@ def main() -> int:
         action="store_true",
         help="merge selected results into the existing report",
     )
+    parser.add_argument(
+        "--deploy-worktree",
+        action="store_true",
+        help="install the agent from this worktree before certification",
+    )
     args = parser.parse_args()
     selected = set(filter(None, (args.commands or "").split(","))) or None
-    path = certify(Target(args.name, args.host, args.device_id), selected, args.resume)
+    path = certify(
+        Target(args.name, args.host, args.device_id),
+        selected,
+        args.resume,
+        args.deploy_worktree,
+    )
     print(path)
     return 0
 

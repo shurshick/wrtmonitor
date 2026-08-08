@@ -1,9 +1,18 @@
 {
-  "generated_at": "2026-08-02T18:06:50.794978+00:00",
-  "router": "Netis NX31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
+  "generated_at": "2026-08-08T13:36:27.280723+00:00",
+  "router": "netis-nx31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
   "target": "netis-nx31",
   "contract_version": 1,
   "commands": {
+    "agent.bash_script": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/netis-nx31/agent.bash_script"
+    },
     "agent.disconnect": {
       "status": "pass",
       "idempotency": "pass",
@@ -48,6 +57,15 @@
       "post_condition": "pass",
       "rollback": "configuration_backup",
       "evidence": "certification/evidence/netis-nx31/agent.set_interval"
+    },
+    "agent.ssh_session": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/netis-nx31/agent.ssh_session"
     },
     "agent.update": {
       "status": "pass",
@@ -823,5 +841,7 @@
       "rollback": "paired_command",
       "evidence": "certification/evidence/netis-nx31/wifi.update_ssid"
     }
-  }
+  },
+  "agent_source": "worktree",
+  "agent_version": "0.35.15"
 }

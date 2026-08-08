@@ -7,7 +7,7 @@
       "surfaces": {
         "api": true,
         "web": true,
-        "android": true,
+        "android": false,
         "agent": true
       },
       "capability": "agent.bash_script",
@@ -19,14 +19,17 @@
       },
       "timeout_seconds": 180,
       "max_deliveries": 2,
-      "post_condition": "read_after_write_config",
+      "post_condition": "handler_result",
       "verification": {
         "required": true,
-        "mode": "read_after_write_config",
+        "mode": "handler_result",
         "fail_closed": true
       },
-      "rollback": "configuration_backup",
-      "surface_equivalents": {}
+      "rollback": "not_available",
+      "surface_equivalents": {},
+      "surface_exclusions": {
+        "android": "Произвольный shell-script намеренно не выполняется из мобильного интерфейса."
+      }
     },
     {
       "command": "agent.disconnect",
@@ -172,7 +175,7 @@
       "surfaces": {
         "api": true,
         "web": true,
-        "android": true,
+        "android": false,
         "agent": true
       },
       "capability": "agent.ssh_session",
@@ -184,14 +187,17 @@
       },
       "timeout_seconds": 180,
       "max_deliveries": 2,
-      "post_condition": "read_after_write_config",
+      "post_condition": "handler_result",
       "verification": {
         "required": true,
-        "mode": "read_after_write_config",
+        "mode": "handler_result",
         "fail_closed": true
       },
-      "rollback": "configuration_backup",
-      "surface_equivalents": {}
+      "rollback": "not_available",
+      "surface_equivalents": {},
+      "surface_exclusions": {
+        "android": "Интерактивный SSH-терминал доступен только в Web UI."
+      }
     },
     {
       "command": "agent.update",

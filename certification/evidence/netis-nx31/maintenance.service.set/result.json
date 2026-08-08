@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T16:04:40.827530+00:00",
+  "tested_at": "2026-08-08T13:33:16.972755+00:00",
   "command": "maintenance.service.set",
   "payload": {
     "service": "cron",
@@ -12,7 +12,7 @@
     "service": "cron"
   },
   "error": null,
-  "elapsed_seconds": 18.687,
+  "elapsed_seconds": 4.438,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

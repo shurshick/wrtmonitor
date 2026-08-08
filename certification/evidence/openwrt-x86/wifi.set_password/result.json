@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T14:59:58.061449+00:00",
+  "tested_at": "2026-08-08T13:41:23.636057+00:00",
   "command": "wifi.set_password",
   "payload": {
     "iface": "default_radio0",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "a2ea6e5c-be1d-4a8a-8e93-289e20da446f",
+      "id": "c73a9b98-c4cb-41fe-ae37-3f246a136097",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 13.844,
+  "elapsed_seconds": 14.766,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

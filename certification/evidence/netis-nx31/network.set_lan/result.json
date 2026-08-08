@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T16:01:45.552760+00:00",
+  "tested_at": "2026-08-08T13:31:36.929745+00:00",
   "command": "network.set_lan",
   "payload": {
     "interface": "lan",
@@ -10,14 +10,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "167744b4-c17a-4413-89f3-722041a036f6",
+      "id": "646dc5f4-4adc-4789-b1ab-9e142f0927d4",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 8.453,
+  "elapsed_seconds": 21.11,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

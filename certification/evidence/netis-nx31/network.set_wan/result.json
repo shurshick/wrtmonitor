@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T16:01:37.099561+00:00",
+  "tested_at": "2026-08-08T13:31:15.812678+00:00",
   "command": "network.set_wan",
   "payload": {
     "interface": "wan",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "8ef2c263-1879-4382-8b86-6d57f34a1a33",
+      "id": "d2b08459-132b-4add-b1c5-f2f0a54117a9",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 19.016,
+  "elapsed_seconds": 14.907,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

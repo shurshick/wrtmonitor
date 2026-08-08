@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:24:48.273159+00:00",
+  "tested_at": "2026-08-08T13:52:43.181727+00:00",
   "command": "network.restart",
   "payload": {},
   "status": "success",
@@ -7,7 +7,7 @@
     "message": "network restart scheduled"
   },
   "error": null,
-  "elapsed_seconds": 8.421,
+  "elapsed_seconds": 6.438,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

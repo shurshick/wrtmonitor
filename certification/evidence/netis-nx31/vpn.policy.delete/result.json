@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:58:45.975110+00:00",
+  "tested_at": "2026-08-08T13:28:37.593585+00:00",
   "command": "vpn.policy.delete",
   "payload": {
     "section": "wrtmonitor_cert_policy",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "e997b789-e1dc-4016-b434-e93ecad16cc9",
+      "id": "fc815531-550c-4f14-b0e0-bac59300670a",
       "state": "confirmed",
       "configs": "pbr",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 18.86,
+  "elapsed_seconds": 16.984,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

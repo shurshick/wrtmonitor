@@ -9,10 +9,19 @@ ANDROID_SOURCES = ROOT / "android" / "app" / "src" / "main" / "java"
 
 def test_android_exposes_current_management_contract() -> None:
     matrix = build_matrix()
+    android_exclusions = {
+        row["command"]
+        for row in matrix["commands"]
+        if "android" in row.get("surface_exclusions", {})
+    }
 
     assert matrix["command_count"] == 93
     assert all(row["surfaces"]["web"] for row in matrix["commands"])
-    assert all(row["surfaces"]["android"] for row in matrix["commands"])
+    assert android_exclusions == {"agent.bash_script", "agent.ssh_session"}
+    assert all(
+        row["surfaces"]["android"] or row["command"] in android_exclusions
+        for row in matrix["commands"]
+    )
     assert all(row["surfaces"]["api"] for row in matrix["commands"])
     assert all(row["surfaces"]["agent"] for row in matrix["commands"])
 

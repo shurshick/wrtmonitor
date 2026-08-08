@@ -30,6 +30,19 @@ python scripts/hardware_certify.py \
   --device-id DEVICE_UUID
 ```
 
+Для проверки ещё не опубликованного кандидата добавьте `--deploy-worktree`.
+Runner временно установит агент и библиотеки из текущего рабочего дерева, не
+перезаписывая UCI-настройки подключения, а затем зафиксирует версию и источник
+агента в отчёте:
+
+```sh
+python scripts/hardware_certify.py \
+  --name netis-nx31 \
+  --host 192.168.1.1 \
+  --device-id DEVICE_UUID \
+  --deploy-worktree
+```
+
 `WRTMONITOR_AGENT_UPDATE_URL` нужен для безопасной проверки update/rollback на локально собранном агенте. Каталог `openwrt-agent/` должен раздаваться с указанного URL.
 
 Повторить отдельные команды и объединить результат с отчётом можно так:
@@ -39,7 +52,7 @@ python scripts/hardware_certify.py \
   --name netis-nx31 \
   --host 192.168.1.1 \
   --device-id DEVICE_UUID \
-  --commands wifi.mesh.set,vpn.policy.delete \
+  --commands wifi.set_mesh,vpn.policy.delete \
   --resume
 ```
 

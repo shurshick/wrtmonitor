@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T18:08:02.173206+00:00",
+  "tested_at": "2026-08-08T13:51:03.825052+00:00",
   "command": "dns.set_doh",
   "payload": {
     "provider": "cloudflare",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "05098475-35d0-490e-abe9-ea43f152dd6c",
+      "id": "05d9b46e-3f2d-4638-a6e0-d425ec6c5407",
       "state": "confirmed",
       "configs": "dhcp https-dns-proxy",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 20.203,
+  "elapsed_seconds": 14.797,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

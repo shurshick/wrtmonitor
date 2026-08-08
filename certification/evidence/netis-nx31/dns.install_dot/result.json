@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-02T15:59:04.898212+00:00",
+  "tested_at": "2026-08-08T13:29:02.878843+00:00",
   "command": "dns.install_dot",
   "payload": {},
   "status": "success",
@@ -9,7 +9,7 @@
     "package": "stubby"
   },
   "error": null,
-  "elapsed_seconds": 18.921,
+  "elapsed_seconds": 25.281,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
