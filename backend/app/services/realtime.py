@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -9,6 +10,9 @@ from typing import Any, AsyncIterator
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+
+
+logger = logging.getLogger(__name__)
 
 
 class RealtimeBroker:
@@ -141,29 +145,49 @@ def queue_realtime_event(
         broker.publish_local(device_id, event_type, data)
 
 
-async def listen_to_postgres(database_url: str) -> None:
+def psycopg_connection_url(database_url: str) -> str:
+    """Return a libpq-compatible DSN from the SQLAlchemy application URL."""
+    for prefix in ("postgresql+psycopg://", "postgresql+psycopg2://"):
+        if database_url.startswith(prefix):
+            return "postgresql://" + database_url.removeprefix(prefix)
+    if database_url.startswith("postgres://"):
+        return "postgresql://" + database_url.removeprefix("postgres://")
+    return database_url
+
+
+async def listen_to_postgres(
+    database_url: str, ready_event: asyncio.Event | None = None
+) -> None:
     from psycopg import AsyncConnection
 
-    # We replace postgresql:// with postgres:// or postgresql+asyncpg:// but psycopg3 handles it natively
-    # psycopg 3 requires postgresql://
-    url = database_url.replace("postgresql+psycopg2://", "postgresql://").replace(
-        "postgres://", "postgresql://"
-    )
+    url = psycopg_connection_url(database_url)
 
     while True:
         try:
             async with await AsyncConnection.connect(url, autocommit=True) as aconn:
                 await aconn.execute("LISTEN wrtmonitor_events")
-                async for notify in aconn.notifies():
-                    try:
-                        payload = json.loads(notify.payload)
-                        device_id = UUID(payload["device_id"])
-                        event_type = payload["type"]
-                        data = payload.get("data", {})
-                        broker.publish_local(device_id, event_type, data)
-                    except Exception:
-                        pass
+                if ready_event is not None:
+                    ready_event.set()
+                while True:
+                    async for notify in aconn.notifies(timeout=1.0):
+                        try:
+                            payload = json.loads(notify.payload)
+                            device_id = UUID(payload["device_id"])
+                            event_type = payload["type"]
+                            data = payload.get("data", {})
+                            broker.publish_local(device_id, event_type, data)
+                        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+                            logger.warning(
+                                "Discarding malformed PostgreSQL realtime notification",
+                                exc_info=True,
+                            )
+                    await asyncio.sleep(0)
+        except asyncio.CancelledError:
+            raise
         except Exception:
+            if ready_event is not None:
+                ready_event.clear()
+            logger.exception("PostgreSQL realtime listener disconnected")
             await asyncio.sleep(5)
 
 

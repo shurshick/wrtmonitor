@@ -1,11 +1,11 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..db import get_db
-from ..models import DeviceGroup, Device, UserSession
+from ..models import DeviceGroup, Device, User
 from .auth import current_user
 from ..schemas import CommandCreateRequest
 from ..services.commands import (
@@ -13,6 +13,7 @@ from ..services.commands import (
     ALLOWED_COMMANDS,
     validate_command_request,
 )
+from ..services.devices import device_supports
 
 router = APIRouter(prefix="/api/v1/fleet", tags=["fleet"])
 
@@ -38,9 +39,7 @@ class DeviceGroupUpdate(BaseModel):
 
 
 @router.get("/groups", response_model=list[DeviceGroupResponse])
-def list_groups(
-    db: Session = Depends(get_db), session: UserSession = Depends(current_user)
-):
+def list_groups(db: Session = Depends(get_db), user: User = Depends(current_user)):
     return db.query(DeviceGroup).order_by(DeviceGroup.name).all()
 
 
@@ -48,12 +47,19 @@ def list_groups(
 def create_group(
     group: DeviceGroupCreate,
     db: Session = Depends(get_db),
-    current_user: UserSession = Depends(current_user),
+    user: User = Depends(current_user),
 ):
     if db.query(DeviceGroup).filter_by(name=group.name).first():
         raise HTTPException(status_code=400, detail="Group name already exists")
 
-    new_group = DeviceGroup(name=group.name, description=group.description)
+    now = datetime.now(UTC)
+    new_group = DeviceGroup(
+        id=uuid4(),
+        name=group.name.strip(),
+        description=group.description,
+        created_at=now,
+        updated_at=now,
+    )
     db.add(new_group)
     db.commit()
     db.refresh(new_group)
@@ -65,7 +71,7 @@ def update_group(
     group_id: UUID,
     update_data: DeviceGroupUpdate,
     db: Session = Depends(get_db),
-    current_user: UserSession = Depends(current_user),
+    user: User = Depends(current_user),
 ):
     group = db.query(DeviceGroup).filter_by(id=group_id).first()
     if not group:
@@ -84,6 +90,8 @@ def update_group(
     if update_data.description is not None:
         group.description = update_data.description
 
+    group.updated_at = datetime.now(UTC)
+
     db.commit()
     db.refresh(group)
     return group
@@ -93,7 +101,7 @@ def update_group(
 def delete_group(
     group_id: UUID,
     db: Session = Depends(get_db),
-    current_user: UserSession = Depends(current_user),
+    user: User = Depends(current_user),
 ):
     group = db.query(DeviceGroup).filter_by(id=group_id).first()
     if not group:
@@ -113,7 +121,7 @@ def assign_devices(
     group_id: UUID,
     payload: DeviceAssign,
     db: Session = Depends(get_db),
-    current_user: UserSession = Depends(current_user),
+    user: User = Depends(current_user),
 ):
     group = db.query(DeviceGroup).filter_by(id=group_id).first()
     if not group:
@@ -132,7 +140,7 @@ def remove_devices(
     group_id: UUID,
     payload: DeviceAssign,
     db: Session = Depends(get_db),
-    current_user: UserSession = Depends(current_user),
+    user: User = Depends(current_user),
 ):
     group = db.query(DeviceGroup).filter_by(id=group_id).first()
     if not group:
@@ -153,6 +161,7 @@ def remove_devices(
 
 class FleetCommandResponse(BaseModel):
     command_ids: dict[UUID, str]
+    skipped: dict[UUID, str]
 
 
 @router.post("/groups/{group_id}/commands", response_model=FleetCommandResponse)
@@ -160,7 +169,7 @@ def create_group_command(
     group_id: UUID,
     payload: CommandCreateRequest,
     db: Session = Depends(get_db),
-    current_user: UserSession = Depends(current_user),
+    user: User = Depends(current_user),
 ):
     if payload.command_type not in ALLOWED_COMMANDS:
         raise HTTPException(status_code=400, detail="Command is not allowed")
@@ -173,22 +182,27 @@ def create_group_command(
     if not devices:
         raise HTTPException(status_code=400, detail="No devices in group")
 
-    # For fleet commands, we validate once generically (without device_supports checks)
-    normalized_payload = validate_command_request(
-        command_type=payload.command_type,
-        payload=payload.payload,
-        confirmed=payload.confirmed,
-        device_supports=lambda capability: True,  # Assumes devices support it if in fleet
-    )
-
-    command_ids = {}
+    command_ids: dict[UUID, str] = {}
+    skipped: dict[UUID, str] = {}
     for device in devices:
+        try:
+            normalized_payload = validate_command_request(
+                command_type=payload.command_type,
+                payload=payload.payload,
+                confirmed=payload.confirmed,
+                device_supports=lambda capability, device_id=device.id: device_supports(
+                    db, device_id, capability
+                ),
+            )
+        except HTTPException as exc:
+            skipped[device.id] = str(exc.detail)
+            continue
         command = create_device_command(
             db,
             device_id=device.id,
             command_type=payload.command_type,
             payload=normalized_payload,
-            created_by=current_user.user_id,
+            created_by=user.id,
             source="fleet_api",
             idempotency_key=f"{payload.idempotency_key}_{device.id}"
             if payload.idempotency_key
@@ -197,4 +211,4 @@ def create_group_command(
         command_ids[device.id] = str(command.id)
 
     db.commit()
-    return {"command_ids": command_ids}
+    return {"command_ids": command_ids, "skipped": skipped}

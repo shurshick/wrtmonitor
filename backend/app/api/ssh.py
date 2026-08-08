@@ -16,6 +16,7 @@ from ..config import Settings, load_settings
 from ..db import get_db
 from ..services.auth import web_user_from_session, device_from_token
 from ..services.commands import create_device_command
+from ..services.devices import get_user_device_or_404
 
 router = APIRouter(prefix="/api/v1", tags=["ssh"])
 
@@ -36,6 +37,12 @@ async def browser_ssh_ws(
 ):
     user = web_user_from_session(wrtmonitor_session, config, db)
     if not user:
+        await websocket.close(code=1008)
+        return
+
+    try:
+        get_user_device_or_404(db, user, device_id)
+    except HTTPException:
         await websocket.close(code=1008)
         return
 
@@ -80,10 +87,11 @@ async def agent_ssh_down(
     authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ):
-    try:
-        device_from_token(authorization, db)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    device = device_from_token(authorization, db)
+    if device.id != device_id:
+        raise HTTPException(
+            status_code=403, detail="Device token does not match SSH target"
+        )
 
     if device_id not in agent_down_queues:
         agent_down_queues[device_id] = asyncio.Queue()
@@ -114,10 +122,11 @@ async def agent_ssh_up(
     authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ):
-    try:
-        device_from_token(authorization, db)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    device = device_from_token(authorization, db)
+    if device.id != device_id:
+        raise HTTPException(
+            status_code=403, detail="Device token does not match SSH target"
+        )
 
     browser_ws = browser_connections.get(device_id)
     if not browser_ws:

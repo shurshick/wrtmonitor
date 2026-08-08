@@ -1,11 +1,72 @@
 import asyncio
+import os
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
+from psycopg import AsyncConnection
 
 import backend.app.api.agent as agent_api
 from backend.app.main import app
-from backend.app.services.realtime import RealtimeBroker, sse_message
+from backend.app.services.realtime import (
+    RealtimeBroker,
+    broker,
+    listen_to_postgres,
+    psycopg_connection_url,
+    sse_message,
+)
+
+
+def postgres_e2e_enabled() -> bool:
+    return (
+        bool(os.getenv("WRTMONITOR_DATABASE_URL"))
+        and os.getenv("WRTMONITOR_SKIP_E2E", "0") != "1"
+    )
+
+
+def test_psycopg_connection_url_strips_sqlalchemy_driver_name():
+    assert (
+        psycopg_connection_url(
+            "postgresql+psycopg://wrtmonitor:secret@postgres:5432/wrtmonitor"
+        )
+        == "postgresql://wrtmonitor:secret@postgres:5432/wrtmonitor"
+    )
+
+
+def test_postgresql_listener_delivers_real_notify_e2e():
+    if not postgres_e2e_enabled():
+        pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
+
+    async def scenario():
+        database_url = os.environ["WRTMONITOR_DATABASE_URL"]
+        ready = asyncio.Event()
+        listener = asyncio.create_task(listen_to_postgres(database_url, ready))
+        broker.bind(asyncio.get_running_loop())
+        device_id = uuid4()
+        try:
+            async with broker.subscribe(device_id) as queue:
+                await asyncio.wait_for(ready.wait(), timeout=3)
+                async with await AsyncConnection.connect(
+                    psycopg_connection_url(database_url), autocommit=True
+                ) as connection:
+                    await connection.execute(
+                        "SELECT pg_notify('wrtmonitor_events', %s)",
+                        (
+                            '{"device_id":"'
+                            + str(device_id)
+                            + '","type":"integration.ready","data":{"ok":true}}',
+                        ),
+                    )
+                event = await asyncio.wait_for(queue.get(), timeout=3)
+                assert event["type"] == "integration.ready"
+                assert event["data"] == {"ok": True}
+        finally:
+            listener.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await listener
+
+    loop_factory = asyncio.SelectorEventLoop if os.name == "nt" else None
+    asyncio.run(scenario(), loop_factory=loop_factory)
 
 
 def test_realtime_broker_broadcasts_without_consuming_another_subscriber_event():
