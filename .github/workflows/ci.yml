@@ -99,10 +99,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -r backend/requirements.txt
+      - name: Validate release metadata and Android versionCode
+        run: |
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+          test -n "$PREVIOUS_TAG"
+          python scripts/validate_release_metadata.py --previous-ref "$PREVIOUS_TAG"
       - name: Generate immutable agent manifest
         run: python -c "from backend.app.services.openwrt_downloads import ensure_openwrt_download_metadata; ensure_openwrt_download_metadata()"
       - name: Sign and verify agent manifest
@@ -122,6 +129,11 @@ jobs:
           # Verify signatures
           base64 --decode openwrt-agent/SHA256SUMS.sig > "$RUNNER_TEMP/verify.sig"
           openssl pkeyutl -verify -pubin -inkey openwrt-agent/update-ed25519-public-key.pem -rawin -in openwrt-agent/SHA256SUMS.txt -sigfile "$RUNNER_TEMP/verify.sig"
+          python scripts/verify_update_chain.py \
+            --legacy-ed25519-key openwrt-agent/tests/fixtures/v0.32-ed25519-public-key.pem \
+            --current-ed25519-key openwrt-agent/update-ed25519-public-key.pem \
+            --manifest openwrt-agent/SHA256SUMS.txt \
+            --signature openwrt-agent/SHA256SUMS.sig
           if [ -r openwrt-agent/SHA256SUMS.rsa.sig ]; then
             base64 --decode openwrt-agent/SHA256SUMS.rsa.sig > "$RUNNER_TEMP/verify-rsa.sig"
             openssl dgst -sha256 -verify openwrt-agent/update-rsa-public-key.pem -signature "$RUNNER_TEMP/verify-rsa.sig" openwrt-agent/SHA256SUMS.txt

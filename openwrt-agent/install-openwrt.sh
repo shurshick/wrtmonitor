@@ -185,6 +185,22 @@ LwIDAQAB
 EOF
 }
 
+write_update_legacy_rsa_public_key() {
+    cat >"$1" <<'EOF'
+-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnk2nhDg1rLY7XmxMRA81
+ahLaHSD+SP3t0vaul5dnE9kKzFAMoOBWTkuhmECLJ+ZXgzHKpZCbC7K0uH1zJ/og
+xQDj9ok4z4DIhyXSkvUY4WUe1MMTYpxFa6Ow6E6+ke0oBxUMOHGhOKBm/7QPcTxp
+nbTSjxIHlwR2i7iyNDnjZ7xBZpep/b3FTX/O/ha1/5rGHeImd6SVRk8x2RCeCmQj
+w7fprDRD//2Ko350oojyinicZmU1tp61RyW78fgrQURQJjm5p8FPEyqjvmWkjLbw
+/cWDqGcZXiBsGwPCbxiXL4cYQR27FTjIDu1b30dyt4mJ80XQHuVVMqLHiwPcx1UV
+uW9/XV0g6YUzHcJxXFT47R3cOCvU0qiZixxItEFc+3mNZ4fhiOudZOq7H04yZq0E
+zgpi4sAWwz2IcbNj4sohxaV9hq8pPgnCzG6PYPRLpl6UmiKeLY6dmKGXFHx+GxcP
+gU3H/CMcfRH8Os4zX9nhqWj3aV2wDXHkgABOGHsiNbTXAgMBAAE=
+-----END PUBLIC KEY-----
+EOF
+}
+
 verify_ed25519_manifest_signature() {
     tree="$1"
     public_key="$tree/update-public-key.pem"
@@ -201,8 +217,11 @@ verify_rsa_manifest_signature() {
     public_key="$tree/update-rsa-public-key.pem"
     signature="$tree/SHA256SUMS.rsa.sig.bin"
     [ -r "$tree/SHA256SUMS.rsa.sig" ] || return 1
-    write_update_rsa_public_key "$public_key"
     base64 -d <"$tree/SHA256SUMS.rsa.sig" >"$signature" 2>/dev/null || return 1
+    write_update_rsa_public_key "$public_key"
+    openssl dgst -sha256 -verify "$public_key" -signature "$signature" \
+        "$tree/SHA256SUMS.txt" >/dev/null 2>&1 && return 0
+    write_update_legacy_rsa_public_key "$public_key"
     openssl dgst -sha256 -verify "$public_key" -signature "$signature" \
         "$tree/SHA256SUMS.txt" >/dev/null 2>&1
 }

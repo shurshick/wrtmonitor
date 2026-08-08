@@ -19,6 +19,7 @@ SUMS = ROOT / "SHA256SUMS.txt"
 AGENT_VERSION = ROOT / "agent-version.txt"
 ED25519_PUBLIC_KEY = ROOT / "update-ed25519-public-key.pem"
 RSA_PUBLIC_KEY = ROOT / "update-rsa-public-key.pem"
+LEGACY_RSA_PUBLIC_KEY = ROOT / "update-rsa-legacy-public-key.pem"
 REQUIRED_LIBS = [
     "common.sh",
     "dependencies.sh",
@@ -752,7 +753,51 @@ def test_rsa_manifest_signature_supports_legacy_openssl_path(tmp_path: Path):
     assert completed.returncode != 0
 
 
-@pytest.mark.parametrize("release_key", [ED25519_PUBLIC_KEY, RSA_PUBLIC_KEY])
+def test_rsa_manifest_signature_accepts_legacy_trust_key(tmp_path: Path):
+    shell = shell_path()
+    openssl = shutil.which("openssl")
+    if not shell or not openssl:
+        pytest.skip("sh or openssl is not available")
+    sums = tmp_path / "SHA256SUMS.txt"
+    signature = tmp_path / "SHA256SUMS.rsa.sig"
+    private_key = tmp_path / "legacy-private.pem"
+    public_key = tmp_path / "legacy-public.pem"
+    signature_binary = tmp_path / "legacy-signature.bin"
+    shutil.copy2(SUMS, sums)
+    subprocess.run(
+        [openssl, "genpkey", "-algorithm", "RSA", "-out", private_key], check=True
+    )
+    subprocess.run(
+        [openssl, "pkey", "-in", private_key, "-pubout", "-out", public_key],
+        check=True,
+    )
+    subprocess.run(
+        [
+            openssl,
+            "dgst",
+            "-sha256",
+            "-sign",
+            private_key,
+            "-out",
+            signature_binary,
+            sums,
+        ],
+        check=True,
+    )
+    signature.write_bytes(base64.b64encode(signature_binary.read_bytes()) + b"\n")
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "update.sh").as_posix()}"
+        write_update_rsa_public_key() {{ printf '%s\n' invalid >"$1"; }}
+        write_update_legacy_rsa_public_key() {{ cp "{public_key.as_posix()}" "$1"; }}
+        verify_manifest_signature "{tmp_path.as_posix()}"
+    '''
+    subprocess.run([shell, "-c", script], check=True, env=shell_env())
+
+
+@pytest.mark.parametrize(
+    "release_key", [ED25519_PUBLIC_KEY, RSA_PUBLIC_KEY, LEGACY_RSA_PUBLIC_KEY]
+)
 def test_embedded_update_key_matches_release_key(release_key: Path):
     expected = read_text(release_key).strip()
     for source in (read_text(LIB_DIR / "update.sh"), read_text(INSTALLER)):
