@@ -293,7 +293,9 @@ handle_command_agent_ssh_session() {
 
     rm -f "/tmp/wrtmonitor-terminal-$session_id/active"
     supervisor_pid="$(cat "$pid_file" 2>/dev/null || true)"
-    [ -n "$supervisor_pid" ] && kill "$supervisor_pid" 2>/dev/null || true
+    if [ -n "$supervisor_pid" ]; then
+        kill "$supervisor_pid" 2>/dev/null || true
+    fi
     rm -f "$launch_file"
     status="failed"
     result="$(command_failed_result 'terminal startup readiness timeout')"
