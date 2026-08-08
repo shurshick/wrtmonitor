@@ -15,6 +15,7 @@ gzip|gzip
 sysupgrade|base-files
 nlbw|nlbwmon
 ethtool|ethtool
+script|script-utils
 EOF
 }
 

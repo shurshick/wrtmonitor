@@ -147,7 +147,7 @@ capability_supported() {
         agent.rotate_token) has_uci_config wrtmonitor && has_commands curl jsonfilter ;;
         agent.rollback) has_commands cp mv && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
         agent.disable) has_uci_config wrtmonitor && [ -x "$(capability_path /etc/init.d/wrtmonitor)" ] ;;
-        agent.ssh_session) return 0 ;;
+        agent.ssh_session) has_commands curl base64 script ;;
         agent.bash_script) return 0 ;;
         config.transaction) has_config_transactions ;;
         telemetry.system) [ -r "$(capability_path /proc/uptime)" ] && [ -r "$(capability_path /proc/loadavg)" ] ;;

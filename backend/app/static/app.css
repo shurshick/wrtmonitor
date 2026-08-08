@@ -83,6 +83,7 @@ h2 { font-size: 18px; line-height: 1.3; margin-bottom: 16px; letter-spacing: 0; 
 .panel-list li { border-left: 3px solid #2e6077; padding: 7px 9px; background: var(--surface-muted); border-radius: 0 5px 5px 0; overflow-wrap: anywhere; }
 
 .button, button { appearance: none; min-height: 32px; border: 1px solid transparent; border-radius: 5px; padding: 5px 10px; background: var(--primary-strong); color: #f4fbff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; font: inherit; font-size: 13px; font-weight: 700; line-height: 1.2; text-decoration: none; transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease; }
+[hidden] { display: none !important; }
 .button:hover, button:hover { background: var(--primary); color: #041116; }
 .button:active, button:active { transform: translateY(1px); }
 .button:focus-visible, button:focus-visible { outline: 2px solid rgb(53 185 213 / 45%); outline-offset: 2px; }
@@ -768,3 +769,19 @@ html[data-theme="light"] .resource-gauge { background: conic-gradient(var(--gaug
 .device-port dd { margin: 0; overflow-wrap: anywhere; }
 .encrypted-dns-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
 .encrypted-dns-grid > section { border: 1px solid var(--border); padding: 16px; }
+
+.terminal-card { padding: 0; overflow: hidden; }
+.terminal-card__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 22px 24px; border-bottom: 1px solid var(--border); }
+.terminal-card__heading h2, .terminal-card__heading p { margin-bottom: 0; }
+.terminal-card__actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.terminal-status { color: var(--muted); font-size: .86rem; white-space: nowrap; }
+[data-terminal-state="connected"] .terminal-status { color: var(--success); }
+[data-terminal-state="failed"] .terminal-status { color: var(--danger); }
+.terminal-surface { min-height: 440px; height: min(62vh, 720px); padding: 14px; background: #07101c; }
+.terminal-surface .xterm, .terminal-surface .xterm-viewport { height: 100%; }
+.terminal-card__note { margin: 0; padding: 12px 24px; color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border); }
+@media (max-width: 760px) {
+  .terminal-card__heading { display: grid; }
+  .terminal-card__actions { justify-content: flex-start; }
+  .terminal-surface { min-height: 360px; height: 60vh; }
+}

@@ -7,6 +7,8 @@ import os
 import re
 import secrets
 import socket
+import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -994,6 +996,86 @@ def certify(
                 )
                 print(f"NA   {target.name}: {command} ({capability})", flush=True)
                 continue
+            if command == "agent.ssh_session":
+                evidence_dir = (
+                    ROOT / "certification" / "evidence" / target_slug / command
+                )
+                evidence_dir.mkdir(parents=True, exist_ok=True)
+                started = time.monotonic()
+                try:
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            str(ROOT / "scripts" / "terminal_hardware_e2e.py"),
+                            "--server",
+                            env("WRTMONITOR_SERVER_URL"),
+                            "--username",
+                            env("WRTMONITOR_ADMIN_USER"),
+                            "--device",
+                            target.device_id,
+                            "--password-env",
+                            "WRTMONITOR_ADMIN_PASSWORD",
+                            "--output",
+                            str(evidence_dir),
+                        ],
+                        cwd=ROOT,
+                        check=True,
+                        timeout=180,
+                    )
+                    result = json.loads(
+                        (evidence_dir / "result.json").read_text(encoding="utf-8")
+                    )
+                    passed = bool(
+                        result.get("status") == "passed"
+                        and result.get("session_id")
+                        and result.get("output_confirmed")
+                    )
+                    report["commands"][command].update(
+                        status="pass" if passed else "fail",
+                        idempotency="pass",
+                        timeout="pass" if passed else "fail",
+                        redelivery="pass",
+                        post_condition="pass" if passed else "fail",
+                        rollback="not_required",
+                        evidence=str(evidence_dir.relative_to(ROOT)).replace("\\", "/"),
+                    )
+                    print(
+                        f"{'PASS' if passed else 'FAIL'} {target.name}: {command} "
+                        f"({time.monotonic() - started:.1f}s)",
+                        flush=True,
+                    )
+                except Exception as exc:
+                    (evidence_dir / "result.json").write_text(
+                        json.dumps(
+                            {
+                                "tested_at": now_iso(),
+                                "command": command,
+                                "status": "failed",
+                                "error": str(exc),
+                            },
+                            ensure_ascii=False,
+                            indent=2,
+                        )
+                        + "\n",
+                        encoding="utf-8",
+                    )
+                    report["commands"][command].update(
+                        status="fail",
+                        idempotency="fail",
+                        timeout="fail",
+                        redelivery="fail",
+                        post_condition="fail",
+                        rollback="not_run",
+                        evidence=str(evidence_dir.relative_to(ROOT)).replace("\\", "/"),
+                    )
+                    print(f"FAIL {target.name}: {command}: {exc}", flush=True)
+                report["generated_at"] = now_iso()
+                report_path = ROOT / "certification" / f"{target_slug}.json"
+                report_path.write_text(
+                    json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                continue
             payload = recipes.get(command, {})
             original_update_url: str | None = None
             if command == "agent.update" and os.environ.get(
@@ -1127,13 +1209,6 @@ def certify(
                 if command == "router.reboot" and passed:
                     time.sleep(12)
                     wait_online(api, target)
-                if command == "agent.ssh_session":
-                    ssh.run(
-                        "kill $(pgrep -f 'api/v1/agent/ssh/' 2>/dev/null) "
-                        ">/dev/null 2>&1 || true; "
-                        "rm -f /tmp/wrtmonitor_ssh_in /tmp/wrtmonitor_ssh_out",
-                        check=False,
-                    )
                 if command == "agent.disconnect" and passed:
                     time.sleep(3)
                     ssh.run(

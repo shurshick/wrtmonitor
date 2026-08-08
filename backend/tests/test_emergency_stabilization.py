@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from uuid import uuid4
+from contextlib import contextmanager
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,9 +11,24 @@ from backend.app.main import app
 from backend.tests.test_api import clear_database, postgres_e2e_enabled
 
 
-def test_ssh_upload_rejects_token_for_another_device(monkeypatch):
+def test_terminal_websocket_requires_same_origin():
+    matching = SimpleNamespace(
+        headers={"origin": "https://router.example", "host": "router.example"}
+    )
+    foreign = SimpleNamespace(
+        headers={"origin": "https://attacker.example", "host": "router.example"}
+    )
+    missing = SimpleNamespace(headers={"host": "router.example"})
+
+    assert ssh_api._websocket_is_same_origin(matching) is True
+    assert ssh_api._websocket_is_same_origin(foreign) is False
+    assert ssh_api._websocket_is_same_origin(missing) is False
+
+
+def test_terminal_upload_rejects_token_for_another_device(monkeypatch):
     authenticated_device_id = uuid4()
     target_device_id = uuid4()
+    session_id = uuid4()
 
     def fake_db():
         yield object()
@@ -22,10 +38,15 @@ def test_ssh_upload_rejects_token_for_another_device(monkeypatch):
         "device_from_token",
         lambda authorization, db: SimpleNamespace(id=authenticated_device_id),
     )
+    monkeypatch.setattr(
+        ssh_api,
+        "get_terminal_session",
+        lambda db, requested_session_id: SimpleNamespace(device_id=target_device_id),
+    )
     app.dependency_overrides[get_db] = fake_db
     try:
         response = TestClient(app).put(
-            f"/api/v1/agent/ssh/up/{target_device_id}",
+            f"/api/v1/agent/terminal/sessions/{session_id}/up",
             headers={"Authorization": "Bearer router-token"},
             content=b"hostname\n",
         )
@@ -33,11 +54,12 @@ def test_ssh_upload_rejects_token_for_another_device(monkeypatch):
         app.dependency_overrides.clear()
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Device token does not match SSH target"
+    assert response.json()["detail"] == "Device token does not match terminal session"
 
 
-def test_ssh_upload_accepts_matching_device_token(monkeypatch):
+def test_terminal_upload_accepts_matching_device_token(monkeypatch):
     device_id = uuid4()
+    session_id = uuid4()
 
     def fake_db():
         yield object()
@@ -47,10 +69,29 @@ def test_ssh_upload_accepts_matching_device_token(monkeypatch):
         "device_from_token",
         lambda authorization, db: SimpleNamespace(id=device_id),
     )
+    monkeypatch.setattr(
+        ssh_api,
+        "get_terminal_session",
+        lambda db, requested_session_id: SimpleNamespace(device_id=device_id),
+    )
+
+    @contextmanager
+    def fake_broker_session():
+        yield SimpleNamespace(commit=lambda: None)
+
+    stored = []
+    monkeypatch.setattr(ssh_api, "broker_session", fake_broker_session)
+    monkeypatch.setattr(ssh_api, "set_terminal_status", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        ssh_api,
+        "append_terminal_frame",
+        lambda *args, **kwargs: stored.append(kwargs["payload"]),
+    )
+    monkeypatch.setattr(ssh_api, "trim_terminal_frames", lambda *args, **kwargs: 0)
     app.dependency_overrides[get_db] = fake_db
     try:
         response = TestClient(app).put(
-            f"/api/v1/agent/ssh/up/{device_id}",
+            f"/api/v1/agent/terminal/sessions/{session_id}/up",
             headers={"Authorization": "Bearer router-token"},
             content=b"hostname\n",
         )
@@ -58,7 +99,8 @@ def test_ssh_upload_accepts_matching_device_token(monkeypatch):
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ignored"}
+    assert response.json() == {"status": "ok", "bytes": 9}
+    assert b"".join(stored) == b"hostname\n"
 
 
 def test_fleet_group_creation_and_capability_filtering_e2e():

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.35.16
+
+- Web-терминал переведён на локальный xterm, отдельные UUID сессий и устойчивый PostgreSQL-брокер.
+- OpenWrt-агент запускает интерактивный shell в PTY, передаёт размер окна и восстанавливает разорванные HTTP-потоки.
+- Добавлены TTL, очистка кадров, same-origin WebSocket и строгая привязка сессии к device token.
+- CI проверяет сквозной обмен вводом и выводом; для физического роутера добавлен Playwright hardware runner.
+- Android `versionCode` увеличен до 90.
+
 ## v0.35.15
 
 - Аппаратный certification runner теперь покрывает все 93 команды контракта, включая `agent.bash_script` и `agent.ssh_session`.

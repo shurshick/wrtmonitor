@@ -16,7 +16,7 @@ handle_agent_command() {
             disconnect_after=1
             ;;
         agent.ssh_session)
-            if handle_command_agent_ssh_session "$command_id"; then
+            if handle_command_agent_ssh_session "$command_id" "$command_payload"; then
                 # result is set in the handler
                 :
             else

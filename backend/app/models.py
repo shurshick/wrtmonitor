@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -233,6 +234,60 @@ class DeviceCommand(Base):
     idempotency_key: Mapped[str | None] = mapped_column(String(128))
 
 
+class TerminalSession(Base):
+    __tablename__ = "terminal_sessions"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    device_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("devices.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    command_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("device_commands.id", ondelete="SET NULL"),
+    )
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="queued")
+    columns: Mapped[int] = mapped_column(Integer, nullable=False, default=80)
+    rows: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    connected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    close_reason: Mapped[str | None] = mapped_column(Text)
+
+
+class TerminalFrame(Base):
+    __tablename__ = "terminal_frames"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    session_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("terminal_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    direction: Mapped[str] = mapped_column(String(8), nullable=False)
+    frame_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    payload: Mapped[bytes | None] = mapped_column(LargeBinary)
+    frame_data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
 class ClientProfile(Base):
     __tablename__ = "client_profiles"
 
@@ -374,6 +429,17 @@ Index(
     DeviceCommand.idempotency_key,
     unique=True,
     postgresql_where=DeviceCommand.idempotency_key.is_not(None),
+)
+Index(
+    "ix_terminal_sessions_device_status",
+    TerminalSession.device_id,
+    TerminalSession.status,
+)
+Index(
+    "ix_terminal_frames_session_direction_id",
+    TerminalFrame.session_id,
+    TerminalFrame.direction,
+    TerminalFrame.id,
 )
 Index("ix_network_clients_device_online", NetworkClient.device_id, NetworkClient.online)
 Index(

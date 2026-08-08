@@ -1,20 +1,21 @@
-<div class="card h-100">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title m-0">Remote Terminal (Web SSH)</h5>
-        <div>
-            <button type="button" id="btn-ssh-connect" class="btn btn-primary btn-sm">Connect</button>
-            <button type="button" id="btn-ssh-disconnect" class="btn btn-outline-danger btn-sm" style="display:none;">Disconnect</button>
-        </div>
+<section class="card terminal-card" data-terminal-device="{{ device.id }}" data-terminal-state="idle">
+  <div class="terminal-card__heading">
+    <div>
+      <span class="eyebrow">Защищённый канал</span>
+      <h2>Терминал OpenWrt</h2>
+      <p class="muted">Интерактивная PTY-сессия через сервер WrtMonitor. Порты роутера наружу не открываются.</p>
     </div>
-    <div class="card-body p-0 bg-dark" style="min-height: 400px; position: relative;">
-        <div id="terminal-container" style="width: 100%; height: 100%; position: absolute; padding: 10px;"></div>
-        <div id="terminal-overlay" class="d-flex justify-content-center align-items-center flex-column text-white" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 10;">
-            <p>Click Connect to start SSH session</p>
-        </div>
+    <div class="terminal-card__actions">
+      <span id="terminal-status" class="terminal-status" aria-live="polite">Не подключено</span>
+      <button type="button" id="btn-terminal-connect">Подключить</button>
+      <button type="button" id="btn-terminal-disconnect" class="button--danger" hidden>Отключить</button>
     </div>
-</div>
+  </div>
+  <div id="terminal-container" class="terminal-surface" role="application" aria-label="Терминал роутера"></div>
+  <p class="terminal-card__note">Сессия имеет отдельный идентификатор, завершается при закрытии страницы и автоматически истекает через 30 минут бездействия.</p>
+</section>
 
-<link href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-<script src="/static/web-ssh.js?v=0.35.9"></script>
+<link href="/static/vendor/xterm/xterm.css" rel="stylesheet">
+<script src="/static/vendor/xterm/xterm.js"></script>
+<script src="/static/vendor/xterm-addon-fit/xterm-addon-fit.js"></script>
+<script src="/static/web-ssh.js?v=0.35.16"></script>

@@ -66,6 +66,30 @@ flowchart LR
 - `requires_confirmation`
 - `secret_fields`
 
+## Web-терминал
+
+Терминал не является прямым SSH-подключением браузера к роутеру. Браузер открывает same-origin WebSocket к серверу, сервер создаёт UUID сессии и сохраняет двунаправленные кадры в PostgreSQL. Агент забирает ввод и отправляет вывод исходящими HTTPS-запросами, а shell работает в PTY OpenWrt.
+
+```mermaid
+sequenceDiagram
+  participant Browser as "Browser / local xterm"
+  participant Server as "WrtMonitor"
+  participant DB as "PostgreSQL broker"
+  participant Agent as "OpenWrt agent"
+  participant PTY as "ash in PTY"
+  Browser->>Server: WebSocket + owner cookie
+  Server->>DB: terminal session UUID
+  Agent->>Server: authenticated long-poll
+  Server->>DB: read input frames
+  Agent->>PTY: stdin and resize
+  PTY-->>Agent: stdout/stderr
+  Agent-->>Server: HTTPS upload
+  Server->>DB: output frames
+  Server-->>Browser: WebSocket output
+```
+
+Активная сессия продлевается при обмене данными и истекает через 30 минут бездействия. Завершённые сессии и кадры удаляются плановой очисткой через сутки.
+
 ## Access model
 
 Текущая модель сознательно простая: `single-owner`.

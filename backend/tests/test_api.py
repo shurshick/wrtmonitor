@@ -24,6 +24,8 @@ from backend.app.models import (
     DeviceGroup,
     DeviceCommand,
     DeviceTelemetry,
+    TerminalFrame,
+    TerminalSession,
     User,
 )
 from backend.app.main import app
@@ -496,6 +498,8 @@ def clear_database():
         for model in (
             AuthAttempt,
             MobilePairingAttempt,
+            TerminalFrame,
+            TerminalSession,
             DeviceCommand,
             DeviceTelemetry,
             AuditLog,
@@ -526,6 +530,16 @@ def test_stability_migration_schema_e2e():
         item["name"]: item for item in database.get_indexes("device_commands")
     }
     assert command_indexes["uq_device_commands_device_idempotency"]["unique"]
+    assert database.has_table("terminal_sessions")
+    assert database.has_table("terminal_frames")
+    terminal_session_indexes = {
+        item["name"] for item in database.get_indexes("terminal_sessions")
+    }
+    terminal_frame_indexes = {
+        item["name"] for item in database.get_indexes("terminal_frames")
+    }
+    assert "ix_terminal_sessions_device_status" in terminal_session_indexes
+    assert "ix_terminal_frames_session_direction_id" in terminal_frame_indexes
 
 
 def test_router_registration_telemetry_and_latest_api_e2e():

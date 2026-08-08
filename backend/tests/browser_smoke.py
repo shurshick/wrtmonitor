@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import os
 import time
+import base64
+import json
+import threading
 from pathlib import Path
 
 import httpx
@@ -14,7 +17,7 @@ USERNAME = "browser@example.com"
 PASSWORD = "browser-test-password"
 
 
-def prepare_router() -> str:
+def prepare_router() -> tuple[str, str]:
     with httpx.Client(base_url=BASE_URL, timeout=15) as client:
         setup = client.get("/api/v1/setup/status")
         setup.raise_for_status()
@@ -53,6 +56,7 @@ def prepare_router() -> str:
             "agent.update": True,
             "agent.set_interval": True,
             "agent.rollback": True,
+            "agent.ssh_session": True,
             "diagnostics.check_server": True,
             "network.read": True,
             "network.interface_restart": True,
@@ -470,7 +474,79 @@ def prepare_router() -> str:
                 },
             )
             command.raise_for_status()
-        return device_id
+        return device_id, provision.json()["device_token"]
+
+
+def terminal_agent_roundtrip(device_token: str, marker: str, errors: list[str]) -> None:
+    try:
+        headers = {"Authorization": f"Bearer {device_token}"}
+        with httpx.Client(base_url=BASE_URL, timeout=35) as client:
+            command = None
+            for _ in range(6):
+                commands = client.get(
+                    "/api/v1/agent/commands", params={"wait": 5}, headers=headers
+                ).json()
+                command = next(
+                    (item for item in commands if item["type"] == "agent.ssh_session"),
+                    None,
+                )
+                if command:
+                    break
+            if command is None:
+                raise AssertionError("browser did not enqueue terminal command")
+            session_id = command["payload"]["session_id"]
+            client.post(
+                f"/api/v1/agent/commands/{command['id']}/result",
+                headers=headers,
+                json={"status": "running", "result": {}},
+            ).raise_for_status()
+            client.post(
+                f"/api/v1/agent/terminal/sessions/{session_id}/status",
+                headers=headers,
+                json={"status": "connected"},
+            ).raise_for_status()
+            received = bytearray()
+            cursor = 0
+            for _ in range(120):
+                response = client.get(
+                    f"/api/v1/agent/terminal/sessions/{session_id}/down",
+                    params={"after": cursor, "wait_seconds": 5},
+                    headers=headers,
+                )
+                response.raise_for_status()
+                for line in response.text.splitlines():
+                    frame = json.loads(line)
+                    cursor = max(cursor, int(frame.get("id") or 0))
+                    if frame.get("type") == "data":
+                        received.extend(base64.b64decode(frame["data"]))
+                if marker.encode() in received:
+                    break
+            else:
+                raise AssertionError("browser input did not reach terminal broker")
+            output = f"PTY E2E OK: {marker}\r\n".encode()
+            client.put(
+                f"/api/v1/agent/terminal/sessions/{session_id}/up",
+                headers=headers,
+                content=output,
+            ).raise_for_status()
+            client.post(
+                f"/api/v1/agent/terminal/sessions/{session_id}/status",
+                headers=headers,
+                json={"status": "closed", "reason": "browser E2E complete"},
+            ).raise_for_status()
+            client.post(
+                f"/api/v1/agent/commands/{command['id']}/result",
+                headers=headers,
+                json={
+                    "status": "success",
+                    "result": {
+                        "status": "ssh_started",
+                        "session_id": session_id,
+                    },
+                },
+            ).raise_for_status()
+    except Exception as exc:  # pragma: no cover - reported in the browser job
+        errors.append(str(exc))
 
 
 def assert_page(page: Page, path: str, screenshot_name: str) -> None:
@@ -497,7 +573,7 @@ def assert_page(page: Page, path: str, screenshot_name: str) -> None:
 
 def run() -> None:
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    device_id = prepare_router()
+    device_id, device_token = prepare_router()
     with sync_playwright() as playwright:
         for name, viewport in (
             ("desktop", {"width": 1440, "height": 900}),
@@ -551,6 +627,7 @@ def run() -> None:
                 "vpn",
                 "system",
                 "management",
+                "terminal",
             ):
                 assert_page(
                     page,
@@ -748,10 +825,10 @@ def run() -> None:
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
+                    page.wait_for_url("**command_page=2**")
                     page.locator(
-                        "[data-command-journal] .command-pagination nav span",
-                        has_text="2 / 2",
-                    ).wait_for()
+                        "[data-command-journal] .command-pagination nav span"
+                    ).filter(has_text="2 /").wait_for()
                     assert "command_page=2" in page.url
                     assert journal.count() == 1
                     assert interval_input.input_value() == "17"
@@ -759,6 +836,67 @@ def run() -> None:
                         path=str(ARTIFACTS / f"{name}-management-page2.png"),
                         full_page=True,
                     )
+            if name == "desktop":
+                marker = "wrtmonitor-browser-terminal-roundtrip"
+                errors: list[str] = []
+                worker = threading.Thread(
+                    target=terminal_agent_roundtrip,
+                    args=(device_token, marker, errors),
+                    daemon=True,
+                )
+                worker.start()
+                page.goto(
+                    f"{BASE_URL}/devices/{device_id}?section=terminal",
+                    wait_until="domcontentloaded",
+                )
+                page.locator("#btn-terminal-connect").click()
+                terminal_input = page.locator(".xterm-helper-textarea")
+                terminal_input.wait_for(state="attached")
+                deadline = time.monotonic() + 30
+                terminal_state = ""
+                while time.monotonic() < deadline and not errors:
+                    terminal_state = (
+                        page.locator("[data-terminal-device]").get_attribute(
+                            "data-terminal-state"
+                        )
+                        or ""
+                    )
+                    if terminal_state == "connected":
+                        break
+                    time.sleep(0.1)
+                assert not errors, errors[0]
+                assert terminal_state == "connected", (
+                    f"terminal did not connect; state={terminal_state}"
+                )
+                assert page.evaluate(
+                    """
+                    () => document.querySelector('[data-terminal-device]')
+                      .wrtmonitorTerminal.options.minimumContrastRatio >= 7
+                    """
+                ), "terminal contrast guard is disabled"
+                terminal_input.evaluate("node => node.focus()")
+                page.keyboard.type(marker + "\n")
+                page.wait_for_function(
+                    """expected => {
+                      const terminal = document.querySelector('[data-terminal-device]').wrtmonitorTerminal;
+                      if (!terminal) return false;
+                      const buffer = terminal.buffer.active;
+                      let text = '';
+                      for (let index = 0; index < buffer.length; index += 1) {
+                        text += buffer.getLine(index)?.translateToString(true) || '';
+                      }
+                      return text.includes(expected);
+                    }""",
+                    arg=f"PTY E2E OK: {marker}",
+                    timeout=30000,
+                )
+                worker.join(timeout=10)
+                assert not worker.is_alive(), "terminal agent fixture did not finish"
+                assert not errors, errors[0]
+                page.screenshot(
+                    path=str(ARTIFACTS / "desktop-terminal-connected.png"),
+                    full_page=True,
+                )
             browser.close()
 
 

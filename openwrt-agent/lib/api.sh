@@ -216,6 +216,16 @@ main() {
         debug-api) debug_api ;;
         version) printf '%s\n' "$AGENT_VERSION" ;;
         support-bundle) support_bundle "${2:-}" ;;
+        terminal-supervisor)
+            terminal_log="/tmp/wrtmonitor-terminal-${2:-unknown}.log"
+            if terminal_supervisor "${2:-}" "${3:-80}" "${4:-24}" \
+                    >"$terminal_log" 2>&1; then
+                rm -f "$terminal_log"
+            else
+                log_notice "PTY supervisor failed; details: $terminal_log"
+                exit 1
+            fi
+            ;;
         *)
             echo "Usage: wrtmonitor-agent capabilities [--json]|check-server|check-dns|check-route|check-wifi|check-dependencies|ensure-dependencies|diagnostics [--json]|list-config-backups|register|send-now|daemon|apply-wifi-schedules|update [--force] [--allow-downgrade]|rollback|update-status [--json]|debug|debug-telemetry|debug-api|version|support-bundle [--public]" >&2
             exit 1

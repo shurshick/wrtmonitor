@@ -6,7 +6,21 @@ GitHub Actions запускает PostgreSQL-тесты backend, E2E жизне�
 
 PostgreSQL backup восстанавливается во временную БД; CI проверяет `alembic_version` и таблицу владельца, после чего удаляет тестовую БД.
 
-Chromium smoke-test авторизуется в Web UI, открывает список устройств и все разделы роутера на desktop и mobile viewport. Проверяются HTTP-ошибки, `Internal Server Error` и горизонтальное переполнение; скриншоты сохраняются в CI-артефакте `web-responsive-smoke`.
+Chromium smoke-test авторизуется в Web UI, открывает список устройств и все разделы роутера на desktop и mobile viewport. Проверяются HTTP-ошибки, `Internal Server Error`, горизонтальное переполнение и реальный обмен данными с локальным xterm через WebSocket-брокер; скриншоты сохраняются в CI-артефакте `web-responsive-smoke`.
+
+## Аппаратный E2E Web-терминала
+
+Runner проверяет полный путь от Chromium до настоящего PTY роутера и обратно. Пароль передаётся только через переменную окружения:
+
+```sh
+export WRTMONITOR_E2E_PASSWORD='пароль владельца'
+python scripts/terminal_hardware_e2e.py \
+  --server https://monitor.example.ru \
+  --username admin@example.com \
+  --device HomeRouter
+```
+
+Успешный запуск создаёт `artifacts/terminal-hardware-e2e/result.json` и `terminal.png`. Тест не считается пройденным, пока xterm не получит уникальный маркер вместе с результатом `uname` из shell OpenWrt.
 
 ## Ручная регрессия
 

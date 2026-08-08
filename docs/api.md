@@ -68,6 +68,15 @@ Android подключается только к WrtMonitor Server. Pairing не
 - `POST /api/v1/agent/commands/{command_id}/result`
 - `GET /api/v1/meta/contracts`
 
+## Web-терминал
+
+- `WS /api/v1/devices/{device_id}/terminal/ws` — браузерная owner-сессия, кадры `input`, `resize`, `close`;
+- `GET /api/v1/agent/terminal/sessions/{session_id}/down` — конечный long-poll входных кадров для агента;
+- `PUT /api/v1/agent/terminal/sessions/{session_id}/up` — поток вывода PTY;
+- `POST /api/v1/agent/terminal/sessions/{session_id}/status` — состояние `connecting`, `connected`, `closed` или `failed`.
+
+Browser WebSocket принимает только авторизованную cookie и same-origin запрос. Agent endpoints требуют device token того же роутера, которому принадлежит UUID сессии.
+
 ## Latest telemetry
 
 `GET /api/v1/devices/{device_id}/telemetry/latest`

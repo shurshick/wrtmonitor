@@ -22,6 +22,7 @@ from .telemetry_history import (
     cleanup_device_telemetry,
     cleanup_device_telemetry_metrics,
 )
+from .terminal_broker import cleanup_terminal_sessions
 from .realtime import broker
 
 
@@ -194,8 +195,19 @@ def operational_notifications(db: Session) -> list[dict[str, Any]]:
 
 def run_housekeeping(db: Session, config: Settings) -> dict[str, int]:
     now = datetime.now(UTC)
-    counters = {"offline": 0, "online": 0, "telemetry": 0, "commands": 0, "auth": 0}
+    counters = {
+        "offline": 0,
+        "online": 0,
+        "telemetry": 0,
+        "commands": 0,
+        "auth": 0,
+        "terminal_expired": 0,
+        "terminal_deleted": 0,
+    }
     expire_old_commands(db)
+    terminal_cleanup = cleanup_terminal_sessions(db, now=now)
+    counters["terminal_expired"] = terminal_cleanup["expired"]
+    counters["terminal_deleted"] = terminal_cleanup["deleted"]
     devices = db.scalars(select(Device).where(Device.archived_at.is_(None))).all()
     for device in devices:
         telemetry = db.scalars(

@@ -230,19 +230,19 @@ def command_result(
         device.updated_at = now
 
     if command.command_type == "agent.ssh_session" and command.status == "failed":
-        from .ssh import browser_connections
+        from ..services.terminal_broker import set_terminal_status
 
-        if device.id in browser_connections:
-            ws = browser_connections[device.id]
-            error_msg = (
-                "\r\n\x1b[31mAgent Error: "
-                + str((payload.result or {}).get("error", "Unknown error"))
-                + "\x1b[0m\r\n"
-            )
-            import asyncio
-
-            asyncio.create_task(ws.send_text(error_msg))
-            asyncio.create_task(ws.close())
+        session_id = (command.payload or {}).get("session_id")
+        if session_id:
+            try:
+                set_terminal_status(
+                    db,
+                    session_id=UUID(str(session_id)),
+                    status="failed",
+                    reason=str((payload.result or {}).get("error", "Agent failed")),
+                )
+            except (LookupError, ValueError):
+                pass
 
     if (
         command.command_type == "wifi.set_password"
