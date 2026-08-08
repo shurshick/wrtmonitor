@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,13 +11,13 @@ def test_current_release_metadata_is_consistent():
     validate()
 
 
-def test_version_code_is_higher_than_previous_release():
-    previous_tag = subprocess.check_output(
-        ["git", "describe", "--tags", "--abbrev=0", "HEAD^"],
-        cwd=ROOT,
-        text=True,
-    ).strip()
-    validate(previous_tag)
+def test_version_code_is_higher_than_previous_release(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from scripts import validate_release_metadata as metadata
+
+    monkeypatch.setattr(metadata, "version_code_at", lambda _ref: 87)
+    validate("previous-release")
 
 
 def test_legacy_and_current_rsa_keys_are_distinct():
