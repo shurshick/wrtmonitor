@@ -189,7 +189,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           context: .
@@ -201,7 +201,7 @@ jobs:
             org.opencontainers.image.version=${{ env.RELEASE_VERSION }}-canary
           provenance: mode=max
           sbom: true
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         with:
           context: .
