@@ -26,17 +26,20 @@ terminal_down_loop() {
     frame_file="$work_dir/frame"
     token="$(device_token)"
     server="$(server_url)"
+    wait_seconds=0
 
     exec 3>"$input_fifo"
     while [ -e "$work_dir/active" ]; do
         after="$(cat "$cursor_file" 2>/dev/null || printf 0)"
         if ! curl -fsS --connect-timeout 10 --max-time 35 \
                 -H "Authorization: Bearer $token" \
-                "$server/api/v1/agent/terminal/sessions/$session_id/down?after=$after&wait_seconds=20" \
+                "$server/api/v1/agent/terminal/sessions/$session_id/down?after=$after&wait_seconds=$wait_seconds" \
                 >"$frames_file"; then
             sleep 1
             continue
         fi
+        : >"$work_dir/down.ready"
+        wait_seconds=20
         while IFS= read -r frame; do
             [ -n "$frame" ] || continue
             printf '%s' "$frame" >"$frame_file"
@@ -77,18 +80,46 @@ terminal_up_loop() {
     session_id="$1"
     work_dir="$2"
     output_fifo="$work_dir/output"
+    chunk_file="$work_dir/output.chunk"
     token="$(device_token)"
     server="$(server_url)"
 
+    # An empty request proves that authentication and the upstream route work.
+    # Output itself is sent in finite chunks so curl never owns the FIFO forever.
     while [ -e "$work_dir/active" ]; do
-        curl -fsS --connect-timeout 10 \
-            -X PUT "$server/api/v1/agent/terminal/sessions/$session_id/up" \
-            -H "Authorization: Bearer $token" \
-            -H 'Content-Type: application/octet-stream' \
-            -H 'Expect:' \
-            --upload-file "$output_fifo" >/dev/null 2>&1 || true
-        [ -e "$work_dir/active" ] && sleep 1
+        if curl -fsS --connect-timeout 10 --max-time 20 \
+                -X PUT "$server/api/v1/agent/terminal/sessions/$session_id/up" \
+                -H "Authorization: Bearer $token" \
+                -H 'Content-Type: application/octet-stream' \
+                -H 'Expect:' \
+                --data-binary '' >/dev/null 2>&1; then
+            : >"$work_dir/up.ready"
+            break
+        fi
+        sleep 1
     done
+
+    exec 4<"$output_fifo"
+    while [ -e "$work_dir/active" ]; do
+        if ! dd of="$chunk_file" bs=4096 count=1 <&4 2>/dev/null; then
+            [ -e "$work_dir/active" ] && sleep 1
+            continue
+        fi
+        [ -s "$chunk_file" ] || continue
+        while [ -e "$work_dir/active" ]; do
+            if curl -fsS --connect-timeout 10 --max-time 20 \
+                    -X PUT "$server/api/v1/agent/terminal/sessions/$session_id/up" \
+                    -H "Authorization: Bearer $token" \
+                    -H 'Content-Type: application/octet-stream' \
+                    -H 'Expect:' \
+                    --data-binary "@$chunk_file" >/dev/null 2>&1; then
+                break
+            fi
+            sleep 1
+        done
+    done
+    exec 4<&-
+    rm -f "$chunk_file"
 }
 
 terminal_supervisor() {
@@ -100,6 +131,10 @@ terminal_supervisor() {
     output_fifo="$work_dir/output"
     size_file="$work_dir/size"
     env_file="$work_dir/ash.env"
+    launch_file="/tmp/wrtmonitor-terminal-$session_id.launch"
+    launch_log="/tmp/wrtmonitor-terminal-$session_id.log"
+
+    exec >>"$launch_log" 2>&1
 
     rm -rf "$work_dir"
     mkdir -m 0700 "$work_dir" || return 1
@@ -129,12 +164,44 @@ EOF
     terminal_up_loop "$session_id" "$work_dir" &
     pid_up=$!
 
-    if TERM=xterm-256color \
+    TERM=xterm-256color \
         ENV="$env_file" \
         WRTMONITOR_TERM_SIZE="$size_file" \
         WRTMONITOR_TERM_PID="$work_dir/shell.pid" \
             script -q -f -c '/bin/ash -i' /dev/null \
-            <"$input_fifo" >"$output_fifo" 2>&1; then
+            <"$input_fifo" >"$output_fifo" 2>&1 &
+    pid_pty=$!
+    printf '%s\n' "$pid_pty" >"$work_dir/pty.pid"
+
+    ready=0
+    attempts=0
+    while [ "$attempts" -lt 12 ]; do
+        if ! kill -0 "$pid_pty" 2>/dev/null; then
+            printf '%s\n' 'failed: PTY process exited during startup' >"$launch_file"
+            break
+        fi
+        if [ -e "$work_dir/up.ready" ] && [ -e "$work_dir/down.ready" ]; then
+            ready=1
+            printf '%s\n' ready >"$launch_file"
+            break
+        fi
+        attempts=$((attempts + 1))
+        sleep 1
+    done
+    if [ "$ready" -ne 1 ]; then
+        if ! grep -q '^failed:' "$launch_file" 2>/dev/null; then
+            printf '%s\n' 'failed: terminal transport readiness timeout' >"$launch_file"
+        fi
+        terminal_status "$session_id" failed "$(sed 's/^failed: //' "$launch_file")" || true
+        rm -f "$work_dir/active"
+        kill "$pid_pty" "$pid_down" "$pid_up" 2>/dev/null || true
+        wait "$pid_pty" "$pid_down" "$pid_up" 2>/dev/null || true
+        rm -rf "$work_dir"
+        rm -f "/tmp/wrtmonitor-terminal-$session_id.pid"
+        return 1
+    fi
+
+    if wait "$pid_pty"; then
         exit_code=0
     else
         exit_code=$?
@@ -180,14 +247,55 @@ handle_command_agent_ssh_session() {
     fi
 
     pid_file="/tmp/wrtmonitor-terminal-$session_id.pid"
-    if ! start-stop-daemon -S -b -m -p "$pid_file" -n wrt-terminal \
+    launch_file="/tmp/wrtmonitor-terminal-$session_id.launch"
+    launch_log="/tmp/wrtmonitor-terminal-$session_id.log"
+    printf '%s\n' starting >"$launch_file"
+    rm -f "$launch_log"
+    if ! start-stop-daemon -S -b -m -p "$pid_file" \
             -x "$AGENT_SCRIPT" -- \
             terminal-supervisor "$session_id" "$columns" "$rows"; then
+        rm -f "$launch_file"
         status="failed"
         result="$(command_failed_result 'failed to start PTY supervisor')"
         return 1
     fi
-    status="done"
-    result="$(command_success_result 'PTY terminal session started' "\"status\":\"ssh_started\",\"session_id\":\"$(json_escape "$session_id")\"")"
-    return 0
+
+    attempts=0
+    while [ "$attempts" -lt 15 ]; do
+        launch_state="$(cat "$launch_file" 2>/dev/null || true)"
+        case "$launch_state" in
+            ready)
+                rm -f "$launch_file" "$launch_log"
+                status="done"
+                result="$(command_success_result 'PTY terminal session started' "\"status\":\"ssh_started\",\"session_id\":\"$(json_escape "$session_id")\"")"
+                return 0
+                ;;
+            failed:*)
+                reason="${launch_state#failed: }"
+                rm -f "$launch_file"
+                status="failed"
+                result="$(command_failed_result "$reason")"
+                return 1
+                ;;
+        esac
+        supervisor_pid="$(cat "$pid_file" 2>/dev/null || true)"
+        if [ -n "$supervisor_pid" ] && ! kill -0 "$supervisor_pid" 2>/dev/null; then
+            reason="$(tail -n 1 "$launch_log" 2>/dev/null || true)"
+            [ -n "$reason" ] || reason='PTY supervisor exited during startup'
+            rm -f "$launch_file"
+            status="failed"
+            result="$(command_failed_result "$reason")"
+            return 1
+        fi
+        attempts=$((attempts + 1))
+        sleep 1
+    done
+
+    rm -f "/tmp/wrtmonitor-terminal-$session_id/active"
+    supervisor_pid="$(cat "$pid_file" 2>/dev/null || true)"
+    [ -n "$supervisor_pid" ] && kill "$supervisor_pid" 2>/dev/null || true
+    rm -f "$launch_file"
+    status="failed"
+    result="$(command_failed_result 'terminal startup readiness timeout')"
+    return 1
 }

@@ -103,7 +103,8 @@ def main() -> int:
         terminal_input.wait_for(state="attached", timeout=15_000)
         page.locator('[data-terminal-state="connected"]').wait_for(timeout=45_000)
         terminal_input.evaluate("node => node.focus()")
-        page.keyboard.type(f"printf '{marker}:%s\\n' \"$(uname -s)\"\n")
+        page.keyboard.type(f"printf '{marker}:%s\\n' \"$(uname -s)\"")
+        page.keyboard.press("Enter")
         page.wait_for_function(
             """expected => {
               const root = document.querySelector('[data-terminal-device]');
@@ -126,7 +127,8 @@ def main() -> int:
             raise RuntimeError("browser did not receive a terminal session identifier")
         captured = terminal_text(page)
         page.screenshot(path=str(output / "terminal.png"), full_page=True)
-        page.keyboard.type("exit\n")
+        page.keyboard.type("exit")
+        page.keyboard.press("Enter")
         page.locator('[data-terminal-state="closed"]').wait_for(timeout=15_000)
         browser.close()
 

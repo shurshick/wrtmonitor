@@ -855,6 +855,91 @@ def test_terminal_command_result_is_cached_for_replay(tmp_path: Path):
     }
 
 
+def test_terminal_transport_uses_finite_chunks_and_readiness_handshake():
+    source = read_text(LIB_DIR / "command_ssh.sh")
+    assert "--upload-file" not in source
+    assert 'exec 4<"$output_fifo"' in source
+    assert 'dd of="$chunk_file" bs=4096 count=1 <&4' in source
+    assert "exec 4<&-" in source
+    assert '--data-binary "@$chunk_file"' in source
+    assert ': >"$work_dir/up.ready"' in source
+    assert ': >"$work_dir/down.ready"' in source
+    assert '[ -e "$work_dir/up.ready" ] && [ -e "$work_dir/down.ready" ]' in source
+    assert "-n wrt-terminal" not in source
+    assert '-O "$launch_log"' not in source
+    assert 'exec >>"$launch_log" 2>&1' in source
+    assert "terminal startup readiness timeout" in source
+
+
+def test_terminal_up_loop_delivers_router_output_as_a_finite_request(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    work_dir = tmp_path / "terminal"
+    capture = tmp_path / "capture"
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "command_ssh.sh").as_posix()}"
+        mkdir -p "{work_dir.as_posix()}"
+        mkfifo "{(work_dir / "output").as_posix()}"
+        : >"{(work_dir / "active").as_posix()}"
+        server_url() {{ printf 'https://server.test'; }}
+        device_token() {{ printf 'token'; }}
+        curl() {{
+            data=''
+            while [ "$#" -gt 0 ]; do
+                if [ "$1" = '--data-binary' ]; then
+                    shift
+                    data="$1"
+                fi
+                shift
+            done
+            case "$data" in
+                '') return 0 ;;
+                @*)
+                    cat "${{data#@}}" >"{capture.as_posix()}"
+                    rm -f "{(work_dir / "active").as_posix()}"
+                    return 0
+                    ;;
+            esac
+        }}
+        (printf 'router-prompt' >"{(work_dir / "output").as_posix()}") &
+        terminal_up_loop '12345678-1234-1234-1234-123456789abc' "{work_dir.as_posix()}"
+        test -e "{(work_dir / "up.ready").as_posix()}"
+        test "$(cat "{capture.as_posix()}")" = 'router-prompt'
+    '''
+    subprocess.run([shell, "-c", script], check=True, env=shell_env(), timeout=10)
+
+
+def test_terminal_command_reports_supervisor_startup_failure(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    session_id = "12345678-1234-1234-1234-123456789abc"
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "command_ssh.sh").as_posix()}"
+        AGENT_SCRIPT=/usr/bin/wrtmonitor-agent
+        script() {{ :; }}
+        json_get_string() {{ printf '{session_id}'; }}
+        json_get_number() {{ printf '80'; }}
+        command_failed_result() {{ printf '{{"message":"%s"}}' "$1"; }}
+        command_success_result() {{ printf '{{"message":"%s"}}' "$1"; }}
+        start-stop-daemon() {{
+            printf '%s\n' 'failed: PTY transport rejected by server' \
+                >'/tmp/wrtmonitor-terminal-{session_id}.launch'
+            return 0
+        }}
+        payload='{{"session_id":"{session_id}","columns":80,"rows":24}}'
+        if handle_command_agent_ssh_session '87654321-4321-4321-4321-cba987654321' "$payload"; then
+            exit 1
+        fi
+        test "$status" = failed
+        case "$result" in *'PTY transport rejected by server'*) ;; *) exit 1 ;; esac
+    '''
+    subprocess.run([shell, "-c", script], check=True, env=shell_env(), timeout=10)
+
+
 def test_command_execution_does_not_run_competing_telemetry_refresh():
     commands = read_text(LIB_DIR / "commands.sh")
     transactions = read_text(LIB_DIR / "transactions.sh")

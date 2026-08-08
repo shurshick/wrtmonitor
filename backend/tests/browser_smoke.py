@@ -875,7 +875,8 @@ def run() -> None:
                     """
                 ), "terminal contrast guard is disabled"
                 terminal_input.evaluate("node => node.focus()")
-                page.keyboard.type(marker + "\n")
+                page.keyboard.type(marker)
+                page.keyboard.press("Enter")
                 page.wait_for_function(
                     """expected => {
                       const terminal = document.querySelector('[data-terminal-device]').wrtmonitorTerminal;
