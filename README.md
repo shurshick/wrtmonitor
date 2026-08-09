@@ -41,6 +41,10 @@
 
 [![Состояние интернет-подключения и сетевых интерфейсов в WrtMonitor](docs/images/web-internet.png)](docs/images/web-internet.png)
 
+### Web-терминал OpenWrt
+
+[![Интерактивная PTY-сессия OpenWrt через Web SSH в WrtMonitor](docs/images/web-terminal.png)](docs/images/web-terminal.png)
+
 ## Быстрый старт
 
 1. Разверните сервер и PostgreSQL через Docker Compose или TrueNAS.
