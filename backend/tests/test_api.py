@@ -24,6 +24,10 @@ from backend.app.models import (
     DeviceGroup,
     DeviceCommand,
     DeviceTelemetry,
+    AutomationRun,
+    AutomationRule,
+    EventRecord,
+    NotificationRule,
     TerminalFrame,
     TerminalSession,
     User,
@@ -70,7 +74,11 @@ def test_password_command_payload_is_redacted_for_clients():
     }
 
 
-def test_agent_update_bridges_only_the_090_version_boundary():
+def test_agent_update_bridges_only_the_090_version_boundary(monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.services.events.emit_event", lambda *args, **kwargs: (None, True)
+    )
+
     class FakeScalars:
         def first(self):
             return DeviceTelemetry(
@@ -496,6 +504,10 @@ def clear_database():
     )
     with session_factory() as session:
         for model in (
+            AutomationRun,
+            AutomationRule,
+            NotificationRule,
+            EventRecord,
             AuthAttempt,
             MobilePairingAttempt,
             TerminalFrame,
@@ -532,6 +544,10 @@ def test_stability_migration_schema_e2e():
     assert command_indexes["uq_device_commands_device_idempotency"]["unique"]
     assert database.has_table("terminal_sessions")
     assert database.has_table("terminal_frames")
+    assert database.has_table("event_records")
+    assert database.has_table("notification_rules")
+    assert database.has_table("automation_rules")
+    assert database.has_table("automation_runs")
     terminal_session_indexes = {
         item["name"] for item in database.get_indexes("terminal_sessions")
     }

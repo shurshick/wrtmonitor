@@ -623,4 +623,25 @@
     <string name="module_devices">Devices: %1$d</string>
     <string name="start_service">Start</string>
     <string name="stop_service">Stop</string>
+    <string name="events_and_automation">Events and automation</string>
+    <string name="events_summary">Router events, notifications and safe automation</string>
+    <string name="event_log">Event log</string>
+    <string name="event_log_count">Shown: %1$d</string>
+    <string name="no_events">No events match this filter</string>
+    <string name="open_events">Open</string>
+    <string name="critical_events">Critical</string>
+    <string name="all_events">All</string>
+    <string name="acknowledge">Acknowledge</string>
+    <string name="snooze_one_hour">Snooze 1 hour</string>
+    <string name="notification_rules">Notification rules</string>
+    <string name="notification_rules_summary">Rules: %1$d · in-app, webhook, ntfy and SMTP</string>
+    <string name="notification_rule_name">Rule name</string>
+    <string name="add_rule">Add</string>
+    <string name="create_notification_rule">Create in-app rule</string>
+    <string name="automation">Automation</string>
+    <string name="automation_summary">Rules: %1$d · cooldown and rate limits are enforced</string>
+    <string name="safe_templates">Safe templates</string>
+    <string name="automation_history">Automation history</string>
+    <string name="automation_runs_count">Runs: %1$d</string>
+    <string name="no_automation_runs">No automation runs yet</string>
 </resources>

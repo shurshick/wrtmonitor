@@ -6,7 +6,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from .audit import audit
+from .events import emit_event
 from .telemetry import normalize_network_summary
+from ..config import load_settings
 
 
 def _mwan_state(payload: dict[str, Any] | None) -> dict[str, Any]:
@@ -45,6 +47,19 @@ def record_wan_transition(
         "device",
         str(device_id),
         {"before": before, "after": after},
+    )
+    emit_event(
+        db,
+        device_id=device_id,
+        event_type="wan.changed",
+        severity="warning",
+        source="telemetry",
+        title="Изменилось состояние WAN",
+        message=(after["status"] or "Состояние Multi-WAN изменилось."),
+        data={"before": before, "after": after},
+        fingerprint=f"{device_id}:wan.changed:{after['status']}:{after['members']}",
+        dedupe_seconds=120,
+        config=load_settings(),
     )
 
 

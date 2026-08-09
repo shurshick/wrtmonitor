@@ -618,6 +618,10 @@ def run() -> None:
             assert page.locator(".pairing-qr svg").count() == 0
             assert page.locator("[data-pairing-status]").text_content() == "отозван"
             assert "pairing_token" not in page.content()
+            assert_page(page, "/events", f"{name}-events.png")
+            assert page.locator(".event-item").count() >= 1
+            assert page.get_by_text("Правила уведомлений", exact=True).count() == 1
+            assert page.get_by_text("Автоматизация", exact=True).count() == 1
             for section in (
                 "overview",
                 "internet",

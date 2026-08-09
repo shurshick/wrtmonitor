@@ -35,10 +35,17 @@ WRTMONITOR_ALLOW_INSECURE_DEV_DEFAULTS=false
 WRTMONITOR_ENABLE_API_DOCS=false
 WRTMONITOR_COMMAND_HISTORY_RETENTION_DAYS=30
 WRTMONITOR_COMMAND_HISTORY_MAX_PER_DEVICE=500
+WRTMONITOR_EVENT_RETENTION_DAYS=90
+WRTMONITOR_EVENT_MAX_PER_DEVICE=2000
+WRTMONITOR_NOTIFICATION_ALLOW_PRIVATE_TARGETS=false
 ```
 
 Завершённые команды автоматически удаляются после указанного срока или при
 превышении лимита на роутер. Активные команды очистка не затрагивает.
+
+События очищаются по отдельному сроку и лимиту. Настройка webhook, ntfy,
+SMTP и безопасной автоматизации описана в
+[Событиях и автоматизации](events-and-automation.md).
 
 ## TrueNAS Custom App
 

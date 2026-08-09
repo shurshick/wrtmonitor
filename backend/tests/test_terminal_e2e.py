@@ -111,13 +111,14 @@ def test_browser_server_agent_terminal_roundtrip():
             resize_frame = next(item for item in frames if item["type"] == "resize")
             assert resize_frame["columns"] == 120
             assert resize_frame["rows"] == 32
-            after_id = max(item["id"] for item in frames)
-            down = client.get(
-                f"/api/v1/agent/terminal/sessions/{session_id}/down",
-                params={"after": after_id, "wait_seconds": 1},
-                headers=agent_headers,
-            )
-            frames = [json.loads(line) for line in down.text.splitlines()]
+            if not any(item["type"] == "data" for item in frames):
+                after_id = max(item["id"] for item in frames)
+                down = client.get(
+                    f"/api/v1/agent/terminal/sessions/{session_id}/down",
+                    params={"after": after_id, "wait_seconds": 1},
+                    headers=agent_headers,
+                )
+                frames.extend(json.loads(line) for line in down.text.splitlines())
             data_frame = next(item for item in frames if item["type"] == "data")
             assert base64.b64decode(data_frame["data"]) == (marker + "\n").encode()
 

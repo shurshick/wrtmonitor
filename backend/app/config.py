@@ -40,6 +40,15 @@ class Settings:
     login_rate_limit_attempts: int = 10
     login_rate_limit_window_seconds: int = 15 * 60
     enable_metrics: bool = False
+    event_retention_days: int = 90
+    event_max_per_device: int = 2000
+    notification_allow_private_targets: bool = False
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_starttls: bool = True
 
 
 def bool_from_env(value: str | None, default: bool = False) -> bool:
@@ -168,4 +177,19 @@ def load_settings() -> Settings:
             60, int(os.getenv("WRTMONITOR_LOGIN_RATE_LIMIT_WINDOW_SECONDS", "900"))
         ),
         enable_metrics=bool_from_env(os.getenv("WRTMONITOR_ENABLE_METRICS"), False),
+        event_retention_days=max(
+            1, int(os.getenv("WRTMONITOR_EVENT_RETENTION_DAYS", "90"))
+        ),
+        event_max_per_device=max(
+            100, int(os.getenv("WRTMONITOR_EVENT_MAX_PER_DEVICE", "2000"))
+        ),
+        notification_allow_private_targets=bool_from_env(
+            os.getenv("WRTMONITOR_NOTIFICATION_ALLOW_PRIVATE_TARGETS"), False
+        ),
+        smtp_host=os.getenv("WRTMONITOR_SMTP_HOST", "").strip() or None,
+        smtp_port=max(1, int(os.getenv("WRTMONITOR_SMTP_PORT", "587"))),
+        smtp_username=os.getenv("WRTMONITOR_SMTP_USERNAME", "").strip() or None,
+        smtp_password=os.getenv("WRTMONITOR_SMTP_PASSWORD", "").strip() or None,
+        smtp_from=os.getenv("WRTMONITOR_SMTP_FROM", "").strip() or None,
+        smtp_starttls=bool_from_env(os.getenv("WRTMONITOR_SMTP_STARTTLS"), True),
     )

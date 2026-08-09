@@ -10,13 +10,18 @@ from sqlalchemy.orm import Session
 from ..config import APP_VERSION
 from ..config import Settings
 from ..models import (
+    AutomationRun,
     AuditLog,
     AuthAttempt,
     Device,
     DeviceCommand,
     DeviceTelemetry,
+    EventRecord,
     MobilePairingAttempt,
 )
+from ..models import NetworkClient
+from .client_registry import effective_client_presence
+from .events import emit_event
 from .command_store import cleanup_device_command_history, expire_old_commands
 from .telemetry_history import (
     cleanup_device_telemetry,
@@ -98,99 +103,28 @@ def operation_metrics(db: Session) -> dict[str, Any]:
 
 def operational_notifications(db: Session) -> list[dict[str, Any]]:
     now = datetime.now(UTC)
-    items: list[dict[str, Any]] = []
-    devices = db.scalars(
-        select(Device).where(Device.archived_at.is_(None)).order_by(Device.created_at)
-    ).all()
-    for device in devices:
-        telemetry = db.scalars(
-            select(DeviceTelemetry)
-            .where(DeviceTelemetry.device_id == device.id)
-            .order_by(DeviceTelemetry.created_at.desc())
-            .limit(1)
-        ).first()
-        agent = (telemetry.payload.get("agent") or {}) if telemetry else {}
-        freshness = _agent_freshness(device, telemetry, now)
-        if not freshness["fresh"]:
-            items.append(
-                {
-                    "severity": "critical",
-                    "kind": "device_offline",
-                    "title": f"Нет связи с {device.name or device.hostname or 'роутером'}",
-                    "message": f"Telemetry не поступает более {freshness['stale_after_seconds']} секунд.",
-                    "device_id": str(device.id),
-                }
-            )
-        agent_version = str(agent.get("version") or "")
-        if agent_version and agent_version != APP_VERSION:
-            items.append(
-                {
-                    "severity": "warning",
-                    "kind": "agent_update",
-                    "title": f"Доступно обновление агента {APP_VERSION}",
-                    "message": f"На {device.name or device.hostname or 'роутере'} установлена версия {agent_version}.",
-                    "device_id": str(device.id),
-                }
-            )
-    failed = db.scalars(
-        select(DeviceCommand)
+    events = db.scalars(
+        select(EventRecord)
         .where(
-            DeviceCommand.status == "failed",
-            DeviceCommand.updated_at >= now - timedelta(hours=24),
+            EventRecord.status == "open",
+            (EventRecord.snoozed_until.is_(None) | (EventRecord.snoozed_until <= now)),
         )
-        .order_by(DeviceCommand.updated_at.desc())
-        .limit(20)
+        .order_by(EventRecord.last_occurred_at.desc())
+        .limit(100)
     ).all()
-    kind_by_command = {
-        "agent.update": ("agent_update_failed", "Ошибка обновления агента"),
-        "maintenance.backup.create": ("backup_failed", "Ошибка резервного копирования"),
-        "maintenance.backup.restore": (
-            "backup_failed",
-            "Ошибка восстановления резервной копии",
-        ),
-        "network.set_multiwan": (
-            "wan_failover_failed",
-            "Ошибка настройки WAN failover",
-        ),
-    }
-    for command in failed:
-        kind, title = kind_by_command.get(
-            command.command_type,
-            ("command_failed", f"Команда {command.command_type} завершилась ошибкой"),
-        )
-        items.append(
-            {
-                "severity": "warning",
-                "kind": kind,
-                "title": title,
-                "message": command.last_error or "Агент вернул ошибку выполнения.",
-                "device_id": str(command.device_id),
-                "command_id": str(command.id),
-            }
-        )
-    recent_events = db.scalars(
-        select(AuditLog)
-        .where(
-            AuditLog.action.in_(("device.online", "device.offline", "wan.failover")),
-            AuditLog.created_at >= now - timedelta(hours=24),
-        )
-        .order_by(AuditLog.created_at.desc())
-        .limit(50)
-    ).all()
-    for event in recent_events:
-        details = event.details or {}
-        items.append(
-            {
-                "severity": "info" if event.action == "device.online" else "warning",
-                "kind": event.action,
-                "title": details.get("title") or event.action,
-                "message": details.get("message")
-                or "Состояние подключения изменилось.",
-                "device_id": event.object_id,
-                "created_at": event.created_at.isoformat(),
-            }
-        )
-    return items
+    return [
+        {
+            "id": str(item.id),
+            "severity": item.severity,
+            "kind": item.event_type,
+            "title": item.title,
+            "message": item.message,
+            "device_id": str(item.device_id) if item.device_id else None,
+            "created_at": item.last_occurred_at.isoformat(),
+            "occurrence_count": item.occurrence_count,
+        }
+        for item in events
+    ]
 
 
 def run_housekeeping(db: Session, config: Settings) -> dict[str, int]:
@@ -203,6 +137,8 @@ def run_housekeeping(db: Session, config: Settings) -> dict[str, int]:
         "auth": 0,
         "terminal_expired": 0,
         "terminal_deleted": 0,
+        "events": 0,
+        "clients_offline": 0,
     }
     expire_old_commands(db)
     terminal_cleanup = cleanup_terminal_sessions(db, now=now)
@@ -236,7 +172,48 @@ def run_housekeeping(db: Session, config: Settings) -> dict[str, int]:
                     created_at=now,
                 )
             )
+            emit_event(
+                db,
+                device_id=device.id,
+                event_type=f"device.{desired}",
+                severity="critical" if desired == "offline" else "info",
+                source="housekeeping",
+                title=f"{device.name or device.hostname or 'Роутер'}: {'нет связи' if desired == 'offline' else 'связь восстановлена'}",
+                message=f"Состояние изменилось: {previous} → {desired}.",
+                fingerprint=f"{device.id}:device.{desired}",
+                dedupe_seconds=30,
+                config=config,
+            )
             counters[desired] += 1
+        for client in db.scalars(
+            select(NetworkClient).where(
+                NetworkClient.device_id == device.id,
+                NetworkClient.presence_state != "offline",
+            )
+        ).all():
+            if effective_client_presence(client, now) == "offline":
+                client.online = False
+                client.presence_state = "offline"
+                client.presence_source = "presence_timeout"
+                client.updated_at = now
+                emit_event(
+                    db,
+                    device_id=device.id,
+                    event_type="client.offline",
+                    severity="info",
+                    source="housekeeping",
+                    title=f"Клиент отключился: {client.display_name or client.hostname or client.mac}",
+                    message=f"Последний адрес: {client.ip_address or 'не определён'}.",
+                    data={
+                        "client_id": str(client.id),
+                        "mac": client.mac,
+                        "ip": client.ip_address,
+                    },
+                    fingerprint=f"{device.id}:client.offline:{client.mac}",
+                    dedupe_seconds=120,
+                    config=config,
+                )
+                counters["clients_offline"] += 1
         counters["telemetry"] += (
             cleanup_device_telemetry(
                 db, device.id, config.telemetry_retention_per_device
@@ -259,6 +236,21 @@ def run_housekeeping(db: Session, config: Settings) -> dict[str, int]:
     for model in (AuthAttempt, MobilePairingAttempt):
         result = db.execute(delete(model).where(model.created_at < auth_cutoff))
         counters["auth"] += int(result.rowcount or 0)
+    event_cutoff = now - timedelta(days=config.event_retention_days)
+    removed_events = db.execute(
+        delete(EventRecord).where(EventRecord.last_occurred_at < event_cutoff)
+    )
+    counters["events"] += int(removed_events.rowcount or 0)
+    for device in devices:
+        overflow = (
+            select(EventRecord.id)
+            .where(EventRecord.device_id == device.id)
+            .order_by(EventRecord.last_occurred_at.desc())
+            .offset(config.event_max_per_device)
+        )
+        result = db.execute(delete(EventRecord).where(EventRecord.id.in_(overflow)))
+        counters["events"] += int(result.rowcount or 0)
+    db.execute(delete(AutomationRun).where(AutomationRun.created_at < event_cutoff))
     db.commit()
     return counters
 

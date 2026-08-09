@@ -19,6 +19,11 @@ import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.api.dto.DeviceEventDto
+import ru.wrtmonitor.app.api.dto.AutomationRuleDto
+import ru.wrtmonitor.app.api.dto.AutomationRunDto
+import ru.wrtmonitor.app.api.dto.AutomationTemplateDto
+import ru.wrtmonitor.app.api.dto.EventDto
+import ru.wrtmonitor.app.api.dto.NotificationRuleDto
 import okhttp3.Response
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
@@ -101,6 +106,42 @@ class RouterRepository(
     ): ApiResult<List<TelemetryHistoryPointDto>> =
         onIo { api.getTelemetryHistory(deviceId, 120, range) }
 
+    suspend fun events(deviceId: String): ApiResult<List<EventDto>> =
+        onIo { api.getEvents(deviceId) }
+
+    suspend fun acknowledgeEvent(eventId: String): ApiResult<EventDto> =
+        onIo { api.acknowledgeEvent(eventId) }
+
+    suspend fun snoozeEvent(eventId: String): ApiResult<EventDto> =
+        onIo { api.snoozeEvent(eventId) }
+
+    suspend fun notificationRules(): ApiResult<List<NotificationRuleDto>> =
+        onIo(api::getNotificationRules)
+
+    suspend fun createInAppNotificationRule(deviceId: String, name: String): ApiResult<Unit> =
+        onIo { api.createInAppNotificationRule(deviceId, name) }
+
+    suspend fun deleteNotificationRule(ruleId: String): ApiResult<Unit> =
+        onIo { api.deleteNotificationRule(ruleId) }
+
+    suspend fun automationRules(): ApiResult<List<AutomationRuleDto>> =
+        onIo(api::getAutomationRules)
+
+    suspend fun automationTemplates(): ApiResult<List<AutomationTemplateDto>> =
+        onIo(api::getAutomationTemplates)
+
+    suspend fun createAutomation(deviceId: String, template: AutomationTemplateDto): ApiResult<Unit> =
+        onIo { api.createAutomationFromTemplate(deviceId, template) }
+
+    suspend fun setAutomationEnabled(rule: AutomationRuleDto, enabled: Boolean): ApiResult<Unit> =
+        onIo { api.setAutomationEnabled(rule, enabled) }
+
+    suspend fun deleteAutomationRule(ruleId: String): ApiResult<Unit> =
+        onIo { api.deleteAutomationRule(ruleId) }
+
+    suspend fun automationRuns(): ApiResult<List<AutomationRunDto>> =
+        onIo(api::getAutomationRuns)
+
     fun deviceEvents(deviceId: String): Flow<ApiResult<DeviceEventDto>> = callbackFlow {
         val listener = object : EventSourceListener() {
             override fun onEvent(
@@ -121,12 +162,12 @@ class RouterRepository(
                     .onFailure { trySend(ApiResult.Error("Некорректное событие сервера", cause = it)) }
             }
 
-            override fun onFailure(eventSource: EventSource, throwable: Throwable?, response: Response?) {
+            override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
                 trySend(
                     ApiResult.Error(
                         message = if (response?.code == 401) "Сессия истекла" else "Поток событий отключён",
                         statusCode = response?.code,
-                        cause = throwable,
+                        cause = t,
                     )
                 )
                 this@callbackFlow.close()

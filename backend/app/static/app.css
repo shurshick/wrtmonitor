@@ -21,6 +21,34 @@
   --shadow: 0 12px 28px rgb(0 0 0 / 14%);
 }
 
+.header-link { color: var(--muted); font-weight: 700; text-decoration: none; }
+.header-link:hover { color: var(--accent); }
+.filter-bar { display: grid; grid-template-columns: minmax(180px, 1fr) 180px 180px auto auto; gap: 10px; align-items: end; margin-bottom: 16px; }
+.filter-bar label { margin: 0; }
+.event-list, .rule-list { display: grid; gap: 8px; }
+.event-item { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px; border: 1px solid var(--border); background: var(--surface); border-radius: 6px; }
+.event-item__marker { width: 4px; align-self: stretch; border-radius: 3px; background: var(--accent); }
+.event-item--warning .event-item__marker { background: var(--warning); }
+.event-item--critical .event-item__marker { background: var(--danger); }
+.event-item__heading, .rule-row, .event-item__actions, .inline-fields { display: flex; align-items: center; gap: 10px; }
+.event-item__heading { justify-content: space-between; }
+.event-item p { margin: 4px 0; }
+.event-item small, .rule-row small { color: var(--muted); display: block; }
+.event-item__actions { justify-content: flex-end; }
+.operations-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.operations-panel { min-height: 360px; }
+.rule-row { justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.template-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.compact-card { padding: 16px; }
+.compact-card h3 { margin-top: 0; }
+.icon-button--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); }
+@media (max-width: 860px) {
+  .filter-bar, .operations-grid, .template-grid { grid-template-columns: 1fr; }
+  .event-item { grid-template-columns: 4px minmax(0, 1fr); }
+  .event-item__actions { grid-column: 2; justify-content: flex-start; }
+  .inline-fields { align-items: stretch; flex-direction: column; }
+}
+
 html[data-theme="light"] {
   color-scheme: light;
   --bg: #f3f6fa;

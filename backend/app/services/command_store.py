@@ -158,6 +158,26 @@ def create_device_command(
         "command.queued",
         {"command_id": str(command.id), "command_type": command.command_type},
     )
+    from ..config import load_settings
+    from .events import emit_event
+
+    emit_event(
+        db,
+        device_id=device_id,
+        event_type="command.queued",
+        severity="info",
+        source=source,
+        title=f"Команда поставлена в очередь: {command_type}",
+        message="Агент получит команду через постоянный канал или при следующем опросе.",
+        data={
+            "command_id": str(command.id),
+            "command_type": command_type,
+            "automation_depth": int(payload.get("automation_depth") or 0),
+        },
+        fingerprint=f"command:{command.id}:queued",
+        dedupe_seconds=0,
+        config=load_settings(),
+    )
     return command
 
 

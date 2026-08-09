@@ -23,7 +23,11 @@ def test_telemetry_summary_handles_missing_wifi():
     assert summary["memory_total_mb"] == 2
 
 
-def test_create_command_has_expiry():
+def test_create_command_has_expiry(monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.services.events.emit_event", lambda *args, **kwargs: (None, True)
+    )
+
     class FakeSession:
         def __init__(self):
             self.item = None

@@ -228,6 +228,17 @@ def telemetry_alerts(
                 "message": "Использовано более 90% памяти",
             }
         )
+    system = payload.get("system") or {}
+    cpu_count = max(1, _safe_int(system.get("cpu_count")) or 1)
+    load_1m = _safe_float(system.get("load_1m", system.get("load")))
+    if load_1m / cpu_count >= 1.5:
+        alerts.append(
+            {
+                "level": "warning",
+                "code": "load.high",
+                "message": "Средняя нагрузка выше 150% на ядро",
+            }
+        )
     network = normalize_network_summary(payload)
     wan = next(
         (

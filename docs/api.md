@@ -11,6 +11,15 @@ Access-token владельца действует 15 минут. Refresh-token 
 - `DELETE /api/v1/auth/sessions/{id}` — отозвать сессию;
 - `POST /api/v1/auth/change-password` — сменить пароль и отозвать все refresh-сессии;
 - `GET /api/v1/operations/notifications` — эксплуатационные уведомления.
+- `GET /api/v1/operations/events` — постоянный журнал событий с фильтрами и пагинацией;
+- `POST /api/v1/operations/events/{id}/acknowledge` — подтвердить событие;
+- `POST /api/v1/operations/events/{id}/snooze` — отложить событие;
+- `GET|POST /api/v1/operations/notification-rules` — правила доставки;
+- `PUT|DELETE /api/v1/operations/notification-rules/{id}` — изменение и удаление правила;
+- `GET|POST /api/v1/operations/automation-rules` — безопасные сценарии;
+- `PUT|DELETE /api/v1/operations/automation-rules/{id}` — изменение и удаление сценария;
+- `GET /api/v1/operations/automation/templates` — готовые сценарии;
+- `GET /api/v1/operations/automation-runs` — фактическая история запусков.
 
 - `POST /api/v1/auth/login` возвращает `access_token`, `refresh_token` и `expires_in`.
 - `POST /api/v1/auth/refresh` принимает `refresh_token` и выдаёт новую пару токенов.

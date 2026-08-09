@@ -7,11 +7,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import DeviceTelemetry, User
+from ..models import DeviceTelemetry, NetworkClient, User
 from ..schemas import TelemetryRequest
 from ..services.auth import current_user, device_from_token, settings
 from ..services.agent_updates import queue_automatic_agent_update
-from ..services.client_registry import client_inventory_summary, sync_client_inventory
+from ..services.client_registry import (
+    client_inventory_summary,
+    effective_client_presence,
+    sync_client_inventory,
+)
 from ..services.devices import get_latest_agent_status, get_user_device_or_404
 from ..services.telemetry import (
     TELEMETRY_STALE_SECONDS,
@@ -31,6 +35,7 @@ from ..services.telemetry_security import sanitize_telemetry_payload
 from ..services.data_state import subsystem_data_state, telemetry_data_state
 from ..services.wan_events import record_wan_transition
 from ..services.realtime import queue_realtime_event
+from ..services.events import emit_event, resolve_events
 
 
 router = APIRouter()
@@ -156,6 +161,13 @@ def agent_telemetry(
         raise HTTPException(status_code=403, detail="Device token mismatch")
     clean_telemetry = sanitize_telemetry_payload(payload.telemetry)
     now = datetime.now(UTC)
+    prior_device_status = device.status
+    prior_clients = {
+        item.id: effective_client_presence(item, now)
+        for item in db.scalars(
+            select(NetworkClient).where(NetworkClient.device_id == device.id)
+        ).all()
+    }
     previous = db.scalars(
         select(DeviceTelemetry)
         .where(DeviceTelemetry.device_id == device.id)
@@ -190,5 +202,77 @@ def agent_telemetry(
         "telemetry.updated",
         {"created_at": now.isoformat(), "status": "online"},
     )
+    config = settings()
+    router_name = device.name or device.hostname or "Роутер"
+    if prior_device_status != "online":
+        resolve_events(
+            db,
+            device_id=device.id,
+            event_type="device.offline",
+            title=f"{router_name} снова в сети",
+            message="Связь с агентом восстановлена.",
+            config=config,
+        )
+        emit_event(
+            db,
+            device_id=device.id,
+            event_type="device.online",
+            severity="info",
+            title=f"{router_name} в сети",
+            message="Агент возобновил отправку telemetry.",
+            fingerprint=f"{device.id}:device.online:{now.date()}",
+            dedupe_seconds=30,
+            config=config,
+        )
+    current_clients = db.scalars(
+        select(NetworkClient).where(NetworkClient.device_id == device.id)
+    ).all()
+    for client in current_clients:
+        current_presence = effective_client_presence(client, now)
+        previous_presence = prior_clients.get(client.id, "offline")
+        if current_presence == "online" and previous_presence != "online":
+            emit_event(
+                db,
+                device_id=device.id,
+                event_type="client.online",
+                severity="info",
+                title=f"Клиент в сети: {client.display_name or client.hostname or client.mac}",
+                message=f"{client.ip_address or 'Адрес не назначен'} · {client.interface or 'интерфейс не определён'}",
+                source="telemetry",
+                data={
+                    "client_id": str(client.id),
+                    "mac": client.mac,
+                    "ip": client.ip_address,
+                },
+                fingerprint=f"{device.id}:client.online:{client.mac}",
+                dedupe_seconds=120,
+                config=config,
+            )
+    alerts = telemetry_alerts(clean_telemetry, 0)
+    active_codes = {str(item.get("code")) for item in alerts}
+    for alert in alerts:
+        code = str(alert.get("code") or "unknown")
+        emit_event(
+            db,
+            device_id=device.id,
+            event_type=f"telemetry.{code}",
+            severity="critical" if alert.get("level") == "critical" else "warning",
+            title=f"{router_name}: {alert.get('message')}",
+            message=str(alert.get("message") or ""),
+            source="telemetry",
+            data={"alert_code": code},
+            fingerprint=f"{device.id}:telemetry:{code}",
+            dedupe_seconds=300,
+            config=config,
+        )
+    for code in {"memory", "wan", "stale", "load.high"} - active_codes:
+        resolve_events(
+            db,
+            device_id=device.id,
+            event_type=f"telemetry.{code}",
+            title=f"{router_name}: состояние нормализовалось",
+            message=f"Предупреждение {code} больше не наблюдается.",
+            config=config,
+        )
     db.commit()
     return {"status": "ok"}

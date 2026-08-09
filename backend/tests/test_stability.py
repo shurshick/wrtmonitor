@@ -35,7 +35,11 @@ def test_telemetry_contract_requires_explicit_current_schema() -> None:
     assert payload.telemetry["schema_version"] == 2
 
 
-def test_idempotency_key_returns_the_existing_command() -> None:
+def test_idempotency_key_returns_the_existing_command(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "backend.app.services.events.emit_event", lambda *args, **kwargs: (None, True)
+    )
+
     class Scalars:
         def __init__(self, item):
             self.item = item

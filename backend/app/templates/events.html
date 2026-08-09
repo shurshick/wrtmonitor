@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}WrtMonitor - События и автоматизация{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow">Центр управления</p><h1>События и автоматизация</h1><p class="page-heading__description">Единая история состояния роутеров, уведомления и безопасные сценарии.</p></div>
+  <div class="button-row"><a class="button button--secondary" href="/devices">Роутеры</a><a class="button button--secondary" href="/account">Сервер</a></div>
+</div>
+
+<section class="section">
+  <div class="section-heading section-heading--compact"><div><p class="eyebrow">Лента</p><h2>Последние события</h2><p>Повторы объединяются; подтверждённые и отложенные записи остаются в истории.</p></div></div>
+  <form class="filter-bar" method="get" action="/events">
+    <label>Тип<input name="event_type" value="{{ filters.event_type }}" placeholder="device.offline"></label>
+    <label>Важность<select name="severity"><option value="">Все</option>{% for value, label in [('info','Информация'),('warning','Предупреждение'),('critical','Критично')] %}<option value="{{ value }}" {% if filters.severity == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Состояние<select name="status"><option value="">Все</option>{% for value, label in [('open','Открыто'),('acknowledged','Подтверждено'),('resolved','Восстановлено')] %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <button type="submit">Применить</button><a class="button button--secondary" href="/events">Сбросить</a>
+  </form>
+  <div class="event-list">
+    {% for item in events %}
+    <article class="event-item event-item--{{ item.severity }}">
+      <div class="event-item__marker" aria-hidden="true"></div>
+      <div class="event-item__body">
+        <div class="event-item__heading"><strong>{{ item.title }}</strong><span class="status status--{{ 'offline' if item.severity == 'critical' else ('warning' if item.severity == 'warning' else 'online') }}">{{ item.severity }}</span></div>
+        <p>{{ item.message }}</p>
+        <small>{{ item.event_type }} · {{ item.last_occurred_at|timestamp }}{% if item.occurrence_count > 1 %} · повторов: {{ item.occurrence_count }}{% endif %} · {{ item.status }}</small>
+      </div>
+      {% if item.status != 'resolved' %}<div class="event-item__actions">
+        {% if item.status == 'open' %}<form method="post" action="/events/{{ item.id }}/acknowledge"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button--small" type="submit">Подтвердить</button></form>{% endif %}
+        <form method="post" action="/events/{{ item.id }}/snooze"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="minutes" value="60"><button class="button button--secondary button--small" type="submit">На час</button></form>
+      </div>{% endif %}
+    </article>
+    {% else %}<div class="empty-state card"><h3>Событий нет</h3><p>По выбранным фильтрам ничего не найдено.</p></div>{% endfor %}
+  </div>
+  {% if pagination.total %}<div class="command-pagination"><span>Показано {{ pagination.start }}–{{ pagination.end }} из {{ pagination.total }}</span><nav>{% set filter_query = '&event_type=' ~ filters.event_type ~ '&severity=' ~ filters.severity ~ '&status=' ~ filters.status %}{% if pagination.page > 1 %}<a class="button button--secondary button--small" href="/events?page={{ pagination.page - 1 }}{{ filter_query }}">Назад</a>{% endif %}<span>{{ pagination.page }} / {{ pagination.pages }}</span>{% if pagination.page < pagination.pages %}<a class="button button--secondary button--small" href="/events?page={{ pagination.page + 1 }}{{ filter_query }}">Дальше</a>{% endif %}</nav></div>{% endif %}
+</section>
+
+<div class="operations-grid section">
+  <section class="card operations-panel">
+    <div class="maintenance-card__heading"><div><p class="eyebrow">Доставка</p><h2>Правила уведомлений</h2></div></div>
+    <div class="rule-list">{% for rule in notification_rules %}<div class="rule-row"><div><strong>{{ rule.name }}</strong><small>{{ rule.event_types|join(', ') or 'Все события' }} · {{ rule.severities|join(', ') or 'любая важность' }}</small></div><form method="post" action="/events/notification-rules/{{ rule.id }}/delete"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="icon-button icon-button--danger" type="submit" title="Удалить" aria-label="Удалить">×</button></form></div>{% else %}<p class="muted">Внешние каналы не настроены. События всё равно доступны в приложении и Web UI.</p>{% endfor %}</div>
+    <details><summary>Новое правило</summary><form class="compact-form" method="post" action="/events/notification-rules">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Название<input name="name" required maxlength="120"></label>
+      <label>Роутер<select name="device_id"><option value="">Все роутеры</option>{% for device in devices %}<option value="{{ device.id }}">{{ device.name or device.hostname }}</option>{% endfor %}</select></label>
+      <label>Типы событий<input name="event_types" placeholder="device.offline, wan.changed"></label><label>Важность<input name="severities" value="warning,critical"></label>
+      <label>Канал<select name="channel_type"><option value="in_app">В приложении</option><option value="webhook">Webhook</option><option value="ntfy">ntfy</option><option value="smtp">Электронная почта</option></select></label><label>Адрес или получатель<input type="text" name="target" placeholder="https://notify.example/topic или admin@example.ru"></label>
+      <div class="inline-fields"><label class="check-row"><input type="checkbox" name="quiet_enabled"> Тихие часы (UTC)</label><label>С<input type="time" name="quiet_start" value="22:00"></label><label>До<input type="time" name="quiet_end" value="07:00"></label></div>
+      <button type="submit">Создать правило</button>
+    </form></details>
+  </section>
+
+  <section class="card operations-panel">
+    <div class="maintenance-card__heading"><div><p class="eyebrow">Сценарии</p><h2>Автоматизация</h2></div></div>
+    <div class="rule-list">{% for rule in automations %}<div class="rule-row"><div><strong>{{ rule.name }}</strong><small>{{ rule.trigger_type }} → {{ rule.action_command }} · cooldown {{ rule.cooldown_seconds }} сек.</small></div><div class="button-row"><form method="post" action="/events/automations/{{ rule.id }}/toggle"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button--secondary button--small" type="submit">{{ 'Выключить' if rule.enabled else 'Включить' }}</button></form><form method="post" action="/events/automations/{{ rule.id }}/delete"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="icon-button icon-button--danger" type="submit" title="Удалить" aria-label="Удалить">×</button></form></div></div>{% else %}<p class="muted">Сценариев пока нет.</p>{% endfor %}</div>
+    <details><summary>Новый сценарий</summary><form class="compact-form" method="post" action="/events/automations">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Название<input name="name" required maxlength="120"></label><label>Роутер<select name="device_id" required><option value="">Выберите</option>{% for device in devices %}<option value="{{ device.id }}">{{ device.name or device.hostname }}</option>{% endfor %}</select></label>
+      <label>Событие<input name="trigger_type" required placeholder="device.offline"></label><label>Команда<select name="action_command" required>{% for command in commands %}<option value="{{ command.type }}">{{ command.type }} · {{ command.risk_level }}</option>{% endfor %}</select></label>
+      <label>Параметры JSON<textarea name="action_payload" rows="4">{}</textarea></label><div class="inline-fields"><label>Cooldown, сек<input type="number" name="cooldown_seconds" min="5" max="86400" value="300"></label><label>Запусков в час<input type="number" name="max_runs_per_hour" min="1" max="60" value="6"></label></div>
+      <label class="check-row"><input type="checkbox" name="dry_run"> Только проверить, не выполнять</label><label class="check-row"><input type="checkbox" name="allow_disruptive"> Разрешить прерывающие связь команды</label><button type="submit">Создать сценарий</button>
+    </form></details>
+  </section>
+</div>
+
+<section class="section"><div class="section-heading section-heading--compact"><div><p class="eyebrow">Готовые сценарии</p><h2>Шаблоны</h2><p>Шаблоны используют только разрешённые команды и проходят ту же проверку параметров.</p></div></div><div class="template-grid">{% for template in templates %}<article class="card compact-card"><h3>{{ template.name }}</h3><p>{{ template.trigger_type }} → <code>{{ template.action_command }}</code></p><form class="compact-form" method="post" action="/events/automations"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="name" value="{{ template.name }}"><input type="hidden" name="trigger_type" value="{{ template.trigger_type }}"><input type="hidden" name="action_command" value="{{ template.action_command }}"><input type="hidden" name="action_payload" value='{{ template.action_payload|tojson }}'><input type="hidden" name="cooldown_seconds" value="{{ template.cooldown_seconds }}"><input type="hidden" name="max_runs_per_hour" value="6"><label>Роутер<select name="device_id" required><option value="">Выберите</option>{% for device in devices %}<option value="{{ device.id }}">{{ device.name or device.hostname }}</option>{% endfor %}</select></label><button type="submit">Добавить</button></form></article>{% endfor %}</div></section>
+
+<section class="section"><details><summary>Последние запуски автоматизации</summary><div class="table-wrap"><table><thead><tr><th>Время</th><th>Правило</th><th>Статус</th><th>Результат</th></tr></thead><tbody>{% for run in automation_runs %}<tr><td>{{ run.created_at|timestamp }}</td><td>{{ run.rule_id }}</td><td>{{ run.status }}</td><td>{{ run.message }}</td></tr>{% else %}<tr><td colspan="4">Запусков пока нет.</td></tr>{% endfor %}</tbody></table></div></details></section>
+{% endblock %}

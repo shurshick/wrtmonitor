@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..config import Settings
 from ..contracts import COMMAND_CONTRACT_VERSION
 from ..db import get_db, get_engine
-from ..models import Device, DeviceCommand
+from ..models import AutomationRun, Device, DeviceCommand
 from ..services.audit import audit
 from ..services.auth import bearer_token, device_from_token, settings
 from ..schemas import (
@@ -26,6 +26,7 @@ from ..services.commands import (
     requeue_stale_sent_commands,
 )
 from ..services.realtime import broker, queue_realtime_event
+from ..services.events import emit_event
 
 
 router = APIRouter(prefix="/api/v1/agent")
@@ -275,5 +276,43 @@ def command_result(
             "error": command.last_error,
         },
     )
+    if command.status in TERMINAL_STATUSES:
+        automation_run = db.scalar(
+            select(AutomationRun).where(AutomationRun.command_id == command.id)
+        )
+        if automation_run:
+            automation_run.status = command.status
+            automation_run.message = command.last_error or (
+                "Команда выполнена"
+                if command.status == "success"
+                else "Команда завершена"
+            )
+        failed = command.status in {"failed", "expired", "cancelled"}
+        emit_event(
+            db,
+            device_id=device.id,
+            event_type="command.failed" if failed else "command.completed",
+            severity="warning" if failed else "info",
+            source=command.source,
+            title=("Ошибка команды: " if failed else "Команда выполнена: ")
+            + command.command_type,
+            message=command.last_error
+            or (
+                "Агент подтвердил результат выполнения."
+                if not failed
+                else "Команда не выполнена."
+            ),
+            data={
+                "command_id": str(command.id),
+                "command_type": command.command_type,
+                "status": command.status,
+                "automation_depth": int(
+                    (command.payload or {}).get("automation_depth") or 0
+                ),
+            },
+            fingerprint=f"command:{command.id}:{command.status}",
+            dedupe_seconds=0,
+            config=config,
+        )
     db.commit()
     return {"status": command.status}
