@@ -245,10 +245,14 @@ def _normalize_guest_payload(payload: dict[str, Any]) -> dict[str, Any]:
         )
     result: dict[str, Any] = {"enabled": payload["enabled"]}
     if payload["enabled"]:
-        result["ssid"] = _require_string(payload, "ssid", max_length=32)
-        result["password"] = _require_string(
-            payload, "password", min_length=8, max_length=63
-        )
+        ssid = _optional_string(payload, "ssid")
+        password = _optional_string(payload, "password")
+        if ssid:
+            result["ssid"] = _require_string(payload, "ssid", max_length=32)
+        if password:
+            result["password"] = _require_string(
+                payload, "password", min_length=8, max_length=63
+            )
     radio = _optional_string(payload, "radio")
     if radio:
         result["radio"] = _safe_identifier(radio, "radio", r"[A-Za-z0-9_.@\[\]-]+")

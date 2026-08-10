@@ -17,6 +17,15 @@
   {% for alert in telemetry_alerts %}<div class="notice notice--{{ 'danger' if alert.level == 'critical' else 'warning' }}"><strong>{{ alert.message }}</strong></div>{% endfor %}
 </div>{% endif %}
 
+<section class="daily-actions" aria-label="Быстрые действия">
+  <div class="daily-actions__heading"><span class="eyebrow">Ежедневное управление</span><strong>Быстрые действия</strong></div>
+  {% if supports.system_reboot %}<form method="post" action="/devices/{{ device.id }}/web-command?section=overview" onsubmit="return confirm('Перезагрузить роутер? Связь пропадёт на несколько минут.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="router.reboot"><input type="hidden" name="confirmed" value="true"><button class="button button--secondary button--small" type="submit">Перезагрузить</button></form>{% endif %}
+  {% if supports.wifi_toggle and quick_wifi.available %}<form method="post" action="/devices/{{ device.id }}/web-command?section=overview"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_enabled"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="enabled" value="{{ 'false' if quick_wifi.enabled else 'true' }}"><input type="hidden" name="radio" value="{{ quick_wifi.radio }}"><button class="button button--secondary button--small" type="submit">Wi-Fi: {{ 'выключить' if quick_wifi.enabled else 'включить' }}</button></form>{% endif %}
+  {% if supports.wifi_guest and quick_guest.configured %}<form method="post" action="/devices/{{ device.id }}/web-command?section=overview"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="wifi.set_guest"><input type="hidden" name="confirmed" value="true"><input type="hidden" name="enabled" value="{{ 'false' if quick_guest.enabled else 'true' }}"><input type="hidden" name="radio" value="{{ quick_guest.radio }}"><input type="hidden" name="ssid" value="{{ quick_guest.ssid }}"><button class="button button--secondary button--small" type="submit">Гостевая: {{ 'выключить' if quick_guest.enabled else 'включить' }}</button></form>{% else %}<a class="button button--secondary button--small" href="/devices/{{ device.id }}?section=wifi">Настроить гостевую</a>{% endif %}
+  <a class="button button--secondary button--small" href="/devices/{{ device.id }}?section=clients">Заблокировать клиента</a>
+  {% if supports.diagnostics %}<form method="post" action="/devices/{{ device.id }}/web-command?section=overview"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="diagnostics.run"><input type="hidden" name="confirmed" value="true">{% for check in ['server','dns','route','wifi','dependencies'] %}<input type="hidden" name="diagnostics_checks" value="{{ check }}">{% endfor %}<button class="button button--small" type="submit">Проверить сеть</button></form>{% endif %}
+</section>
+
 <div class="dashboard-grid">
   <section class="dashboard-card dashboard-card--traffic" data-live-monitor data-endpoint="/devices/{{ device.id }}/live">
     <header class="dashboard-card__header">
@@ -74,6 +83,13 @@
   <a href="/devices/{{ device.id }}?section=rules"><span class="shortcut-icon shortcut-icon--shield">FW</span><span><strong>Сетевые правила</strong><small>{{ network.firewall_rules|length }} правил · {{ network.routes|length }} маршрутов</small></span><b>&rarr;</b></a>
   <a href="/devices/{{ device.id }}?section=vpn"><span class="shortcut-icon shortcut-icon--vpn">VPN</span><span><strong>VPN и туннели</strong><small>WireGuard: {{ vpn.wireguard.interfaces|length if vpn.wireguard else 0 }} · OpenVPN: {{ vpn.openvpn.clients|length if vpn.openvpn else 0 }}</small></span><b>&rarr;</b></a>
   <a href="/devices/{{ device.id }}?section=management"><span class="shortcut-icon shortcut-icon--agent">AG</span><span><strong>Обслуживание</strong><small>Агент {{ agent.get('version') or 'не определён' }}</small></span><b>&rarr;</b></a>
+</section>
+
+<section class="recent-events">
+  <div class="section-heading section-heading--compact"><div><span class="eyebrow">Что происходило</span><h2>Последние события</h2></div><a href="/events">Весь журнал</a></div>
+  <div class="recent-events__list">
+    {% for event in recent_events %}<article class="recent-event recent-event--{{ event.severity }}"><span class="recent-event__marker"></span><div><strong>{{ event.title }}</strong><p>{{ event.message or 'Дополнительных сведений нет.' }}</p></div><time>{{ event.last_occurred_at|timestamp }}</time></article>{% else %}<p class="muted">Важных событий пока не было.</p>{% endfor %}
+  </div>
 </section>
 
 <section class="overview-strip">

@@ -24,6 +24,7 @@ from ..services.command_registry import COMMAND_REGISTRY
 from ..services.events import (
     BLOCKED_AUTOMATION_COMMANDS,
     event_templates,
+    public_event,
     validate_automation_action,
     validate_automation_payload,
     validate_automation_trigger,
@@ -65,11 +66,12 @@ def events_page(
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     pages = max(1, (total + page_size - 1) // page_size)
     page = min(page, pages)
-    events = db.scalars(
+    event_records = db.scalars(
         query.order_by(EventRecord.last_occurred_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     ).all()
+    events = [public_event(item) for item in event_records]
     notification_rules = db.scalars(
         select(NotificationRule).order_by(NotificationRule.name)
     ).all()

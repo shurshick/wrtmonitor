@@ -53,6 +53,7 @@ import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.dto.AgentStatusDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
+import ru.wrtmonitor.app.api.dto.EventDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.data.RouterRepository
@@ -128,6 +129,11 @@ fun DeviceDetailScreen(
                 state.telemetryHistoryLoading,
                 state.telemetryHistoryError,
                 state.loadedTelemetryRange,
+                state.events,
+                state.quickActionRunning,
+                state.quickActionMessage,
+                state.quickActionError,
+                viewModel::runQuickCommand,
                 onOpenClients,
                 onOpenWifi,
                 onOpenNetwork,
@@ -148,6 +154,11 @@ private fun RouterOverview(
     historyLoading: Boolean,
     historyError: String?,
     loadedHistoryRange: String?,
+    events: List<EventDto>,
+    quickActionRunning: Boolean,
+    quickActionMessage: String?,
+    quickActionError: Boolean,
+    onQuickCommand: (String, JsonObject, String) -> Unit,
     onOpenClients: () -> Unit,
     onOpenWifi: () -> Unit,
     onOpenNetwork: () -> Unit,
@@ -172,6 +183,23 @@ private fun RouterOverview(
     val radios = wifi?.optJsonArray("radios")
     val firstRadio = radios?.optJsonObject(0)
     val firstWifi = firstRadio?.optJsonArray("interfaces")?.optJsonObject(0)
+    var guestWifi: JsonObject? = null
+    if (radios != null) {
+        for (radioIndex in 0 until radios.length()) {
+            val radio = radios.optJsonObject(radioIndex) ?: continue
+            val wifiInterfaces = radio.optJsonArray("interfaces") ?: continue
+            for (interfaceIndex in 0 until wifiInterfaces.length()) {
+                val candidate = wifiInterfaces.optJsonObject(interfaceIndex) ?: continue
+                if (candidate.optString("network") == "wrtmonitor_guest" || candidate.optString("section") == "wrtmonitor_guest") {
+                    guestWifi = candidate
+                }
+            }
+        }
+    }
+    val guestConfig = guestWifi
+    val radioId = firstRadio?.optString("name").orEmpty().ifBlank { firstRadio?.optString("id").orEmpty() }
+    val wifiEnabled = firstRadio != null && !firstRadio.optBoolean("disabled", false)
+    val guestEnabled = guestConfig != null && !guestConfig.optBoolean("disabled", false)
     val wifiLabel = firstWifi?.optString("ssid").orEmpty().ifBlank { stringResource(R.string.wifi_unavailable) }
     val uptime = system?.optLong("uptime", 0) ?: 0
     val availableMb = memory?.optLong("available_kb", 0)?.div(1024) ?: 0
@@ -230,6 +258,51 @@ private fun RouterOverview(
             }
         }
     }
+    var confirmReboot by rememberSaveable { mutableStateOf(false) }
+    val wifiQueuedMessage = if (wifiEnabled) stringResource(R.string.wifi_disable_queued) else stringResource(R.string.wifi_enable_queued)
+    val guestQueuedMessage = if (guestEnabled) stringResource(R.string.guest_wifi_disable_queued) else stringResource(R.string.guest_wifi_enable_queued)
+    val diagnosticsQueuedMessage = stringResource(R.string.diagnostics_queued)
+    val rebootQueuedMessage = stringResource(R.string.reboot_queued)
+    SectionCard(title = stringResource(R.string.quick_actions), subtitle = stringResource(R.string.quick_actions_summary)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SecondaryActionButton(
+                if (wifiEnabled) stringResource(R.string.turn_off_wifi) else stringResource(R.string.turn_on_wifi),
+                { onQuickCommand("wifi.set_enabled", JsonObject().put("enabled", !wifiEnabled).put("radio", radioId), wifiQueuedMessage) },
+                Modifier.weight(1f),
+                enabled = !quickActionRunning && radioId.isNotBlank(),
+            )
+            SecondaryActionButton(
+                if (guestConfig == null) stringResource(R.string.configure_guest_wifi) else if (guestEnabled) stringResource(R.string.turn_off_guest_wifi) else stringResource(R.string.turn_on_guest_wifi),
+                {
+                    if (guestConfig == null) onOpenWifi() else onQuickCommand(
+                        "wifi.set_guest",
+                        JsonObject().put("enabled", !guestEnabled).put("radio", guestConfig.optString("device").ifBlank { radioId }).put("ssid", guestConfig.optString("ssid")),
+                        guestQueuedMessage,
+                    )
+                },
+                Modifier.weight(1f),
+                enabled = !quickActionRunning,
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TonalActionButton(stringResource(R.string.block_client), onOpenClients, Modifier.weight(1f), !quickActionRunning)
+            TonalActionButton(
+                stringResource(R.string.run_network_check),
+                { onQuickCommand("diagnostics.run", JsonObject().put("checks", ru.wrtmonitor.app.api.dto.JsonArray(listOf("server", "dns", "route", "wifi", "dependencies"))), diagnosticsQueuedMessage) },
+                Modifier.weight(1f),
+                enabled = !quickActionRunning,
+            )
+        }
+        SecondaryActionButton(stringResource(R.string.reboot), { confirmReboot = true }, Modifier.align(Alignment.End), !quickActionRunning)
+        quickActionMessage?.let { MessageBanner(it, error = quickActionError) }
+    }
+    if (confirmReboot) AlertDialog(
+        onDismissRequest = { confirmReboot = false },
+        title = { Text(stringResource(R.string.reboot_confirm_title)) },
+        text = { Text(stringResource(R.string.reboot_confirm_message)) },
+        confirmButton = { TextButton(onClick = { confirmReboot = false; onQuickCommand("router.reboot", JsonObject(), rebootQueuedMessage) }) { Text(stringResource(R.string.reboot)) } },
+        dismissButton = { TextButton(onClick = { confirmReboot = false }) { Text(stringResource(R.string.cancel)) } },
+    )
     TrafficMonitorCard(
         history,
         historyRange,
@@ -281,6 +354,27 @@ private fun RouterOverview(
             MaterialTheme.colorScheme.tertiary,
             onOpenSystem,
         )
+    }
+    SectionCard(title = stringResource(R.string.recent_events), subtitle = stringResource(R.string.recent_events_summary)) {
+        if (events.isEmpty()) Text(stringResource(R.string.no_events), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        events.forEach { event ->
+            val severityLabel = when (event.severity) {
+                "critical" -> stringResource(R.string.event_severity_critical)
+                "warning" -> stringResource(R.string.event_severity_warning)
+                else -> stringResource(R.string.event_severity_info)
+            }
+            ActionRow {
+                Column(Modifier.weight(1f)) {
+                    Text(event.title, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        listOfNotNull(event.message.takeIf(String::isNotBlank), formatTimestamp(event.lastOccurredAt)).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                StatusPill(severityLabel, event.severity != "critical")
+            }
+        }
     }
 }
 

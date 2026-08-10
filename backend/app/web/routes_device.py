@@ -56,6 +56,7 @@ from ..services.firmware_catalog import firmware_catalog
 from ..services.hardware_catalog import hardware_report, hardware_summary
 from ..services.health_monitoring import build_health_snapshot
 from ..services.policy_catalog import policy_catalog
+from .device_overview import daily_overview_context
 
 router = APIRouter()
 
@@ -376,6 +377,7 @@ def device_page(
         firmware_catalog(payload) if section == "management" else {"images": []}
     )
     hardware_view = hardware_summary(db, device_id, payload)
+    overview_context = daily_overview_context(db, device_id, radios)
     db.commit()
 
     age = (
@@ -458,6 +460,7 @@ def device_page(
             "supports": supports,
             "wifi": wifi,
             "radios": radios,
+            **overview_context,
             "interfaces": interfaces,
             "lan_interface": lan_interface,
             "wan_interface": wan_interface,

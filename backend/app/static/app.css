@@ -313,6 +313,18 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .dashboard-shortcuts > a > span:nth-child(2) { display: grid; min-width: 0; }
 .dashboard-shortcuts small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dashboard-shortcuts b { color: var(--primary); }
+.daily-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 12px 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-muted); }
+.daily-actions__heading { display: grid; gap: 1px; margin-right: auto; min-width: 175px; }
+.daily-actions form { margin: 0; }
+.recent-events { margin-top: 14px; }
+.recent-events__list { display: grid; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-muted); overflow: hidden; }
+.recent-event { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 13px; border-bottom: 1px solid var(--border); }
+.recent-event:last-child { border-bottom: 0; }
+.recent-event__marker { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+.recent-event--warning .recent-event__marker { background: var(--warning); }
+.recent-event--critical .recent-event__marker { background: var(--danger); }
+.recent-event p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.recent-event time { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .shortcut-icon { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #315b6c; border-radius: 6px; background: #102b38; color: var(--primary); font-size: 10px; font-weight: 800; }
 .shortcut-icon--shield { border-color: #2c6143; background: #10271c; color: var(--success); }
 .shortcut-icon--vpn { border-color: #4a4f7e; background: #1a1d38; color: #9caaff; }

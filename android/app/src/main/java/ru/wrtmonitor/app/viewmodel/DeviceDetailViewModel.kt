@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.dto.DeviceDto
+import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.data.RouterRepository
 import java.util.concurrent.atomic.AtomicInteger
@@ -30,6 +31,7 @@ class DeviceDetailViewModel(
     private var realtimeRefresh: Job? = null
 
     fun start() {
+        if (state.events.isEmpty()) viewModelScope.launch { refreshEvents() }
         if (telemetryLoop == null) telemetryLoop = viewModelScope.launch {
             while (true) {
                 refreshTelemetry(showLoading = state.telemetry == null)
@@ -70,7 +72,33 @@ class DeviceDetailViewModel(
 
     fun refresh() {
         viewModelScope.launch { refreshTelemetry() }
+        viewModelScope.launch { refreshEvents() }
         restartHistoryLoop()
+    }
+
+    fun runQuickCommand(type: String, payload: JsonObject, successMessage: String) {
+        if (state.quickActionRunning) return
+        viewModelScope.launch {
+            state = state.copy(quickActionRunning = true, quickActionMessage = null)
+            when (val result = repository.createCommand(device.id, type, payload, true)) {
+                is ApiResult.Success -> {
+                    state = state.copy(
+                        quickActionRunning = false,
+                        quickActionMessage = successMessage,
+                        quickActionError = false,
+                    )
+                    delay(600)
+                    refreshTelemetry(showLoading = false)
+                    refreshEvents()
+                }
+                is ApiResult.Error -> state = state.copy(
+                    quickActionRunning = false,
+                    quickActionMessage = result.message,
+                    quickActionError = true,
+                    sessionExpired = result.isUnauthorized(),
+                )
+            }
+        }
     }
 
     private fun restartHistoryLoop() {
@@ -121,6 +149,15 @@ class DeviceDetailViewModel(
                     telemetryHistoryError = result.message,
                     sessionExpired = result.isUnauthorized(),
                 )
+            }
+        }
+    }
+
+    private suspend fun refreshEvents() {
+        when (val result = repository.events(device.id)) {
+            is ApiResult.Success -> state = state.copy(events = result.data.take(5))
+            is ApiResult.Error -> if (result.isUnauthorized()) {
+                state = state.copy(sessionExpired = true, error = result.message)
             }
         }
     }

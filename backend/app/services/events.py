@@ -38,6 +38,29 @@ BLOCKED_AUTOMATION_COMMANDS = {
     "router.factory_reset",
 }
 
+EVENT_TITLES = {
+    "device.online": "Роутер снова в сети",
+    "device.offline": "Роутер не отвечает",
+    "wan.changed": "Изменилось интернет-подключение",
+    "wan.recovered": "Интернет-подключение восстановлено",
+    "client.online": "Устройство подключилось к сети",
+    "client.offline": "Устройство покинуло сеть",
+    "agent.update.failed": "Не удалось обновить агент",
+    "backup.failed": "Не удалось создать резервную копию",
+    "telemetry.temperature.high": "Роутер перегревается",
+    "telemetry.memory.low": "Заканчивается свободная память",
+    "telemetry.storage.high": "Накопитель почти заполнен",
+}
+
+
+def human_event_title(item: EventRecord) -> str:
+    mapped = EVENT_TITLES.get(item.event_type)
+    title = str(item.title or "").strip()
+    technical = (
+        not title or title == item.event_type or "." in title and " " not in title
+    )
+    return mapped if mapped and technical else title or mapped or "Событие роутера"
+
 
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
@@ -50,7 +73,7 @@ def public_event(item: EventRecord) -> dict[str, Any]:
         "event_type": item.event_type,
         "severity": item.severity,
         "source": item.source,
-        "title": item.title,
+        "title": human_event_title(item),
         "message": item.message,
         "data": item.event_data,
         "status": item.status,
@@ -488,4 +511,5 @@ __all__ = [
     "validate_automation_payload",
     "validate_notification_channels",
     "event_templates",
+    "human_event_title",
 ]

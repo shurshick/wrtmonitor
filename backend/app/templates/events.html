@@ -19,7 +19,7 @@
     <article class="event-item event-item--{{ item.severity }}">
       <div class="event-item__marker" aria-hidden="true"></div>
       <div class="event-item__body">
-        <div class="event-item__heading"><strong>{{ item.title }}</strong><span class="status status--{{ 'offline' if item.severity == 'critical' else ('warning' if item.severity == 'warning' else 'online') }}">{{ item.severity }}</span></div>
+        <div class="event-item__heading"><strong>{{ item.title }}</strong><span class="status status--{{ 'offline' if item.severity == 'critical' else ('warning' if item.severity == 'warning' else 'online') }}">{{ 'Критично' if item.severity == 'critical' else ('Предупреждение' if item.severity == 'warning' else 'Информация') }}</span></div>
         <p>{{ item.message }}</p>
         <small>{{ item.event_type }} · {{ item.last_occurred_at|timestamp }}{% if item.occurrence_count > 1 %} · повторов: {{ item.occurrence_count }}{% endif %} · {{ item.status }}</small>
       </div>

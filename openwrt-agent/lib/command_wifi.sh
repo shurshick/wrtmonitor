@@ -183,6 +183,8 @@ handle_wifi_command() {
         wifi.set_guest)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
             [ -n "$guest_radio" ] || guest_radio="$(resolve_wifi_radio "" || true)"; [ -n "$guest_radio" ] || guest_radio="radio0"
+            [ -n "$guest_ssid" ] || guest_ssid="$(uci -q get wireless.wrtmonitor_guest.ssid 2>/dev/null || true)"
+            [ -n "$guest_password" ] || guest_password="$(uci -q get wireless.wrtmonitor_guest.key 2>/dev/null || true)"
             guest_ip="$(uci -q get network.wrtmonitor_guest.ipaddr 2>/dev/null || true)"
             if [ -z "$guest_ip" ]; then
                 guest_octet=2
@@ -197,7 +199,8 @@ handle_wifi_command() {
                 done
             fi
             wireless_backup="$(backup_config wireless "$command_id" "$command_type" || true)"; network_backup="$(backup_config network "$command_id" "$command_type" || true)"; dhcp_backup="$(backup_config dhcp "$command_id" "$command_type" || true)"; firewall_backup="$(backup_config firewall "$command_id" "$command_type" || true)"
-            if [ -z "$guest_ip" ]; then status="failed"; result="$(command_failed_result "no unused guest subnet is available")"
+            if [ "$guest_enabled" = "true" ] && { [ -z "$guest_ssid" ] || [ "${#guest_password}" -lt 8 ]; }; then status="failed"; result="$(command_failed_result "guest Wi-Fi must be configured before it can be enabled")"
+            elif [ -z "$guest_ip" ]; then status="failed"; result="$(command_failed_result "no unused guest subnet is available")"
             elif [ -z "$wireless_backup" ] || [ -z "$network_backup" ] || [ -z "$dhcp_backup" ] || [ -z "$firewall_backup" ]; then status="failed"; result="$(command_failed_result "failed to create guest network backups")"
             else
                 uci set network.wrtmonitor_guest=interface; uci set network.wrtmonitor_guest.proto=static; uci set "network.wrtmonitor_guest.ipaddr=$guest_ip"; uci set network.wrtmonitor_guest.netmask=255.255.255.0
