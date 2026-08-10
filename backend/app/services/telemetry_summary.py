@@ -19,6 +19,10 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
     cpu = payload.get("cpu") or {}
     storage = payload.get("storage") or {}
     thermal = payload.get("thermal") or {}
+    sensors = thermal.get("sensors") or []
+    primary_temperature = thermal.get("milli_celsius")
+    if primary_temperature is None and sensors:
+        primary_temperature = sensors[0].get("milli_celsius")
     traffic = payload.get("traffic") or {}
     wifi = normalize_wifi_summary(payload)
     network = normalize_network_summary(payload)
@@ -37,8 +41,9 @@ def build_telemetry_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "storage_total_mb": _kb_to_mb(storage.get("total_kb")),
         "storage_available_mb": _kb_to_mb(storage.get("available_kb")),
         "temperature_celsius": _millidegrees_to_celsius(
-            thermal.get("milli_celsius") if thermal.get("available") else None
+            primary_temperature if thermal.get("available") else None
         ),
+        "temperature_sensor_count": len(sensors),
         "traffic_rx_bytes": traffic.get("rx_bytes"),
         "traffic_tx_bytes": traffic.get("tx_bytes"),
         "wifi_available": wifi.get("available"),

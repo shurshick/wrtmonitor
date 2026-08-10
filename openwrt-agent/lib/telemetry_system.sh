@@ -22,10 +22,64 @@ memory_json() {
 }
 
 cpu_json() {
-    cores="$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || echo 0)"
-    model="$(sed -n 's/^model name[[:space:]]*:[[:space:]]*//p; s/^system type[[:space:]]*:[[:space:]]*//p' /proc/cpuinfo 2>/dev/null | head -n 1)"
+    cores="$(find /sys/devices/system/cpu -maxdepth 1 -type d -name 'cpu[0-9]*' 2>/dev/null | wc -l | tr -d ' ')"
+    [ "$cores" -gt 0 ] 2>/dev/null || cores="$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || echo 0)"
+    model="$(sed -n 's/^model name[[:space:]]*:[[:space:]]*//p; s/^Hardware[[:space:]]*:[[:space:]]*//p; s/^Processor[[:space:]]*:[[:space:]]*//p; s/^system type[[:space:]]*:[[:space:]]*//p' /proc/cpuinfo 2>/dev/null | head -n 1)"
+    compatible="$(read_device_tree_value /proc/device-tree/cpus/cpu@0/compatible | head -n 1)"
+    [ -n "$compatible" ] || compatible="$(read_device_tree_value /sys/firmware/devicetree/base/cpus/cpu@0/compatible | head -n 1)"
+    [ -n "$model" ] || model="$compatible"
+    architecture="$(uname -m 2>/dev/null || true)"
+    current_khz="0"
+    max_khz="0"
+    frequencies=""
+    for cpu_path in /sys/devices/system/cpu/cpu[0-9]*; do
+        [ -d "$cpu_path" ] || continue
+        cpu_name="$(basename "$cpu_path")"
+        current="$(cat "$cpu_path/cpufreq/scaling_cur_freq" 2>/dev/null || cat "$cpu_path/cpufreq/cpuinfo_cur_freq" 2>/dev/null || echo 0)"
+        maximum="$(cat "$cpu_path/cpufreq/cpuinfo_max_freq" 2>/dev/null || cat "$cpu_path/cpufreq/scaling_max_freq" 2>/dev/null || echo 0)"
+        case "$current" in ""|*[!0-9]*) current="0" ;; esac
+        case "$maximum" in ""|*[!0-9]*) maximum="0" ;; esac
+        [ "$current" -gt "$current_khz" ] 2>/dev/null && current_khz="$current"
+        [ "$maximum" -gt "$max_khz" ] 2>/dev/null && max_khz="$maximum"
+        [ -n "$frequencies" ] && frequencies="$frequencies,"
+        frequencies="$frequencies{\"cpu\":\"$(json_escape "$cpu_name")\",\"current_khz\":$current,\"max_khz\":$maximum}"
+    done
     case "$cores" in ""|*[!0-9]*) cores="0" ;; esac
-    printf '{"cores":%s,"model":"%s"}' "$cores" "$(json_escape "$model")"
+    printf '{"cores":%s,"model":"%s","architecture":"%s","compatible":"%s","current_khz":%s,"max_khz":%s,"frequencies":[%s]}' \
+        "$cores" "$(json_escape "$model")" "$(json_escape "$architecture")" \
+        "$(json_escape "$compatible")" "$current_khz" "$max_khz" "$frequencies"
+}
+
+read_device_tree_value() {
+    path="$1"
+    [ -r "$path" ] || return 0
+    tr '\000' '\n' <"$path" 2>/dev/null | sed '/^$/d'
+}
+
+hardware_identity_json() {
+    dt_root="/sys/firmware/devicetree/base"
+    [ -d "$dt_root" ] || dt_root="/proc/device-tree"
+    model="$(read_device_tree_value "$dt_root/model" | head -n 1)"
+    compatible_json=""
+    compatible_text=""
+    while IFS= read -r item; do
+        [ -n "$item" ] || continue
+        [ -n "$compatible_json" ] && compatible_json="$compatible_json,"
+        compatible_json="$compatible_json\"$(json_escape "$item")\""
+        [ -n "$compatible_text" ] && compatible_text="$compatible_text,"
+        compatible_text="$compatible_text$item"
+    done <<EOF
+$(read_device_tree_value "$dt_root/compatible")
+EOF
+    board_name="$(ubus call system board 2>/dev/null | jsonfilter -e '@.board_name' 2>/dev/null || true)"
+    [ -n "$model" ] || model="$(ubus call system board 2>/dev/null | jsonfilter -e '@.model' 2>/dev/null || true)"
+    target="$(sed -n "s/^DISTRIB_TARGET='\([^']*\)'.*/\1/p" /etc/openwrt_release 2>/dev/null | head -n 1)"
+    package_arch="$(opkg print-architecture 2>/dev/null | awk 'END {print $2}' || true)"
+    [ -n "$package_arch" ] || package_arch="$(apk --print-arch 2>/dev/null || true)"
+    printf '{"state":"observed","model":"%s","board_name":"%s","compatible":[%s],"compatible_text":"%s","target":"%s","package_arch":"%s","architecture":"%s"}' \
+        "$(json_escape "$model")" "$(json_escape "$board_name")" "$compatible_json" \
+        "$(json_escape "$compatible_text")" "$(json_escape "$target")" \
+        "$(json_escape "$package_arch")" "$(json_escape "$(uname -m 2>/dev/null || true)")"
 }
 
 storage_json() {
@@ -44,14 +98,41 @@ EOF
 }
 
 thermal_json() {
-    sensor="$(find /sys/class/thermal -name temp -type f 2>/dev/null | head -n 1)"
-    if [ -z "$sensor" ] || [ ! -r "$sensor" ]; then
-        printf '{"available":false}'
+    sensors=""
+    primary=""
+    count="0"
+    for zone in /sys/class/thermal/thermal_zone*; do
+        [ -r "$zone/temp" ] || continue
+        value="$(cat "$zone/temp" 2>/dev/null || true)"
+        case "$value" in ""|*[!0-9-]*) continue ;; esac
+        sensor_id="$(basename "$zone")"
+        sensor_type="$(cat "$zone/type" 2>/dev/null || echo "$sensor_id")"
+        [ -n "$sensors" ] && sensors="$sensors,"
+        sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"thermal\",\"type\":\"$(json_escape "$sensor_type")\",\"label\":\"$(json_escape "$sensor_type")\",\"milli_celsius\":$value}"
+        [ -n "$primary" ] || primary="$value"
+        count=$((count + 1))
+    done
+    for hwmon in /sys/class/hwmon/hwmon*; do
+        [ -d "$hwmon" ] || continue
+        hwmon_name="$(cat "$hwmon/name" 2>/dev/null || basename "$hwmon")"
+        for input in "$hwmon"/temp*_input; do
+            [ -r "$input" ] || continue
+            value="$(cat "$input" 2>/dev/null || true)"
+            case "$value" in ""|*[!0-9-]*) continue ;; esac
+            input_name="$(basename "$input" _input)"
+            label="$(cat "$hwmon/${input_name}_label" 2>/dev/null || echo "$hwmon_name $input_name")"
+            sensor_id="$(basename "$hwmon")_$input_name"
+            [ -n "$sensors" ] && sensors="$sensors,"
+            sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"hwmon\",\"type\":\"$(json_escape "$hwmon_name")\",\"label\":\"$(json_escape "$label")\",\"milli_celsius\":$value}"
+            [ -n "$primary" ] || primary="$value"
+            count=$((count + 1))
+        done
+    done
+    if [ "$count" -eq 0 ]; then
+        printf '{"available":false,"state":"unsupported","sensors":[]}'
         return
     fi
-    milli_celsius="$(cat "$sensor" 2>/dev/null || echo 0)"
-    case "$milli_celsius" in ""|*[!0-9]*) milli_celsius="0" ;; esac
-    printf '{"available":true,"milli_celsius":%s}' "$milli_celsius"
+    printf '{"available":true,"state":"observed","milli_celsius":%s,"sensor_count":%s,"sensors":[%s]}' "$primary" "$count" "$sensors"
 }
 
 traffic_json() {

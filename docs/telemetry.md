@@ -35,6 +35,9 @@ OpenWrt agent собирает:
 
 - `system`: uptime, load 1/5/15, память, hostname, kernel, conntrack, сервисы, часовой пояс, NTP и `ubus system info`;
 - `board`: `ubus system board`;
+- `hardware`: модель и compatible из Device Tree, OpenWrt target, package architecture и фактическая архитектура ядра;
+- `cpu`: наблюдаемая модель/compatible, число ядер, текущая и максимальная частота `cpufreq` по каждому ядру;
+- `thermal`: все доступные `thermal_zone` и `hwmon` датчики; старое поле `milli_celsius` сохранено как primary measurement для совместимости;
 - `network`: интерфейсы, IPv4 с длиной префикса и маской, IPv6, gateway, DNS, DoT/DoH и traffic;
 - `network_devices`: carrier, operstate, MAC, MTU, скорость, duplex, RX/TX, пакеты, ошибки и drops физических интерфейсов;
 - `wifi`: multi-radio snapshot, SSID, channel, country, htmode и параметры интерфейсов;
@@ -46,6 +49,8 @@ OpenWrt agent собирает:
 `schema_version=2` является единственным поддерживаемым форматом telemetry; capability report имеет версию 16. Сервер отклоняет telemetry без явной версии, v1 и неизвестные будущие версии. Активные Wi-Fi-станции содержат SSID, диапазон, интерфейс и параметры сигнала. LAN передаёт реальные `ip6assign`, `ip6hint`, RA, DHCPv6 и NDP, а `network.topology` содержит фактические UCI-сегменты, мосты, порты и Bridge VLAN. Источник клиентского трафика сообщает статус `ready`, `not_installed`, `service_missing`, `service_stopped` или `query_failed`. Отсутствующие подсистемы получают состояние `unsupported`, а не выдуманное значение. Блок `maintenance` содержит количество и ограниченные списки пакетов/обновлений, число cron-заданий, recovery mode и checksum подготовленной прошивки. Объекты firewall содержат безопасные UCI section для адресного редактирования и удаления.
 
 Retention разделён: последние 100 исходных JSON snapshots нужны для диагностики, а компактные метрики графиков хранятся 45 дней. Срок метрик задаётся `WRTMONITOR_TELEMETRY_METRIC_RETENTION_DAYS`.
+
+Температурные samples также хранятся 45 дней отдельно от raw telemetry, не чаще одной записи в минуту на датчик. Для каждого sensor key API возвращает текущее, минимальное и максимальное observed значение. Каталог может добавить понятную подпись и роль датчика, но никогда не заменяет измерение агента.
 
 Реестр клиентов живёт отдельно от raw telemetry. Для каждого MAC сохраняются первая активность, последнее наблюдение, последнее подтверждённое присутствие, имя, vendor и до 96 последних точек счётчиков.
 

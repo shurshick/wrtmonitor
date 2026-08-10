@@ -36,7 +36,7 @@ telemetry_payload() {
         ""|*[!0-9]*) uptime_value="0" ;;
     esac
     load_value="$(json_escape "$load_value")"
-    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","time":%s,"memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"vpn":%s,"modules":%s,"maintenance":%s,"agent":%s}}' \
+    printf '{"device_id":"%s","telemetry":{"schema_version":2,"system":{"uptime":%s,"load":"%s","load_5m":"%s","load_15m":"%s","hostname":"%s","kernel":"%s","local_time":"%s","time":%s,"memory":%s,"processes":%s,"conntrack":%s,"services":%s,"ubus":%s},"hardware":%s,"cpu":%s,"storage":%s,"thermal":%s,"traffic":%s,"board":%s,"network":%s,"network_devices":%s,"wifi":%s,"clients":%s,"dhcp":%s,"perimeter":%s,"vpn":%s,"modules":%s,"maintenance":%s,"agent":%s}}' \
         "$(device_id)" \
         "$uptime_value" \
         "$load_value" \
@@ -51,6 +51,7 @@ telemetry_payload() {
         "$(conntrack_json)" \
         "$(services_json)" \
         "$(ubus_json system info)" \
+        "$(hardware_identity_json)" \
         "$(cpu_json)" \
         "$(storage_json)" \
         "$(thermal_json)" \

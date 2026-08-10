@@ -36,6 +36,7 @@ from ..services.data_state import subsystem_data_state, telemetry_data_state
 from ..services.wan_events import record_wan_transition
 from ..services.realtime import queue_realtime_event
 from ..services.events import emit_event, resolve_events
+from ..services.hardware_catalog import hardware_summary, record_hardware_observation
 
 
 router = APIRouter()
@@ -92,6 +93,7 @@ def latest_device_telemetry(
             "clients": None,
             "system": None,
             "services": None,
+            "hardware": None,
             "alerts": telemetry_alerts(None, None),
         }
     age_seconds = max(
@@ -144,6 +146,7 @@ def latest_device_telemetry(
         "clients": clients,
         "system": system,
         "services": services,
+        "hardware": hardware_summary(db, device_id, telemetry.payload),
         "alerts": telemetry_alerts(telemetry.payload, age_seconds),
     }
 
@@ -181,6 +184,7 @@ def agent_telemetry(
         )
     )
     db.flush()
+    record_hardware_observation(db, device.id, clean_telemetry, now)
     record_device_telemetry_metric(db, device.id, clean_telemetry, now)
     sync_client_inventory(db, device.id, clean_telemetry, now)
     record_wan_transition(

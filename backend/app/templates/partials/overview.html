@@ -46,7 +46,7 @@
         <div class="resource-gauge" style="--value: {{ system_view.memory_percent }}; --gauge: var(--primary);"><span><strong data-live-memory>{{ system_view.memory_percent }}%</strong><small>Память</small></span></div>
         <div class="resource-gauge resource-gauge--load" style="--value: {{ ([system.get('load', 0)|float * 25, 100]|min)|round }}; --gauge: var(--warning);"><span><strong data-live-load>{{ system.get('load') or '—' }}</strong><small>Load 1m</small></span></div>
       </div>
-      <div class="compact-facts"><span><small>Процессы</small><strong>{{ processes.get('count') or '—' }}</strong></span><span><small>Температура</small><strong>{% if thermal.get('available') %}{{ (thermal.get('milli_celsius', 0) / 1000)|round(1) }} °C{% else %}нет датчика{% endif %}</strong></span></div>
+      <div class="compact-facts"><span><small>Процессы</small><strong>{{ processes.get('count') or '—' }}</strong></span><span><small>Температура</small><strong>{% if thermal.get('available') %}{{ (thermal.get('milli_celsius', 0) / 1000)|round(1) }} °C{% else %}не поддерживается{% endif %}</strong></span></div>
     </section>
 
     <a class="dashboard-card dashboard-card--network" href="/devices/{{ device.id }}?section=clients">

@@ -60,7 +60,50 @@ data class TelemetryDto(
     val clients: JsonObject? = null,
     val system: JsonObject? = null,
     val services: JsonObject? = null,
+    val hardware: HardwareDto? = null,
     val alerts: JsonArray? = null,
+)
+
+data class HardwareDto(
+    val state: String,
+    val model: String?,
+    val boardName: String?,
+    val target: String?,
+    val packageArch: String?,
+    val cpu: HardwareCpuDto,
+    val catalog: HardwareCatalogDto?,
+    val sensors: List<HardwareSensorDto>,
+)
+
+data class HardwareCpuDto(
+    val observedModel: String?,
+    val architecture: String?,
+    val cores: Int?,
+    val currentKhz: Long?,
+    val maxKhz: Long?,
+)
+
+data class HardwareCatalogDto(
+    val vendor: String?,
+    val model: String?,
+    val socVendor: String?,
+    val socModel: String?,
+    val cpuVendor: String?,
+    val cpuModel: String?,
+    val cpuArchitecture: String?,
+    val cpuCores: Int?,
+    val cpuMaxMhz: Int?,
+)
+
+data class HardwareSensorDto(
+    val key: String,
+    val label: String,
+    val role: String?,
+    val currentMilliCelsius: Int?,
+    val minMilliCelsius: Int?,
+    val maxMilliCelsius: Int?,
+    val sampleCount: Int,
+    val state: String,
 )
 
 data class DataStateDto(

@@ -21,6 +21,10 @@ import ru.wrtmonitor.app.api.dto.WifiRadioOptionDto
 import ru.wrtmonitor.app.api.dto.DataStateDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.NotificationRuleDto
+import ru.wrtmonitor.app.api.dto.HardwareCatalogDto
+import ru.wrtmonitor.app.api.dto.HardwareCpuDto
+import ru.wrtmonitor.app.api.dto.HardwareDto
+import ru.wrtmonitor.app.api.dto.HardwareSensorDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.api.dto.toJsonArray
@@ -222,6 +226,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 clients = json.optJSONObject("clients")?.toJsonObject(),
                 system = json.optJSONObject("system")?.toJsonObject(),
                 services = json.optJSONObject("services")?.toJsonObject(),
+                hardware = json.optJSONObject("hardware")?.let(::parseHardware),
                 alerts = json.optJSONArray("alerts")?.toJsonArray(),
             )
         }
@@ -677,6 +682,59 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         capabilities = json.optJSONObject("capabilities").toBooleanMap(),
         capabilityReasons = json.optJSONObject("capability_details").toCapabilityReasons(),
     )
+
+    private fun parseHardware(json: JSONObject): HardwareDto {
+        val cpu = json.optJSONObject("cpu") ?: JSONObject()
+        val catalog = json.optJSONObject("catalog")
+        val sensors = json.optJSONArray("sensors") ?: JSONArray()
+        fun JSONObject.optionalInt(key: String): Int? =
+            takeIf { has(key) && !isNull(key) }?.optInt(key)
+        fun JSONObject.optionalLong(key: String): Long? =
+            takeIf { has(key) && !isNull(key) }?.optLong(key)
+        fun JSONObject.optionalString(key: String): String? =
+            optString(key).takeIf { it.isNotBlank() && it != "null" }
+        return HardwareDto(
+            state = json.optString("state", "unsupported"),
+            model = json.optionalString("model"),
+            boardName = json.optionalString("board_name"),
+            target = json.optionalString("target"),
+            packageArch = json.optionalString("package_arch"),
+            cpu = HardwareCpuDto(
+                observedModel = cpu.optionalString("observed_model"),
+                architecture = cpu.optionalString("architecture"),
+                cores = cpu.optionalInt("cores"),
+                currentKhz = cpu.optionalLong("current_khz"),
+                maxKhz = cpu.optionalLong("max_khz"),
+            ),
+            catalog = catalog?.let {
+                HardwareCatalogDto(
+                    vendor = it.optionalString("vendor"),
+                    model = it.optionalString("model"),
+                    socVendor = it.optionalString("soc_vendor"),
+                    socModel = it.optionalString("soc_model"),
+                    cpuVendor = it.optionalString("cpu_vendor"),
+                    cpuModel = it.optionalString("cpu_model"),
+                    cpuArchitecture = it.optionalString("cpu_architecture"),
+                    cpuCores = it.optionalInt("cpu_cores"),
+                    cpuMaxMhz = it.optionalInt("cpu_max_mhz"),
+                )
+            },
+            sensors = (0 until sensors.length()).mapNotNull { index ->
+                sensors.optJSONObject(index)?.let { sensor ->
+                    HardwareSensorDto(
+                        key = sensor.optString("key"),
+                        label = sensor.optString("label"),
+                        role = sensor.optionalString("role"),
+                        currentMilliCelsius = sensor.optionalInt("current_milli_celsius"),
+                        minMilliCelsius = sensor.optionalInt("min_milli_celsius"),
+                        maxMilliCelsius = sensor.optionalInt("max_milli_celsius"),
+                        sampleCount = sensor.optInt("sample_count"),
+                        state = sensor.optString("state", "unsupported"),
+                    )
+                }
+            },
+        )
+    }
 
     private fun parseCommand(json: JSONObject): CommandDto = CommandDto(
         id = json.optString("id"),

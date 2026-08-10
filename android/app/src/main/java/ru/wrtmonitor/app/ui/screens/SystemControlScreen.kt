@@ -170,6 +170,7 @@ fun SystemControlScreen(
     val systemSummary = telemetry?.system
     val maintenance = telemetry?.payload?.optJsonObject("maintenance")
     val services = telemetry?.services
+    val hardware = telemetry?.hardware
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
     val latestDiagnostics = commands.firstOrNull { it.commandType == "diagnostics.run" }
     val diagnosticsQueued = stringResource(R.string.diagnostics_queued)
@@ -229,8 +230,62 @@ fun SystemControlScreen(
     }
     SectionCard(stringResource(R.string.router_information)) {
         InfoRow(stringResource(R.string.hostname), hostnameValue, stringResource(R.string.no_data))
+        InfoRow(
+            stringResource(R.string.hardware_model),
+            listOfNotNull(hardware?.catalog?.vendor, hardware?.catalog?.model).joinToString(" ").takeIf { it.isNotBlank() } ?: hardware?.model,
+            stringResource(R.string.no_data),
+        )
+        InfoRow(
+            stringResource(R.string.soc),
+            listOfNotNull(hardware?.catalog?.socVendor, hardware?.catalog?.socModel).joinToString(" ").takeIf { it.isNotBlank() },
+            stringResource(R.string.catalog_not_matched),
+        )
+        InfoRow(
+            stringResource(R.string.processor),
+            listOfNotNull(hardware?.catalog?.cpuVendor, hardware?.catalog?.cpuModel).joinToString(" ").takeIf { it.isNotBlank() } ?: hardware?.cpu?.observedModel,
+            stringResource(R.string.no_data),
+        )
+        InfoRow(
+            stringResource(R.string.architecture),
+            hardware?.cpu?.architecture ?: hardware?.catalog?.cpuArchitecture,
+            stringResource(R.string.no_data),
+        )
+        InfoRow(
+            stringResource(R.string.cpu_frequency),
+            hardware?.cpu?.currentKhz?.takeIf { it > 0 }?.let { current ->
+                val maximum = hardware.cpu.maxKhz?.takeIf { it > 0 }
+                if (maximum != null) {
+                    stringResource(R.string.cpu_frequency_current_max, current / 1000, maximum / 1000)
+                } else {
+                    stringResource(R.string.cpu_frequency_current, current / 1000)
+                }
+            } ?: hardware?.catalog?.cpuMaxMhz?.let { stringResource(R.string.cpu_frequency_catalog, it) },
+            stringResource(R.string.unsupported_data),
+        )
         InfoRow(stringResource(R.string.kernel), systemSummary?.optString("kernel"), stringResource(R.string.no_data))
         InfoRow(stringResource(R.string.connections), connectionLabel, stringResource(R.string.no_data))
+    }
+    SectionCard(
+        stringResource(R.string.temperature_sensors),
+        subtitle = stringResource(R.string.temperature_sensors_count, hardware?.sensors?.size ?: 0),
+    ) {
+        if (hardware?.sensors.isNullOrEmpty()) {
+            Text(stringResource(R.string.temperature_unsupported), style = MaterialTheme.typography.bodyMedium)
+        } else {
+            hardware?.sensors?.forEachIndexed { index, sensor ->
+                val current = sensor.currentMilliCelsius?.let { "%.1f °C".format(Locale.US, it / 1000.0) }
+                val range = if (sensor.minMilliCelsius != null && sensor.maxMilliCelsius != null) {
+                    stringResource(
+                        R.string.temperature_sensor_range,
+                        sensor.minMilliCelsius / 1000.0,
+                        sensor.maxMilliCelsius / 1000.0,
+                        sensor.sampleCount,
+                    )
+                } else null
+                InfoRow(sensor.label, current, stringResource(R.string.stale_telemetry), supporting = range)
+                if (index < hardware.sensors.lastIndex) HorizontalDivider()
+            }
+        }
     }
     }
     if (mode == SystemScreenMode.System && services != null) {

@@ -644,4 +644,17 @@
     <string name="automation_history">История автоматизации</string>
     <string name="automation_runs_count">Запусков: %1$d</string>
     <string name="no_automation_runs">Запусков автоматизации пока нет</string>
+    <string name="hardware_model">Модель устройства</string>
+    <string name="soc">SoC</string>
+    <string name="processor">Процессор</string>
+    <string name="architecture">Архитектура</string>
+    <string name="cpu_frequency">Частота CPU</string>
+    <string name="cpu_frequency_current">%1$d МГц</string>
+    <string name="cpu_frequency_current_max">%1$d / %2$d МГц</string>
+    <string name="cpu_frequency_catalog">до %1$d МГц</string>
+    <string name="catalog_not_matched">Не определён каталогом</string>
+    <string name="temperature_sensors">Датчики температуры</string>
+    <string name="temperature_sensors_count">Обнаружено: %1$d</string>
+    <string name="temperature_unsupported">Роутер не предоставляет измерения thermal или hwmon</string>
+    <string name="temperature_sensor_range">мин. %1$.1f · макс. %2$.1f °C · измерений: %3$d</string>
 </resources>

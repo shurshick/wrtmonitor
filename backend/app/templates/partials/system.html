@@ -1,3 +1,6 @@
+{% set hardware_catalog = hardware_view.get('catalog') or {} %}
+{% set hardware_cpu = hardware_view.get('cpu') or {} %}
+{% set hardware_sensors = hardware_view.get('sensors') or [] %}
 <div class="system-stat-grid">
   <article class="stat-card {{ 'stat-card--healthy' if age is not none and age <= 120 else 'stat-card--warning' }}">
     <span class="stat-card__label">Мониторинг</span>
@@ -32,10 +35,13 @@
     <div class="card__heading"><div><p class="eyebrow">Устройство</p><h2>О роутере</h2></div></div>
     <dl class="friendly-list">
       <dt>Имя в сети</dt><dd>{{ system_summary.hostname or device.hostname or 'нет данных' }}</dd>
-      <dt>Модель</dt><dd>{{ device.model or board.get('model') or 'нет данных' }}</dd>
+      <dt>Модель</dt><dd>{{ hardware_catalog.get('vendor') ~ ' ' ~ hardware_catalog.get('model') if hardware_catalog else device.model or board.get('model') or 'нет данных' }}</dd>
       <dt>Прошивка</dt><dd>{{ device.firmware or 'нет данных' }}</dd>
       <dt>Ядро Linux</dt><dd>{{ system_summary.kernel or 'нет данных' }}</dd>
-      <dt>Процессор</dt><dd>{{ cpu.get('model') or 'нет данных' }}{% if cpu.get('cores') %} · {{ cpu.get('cores') }} ядер{% endif %}</dd>
+      <dt>SoC</dt><dd>{% if hardware_catalog.get('soc_model') %}{{ hardware_catalog.get('soc_vendor') }} {{ hardware_catalog.get('soc_model') }}{% else %}не определён каталогом{% endif %}</dd>
+      <dt>Процессор</dt><dd>{% if hardware_catalog.get('cpu_model') %}{{ hardware_catalog.get('cpu_vendor') }} {{ hardware_catalog.get('cpu_model') }}{% else %}{{ hardware_cpu.get('observed_model') or 'нет данных' }}{% endif %}{% if hardware_cpu.get('cores') or hardware_catalog.get('cpu_cores') %} · {{ hardware_cpu.get('cores') or hardware_catalog.get('cpu_cores') }} ядер{% endif %}</dd>
+      <dt>Архитектура</dt><dd>{{ hardware_cpu.get('architecture') or hardware_catalog.get('cpu_architecture') or 'нет данных' }}</dd>
+      <dt>Частота CPU</dt><dd>{% if hardware_cpu.get('current_khz') %}{{ (hardware_cpu.get('current_khz') / 1000)|round|int }} МГц{% if hardware_cpu.get('max_khz') %} из {{ (hardware_cpu.get('max_khz') / 1000)|round|int }} МГц{% endif %}{% elif hardware_catalog.get('cpu_max_mhz') %}до {{ hardware_catalog.get('cpu_max_mhz') }} МГц по каталогу{% else %}не поддерживается{% endif %}</dd>
       <dt>Локальное время</dt><dd>{{ system_summary.local_time or 'нет данных' }}</dd>
     </dl>
   </section>
@@ -45,12 +51,31 @@
     <div class="resource-list">
       <div class="resource-item"><div><span>Встроенная память</span><strong>{{ system_view.storage_used|size_kb }} из {{ system_view.storage_total|size_kb }}</strong></div><div class="progress"><span style="width: {{ system_view.storage_percent }}%"></span></div></div>
       <div class="resource-item"><div><span>Сетевые соединения</span><strong>{{ system_summary.conntrack_count or 0 }} из {{ system_summary.conntrack_max or 0 }}</strong></div><div class="progress"><span style="width: {{ system_view.conntrack_percent }}%"></span></div></div>
-      <div class="resource-item"><div><span>Температура</span><strong>{% if thermal.get('available') %}{{ thermal.get('milli_celsius', 0) / 1000 }} °C{% else %}Датчик не найден{% endif %}</strong></div></div>
+      <div class="resource-item"><div><span>Температура</span><strong>{% if thermal.get('available') %}{{ (thermal.get('milli_celsius', 0) / 1000)|round(1) }} °C{% else %}измерение не поддерживается{% endif %}</strong></div></div>
       <div class="resource-item"><div><span>Процессы</span><strong>{{ processes.get('count') or 'нет данных' }}</strong></div></div>
       <div class="resource-item"><div><span>Сейчас в сети</span><strong>{{ online_client_count }}</strong></div></div>
     </div>
   </section>
 </div>
+
+<section class="card section">
+  <div class="card__heading"><div><p class="eyebrow">Аппаратный мониторинг</p><h2>Датчики температуры</h2></div><span class="badge">{{ hardware_sensors|length }}</span></div>
+  {% if hardware_sensors %}
+  <div class="resource-list">
+    {% for sensor in hardware_sensors %}
+    <div class="resource-item">
+      <div>
+        <span>{{ sensor.label }}{% if sensor.role %} · {{ sensor.role }}{% endif %}</span>
+        <strong>{% if sensor.current_milli_celsius is not none %}{{ (sensor.current_milli_celsius / 1000)|round(1) }} °C{% else %}последнее измерение устарело{% endif %}</strong>
+        <small>минимум {{ (sensor.min_milli_celsius / 1000)|round(1) }} °C · максимум {{ (sensor.max_milli_celsius / 1000)|round(1) }} °C · {{ sensor.sample_count }} измерений</small>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state">Агент не обнаружил доступных thermal/hwmon-датчиков. Это состояние не подменяется расчётным значением.</p>
+  {% endif %}
+</section>
 
 {% if services or supports.system_restart_service %}
 <details class="settings-panel card section">

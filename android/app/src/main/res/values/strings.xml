@@ -644,4 +644,17 @@
     <string name="automation_history">Automation history</string>
     <string name="automation_runs_count">Runs: %1$d</string>
     <string name="no_automation_runs">No automation runs yet</string>
+    <string name="hardware_model">Hardware model</string>
+    <string name="soc">SoC</string>
+    <string name="processor">Processor</string>
+    <string name="architecture">Architecture</string>
+    <string name="cpu_frequency">CPU frequency</string>
+    <string name="cpu_frequency_current">%1$d MHz</string>
+    <string name="cpu_frequency_current_max">%1$d / %2$d MHz</string>
+    <string name="cpu_frequency_catalog">up to %1$d MHz</string>
+    <string name="catalog_not_matched">Not identified by the catalog</string>
+    <string name="temperature_sensors">Temperature sensors</string>
+    <string name="temperature_sensors_count">Detected: %1$d</string>
+    <string name="temperature_unsupported">No thermal or hwmon measurements are exposed by this router</string>
+    <string name="temperature_sensor_range">min %1$.1f · max %2$.1f °C · %3$d samples</string>
 </resources>

@@ -53,6 +53,7 @@ from .route_shared import (
 )
 from ..models import AuditLog
 from ..services.firmware_catalog import firmware_catalog
+from ..services.hardware_catalog import hardware_summary
 from ..services.policy_catalog import policy_catalog
 
 router = APIRouter()
@@ -373,6 +374,7 @@ def device_page(
     firmware_images = (
         firmware_catalog(payload) if section == "management" else {"images": []}
     )
+    hardware_view = hardware_summary(db, device_id, payload)
     db.commit()
 
     age = (
@@ -442,6 +444,7 @@ def device_page(
             "cpu": cpu,
             "storage": storage,
             "thermal": thermal,
+            "hardware_view": hardware_view,
             "traffic": traffic,
             "processes": processes,
             "board": board,
