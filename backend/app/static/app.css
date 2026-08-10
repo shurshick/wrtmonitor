@@ -378,6 +378,13 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 [data-command-journal] { transition: opacity .16s ease; }
 [data-command-journal].is-loading { opacity: .48; pointer-events: none; }
 .dashboard-alerts { display: grid; gap: 8px; margin: 12px 0 0; }
+.health-summary { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin: 12px 0 14px; }
+.health-summary__item { display: grid; gap: 2px; min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-top: 2px solid var(--muted); border-radius: var(--radius); background: var(--surface-muted); }
+.health-summary__item > span, .health-summary__item > small { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.health-summary__item > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.health-summary__item.is-ok { border-top-color: var(--success); }
+.health-summary__item.is-warning { border-top-color: var(--warning); }
+.health-summary__item.is-critical { border-top-color: var(--danger); }
 .radio-current { border-left: 3px solid var(--primary); background: var(--surface-strong); color: var(--muted); padding: 10px 12px; }
 .wifi-configuration .compact-form--separated { margin-top: 18px; padding-top: 18px; }
 .debug-panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--surface-muted); }
@@ -687,6 +694,7 @@ html[data-theme="light"] .resource-gauge { background: conic-gradient(var(--gaug
 }
 
 @media (max-width: 980px) {
+  .health-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .device-layout { grid-template-columns: 1fr; gap: 20px; }
   .device-sidebar { position: static; gap: 12px; }
   .device-sidebar__identity { display: none; }

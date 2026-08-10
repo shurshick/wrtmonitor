@@ -1,10 +1,17 @@
 {% set ns = namespace(wan=None) %}
 {% for item in interfaces %}{% if item.interface == 'wan' %}{% set ns.wan = item %}{% endif %}{% endfor %}
 
-<div class="health-bar {{ 'is-online' if device.status == 'online' else 'is-warning' }}">
-  <div class="health-bar__state"><span class="health-bar__dot"></span><div><strong>{{ 'Сеть работает нормально' if device.status == 'online' else 'Роутер требует внимания' }}</strong><small>{{ device.model or 'OpenWrt-устройство' }} · время работы {{ system.get('uptime')|duration if system.get('uptime') is not none else 'нет данных' }}</small></div></div>
+<div class="health-bar {{ 'is-online' if health.overall == 'ok' else 'is-warning' }}">
+  <div class="health-bar__state"><span class="health-bar__dot"></span><div><strong>{{ 'Сеть работает нормально' if health.overall == 'ok' else 'Роутер требует внимания' }}</strong><small>{{ device.model or 'OpenWrt-устройство' }} · время работы {{ system.get('uptime')|duration if system.get('uptime') is not none else 'нет данных' }}</small></div></div>
   <div class="health-bar__updated"><span>Последняя telemetry</span><strong data-live-updated>{{ age ~ ' сек назад' if age is not none else 'нет данных' }}</strong></div>
 </div>
+
+<section class="health-summary" aria-label="Состояние роутера">
+  {% for key, label in [('wan', 'Интернет'), ('dns', 'DNS'), ('wifi', 'Wi-Fi'), ('agent', 'Агент'), ('temperature', 'Температура'), ('memory', 'Память'), ('storage', 'Накопитель')] %}
+  {% set item = health['items'][key] %}
+  <div class="health-summary__item is-{{ item.state }}"><span>{{ label }}</span><strong>{{ item.label }}</strong><small>{{ item.detail }}</small></div>
+  {% endfor %}
+</section>
 
 {% if telemetry_alerts %}<div class="dashboard-alerts" aria-label="Предупреждения">
   {% for alert in telemetry_alerts %}<div class="notice notice--{{ 'danger' if alert.level == 'critical' else 'warning' }}"><strong>{{ alert.message }}</strong></div>{% endfor %}
@@ -22,7 +29,7 @@
     </div>
     <div class="chart-controls">
       <div class="chart-control" aria-label="Интервал графика"><span>Период</span><div><button class="chart-range is-active" type="button" data-chart-range="live">2 часа</button><button class="chart-range" type="button" data-chart-range="24h">24 часа</button><button class="chart-range" type="button" data-chart-range="7d">7 дней</button><button class="chart-range" type="button" data-chart-range="30d">30 дней</button></div></div>
-      <div class="chart-control" aria-label="Показатель графика"><span>График</span><div><button class="chart-range is-active" type="button" data-chart-metric="traffic">Трафик</button><button class="chart-range" type="button" data-chart-metric="load">Нагрузка</button><button class="chart-range" type="button" data-chart-metric="memory">Память</button><button class="chart-range" type="button" data-chart-metric="clients">Клиенты</button></div></div>
+      <div class="chart-control" aria-label="Показатель графика"><span>График</span><div><button class="chart-range is-active" type="button" data-chart-metric="traffic">Трафик</button><button class="chart-range" type="button" data-chart-metric="load">Нагрузка</button><button class="chart-range" type="button" data-chart-metric="memory">Память</button><button class="chart-range" type="button" data-chart-metric="temperature">Температура</button><button class="chart-range" type="button" data-chart-metric="storage">Накопитель</button><button class="chart-range" type="button" data-chart-metric="clients">Клиенты</button></div></div>
     </div>
     <div class="chart-state"><span data-chart-state>Загружено: 2 часа</span><span data-chart-coverage></span><b data-live-samples>{{ dashboard_history|length }} точек</b></div>
     <div class="chart-legend" data-chart-legend aria-live="polite"></div>

@@ -61,7 +61,20 @@ data class TelemetryDto(
     val system: JsonObject? = null,
     val services: JsonObject? = null,
     val hardware: HardwareDto? = null,
+    val health: HealthDto? = null,
     val alerts: JsonArray? = null,
+)
+
+data class HealthDto(
+    val overall: String,
+    val items: Map<String, HealthItemDto>,
+)
+
+data class HealthItemDto(
+    val state: String,
+    val label: String,
+    val detail: String,
+    val observed: Boolean,
 )
 
 data class HardwareDto(
@@ -138,6 +151,8 @@ data class TelemetryHistoryPointDto(
     val txBytes: Long?,
     val load1m: Double?,
     val memoryPercent: Double?,
+    val temperatureCelsius: Double?,
+    val storagePercent: Double?,
     val clientCount: Int?,
 )
 

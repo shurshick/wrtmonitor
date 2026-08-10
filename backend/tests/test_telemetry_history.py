@@ -83,6 +83,8 @@ def test_downsample_telemetry_metrics_keeps_range_and_averages_values():
             tx_bytes=index * 500,
             load_1m=float(index),
             memory_percent=20.0 + index,
+            temperature_celsius=40.0 + index,
+            storage_percent=30.0 + index,
             client_count=index,
         )
         for index in range(10)
@@ -94,6 +96,7 @@ def test_downsample_telemetry_metrics_keeps_range_and_averages_values():
     assert points[0]["created_at"] == rows[1].created_at.isoformat()
     assert points[0]["rx_bps"] == 50
     assert points[-1]["rx_bytes"] == rows[-1].rx_bytes
+    assert points[-1]["temperature_celsius"] == 48.5
 
 
 def test_telemetry_alerts_reports_stale_memory_and_wan():
@@ -110,3 +113,29 @@ def test_telemetry_alerts_reports_stale_memory_and_wan():
     )
 
     assert {alert["code"] for alert in alerts} == {"stale", "memory", "wan"}
+
+
+def test_telemetry_alerts_use_observed_temperature_and_storage_thresholds():
+    alerts = telemetry_alerts(
+        {
+            "system": {"memory": {"total_kb": 1000, "available_kb": 500}},
+            "storage": {"total_kb": 1000, "available_kb": 40},
+            "thermal": {
+                "available": True,
+                "sensors": [
+                    {
+                        "milli_celsius": 86_000,
+                        "warning_milli_celsius": 75_000,
+                        "critical_milli_celsius": 85_000,
+                    }
+                ],
+            },
+            "network": {"interfaces": [{"interface": "wan", "up": True}]},
+        },
+        age_seconds=5,
+    )
+
+    assert {alert["code"] for alert in alerts} == {
+        "storage",
+        "temperature.critical",
+    }

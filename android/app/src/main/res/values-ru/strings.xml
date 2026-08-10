@@ -542,6 +542,16 @@
     <string name="telemetry_metric_traffic">Трафик</string>
     <string name="telemetry_metric_load">Нагрузка</string>
     <string name="telemetry_metric_memory">Память</string>
+    <string name="telemetry_metric_temperature">Температура</string>
+    <string name="telemetry_metric_storage">Накопитель</string>
+    <string name="router_health">Состояние роутера</string>
+    <string name="health_internet">Интернет</string>
+    <string name="health_dns">DNS</string>
+    <string name="health_wifi">Wi-Fi</string>
+    <string name="health_agent">Агент</string>
+    <string name="health_temperature">Температура</string>
+    <string name="health_memory">Память</string>
+    <string name="health_storage">Накопитель</string>
     <string name="telemetry_metric_clients">Клиенты</string>
     <string name="wifi_selected_radio">Выбранный диапазон</string>
     <string name="wifi_radio">Радиомодуль</string>

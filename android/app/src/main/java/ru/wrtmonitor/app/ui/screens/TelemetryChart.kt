@@ -106,6 +106,8 @@ internal fun TrafficMonitorCard(
         "traffic" to stringResource(R.string.telemetry_metric_traffic),
         "load" to stringResource(R.string.telemetry_metric_load),
         "memory" to stringResource(R.string.telemetry_metric_memory),
+        "temperature" to stringResource(R.string.telemetry_metric_temperature),
+        "storage" to stringResource(R.string.telemetry_metric_storage),
         "clients" to stringResource(R.string.telemetry_metric_clients),
     )
     val selectedRangeLabel = rangeOptions.first { it.first == historyRange }.second
@@ -252,6 +254,20 @@ internal fun TelemetryChart(
                 points.map { it.memoryPercent?.coerceIn(0.0, 100.0) ?: Double.NaN },
             ),
         )
+        "temperature" -> listOf(
+            TelemetryChartSeries(
+                stringResource(R.string.telemetry_metric_temperature),
+                MaterialTheme.colorScheme.tertiary,
+                points.map { it.temperatureCelsius ?: Double.NaN },
+            ),
+        )
+        "storage" -> listOf(
+            TelemetryChartSeries(
+                stringResource(R.string.telemetry_metric_storage),
+                primary,
+                points.map { it.storagePercent?.coerceIn(0.0, 100.0) ?: Double.NaN },
+            ),
+        )
         "clients" -> listOf(
             TelemetryChartSeries(
                 stringResource(R.string.telemetry_metric_clients),
@@ -273,7 +289,7 @@ internal fun TelemetryChart(
         )
     }
     val observedMaximum = series.flatMap { it.values }.filter(Double::isFinite).maxOrNull() ?: 0.0
-    val axisMaximum = if (metric == "memory") 100.0 else niceTelemetryAxisMaximum(observedMaximum)
+    val axisMaximum = if (metric == "memory" || metric == "storage") 100.0 else niceTelemetryAxisMaximum(observedMaximum)
     val axisTicks = (3 downTo 0).map { axisMaximum * it / 3.0 }
     Box(
         Modifier
@@ -379,7 +395,8 @@ internal fun Double.coerceFinite(): Double = if (isFinite()) this else 0.0
 
 internal fun formatTelemetryAxisValue(value: Double, metric: String, compact: Boolean = false): String = when (metric) {
     "traffic" -> if (compact) formatCompactTrafficRate(value) else formatTrafficRate(value.toLong())
-    "memory" -> "${value.toInt()}%"
+    "memory", "storage" -> "${value.toInt()}%"
+    "temperature" -> String.format(Locale.getDefault(), "%.1f °C", value)
     "clients" -> value.toInt().toString()
     else -> String.format(Locale.getDefault(), "%.1f", value)
 }

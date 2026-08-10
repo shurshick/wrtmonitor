@@ -37,6 +37,7 @@ from ..services.wan_events import record_wan_transition
 from ..services.realtime import queue_realtime_event
 from ..services.events import emit_event, resolve_events
 from ..services.hardware_catalog import hardware_summary, record_hardware_observation
+from ..services.health_monitoring import build_health_snapshot
 
 
 router = APIRouter()
@@ -94,6 +95,7 @@ def latest_device_telemetry(
             "system": None,
             "services": None,
             "hardware": None,
+            "health": build_health_snapshot(None, None),
             "alerts": telemetry_alerts(None, None),
         }
     age_seconds = max(
@@ -131,6 +133,8 @@ def latest_device_telemetry(
     system["data_state"] = subsystem_data_state(
         telemetry.payload.get("system"), parent_state=state
     )
+    agent = get_latest_agent_status(db, device_id)
+    health = build_health_snapshot(telemetry.payload, age_seconds, agent=agent)
     return {
         "device_id": str(device_id),
         "telemetry": telemetry.payload,
@@ -140,14 +144,15 @@ def latest_device_telemetry(
         "source": "agent",
         "data_state": state,
         "summary": build_telemetry_summary(telemetry.payload),
-        "agent": get_latest_agent_status(db, device_id),
+        "agent": agent,
         "wifi": wifi,
         "network": network,
         "clients": clients,
         "system": system,
         "services": services,
         "hardware": hardware_summary(db, device_id, telemetry.payload),
-        "alerts": telemetry_alerts(telemetry.payload, age_seconds),
+        "health": health,
+        "alerts": health["alerts"],
     }
 
 
@@ -269,7 +274,16 @@ def agent_telemetry(
             dedupe_seconds=300,
             config=config,
         )
-    for code in {"memory", "wan", "stale", "load.high"} - active_codes:
+    for code in {
+        "memory",
+        "storage",
+        "wan",
+        "dns",
+        "stale",
+        "load.high",
+        "temperature.warning",
+        "temperature.critical",
+    } - active_codes:
         resolve_events(
             db,
             device_id=device.id,

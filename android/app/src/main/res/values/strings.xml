@@ -542,6 +542,16 @@
     <string name="telemetry_metric_traffic">Traffic</string>
     <string name="telemetry_metric_load">Load</string>
     <string name="telemetry_metric_memory">Memory</string>
+    <string name="telemetry_metric_temperature">Temperature</string>
+    <string name="telemetry_metric_storage">Storage</string>
+    <string name="router_health">Router health</string>
+    <string name="health_internet">Internet</string>
+    <string name="health_dns">DNS</string>
+    <string name="health_wifi">Wi-Fi</string>
+    <string name="health_agent">Agent</string>
+    <string name="health_temperature">Temperature</string>
+    <string name="health_memory">Memory</string>
+    <string name="health_storage">Storage</string>
     <string name="telemetry_metric_clients">Clients</string>
     <string name="wifi_selected_radio">Selected band</string>
     <string name="wifi_radio">Radio</string>

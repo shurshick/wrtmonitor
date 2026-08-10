@@ -28,6 +28,8 @@ import ru.wrtmonitor.app.api.dto.HardwareSensorDto
 import ru.wrtmonitor.app.api.dto.HardwareThrottlingDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
+import ru.wrtmonitor.app.api.dto.HealthDto
+import ru.wrtmonitor.app.api.dto.HealthItemDto
 import ru.wrtmonitor.app.api.dto.toJsonArray
 import ru.wrtmonitor.app.api.dto.toJsonObject
 import java.util.UUID
@@ -228,6 +230,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 system = json.optJSONObject("system")?.toJsonObject(),
                 services = json.optJSONObject("services")?.toJsonObject(),
                 hardware = json.optJSONObject("hardware")?.let(::parseHardware),
+                health = json.optJSONObject("health")?.let(::parseHealth),
                 alerts = json.optJSONArray("alerts")?.toJsonArray(),
             )
         }
@@ -249,6 +252,8 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     txBytes = point.optLong("tx_bytes").takeIf { !point.isNull("tx_bytes") },
                     load1m = point.optDouble("load_1m").takeIf { !point.isNull("load_1m") },
                     memoryPercent = point.optDouble("memory_percent").takeIf { !point.isNull("memory_percent") },
+                    temperatureCelsius = point.optDouble("temperature_celsius").takeIf { !point.isNull("temperature_celsius") },
+                    storagePercent = point.optDouble("storage_percent").takeIf { !point.isNull("storage_percent") },
                     clientCount = point.optInt("client_count").takeIf { !point.isNull("client_count") },
                 )
             }
@@ -683,6 +688,22 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         capabilities = json.optJSONObject("capabilities").toBooleanMap(),
         capabilityReasons = json.optJSONObject("capability_details").toCapabilityReasons(),
     )
+
+    private fun parseHealth(json: JSONObject): HealthDto {
+        val items = json.optJSONObject("items") ?: JSONObject()
+        return HealthDto(
+            overall = json.optString("overall", "warning"),
+            items = items.keys().asSequence().associateWith { key ->
+                val item = items.optJSONObject(key) ?: JSONObject()
+                HealthItemDto(
+                    state = item.optString("state", "unknown"),
+                    label = item.optString("label"),
+                    detail = item.optString("detail"),
+                    observed = item.optBoolean("observed", false),
+                )
+            },
+        )
+    }
 
     private fun parseHardware(json: JSONObject): HardwareDto {
         val cpu = json.optJSONObject("cpu") ?: JSONObject()

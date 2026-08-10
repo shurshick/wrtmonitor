@@ -54,6 +54,7 @@ from .route_shared import (
 from ..models import AuditLog
 from ..services.firmware_catalog import firmware_catalog
 from ..services.hardware_catalog import hardware_report, hardware_summary
+from ..services.health_monitoring import build_health_snapshot
 from ..services.policy_catalog import policy_catalog
 
 router = APIRouter()
@@ -437,6 +438,7 @@ def device_page(
             "csrf_token": csrf_token,
             "latest": latest,
             "dashboard_history": dashboard_history,
+            "health": build_health_snapshot(payload, age, agent=agent),
             "telemetry_alerts": telemetry_alerts(payload, age),
             "age": age,
             "system": system,

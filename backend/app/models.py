@@ -195,6 +195,8 @@ class DeviceTelemetryMetric(Base):
     tx_bytes: Mapped[int | None] = mapped_column(BigInteger)
     load_1m: Mapped[float | None] = mapped_column(Float)
     memory_percent: Mapped[float | None] = mapped_column(Float)
+    temperature_celsius: Mapped[float | None] = mapped_column(Float)
+    storage_percent: Mapped[float | None] = mapped_column(Float)
     client_count: Mapped[int | None] = mapped_column(Integer)
     interfaces: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     wifi: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)

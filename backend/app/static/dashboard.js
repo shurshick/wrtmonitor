@@ -37,6 +37,8 @@
   const metricSeries = () => {
     if (chartMetric === 'load') return [{ label: 'Нагрузка', key: 'load_1m', color: '#f2ae4a' }];
     if (chartMetric === 'memory') return [{ label: 'Память', key: 'memory_percent', color: '#63df9b' }];
+    if (chartMetric === 'temperature') return [{ label: 'Температура', key: 'temperature_celsius', color: '#f2ae4a' }];
+    if (chartMetric === 'storage') return [{ label: 'Накопитель', key: 'storage_percent', color: '#6ea8ff' }];
     if (chartMetric === 'clients') return [{ label: 'Клиенты', key: 'client_count', color: '#42d3e8' }];
     return [
       { label: 'Приём', key: 'rx_bps', color: '#42d3e8' },
@@ -47,7 +49,8 @@
   const formatMetric = (value, compact = false) => {
     const numeric = Number(value) || 0;
     if (chartMetric === 'traffic') return formatRate(numeric, compact);
-    if (chartMetric === 'memory') return `${Math.round(numeric)}%`;
+    if (chartMetric === 'memory' || chartMetric === 'storage') return `${Math.round(numeric)}%`;
+    if (chartMetric === 'temperature') return `${numeric.toFixed(1)} °C`;
     if (chartMetric === 'clients') return `${Math.round(numeric)}`;
     return numeric.toFixed(compact ? 1 : 2);
   };
@@ -96,7 +99,7 @@
 
     const series = metricSeries();
     const observedMaximum = Math.max(0, ...items.flatMap((point) => series.map((item) => Number(point[item.key]) || 0)));
-    const maximum = chartMetric === 'memory' ? 100 : niceMaximum(observedMaximum);
+    const maximum = chartMetric === 'memory' || chartMetric === 'storage' ? 100 : niceMaximum(observedMaximum);
     context.strokeStyle = 'rgba(133, 157, 184, .18)';
     context.lineWidth = 1;
     for (let row = 0; row < 4; row += 1) {

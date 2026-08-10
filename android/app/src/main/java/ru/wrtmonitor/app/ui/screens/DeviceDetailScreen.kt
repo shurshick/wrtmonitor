@@ -202,6 +202,34 @@ private fun RouterOverview(
             StatusPill(if (healthy) stringResource(R.string.online) else stringResource(R.string.offline), healthy)
         }
     }
+    telemetry.health?.let { health ->
+        val labels = listOf(
+            "wan" to stringResource(R.string.health_internet),
+            "dns" to stringResource(R.string.health_dns),
+            "wifi" to stringResource(R.string.health_wifi),
+            "agent" to stringResource(R.string.health_agent),
+            "temperature" to stringResource(R.string.health_temperature),
+            "memory" to stringResource(R.string.health_memory),
+            "storage" to stringResource(R.string.health_storage),
+        )
+        SectionCard(title = stringResource(R.string.router_health)) {
+            labels.forEach { (key, title) ->
+                health.items[key]?.let { item ->
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(title, style = MaterialTheme.typography.labelLarge)
+                            Text(item.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        StatusPill(item.label, item.state == "ok")
+                    }
+                }
+            }
+        }
+    }
     TrafficMonitorCard(
         history,
         historyRange,

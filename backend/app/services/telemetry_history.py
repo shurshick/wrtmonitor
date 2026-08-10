@@ -20,6 +20,7 @@ from .telemetry_common import (
 from .telemetry_network import normalize_network_summary
 from .telemetry_summary import build_telemetry_summary
 from .telemetry_wifi import normalize_wifi_summary
+from .health_monitoring import build_health_snapshot
 
 
 def cleanup_device_telemetry(db: Session, device_id: UUID, keep: int) -> None:
@@ -66,6 +67,8 @@ def record_device_telemetry_metric(
                 tx_bps = round((tx_bytes - previous.tx_bytes) * 8 / elapsed)
     memory_total = _optional_int(summary.get("memory_total_mb"))
     memory_available = _optional_int(summary.get("memory_available_mb"))
+    storage_total = _optional_int(summary.get("storage_total_mb"))
+    storage_available = _optional_int(summary.get("storage_available_mb"))
     network = normalize_network_summary(payload)
     wifi = normalize_wifi_summary(payload)
     metric = DeviceTelemetryMetric(
@@ -80,6 +83,12 @@ def record_device_telemetry_metric(
             100 * max(0, memory_total - memory_available) / memory_total, 1
         )
         if memory_total and memory_available is not None
+        else None,
+        temperature_celsius=_optional_float(summary.get("temperature_celsius")),
+        storage_percent=round(
+            100 * max(0, storage_total - storage_available) / storage_total, 1
+        )
+        if storage_total and storage_available is not None
         else None,
         client_count=_optional_int(summary.get("client_count")),
         interfaces={"items": network.get("interfaces") or []},
@@ -163,6 +172,12 @@ def metric_history_point(row: DeviceTelemetryMetric) -> dict[str, Any]:
         "memory_percent": round(row.memory_percent, 1)
         if row.memory_percent is not None
         else None,
+        "temperature_celsius": round(row.temperature_celsius, 1)
+        if row.temperature_celsius is not None
+        else None,
+        "storage_percent": round(row.storage_percent, 1)
+        if row.storage_percent is not None
+        else None,
         "client_count": row.client_count,
     }
 
@@ -186,6 +201,10 @@ def downsample_telemetry_metrics(
                 "tx_bytes": last.tx_bytes,
                 "load_1m": _average_optional(bucket, "load_1m", 2),
                 "memory_percent": _average_optional(bucket, "memory_percent", 1),
+                "temperature_celsius": _average_optional(
+                    bucket, "temperature_celsius", 1
+                ),
+                "storage_percent": _average_optional(bucket, "storage_percent", 1),
                 "client_count": _average_optional(bucket, "client_count", 0),
             }
         )
@@ -195,64 +214,7 @@ def downsample_telemetry_metrics(
 def telemetry_alerts(
     payload: dict[str, Any] | None, age_seconds: int | None
 ) -> list[dict[str, str]]:
-    if not payload:
-        return [
-            {
-                "level": "warning",
-                "code": "no_data",
-                "message": "Telemetry ещё не получена",
-            }
-        ]
-    alerts: list[dict[str, str]] = []
-    if age_seconds is not None and age_seconds > TELEMETRY_STALE_SECONDS:
-        alerts.append(
-            {
-                "level": "critical",
-                "code": "stale",
-                "message": "Связь с роутером потеряна",
-            }
-        )
-    memory = (payload.get("system") or {}).get("memory") or {}
-    memory_total = _safe_int(memory.get("total_kb"))
-    memory_available = _safe_int(memory.get("available_kb", memory.get("free_kb")))
-    memory_percent = (
-        100 * max(0, memory_total - memory_available) / memory_total
-        if memory_total
-        else 0
-    )
-    if memory_percent >= 90:
-        alerts.append(
-            {
-                "level": "warning",
-                "code": "memory",
-                "message": "Использовано более 90% памяти",
-            }
-        )
-    system = payload.get("system") or {}
-    cpu_count = max(1, _safe_int(system.get("cpu_count")) or 1)
-    load_1m = _safe_float(system.get("load_1m", system.get("load")))
-    if load_1m / cpu_count >= 1.5:
-        alerts.append(
-            {
-                "level": "warning",
-                "code": "load.high",
-                "message": "Средняя нагрузка выше 150% на ядро",
-            }
-        )
-    network = normalize_network_summary(payload)
-    wan = next(
-        (
-            item
-            for item in network.get("interfaces") or []
-            if item.get("interface") == "wan"
-        ),
-        None,
-    )
-    if wan is not None and not wan.get("up"):
-        alerts.append(
-            {"level": "warning", "code": "wan", "message": "WAN-интерфейс не подключён"}
-        )
-    return alerts
+    return build_health_snapshot(payload, age_seconds)["alerts"]
 
 
 def build_telemetry_history(
@@ -276,6 +238,8 @@ def build_telemetry_history(
                     tx_bps = round((tx_bytes - previous_tx) * 8 / elapsed)
         memory_total = _safe_int(summary.get("memory_total_mb"))
         memory_available = _safe_int(summary.get("memory_available_mb"))
+        storage_total = _safe_int(summary.get("storage_total_mb"))
+        storage_available = _safe_int(summary.get("storage_available_mb"))
         points.append(
             {
                 "created_at": row.created_at.isoformat(),
@@ -289,6 +253,14 @@ def build_telemetry_history(
                 )
                 if memory_total
                 else 0,
+                "temperature_celsius": _optional_float(
+                    summary.get("temperature_celsius")
+                ),
+                "storage_percent": round(
+                    100 * max(0, storage_total - storage_available) / storage_total, 1
+                )
+                if storage_total
+                else None,
                 "client_count": _safe_int(summary.get("client_count")),
             }
         )
