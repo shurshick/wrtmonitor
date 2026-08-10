@@ -120,12 +120,16 @@ thermal_json() {
         sensor_type="$(cat "$zone/type" 2>/dev/null || echo "$sensor_id")"
         warning=""
         critical=""
+        trip_points=""
         for trip_temp_path in "$zone"/trip_point_*_temp; do
             [ -r "$trip_temp_path" ] || continue
             trip_temp="$(cat "$trip_temp_path" 2>/dev/null || true)"
             case "$trip_temp" in ""|*[!0-9]*) continue ;; esac
             trip_prefix="${trip_temp_path%_temp}"
             trip_type="$(cat "${trip_prefix}_type" 2>/dev/null || true)"
+            trip_index="$(basename "$trip_prefix" | sed 's/^trip_point_//')"
+            [ -n "$trip_points" ] && trip_points="$trip_points,"
+            trip_points="$trip_points{\"index\":\"$(json_escape "$trip_index")\",\"type\":\"$(json_escape "$trip_type")\",\"milli_celsius\":$trip_temp}"
             case "$trip_type" in
                 passive|hot)
                     if [ -z "$warning" ] || [ "$trip_temp" -lt "$warning" ]; then warning="$trip_temp"; fi
@@ -138,7 +142,7 @@ thermal_json() {
         warning_json="null"; [ -n "$warning" ] && warning_json="$warning"
         critical_json="null"; [ -n "$critical" ] && critical_json="$critical"
         [ -n "$sensors" ] && sensors="$sensors,"
-        sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"thermal\",\"type\":\"$(json_escape "$sensor_type")\",\"label\":\"$(json_escape "$sensor_type")\",\"milli_celsius\":$value,\"warning_milli_celsius\":$warning_json,\"critical_milli_celsius\":$critical_json}"
+        sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"thermal\",\"type\":\"$(json_escape "$sensor_type")\",\"label\":\"$(json_escape "$sensor_type")\",\"milli_celsius\":$value,\"warning_milli_celsius\":$warning_json,\"critical_milli_celsius\":$critical_json,\"trip_points\":[$trip_points]}"
         [ -n "$primary" ] || primary="$value"
         count=$((count + 1))
     done
@@ -159,7 +163,7 @@ thermal_json() {
             warning_json="null"; [ -n "$warning" ] && warning_json="$warning"
             critical_json="null"; [ -n "$critical" ] && critical_json="$critical"
             [ -n "$sensors" ] && sensors="$sensors,"
-            sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"hwmon\",\"type\":\"$(json_escape "$hwmon_name")\",\"label\":\"$(json_escape "$label")\",\"milli_celsius\":$value,\"warning_milli_celsius\":$warning_json,\"critical_milli_celsius\":$critical_json}"
+            sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"hwmon\",\"type\":\"$(json_escape "$hwmon_name")\",\"label\":\"$(json_escape "$label")\",\"milli_celsius\":$value,\"warning_milli_celsius\":$warning_json,\"critical_milli_celsius\":$critical_json,\"trip_points\":[]}"
             [ -n "$primary" ] || primary="$value"
             count=$((count + 1))
         done

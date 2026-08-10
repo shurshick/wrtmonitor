@@ -25,5 +25,7 @@ def test_thermal_contract_keeps_legacy_primary_value_and_adds_sensor_list():
     assert '"state":"unsupported"' in source
     assert "warning_milli_celsius" in source
     assert "critical_milli_celsius" in source
+    assert '\\"trip_points\\":[' in source
+    assert '\\"milli_celsius\\":$trip_temp' in source
     assert '"throttling"' in source
     assert "thermal_pressure" in source

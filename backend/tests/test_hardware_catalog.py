@@ -13,6 +13,7 @@ from backend.app.services.hardware_catalog import (
     _match_profile,
     _resolved_hardware,
     _temperature_status,
+    hardware_report,
     hardware_summary,
     record_hardware_observation,
 )
@@ -158,6 +159,13 @@ def test_netis_identity_and_multiple_sensor_history_are_persisted():
                     "milli_celsius": 51_000,
                     "warning_milli_celsius": 70_000,
                     "critical_milli_celsius": 85_000,
+                    "trip_points": [
+                        {"index": "0", "type": "critical", "milli_celsius": 125_000},
+                        {"index": "1", "type": "hot", "milli_celsius": 120_000},
+                        {"index": "2", "type": "active", "milli_celsius": 115_000},
+                        {"index": "3", "type": "active", "milli_celsius": 85_000},
+                        {"index": "4", "type": "active", "milli_celsius": 60_000},
+                    ],
                 },
                 {
                     "id": "hwmon0_temp1",
@@ -205,6 +213,7 @@ def test_netis_identity_and_multiple_sensor_history_are_persisted():
         payload["thermal"]["sensors"][0]["milli_celsius"] = 55_000
         record_hardware_observation(db, device_id, payload, now + timedelta(minutes=1))
         summary = hardware_summary(db, device_id, payload)
+        report = hardware_report(db, device_id, payload)
         db.commit()
 
     assert summary["catalog"]["soc_model"] == "MT7981B"
@@ -221,6 +230,58 @@ def test_netis_identity_and_multiple_sensor_history_are_persisted():
     assert soc["max_milli_celsius"] == 55_000
     assert soc["sample_count"] == 4
     assert soc["thermal_status"] == "normal"
+    assert report["schema"] == "wrtmonitor.hardware-report.v1"
+    assert len(report["observed"]["thermal"]["sensors"][0]["trip_points"]) == 5
+
+
+@pytest.mark.skipif(not postgres_e2e_enabled(), reason="PostgreSQL E2E required")
+def test_x86_without_kernel_sensors_is_reported_as_unsupported():
+    reset_database()
+    now = datetime.now(UTC)
+    device_id = uuid4()
+    payload = {
+        "hardware": {
+            "model": "innotek GmbH VirtualBox",
+            "board_name": "innotek-gmbh-virtualbox",
+            "target": "x86/64",
+            "architecture": "x86_64",
+        },
+        "cpu": {
+            "model": "AMD Ryzen 7 9700X 8-Core Processor",
+            "architecture": "x86_64",
+            "cores": 2,
+        },
+        "thermal": {
+            "available": False,
+            "state": "unsupported",
+            "sensors": [],
+            "throttling": {"state": "unsupported", "active": None},
+        },
+    }
+    factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
+    with factory() as db:
+        db.add(
+            Device(
+                id=device_id,
+                name="OpenWrt-x86",
+                hostname="OpenWrt",
+                model="innotek GmbH VirtualBox",
+                firmware="OpenWrt 22.03.5",
+                token_hash=f"hash-{device_id}",
+                status="online",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        db.flush()
+        record_hardware_observation(db, device_id, payload, now)
+        report = hardware_report(db, device_id, payload)
+        db.commit()
+
+    assert report["identity"]["cpu"]["architecture"] == "x86_64"
+    assert report["identity"]["cpu"]["cores"] == 2
+    assert report["identity"]["thermal_health"] == "unsupported"
+    assert report["observed"]["thermal"]["state"] == "unsupported"
 
 
 @pytest.mark.skipif(not postgres_e2e_enabled(), reason="PostgreSQL E2E required")

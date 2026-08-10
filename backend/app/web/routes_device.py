@@ -53,7 +53,7 @@ from .route_shared import (
 )
 from ..models import AuditLog
 from ..services.firmware_catalog import firmware_catalog
-from ..services.hardware_catalog import hardware_summary
+from ..services.hardware_catalog import hardware_report, hardware_summary
 from ..services.policy_catalog import policy_catalog
 
 router = APIRouter()
@@ -531,6 +531,26 @@ def device_page(
     )
 
 
+@router.get("/devices/{device_id}/hardware-report", response_class=JSONResponse)
+def download_device_hardware_report(
+    device_id: UUID,
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> JSONResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+    device = get_user_device_or_404(db, user, device_id)
+    telemetry = latest_device_telemetry(db, device_id)
+    return JSONResponse(
+        hardware_report(db, device_id, telemetry.payload if telemetry else {}, device),
+        headers={
+            "Content-Disposition": f'attachment; filename="wrtmonitor-hardware-{device_id}.json"'
+        },
+    )
+
+
 @router.get("/devices/{device_id}/live", response_class=JSONResponse)
 def device_live_data(
     device_id: UUID,
@@ -561,4 +581,9 @@ def device_live_data(
     )
 
 
-__all__ = ["router", "device_page", "device_live_data"]
+__all__ = [
+    "router",
+    "device_page",
+    "device_live_data",
+    "download_device_hardware_report",
+]

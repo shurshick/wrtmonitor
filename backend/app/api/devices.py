@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,7 @@ from ..services.devices import (
 )
 from ..services.management_options import build_management_options
 from ..services.firmware_catalog import firmware_catalog
+from ..services.hardware_catalog import hardware_report
 from ..schemas import DeviceProvisionRequest
 from ..security import hash_token
 
@@ -147,6 +149,25 @@ def get_device_agent(
 ) -> dict[str, object]:
     get_user_device_or_404(db, user, device_id)
     return get_latest_agent_status(db, device_id)
+
+
+@router.get("/{device_id}/hardware/report")
+def download_hardware_report(
+    device_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    device = get_user_device_or_404(db, user, device_id)
+    telemetry = latest_device_telemetry(db, device_id)
+    report = hardware_report(
+        db, device_id, telemetry.payload if telemetry else {}, device
+    )
+    return JSONResponse(
+        report,
+        headers={
+            "Content-Disposition": f'attachment; filename="wrtmonitor-hardware-{device_id}.json"'
+        },
+    )
 
 
 @router.get("/{device_id}/management-options")

@@ -11,6 +11,10 @@
   <article class="stat-card {{ 'stat-card--warning' if throttling.get('active') else '' }}"><span class="stat-card__label">Троттлинг</span><strong>{% if throttling.get('state') == 'observed' %}{{ 'Активен' if throttling.get('active') else 'Не активен' }}{% else %}Не поддерживается{% endif %}</strong><small>{% if throttling.get('thermal_pressure') is not none %}thermal pressure {{ throttling.get('thermal_pressure') }}{% else %}ядро не предоставляет показатель{% endif %}</small></article>
 </div>
 
+<div class="section-actions">
+  <a class="button button--secondary" href="/devices/{{ device.id }}/hardware-report">Скачать аппаратный отчёт</a>
+</div>
+
 <div class="workspace-grid section">
   <section class="card workspace-card">
     <div class="card__heading"><div><p class="eyebrow">Наблюдение агента</p><h2>Аппаратная идентичность</h2></div></div>

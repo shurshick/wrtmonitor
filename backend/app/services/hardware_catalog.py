@@ -505,10 +505,56 @@ def hardware_summary(
     return resolved
 
 
+def hardware_report(
+    db: Session,
+    device_id: UUID,
+    payload: dict[str, Any] | None,
+    device: Any | None = None,
+) -> dict[str, Any]:
+    telemetry = payload or {}
+    summary = hardware_summary(db, device_id, telemetry)
+    raw_thermal = (
+        telemetry.get("thermal") if isinstance(telemetry.get("thermal"), dict) else {}
+    )
+    sensors = (
+        raw_thermal.get("sensors")
+        if isinstance(raw_thermal.get("sensors"), list)
+        else []
+    )
+    return {
+        "schema": "wrtmonitor.hardware-report.v1",
+        "generated_at": datetime.now(UTC).isoformat(),
+        "catalog_version": CATALOG_VERSION,
+        "device": {
+            "id": str(device_id),
+            "name": getattr(device, "name", None),
+            "hostname": getattr(device, "hostname", None),
+            "model": getattr(device, "model", None),
+            "firmware": getattr(device, "firmware", None),
+        },
+        "identity": summary,
+        "observed": {
+            "hardware": telemetry.get("hardware") or {},
+            "cpu": telemetry.get("cpu") or {},
+            "thermal": {
+                "state": raw_thermal.get("state", "unsupported"),
+                "available": bool(raw_thermal.get("available")),
+                "sensors": sensors,
+                "throttling": raw_thermal.get("throttling")
+                or {
+                    "state": "unsupported",
+                    "active": None,
+                },
+            },
+        },
+    }
+
+
 __all__ = [
     "CATALOG_VERSION",
     "NETIS_NX31_PROFILE_ID",
     "hardware_summary",
+    "hardware_report",
     "record_hardware_observation",
     "sync_builtin_hardware_catalog",
 ]
