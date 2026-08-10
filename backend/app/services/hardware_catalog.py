@@ -217,6 +217,9 @@ def _learn_profile(
     profile.last_seen_at = now
     profile.observation_count = int(profile.observation_count or 0) + 1
     profile.updated_at = now
+    # Persist a newly learned profile before an existing identity references it.
+    # Without the explicit flush PostgreSQL may issue the identity UPDATE first.
+    db.flush()
     return profile
 
 

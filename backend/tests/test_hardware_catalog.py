@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from backend.app.db import Base, get_engine, init_db
-from backend.app.models import Device, HardwareProfile
+from backend.app.models import Device, DeviceHardwareIdentity, HardwareProfile
 from backend.app.services.hardware_catalog import (
     NETIS_NX31_PROFILE_ID,
     _match_profile,
@@ -221,3 +221,59 @@ def test_netis_identity_and_multiple_sensor_history_are_persisted():
     assert soc["max_milli_celsius"] == 55_000
     assert soc["sample_count"] == 4
     assert soc["thermal_status"] == "normal"
+
+
+@pytest.mark.skipif(not postgres_e2e_enabled(), reason="PostgreSQL E2E required")
+def test_unknown_hardware_profile_is_persisted_before_identity_reference():
+    reset_database()
+    now = datetime.now(UTC)
+    device_id = uuid4()
+    factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
+    with factory() as db:
+        db.add(
+            Device(
+                id=device_id,
+                name="NewRouter",
+                hostname="OpenWrt",
+                model="Uncatalogued Router",
+                firmware="OpenWrt test",
+                token_hash=f"hash-{device_id}",
+                status="online",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        db.add(
+            DeviceHardwareIdentity(
+                device_id=device_id,
+                observed={},
+                resolved={},
+                updated_at=now,
+            )
+        )
+        db.flush()
+
+        resolved = record_hardware_observation(
+            db,
+            device_id,
+            {
+                "hardware": {
+                    "model": "Uncatalogued Router",
+                    "board_name": "example,new-router",
+                    "compatible": ["example,new-router"],
+                    "target": "example/target",
+                },
+                "cpu": {"model": "example-cpu", "cores": 4},
+            },
+            now,
+        )
+        db.commit()
+
+        identity = db.get(DeviceHardwareIdentity, device_id)
+        assert identity is not None
+        assert identity.profile_id is not None
+        profile = db.get(HardwareProfile, identity.profile_id)
+
+    assert profile is not None
+    assert profile.origin == "observed"
+    assert resolved["catalog"]["profile_key"] == profile.profile_key
