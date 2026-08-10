@@ -73,6 +73,9 @@ data class HardwareDto(
     val cpu: HardwareCpuDto,
     val catalog: HardwareCatalogDto?,
     val sensors: List<HardwareSensorDto>,
+    val rawSensorCount: Int,
+    val thermalHealth: String,
+    val throttling: HardwareThrottlingDto,
 )
 
 data class HardwareCpuDto(
@@ -93,6 +96,15 @@ data class HardwareCatalogDto(
     val cpuArchitecture: String?,
     val cpuCores: Int?,
     val cpuMaxMhz: Int?,
+    val origin: String?,
+    val verified: Boolean,
+    val observationCount: Int,
+)
+
+data class HardwareThrottlingDto(
+    val state: String,
+    val active: Boolean?,
+    val thermalPressure: Long?,
 )
 
 data class HardwareSensorDto(
@@ -104,6 +116,11 @@ data class HardwareSensorDto(
     val maxMilliCelsius: Int?,
     val sampleCount: Int,
     val state: String,
+    val sourceCount: Int,
+    val warningMilliCelsius: Int?,
+    val criticalMilliCelsius: Int?,
+    val headroomMilliCelsius: Int?,
+    val thermalStatus: String,
 )
 
 data class DataStateDto(

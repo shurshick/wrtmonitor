@@ -90,6 +90,7 @@ private enum class Tab {
     Rules,
     Vpn,
     System,
+    Hardware,
     Management,
     Operations,
     Settings,
@@ -319,7 +320,7 @@ fun WrtMonitorApp() {
             when {
                 tab == Tab.Settings && selectedDevice != null -> tab = Tab.More
                 tab == Tab.Settings -> tab = Tab.Routers
-                tab in setOf(Tab.Rules, Tab.Vpn, Tab.System, Tab.Management, Tab.Operations) -> tab = Tab.More
+                tab in setOf(Tab.Rules, Tab.Vpn, Tab.System, Tab.Hardware, Tab.Management, Tab.Operations) -> tab = Tab.More
                 else -> {
                     selectedDevice = null
                     tab = Tab.Routers
@@ -435,6 +436,7 @@ fun WrtMonitorApp() {
                             onOpenRules = { tab = Tab.Rules },
                             onOpenVpn = { tab = Tab.Vpn },
                             onOpenSystem = { tab = Tab.System },
+                            onOpenHardware = { tab = Tab.Hardware },
                             onOpenManagement = { tab = Tab.Management },
                             onOpenOperations = { tab = Tab.Operations },
                             onOpenSettings = { tab = Tab.Settings },
@@ -442,6 +444,7 @@ fun WrtMonitorApp() {
                         Tab.Rules -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession, NetworkScreenMode.Rules) }
                         Tab.Vpn -> DeviceTabRequired(device) { NetworkControlScreen(serverUrl, accessToken, it, expireSession, NetworkScreenMode.Vpn) }
                         Tab.System -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession, SystemScreenMode.System) }
+                        Tab.Hardware -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession, SystemScreenMode.Hardware) }
                         Tab.Management -> DeviceTabRequired(device) { SystemControlScreen(serverUrl, accessToken, it, expireSession, SystemScreenMode.Management) }
                         Tab.Operations -> DeviceTabRequired(device) { OperationsScreen(serverUrl, accessToken, it.id, expireSession) }
                         Tab.Settings -> AppSettingsScreen(
@@ -490,7 +493,7 @@ private fun RowScope.AppNavigationItem(
     label: Int,
 ) {
     val selected = tab == currentTab || (
-        tab == Tab.More && currentTab in setOf(Tab.Rules, Tab.Vpn, Tab.System, Tab.Management, Tab.Operations)
+        tab == Tab.More && currentTab in setOf(Tab.Rules, Tab.Vpn, Tab.System, Tab.Hardware, Tab.Management, Tab.Operations)
     )
     NavigationBarItem(
         selected = selected,

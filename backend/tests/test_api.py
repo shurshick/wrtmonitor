@@ -347,6 +347,12 @@ def test_device_page_renders_agent_update_status(monkeypatch):
         def __init__(self):
             self.calls = 0
 
+        def get(self, model, key):
+            return None
+
+        def execute(self, statement):
+            return FakeScalars([])
+
         def scalars(self, statement):
             self.calls += 1
             if self.calls == 1:
@@ -427,6 +433,12 @@ def test_device_page_collapses_capabilities_by_default(monkeypatch):
             return self._items
 
     class FakeSession:
+        def get(self, model, key):
+            return None
+
+        def execute(self, statement):
+            return FakeScalars([])
+
         def scalars(self, statement):
             rendered = str(statement)
             if "device_telemetry" in rendered:
@@ -548,6 +560,23 @@ def test_stability_migration_schema_e2e():
     assert database.has_table("notification_rules")
     assert database.has_table("automation_rules")
     assert database.has_table("automation_runs")
+    assert database.has_table("hardware_profiles")
+    assert database.has_table("device_hardware_identities")
+    assert database.has_table("hardware_sensor_samples")
+    profile_columns = {
+        item["name"] for item in database.get_columns("hardware_profiles")
+    }
+    assert {
+        "origin",
+        "verified",
+        "observation_count",
+        "first_seen_at",
+        "last_seen_at",
+    } <= profile_columns
+    sensor_columns = {
+        item["name"] for item in database.get_columns("hardware_sensor_samples")
+    }
+    assert {"warning_milli_celsius", "critical_milli_celsius"} <= sensor_columns
     terminal_session_indexes = {
         item["name"] for item in database.get_indexes("terminal_sessions")
     }

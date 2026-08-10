@@ -22,6 +22,7 @@
       <a class="device-nav__item {{ 'is-active' if section == 'rules' else '' }}" href="/devices/{{ device.id }}?section=rules"><span>Сетевые правила</span><small>Firewall, NAT и маршруты</small></a>
       <span class="device-nav__group">Управление</span>
       <a class="device-nav__item {{ 'is-active' if section == 'system' else '' }}" href="/devices/{{ device.id }}?section=system"><span>Система</span><small>Ресурсы и службы</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'hardware' else '' }}" href="/devices/{{ device.id }}?section=hardware"><span>Оборудование</span><small>CPU и датчики</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'management' else '' }}" href="/devices/{{ device.id }}?section=management"><span>Обслуживание</span><small>Агент и диагностика</small></a>
       <a class="device-nav__item {{ 'is-active' if section == 'terminal' else '' }}" href="/devices/{{ device.id }}?section=terminal"><span>Терминал</span><small>Web SSH</small></a>
     </nav>
@@ -55,6 +56,9 @@
     {% elif section == 'system' %}
       <div class="section-heading"><p class="eyebrow">Роутер</p><h2>Система</h2><p>Ресурсы устройства, службы и системные действия.</p></div>
       {% include "partials/system.html" %}
+    {% elif section == 'hardware' %}
+      <div class="section-heading"><p class="eyebrow">Аппаратная платформа</p><h2>Оборудование</h2><p>Наблюдаемая идентичность, процессор и реальные температурные датчики.</p></div>
+      {% include "partials/hardware.html" %}
     {% elif section == 'management' %}
       <div class="section-heading"><p class="eyebrow">Служебный раздел</p><h2>Обслуживание</h2><p>Обновление агента, диагностика и история команд.</p></div>
       {% include "partials/agent.html" %}

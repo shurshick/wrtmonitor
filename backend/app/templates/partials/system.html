@@ -58,24 +58,7 @@
   </section>
 </div>
 
-<section class="card section">
-  <div class="card__heading"><div><p class="eyebrow">Аппаратный мониторинг</p><h2>Датчики температуры</h2></div><span class="badge">{{ hardware_sensors|length }}</span></div>
-  {% if hardware_sensors %}
-  <div class="resource-list">
-    {% for sensor in hardware_sensors %}
-    <div class="resource-item">
-      <div>
-        <span>{{ sensor.label }}{% if sensor.role %} · {{ sensor.role }}{% endif %}</span>
-        <strong>{% if sensor.current_milli_celsius is not none %}{{ (sensor.current_milli_celsius / 1000)|round(1) }} °C{% else %}последнее измерение устарело{% endif %}</strong>
-        <small>минимум {{ (sensor.min_milli_celsius / 1000)|round(1) }} °C · максимум {{ (sensor.max_milli_celsius / 1000)|round(1) }} °C · {{ sensor.sample_count }} измерений</small>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <p class="empty-state">Агент не обнаружил доступных thermal/hwmon-датчиков. Это состояние не подменяется расчётным значением.</p>
-  {% endif %}
-</section>
+<a class="action-card section" href="/devices/{{ device.id }}?section=hardware"><span><strong>Оборудование и температуры</strong><small>{{ hardware_sensors|length }} {{ 'датчик' if hardware_sensors|length == 1 else 'датчика' if hardware_sensors|length in [2, 3, 4] else 'датчиков' }} · состояние {{ hardware_view.get('thermal_health') or 'неизвестно' }}</small></span><b>Открыть →</b></a>
 
 {% if services or supports.system_restart_service %}
 <details class="settings-panel card section">

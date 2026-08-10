@@ -657,4 +657,23 @@
     <string name="temperature_sensors_count">Detected: %1$d</string>
     <string name="temperature_unsupported">No thermal or hwmon measurements are exposed by this router</string>
     <string name="temperature_sensor_range">min %1$.1f · max %2$.1f °C · %3$d samples</string>
+    <string name="hardware_title">Hardware</string>
+    <string name="hardware_summary">CPU, hardware identity and temperature sensors</string>
+    <string name="hardware_profile_verified">Verified catalog profile</string>
+    <string name="hardware_profile_observed">Learned from this router</string>
+    <string name="hardware_identity">Hardware identity</string>
+    <string name="hardware_board">Board name</string>
+    <string name="hardware_target">OpenWrt target</string>
+    <string name="thermal_health">Thermal state</string>
+    <string name="throttling">Throttling</string>
+    <string name="throttling_active">Active</string>
+    <string name="throttling_inactive">Not active</string>
+    <string name="threshold_unknown">Kernel did not expose a thermal limit</string>
+    <string name="threshold_warning">warning %1$.1f °C</string>
+    <string name="threshold_critical">critical %1$.1f °C</string>
+    <string name="thermal_state_normal">Normal</string>
+    <string name="thermal_state_warning">Needs attention</string>
+    <string name="thermal_state_critical">Critical temperature</string>
+    <string name="thermal_state_stale">Data is stale</string>
+    <string name="thermal_state_unknown">Threshold is unknown</string>
 </resources>

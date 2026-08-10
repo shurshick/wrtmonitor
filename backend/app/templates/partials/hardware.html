@@ -1,0 +1,51 @@
+{% set catalog = hardware_view.get('catalog') or {} %}
+{% set cpu_view = hardware_view.get('cpu') or {} %}
+{% set sensors = hardware_view.get('sensors') or [] %}
+{% set match = hardware_view.get('match') or {} %}
+{% set throttling = hardware_view.get('throttling') or {} %}
+
+<div class="system-stat-grid">
+  <article class="stat-card {{ 'stat-card--healthy' if hardware_view.get('state') == 'observed' else 'stat-card--warning' }}"><span class="stat-card__label">Идентичность</span><strong>{{ 'Получена' if hardware_view.get('state') == 'observed' else 'Не поддерживается' }}</strong><small>{{ hardware_view.get('board_name') or hardware_view.get('model') or 'Device Tree не передана' }}</small></article>
+  <article class="stat-card {{ 'stat-card--healthy' if catalog.get('verified') else 'stat-card--warning' }}"><span class="stat-card__label">Профиль</span><strong>{{ 'Проверен' if catalog.get('verified') else 'Изучен автоматически' if catalog else 'Не найден' }}</strong><small>{{ catalog.get('profile_key') or 'сервер не подменяет неизвестное устройство догадкой' }}</small></article>
+  <article class="stat-card {{ 'stat-card--warning' if hardware_view.get('thermal_health') in ['warning', 'critical'] else 'stat-card--healthy' if hardware_view.get('thermal_health') == 'normal' else '' }}"><span class="stat-card__label">Температуры</span><strong>{{ {'normal':'Норма','warning':'Предупреждение','critical':'Критическая','stale':'Устарели','unknown':'Порог не известен','unsupported':'Не поддерживаются'}.get(hardware_view.get('thermal_health'), 'Нет данных') }}</strong><small>{{ sensors|length }} нормализованных · {{ hardware_view.get('raw_sensor_count', 0) }} исходных</small></article>
+  <article class="stat-card {{ 'stat-card--warning' if throttling.get('active') else '' }}"><span class="stat-card__label">Троттлинг</span><strong>{% if throttling.get('state') == 'observed' %}{{ 'Активен' if throttling.get('active') else 'Не активен' }}{% else %}Не поддерживается{% endif %}</strong><small>{% if throttling.get('thermal_pressure') is not none %}thermal pressure {{ throttling.get('thermal_pressure') }}{% else %}ядро не предоставляет показатель{% endif %}</small></article>
+</div>
+
+<div class="workspace-grid section">
+  <section class="card workspace-card">
+    <div class="card__heading"><div><p class="eyebrow">Наблюдение агента</p><h2>Аппаратная идентичность</h2></div></div>
+    <dl class="friendly-list">
+      <dt>Модель Device Tree</dt><dd>{{ hardware_view.get('model') or 'не передана' }}</dd>
+      <dt>Board name</dt><dd>{{ hardware_view.get('board_name') or 'не передан' }}</dd>
+      <dt>OpenWrt target</dt><dd>{{ hardware_view.get('target') or 'не передан' }}</dd>
+      <dt>Архитектура пакетов</dt><dd>{{ hardware_view.get('package_arch') or 'не передана' }}</dd>
+      <dt>Метод сопоставления</dt><dd>{{ match.get('method') or 'нет' }}{% if match.get('confidence') %} · {{ match.get('confidence') }}%{% endif %}</dd>
+    </dl>
+    <details class="technical-panel"><summary><span>Device Tree compatible</span></summary><div class="technical-panel__content"><code>{{ hardware_view.get('compatible')|join(', ') if hardware_view.get('compatible') else 'не передано' }}</code></div></details>
+  </section>
+  <section class="card workspace-card">
+    <div class="card__heading"><div><p class="eyebrow">{{ 'Проверенный каталог' if catalog.get('verified') else 'Автоматическое изучение' }}</p><h2>{{ catalog.get('vendor') ~ ' ' ~ catalog.get('model') if catalog else 'Профиль не создан' }}</h2></div>{% if catalog %}<span class="risk-badge {{ 'risk-badge--safe' if catalog.get('verified') else 'risk-badge--readonly' }}">{{ catalog.get('origin') }}</span>{% endif %}</div>
+    <dl class="friendly-list">
+      <dt>SoC</dt><dd>{% if catalog.get('soc_model') %}{{ catalog.get('soc_vendor') }} {{ catalog.get('soc_model') }}{% else %}не определён{% endif %}</dd>
+      <dt>CPU по каталогу</dt><dd>{% if catalog.get('cpu_model') %}{{ catalog.get('cpu_vendor') }} {{ catalog.get('cpu_model') }}{% else %}не определён{% endif %}</dd>
+      <dt>Наблюдаемый CPU</dt><dd>{{ cpu_view.get('observed_model') or 'не передан' }}</dd>
+      <dt>Ядра</dt><dd>{{ cpu_view.get('cores') or catalog.get('cpu_cores') or 'не определены' }}</dd>
+      <dt>Архитектура</dt><dd>{{ cpu_view.get('architecture') or catalog.get('cpu_architecture') or 'не определена' }}</dd>
+      <dt>Частота</dt><dd>{% if cpu_view.get('current_khz') %}{{ (cpu_view.get('current_khz') / 1000)|round|int }} МГц{% if cpu_view.get('max_khz') %} из {{ (cpu_view.get('max_khz') / 1000)|round|int }} МГц{% endif %}{% elif catalog.get('cpu_max_mhz') %}до {{ catalog.get('cpu_max_mhz') }} МГц по каталогу{% else %}не поддерживается{% endif %}</dd>
+    </dl>
+    {% if catalog.get('source_url') %}<a class="button button--secondary" href="{{ catalog.get('source_url') }}" target="_blank" rel="noopener">Источник профиля</a>{% endif %}
+  </section>
+</div>
+
+<section class="card section">
+  <div class="card__heading"><div><p class="eyebrow">Thermal / hwmon</p><h2>Температурные датчики</h2></div><span class="badge">{{ sensors|length }}</span></div>
+  {% if sensors %}<div class="sensor-grid">
+    {% for sensor in sensors %}<article class="sensor-card sensor-card--{{ sensor.thermal_status }}">
+      <div class="sensor-card__heading"><strong>{{ sensor.label }}</strong><span class="status">{{ {'normal':'норма','warning':'внимание','critical':'критично','unknown':'порог неизвестен','stale':'устарел'}.get(sensor.thermal_status, sensor.thermal_status) }}</span></div>
+      <strong class="sensor-card__value">{% if sensor.current_milli_celsius is not none %}{{ (sensor.current_milli_celsius / 1000)|round(1) }} °C{% else %}нет свежего значения{% endif %}</strong>
+      <small>Минимум {{ (sensor.min_milli_celsius / 1000)|round(1) }} °C · максимум {{ (sensor.max_milli_celsius / 1000)|round(1) }} °C</small>
+      {% if sensor.warning_milli_celsius or sensor.critical_milli_celsius %}<small>Порог: {% if sensor.warning_milli_celsius %}предупреждение {{ (sensor.warning_milli_celsius / 1000)|round(1) }} °C{% endif %}{% if sensor.critical_milli_celsius %} · критический {{ (sensor.critical_milli_celsius / 1000)|round(1) }} °C{% endif %}</small>{% else %}<small>Ядро не сообщило рабочие пределы; состояние не вычисляется на глаз.</small>{% endif %}
+      {% if sensor.source_count > 1 %}<small>{{ sensor.source_count }} исходных датчика объединены в один аппаратный узел.</small>{% endif %}
+    </article>{% endfor %}
+  </div>{% else %}<p class="empty-state">Доступные thermal/hwmon-датчики не обнаружены. Расчётная температура не показывается.</p>{% endif %}
+</section>

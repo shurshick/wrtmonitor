@@ -203,8 +203,16 @@ fun SystemControlScreen(
     val connectionLabel = systemSummary?.let { "${it.optLong("conntrack_count")} / ${it.optLong("conntrack_max")}" } ?: stringResource(R.string.no_data)
 
     RouterPageHeader(
-        title = stringResource(if (mode == SystemScreenMode.System) R.string.system else R.string.maintenance_title),
-        subtitle = stringResource(if (mode == SystemScreenMode.System) R.string.system_screen_summary else R.string.maintenance_summary),
+        title = stringResource(when (mode) {
+            SystemScreenMode.System -> R.string.system
+            SystemScreenMode.Hardware -> R.string.hardware_title
+            SystemScreenMode.Management -> R.string.maintenance_title
+        }),
+        subtitle = stringResource(when (mode) {
+            SystemScreenMode.System -> R.string.system_screen_summary
+            SystemScreenMode.Hardware -> R.string.hardware_summary
+            SystemScreenMode.Management -> R.string.maintenance_summary
+        }),
         onRefresh = refresh,
     )
     if (loading && telemetry == null) {
@@ -287,6 +295,85 @@ fun SystemControlScreen(
             }
         }
     }
+    }
+    if (mode == SystemScreenMode.Hardware) {
+        SectionCard(
+            stringResource(R.string.hardware_identity),
+            subtitle = stringResource(
+                if (hardware?.catalog?.verified == true) R.string.hardware_profile_verified
+                else R.string.hardware_profile_observed,
+            ),
+        ) {
+            InfoRow(stringResource(R.string.hardware_model), hardware?.model, stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.hardware_board), hardware?.boardName, stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.hardware_target), hardware?.target, stringResource(R.string.no_data))
+            InfoRow(
+                stringResource(R.string.soc),
+                listOfNotNull(hardware?.catalog?.socVendor, hardware?.catalog?.socModel).joinToString(" ").takeIf { it.isNotBlank() },
+                stringResource(R.string.catalog_not_matched),
+            )
+            InfoRow(
+                stringResource(R.string.processor),
+                listOfNotNull(hardware?.catalog?.cpuVendor, hardware?.catalog?.cpuModel).joinToString(" ").takeIf { it.isNotBlank() }
+                    ?: hardware?.cpu?.observedModel,
+                stringResource(R.string.no_data),
+            )
+            InfoRow(stringResource(R.string.architecture), hardware?.cpu?.architecture ?: hardware?.catalog?.cpuArchitecture, stringResource(R.string.no_data))
+            InfoRow(stringResource(R.string.cpu_cores), hardware?.cpu?.cores?.toString() ?: hardware?.catalog?.cpuCores?.toString(), stringResource(R.string.no_data))
+            InfoRow(
+                stringResource(R.string.cpu_frequency),
+                hardware?.cpu?.currentKhz?.takeIf { it > 0 }?.let { current ->
+                    hardware.cpu.maxKhz?.takeIf { it > 0 }?.let { maximum ->
+                        stringResource(R.string.cpu_frequency_current_max, current / 1000, maximum / 1000)
+                    } ?: stringResource(R.string.cpu_frequency_current, current / 1000)
+                } ?: hardware?.catalog?.cpuMaxMhz?.let { stringResource(R.string.cpu_frequency_catalog, it) },
+                stringResource(R.string.unsupported_data),
+            )
+            val thermalHealth = when (hardware?.thermalHealth) {
+                "normal" -> stringResource(R.string.thermal_state_normal)
+                "warning" -> stringResource(R.string.thermal_state_warning)
+                "critical" -> stringResource(R.string.thermal_state_critical)
+                "stale" -> stringResource(R.string.thermal_state_stale)
+                "unknown" -> stringResource(R.string.thermal_state_unknown)
+                else -> null
+            }
+            InfoRow(stringResource(R.string.thermal_health), thermalHealth, stringResource(R.string.unsupported_data))
+            InfoRow(
+                stringResource(R.string.throttling),
+                hardware?.throttling?.takeIf { it.state == "observed" }?.let {
+                    stringResource(if (it.active == true) R.string.throttling_active else R.string.throttling_inactive)
+                },
+                stringResource(R.string.unsupported_data),
+            )
+        }
+        SectionCard(
+            stringResource(R.string.temperature_sensors),
+            subtitle = stringResource(R.string.temperature_sensors_count, hardware?.sensors?.size ?: 0),
+        ) {
+            if (hardware?.sensors.isNullOrEmpty()) {
+                Text(stringResource(R.string.temperature_unsupported), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                hardware?.sensors?.forEachIndexed { index, sensor ->
+                    val current = sensor.currentMilliCelsius?.let { "%.1f °C".format(Locale.US, it / 1000.0) }
+                    val range = if (sensor.minMilliCelsius != null && sensor.maxMilliCelsius != null) {
+                        stringResource(R.string.temperature_sensor_range, sensor.minMilliCelsius / 1000.0, sensor.maxMilliCelsius / 1000.0, sensor.sampleCount)
+                    } else null
+                    val state = when (sensor.thermalStatus) {
+                        "normal" -> stringResource(R.string.thermal_state_normal)
+                        "warning" -> stringResource(R.string.thermal_state_warning)
+                        "critical" -> stringResource(R.string.thermal_state_critical)
+                        "stale" -> stringResource(R.string.thermal_state_stale)
+                        else -> stringResource(R.string.thermal_state_unknown)
+                    }
+                    val limits = listOfNotNull(
+                        sensor.warningMilliCelsius?.let { stringResource(R.string.threshold_warning, it / 1000.0) },
+                        sensor.criticalMilliCelsius?.let { stringResource(R.string.threshold_critical, it / 1000.0) },
+                    ).joinToString(" · ").ifBlank { stringResource(R.string.threshold_unknown) }
+                    InfoRow(sensor.label, current, stringResource(R.string.stale_telemetry), supporting = listOfNotNull(state, range, limits).joinToString(" · "))
+                    if (index < hardware.sensors.lastIndex) HorizontalDivider()
+                }
+            }
+        }
     }
     if (mode == SystemScreenMode.System && services != null) {
         SectionCard(stringResource(R.string.services), subtitle = stringResource(R.string.services_summary)) {

@@ -21,6 +21,7 @@ fun RouterSectionsScreen(
     onOpenRules: () -> Unit,
     onOpenVpn: () -> Unit,
     onOpenSystem: () -> Unit,
+    onOpenHardware: () -> Unit,
     onOpenManagement: () -> Unit,
     onOpenOperations: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -64,6 +65,15 @@ fun RouterSectionsScreen(
             detail = stringResource(R.string.system_screen_summary),
             accent = MaterialTheme.colorScheme.tertiary,
             onClick = onOpenSystem,
+        )
+        HorizontalDivider()
+        DestinationRow(
+            icon = Icons.Default.Memory,
+            title = stringResource(R.string.hardware_title),
+            value = "",
+            detail = stringResource(R.string.hardware_summary),
+            accent = MaterialTheme.colorScheme.secondary,
+            onClick = onOpenHardware,
         )
         HorizontalDivider()
         DestinationRow(

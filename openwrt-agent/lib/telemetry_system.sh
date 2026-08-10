@@ -101,14 +101,44 @@ thermal_json() {
     sensors=""
     primary=""
     count="0"
+    throttling_supported="false"
+    throttling_active="false"
+    thermal_pressure="0"
+    for pressure_path in /sys/devices/system/cpu/cpu[0-9]*/thermal_pressure; do
+        [ -r "$pressure_path" ] || continue
+        throttling_supported="true"
+        pressure="$(cat "$pressure_path" 2>/dev/null || echo 0)"
+        case "$pressure" in ""|*[!0-9]*) pressure="0" ;; esac
+        [ "$pressure" -gt "$thermal_pressure" ] 2>/dev/null && thermal_pressure="$pressure"
+        [ "$pressure" -gt 0 ] 2>/dev/null && throttling_active="true"
+    done
     for zone in /sys/class/thermal/thermal_zone*; do
         [ -r "$zone/temp" ] || continue
         value="$(cat "$zone/temp" 2>/dev/null || true)"
         case "$value" in ""|*[!0-9-]*) continue ;; esac
         sensor_id="$(basename "$zone")"
         sensor_type="$(cat "$zone/type" 2>/dev/null || echo "$sensor_id")"
+        warning=""
+        critical=""
+        for trip_temp_path in "$zone"/trip_point_*_temp; do
+            [ -r "$trip_temp_path" ] || continue
+            trip_temp="$(cat "$trip_temp_path" 2>/dev/null || true)"
+            case "$trip_temp" in ""|*[!0-9]*) continue ;; esac
+            trip_prefix="${trip_temp_path%_temp}"
+            trip_type="$(cat "${trip_prefix}_type" 2>/dev/null || true)"
+            case "$trip_type" in
+                passive|hot)
+                    if [ -z "$warning" ] || [ "$trip_temp" -lt "$warning" ]; then warning="$trip_temp"; fi
+                    ;;
+                critical)
+                    if [ -z "$critical" ] || [ "$trip_temp" -lt "$critical" ]; then critical="$trip_temp"; fi
+                    ;;
+            esac
+        done
+        warning_json="null"; [ -n "$warning" ] && warning_json="$warning"
+        critical_json="null"; [ -n "$critical" ] && critical_json="$critical"
         [ -n "$sensors" ] && sensors="$sensors,"
-        sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"thermal\",\"type\":\"$(json_escape "$sensor_type")\",\"label\":\"$(json_escape "$sensor_type")\",\"milli_celsius\":$value}"
+        sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"thermal\",\"type\":\"$(json_escape "$sensor_type")\",\"label\":\"$(json_escape "$sensor_type")\",\"milli_celsius\":$value,\"warning_milli_celsius\":$warning_json,\"critical_milli_celsius\":$critical_json}"
         [ -n "$primary" ] || primary="$value"
         count=$((count + 1))
     done
@@ -122,17 +152,32 @@ thermal_json() {
             input_name="$(basename "$input" _input)"
             label="$(cat "$hwmon/${input_name}_label" 2>/dev/null || echo "$hwmon_name $input_name")"
             sensor_id="$(basename "$hwmon")_$input_name"
+            warning="$(cat "$hwmon/${input_name}_max" 2>/dev/null || true)"
+            critical="$(cat "$hwmon/${input_name}_crit" 2>/dev/null || true)"
+            case "$warning" in ""|*[!0-9]*) warning="" ;; esac
+            case "$critical" in ""|*[!0-9]*) critical="" ;; esac
+            warning_json="null"; [ -n "$warning" ] && warning_json="$warning"
+            critical_json="null"; [ -n "$critical" ] && critical_json="$critical"
             [ -n "$sensors" ] && sensors="$sensors,"
-            sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"hwmon\",\"type\":\"$(json_escape "$hwmon_name")\",\"label\":\"$(json_escape "$label")\",\"milli_celsius\":$value}"
+            sensors="$sensors{\"id\":\"$(json_escape "$sensor_id")\",\"subsystem\":\"hwmon\",\"type\":\"$(json_escape "$hwmon_name")\",\"label\":\"$(json_escape "$label")\",\"milli_celsius\":$value,\"warning_milli_celsius\":$warning_json,\"critical_milli_celsius\":$critical_json}"
             [ -n "$primary" ] || primary="$value"
             count=$((count + 1))
         done
     done
     if [ "$count" -eq 0 ]; then
-        printf '{"available":false,"state":"unsupported","sensors":[]}'
+        if [ "$throttling_supported" = "true" ]; then
+            printf '{"available":false,"state":"unsupported","sensors":[],"throttling":{"state":"observed","active":%s,"thermal_pressure":%s}}' "$throttling_active" "$thermal_pressure"
+        else
+            printf '{"available":false,"state":"unsupported","sensors":[],"throttling":{"state":"unsupported","active":null}}'
+        fi
         return
     fi
-    printf '{"available":true,"state":"observed","milli_celsius":%s,"sensor_count":%s,"sensors":[%s]}' "$primary" "$count" "$sensors"
+    if [ "$throttling_supported" = "true" ]; then
+        throttling_json="{\"state\":\"observed\",\"active\":$throttling_active,\"thermal_pressure\":$thermal_pressure}"
+    else
+        throttling_json='{"state":"unsupported","active":null}'
+    fi
+    printf '{"available":true,"state":"observed","milli_celsius":%s,"sensor_count":%s,"sensors":[%s],"throttling":%s}' "$primary" "$count" "$sensors" "$throttling_json"
 }
 
 traffic_json() {

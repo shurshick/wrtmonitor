@@ -12,6 +12,7 @@ from backend.app.services.hardware_catalog import (
     NETIS_NX31_PROFILE_ID,
     _match_profile,
     _resolved_hardware,
+    _temperature_status,
     hardware_summary,
     record_hardware_observation,
 )
@@ -84,6 +85,7 @@ def test_catalog_enriches_but_never_overwrites_observed_cpu_values():
 
     assert resolved["cpu"]["observed_model"] == "arm,cortex-a53"
     assert resolved["cpu"]["current_khz"] == 864_000
+    assert resolved["cpu"]["architecture"] == "aarch64"
     assert resolved["catalog"]["soc_model"] == "MT7981B"
     assert resolved["catalog"]["cpu_model"] == "Cortex-A53"
 
@@ -117,6 +119,14 @@ def test_common_soc_and_target_do_not_identify_router_model():
     assert confidence == 0
 
 
+def test_temperature_state_uses_only_observed_limits():
+    assert _temperature_status(61_000, None, None) == "unknown"
+    assert _temperature_status(61_000, 70_000, 85_000) == "normal"
+    assert _temperature_status(75_000, 70_000, 85_000) == "warning"
+    assert _temperature_status(90_000, 70_000, 85_000) == "critical"
+    assert _temperature_status(None, 70_000, 85_000) == "stale"
+
+
 @pytest.mark.skipif(not postgres_e2e_enabled(), reason="PostgreSQL E2E required")
 def test_netis_identity_and_multiple_sensor_history_are_persisted():
     reset_database()
@@ -143,16 +153,32 @@ def test_netis_identity_and_multiple_sensor_history_are_persisted():
                 {
                     "id": "thermal_zone0",
                     "subsystem": "thermal",
-                    "type": "mt7981-thermal",
-                    "label": "mt7981-thermal",
+                    "type": "cpu-thermal",
+                    "label": "cpu-thermal",
                     "milli_celsius": 51_000,
+                    "warning_milli_celsius": 70_000,
+                    "critical_milli_celsius": 85_000,
                 },
                 {
                     "id": "hwmon0_temp1",
                     "subsystem": "hwmon",
-                    "type": "wifi",
-                    "label": "Wi-Fi",
+                    "type": "cpu_thermal",
+                    "label": "cpu_thermal temp1",
+                    "milli_celsius": 50_000,
+                },
+                {
+                    "id": "hwmon1_temp1",
+                    "subsystem": "hwmon",
+                    "type": "mt7915_phy0",
+                    "label": "mt7915_phy0 temp1",
                     "milli_celsius": 48_000,
+                },
+                {
+                    "id": "hwmon2_temp1",
+                    "subsystem": "hwmon",
+                    "type": "mt7915_phy1",
+                    "label": "mt7915_phy1 temp1",
+                    "milli_celsius": 47_000,
                 },
             ],
         },
@@ -186,8 +212,12 @@ def test_netis_identity_and_multiple_sensor_history_are_persisted():
         "method": "device-tree-compatible",
         "confidence": 100,
     }
-    soc = next(item for item in summary["sensors"] if item["key"] == "thermal_zone0")
+    assert len(summary["sensors"]) == 3
+    assert summary["raw_sensor_count"] == 4
+    soc = next(item for item in summary["sensors"] if item["key"] == "soc")
     assert soc["label"] == "SoC MediaTek MT7981B"
-    assert soc["min_milli_celsius"] == 51_000
+    assert soc["source_count"] == 2
+    assert soc["min_milli_celsius"] == 50_000
     assert soc["max_milli_celsius"] == 55_000
-    assert soc["sample_count"] == 2
+    assert soc["sample_count"] == 4
+    assert soc["thermal_status"] == "normal"

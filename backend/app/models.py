@@ -222,6 +222,11 @@ class HardwareProfile(Base):
     cpu_max_mhz: Mapped[int | None] = mapped_column(Integer)
     sensor_roles: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     source_url: Mapped[str | None] = mapped_column(Text)
+    origin: Mapped[str] = mapped_column(String(40), nullable=False, default="builtin")
+    verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    observation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    first_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     catalog_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -269,6 +274,8 @@ class HardwareSensorSample(Base):
     label: Mapped[str] = mapped_column(String(160), nullable=False)
     subsystem: Mapped[str] = mapped_column(String(40), nullable=False)
     milli_celsius: Mapped[int] = mapped_column(Integer, nullable=False)
+    warning_milli_celsius: Mapped[int | None] = mapped_column(Integer)
+    critical_milli_celsius: Mapped[int | None] = mapped_column(Integer)
     observed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )

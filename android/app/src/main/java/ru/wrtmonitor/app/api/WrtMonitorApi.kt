@@ -25,6 +25,7 @@ import ru.wrtmonitor.app.api.dto.HardwareCatalogDto
 import ru.wrtmonitor.app.api.dto.HardwareCpuDto
 import ru.wrtmonitor.app.api.dto.HardwareDto
 import ru.wrtmonitor.app.api.dto.HardwareSensorDto
+import ru.wrtmonitor.app.api.dto.HardwareThrottlingDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.api.dto.toJsonArray
@@ -686,6 +687,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
     private fun parseHardware(json: JSONObject): HardwareDto {
         val cpu = json.optJSONObject("cpu") ?: JSONObject()
         val catalog = json.optJSONObject("catalog")
+        val throttling = json.optJSONObject("throttling") ?: JSONObject()
         val sensors = json.optJSONArray("sensors") ?: JSONArray()
         fun JSONObject.optionalInt(key: String): Int? =
             takeIf { has(key) && !isNull(key) }?.optInt(key)
@@ -717,6 +719,9 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     cpuArchitecture = it.optionalString("cpu_architecture"),
                     cpuCores = it.optionalInt("cpu_cores"),
                     cpuMaxMhz = it.optionalInt("cpu_max_mhz"),
+                    origin = it.optionalString("origin"),
+                    verified = it.optBoolean("verified", false),
+                    observationCount = it.optInt("observation_count", 0),
                 )
             },
             sensors = (0 until sensors.length()).mapNotNull { index ->
@@ -730,9 +735,21 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                         maxMilliCelsius = sensor.optionalInt("max_milli_celsius"),
                         sampleCount = sensor.optInt("sample_count"),
                         state = sensor.optString("state", "unsupported"),
+                        sourceCount = sensor.optInt("source_count", 1),
+                        warningMilliCelsius = sensor.optionalInt("warning_milli_celsius"),
+                        criticalMilliCelsius = sensor.optionalInt("critical_milli_celsius"),
+                        headroomMilliCelsius = sensor.optionalInt("headroom_milli_celsius"),
+                        thermalStatus = sensor.optString("thermal_status", "unknown"),
                     )
                 }
             },
+            rawSensorCount = json.optInt("raw_sensor_count", 0),
+            thermalHealth = json.optString("thermal_health", "unsupported"),
+            throttling = HardwareThrottlingDto(
+                state = throttling.optString("state", "unsupported"),
+                active = throttling.takeIf { it.has("active") && !it.isNull("active") }?.optBoolean("active"),
+                thermalPressure = throttling.optionalLong("thermal_pressure"),
+            ),
         )
     }
 

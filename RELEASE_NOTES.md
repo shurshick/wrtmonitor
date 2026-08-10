@@ -1,22 +1,22 @@
-# WrtMonitor v0.37.0 — аппаратная идентификация
+# WrtMonitor v0.38.0 — Hardware Intelligence
 
-Тестовый релиз создаёт нормальную основу для отображения процессоров и датчиков OpenWrt-устройств.
+Тестовый релиз превращает сырые аппаратные поля в проверяемую и честную модель оборудования.
 
 ## Изменено
 
-- агент читает модель и совместимость платы из Device Tree, target OpenWrt и архитектуру системы;
-- CPU telemetry содержит наблюдаемую модель, ядра и частоты `cpufreq`, включая данные по каждому ядру;
-- все доступные `thermal_zone` и `hwmon` датчики передаются отдельными записями с собственным типом и меткой;
-- PostgreSQL получил каталог аппаратных профилей, observed identity и 45-дневную историю температуры;
-- первый профиль каталога описывает Netis NX31, MediaTek MT7981B и Arm Cortex-A53 по данным OpenWrt;
-- Web UI и Android показывают модель SoC, CPU, архитектуру, текущую/максимальную частоту и min/max датчиков;
-- каталог не подменяет значения агента: неизвестное железо остаётся неизвестным, неподдерживаемое измерение не превращается в ноль.
+- неизвестная плата получает наблюдаемый профиль по точным Device Tree/OpenWrt identifiers; совпадение по общему SoC не используется;
+- встроенный каталог содержит проверенные профили Netis NX31, Banana Pi BPI-R3, Xiaomi AX3600 и FriendlyElec NanoPi R5S;
+- сервер явно сообщает, является профиль проверенным или автоматически изученным;
+- реальные Netis NX31 датчики нормализуются в SoC, Wi-Fi 2.4 ГГц и Wi-Fi 5 ГГц, дубликат температуры SoC не засоряет интерфейс;
+- warning/critical limits читаются из `thermal`/`hwmon`; статус без доступного порога остаётся неизвестным;
+- при поддержке ядром передаётся `thermal_pressure` и состояние троттлинга;
+- отдельный раздел «Оборудование» добавлен в Web UI и Android.
 
 ## Проверки
 
-- backend и OpenWrt-agent unit/contract tests;
-- PostgreSQL migration и E2E сопоставления Netis NX31 с историей нескольких датчиков;
-- Android Kotlin compile, unit/lint/release build в CI;
-- shell syntax, shellcheck, agent harness и browser smoke.
+- backend unit/contract tests и PostgreSQL schema E2E;
+- shell syntax и agent telemetry contract;
+- Android Kotlin compile, unit tests, lint и APK build;
+- Web UI smoke и релизная проверка версии.
 
-Android `versionCode`: `93`.
+Android `versionCode`: `94`.

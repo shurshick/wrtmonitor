@@ -161,6 +161,46 @@ def prepare_router() -> tuple[str, str]:
                         "capabilities_version": 10,
                         "capabilities": capabilities,
                     },
+                    "hardware": {
+                        "model": "WrtMonitor CI Router",
+                        "board_name": "wrtmonitor,ci-router",
+                        "compatible": ["wrtmonitor,ci-router"],
+                        "target": "mediatek/filogic",
+                        "package_arch": "aarch64_cortex-a53",
+                        "architecture": "aarch64",
+                    },
+                    "cpu": {
+                        "model": "Cortex-A53",
+                        "architecture": "aarch64",
+                        "cores": 2,
+                        "current_khz": 1_000_000,
+                        "max_khz": 1_300_000,
+                    },
+                    "thermal": {
+                        "available": True,
+                        "state": "observed",
+                        "sensors": [
+                            {
+                                "id": "thermal_zone0",
+                                "subsystem": "thermal",
+                                "type": "cpu-thermal",
+                                "label": "cpu-thermal",
+                                "milli_celsius": 61_000,
+                                "warning_milli_celsius": 85_000,
+                                "critical_milli_celsius": 105_000,
+                            },
+                            {
+                                "id": "hwmon1_temp1",
+                                "subsystem": "hwmon",
+                                "type": "mt7915_phy0",
+                                "label": "mt7915 phy0",
+                                "milli_celsius": 46_000,
+                                "warning_milli_celsius": None,
+                                "critical_milli_celsius": None,
+                            },
+                        ],
+                        "throttling": {"state": "unsupported", "active": None},
+                    },
                     "system": {
                         "hostname": "openwrt-browser",
                         "uptime": 86400,
@@ -630,6 +670,7 @@ def run() -> None:
                 "rules",
                 "vpn",
                 "system",
+                "hardware",
                 "management",
                 "terminal",
             ):
@@ -678,6 +719,16 @@ def run() -> None:
                     assert wan.locator('[data-wan-fields="static"]').is_hidden()
                     wan.locator("[data-wan-protocol]").select_option("pppoe")
                     assert wan.locator('[data-wan-fields="pppoe"]').is_visible()
+                if section == "hardware":
+                    assert (
+                        page.get_by_text("Автоматическое изучение", exact=True).count()
+                        == 1
+                    )
+                    assert (
+                        page.get_by_text("Температурные датчики", exact=True).count()
+                        == 1
+                    )
+                    assert "61.0 °C" in page.locator(".sensor-grid").inner_text()
                 if section == "wifi":
                     selector = page.locator("[data-wifi-radio-select]")
                     assert selector.count() == 1
