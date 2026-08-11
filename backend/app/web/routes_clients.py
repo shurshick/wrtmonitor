@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from ..services.client_registry import infer_device_type, validate_device_type
 from .route_shared import (
     ClientProfile,
     Cookie,
@@ -36,6 +37,7 @@ def web_client_policy(
     client_id: UUID,
     csrf_token: str = Form(...),
     display_name: str = Form(""),
+    device_type: str = Form("unknown"),
     profile_id: str = Form(""),
     blocked: bool = Form(False),
     schedule_enabled: bool = Form(False),
@@ -81,6 +83,15 @@ def web_client_policy(
         }
     )
     client.display_name = display_name.strip() or None
+    selected_type = validate_device_type(device_type)
+    if selected_type == "unknown":
+        client.device_type = infer_device_type(
+            client.display_name, client.hostname, client.vendor
+        )
+        client.device_type_source = "automatic"
+    else:
+        client.device_type = selected_type
+        client.device_type_source = "user"
     if profile_id:
         try:
             selected_profile_id = UUID(profile_id)

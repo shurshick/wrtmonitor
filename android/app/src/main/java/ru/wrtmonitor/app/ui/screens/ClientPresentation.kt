@@ -15,14 +15,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.DevicesOther
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.TabletAndroid
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -175,6 +181,17 @@ internal fun wifiBandResource(band: String?): Int? = when (band?.lowercase(Local
 }
 
 internal fun clientIcon(client: NetworkClientDto): ImageVector {
+    when (client.deviceType) {
+        "phone" -> return Icons.Default.PhoneAndroid
+        "tablet" -> return Icons.Default.TabletAndroid
+        "computer" -> return Icons.Default.Computer
+        "tv" -> return Icons.Default.Tv
+        "speaker" -> return Icons.Default.Speaker
+        "camera" -> return Icons.Default.CameraAlt
+        "printer" -> return Icons.Default.Print
+        "storage" -> return Icons.Default.Storage
+        "router" -> return Icons.Default.Router
+    }
     val identity = listOfNotNull(client.displayName, client.hostname, client.vendor).joinToString(" ").lowercase(Locale.ROOT)
     return when {
         listOf("phone", "redmi", "poco", "xiaomi", "huawei", "mobile", "android", "iphone").any(identity::contains) -> Icons.Default.PhoneAndroid

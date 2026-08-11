@@ -77,6 +77,7 @@ class CommandResultRequest(BaseModel):
 
 class ClientUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, max_length=120)
+    device_type: str | None = Field(default=None, max_length=24)
     profile_id: UUID | None = None
     policy: dict[str, Any] | None = None
 

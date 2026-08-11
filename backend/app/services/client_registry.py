@@ -10,13 +10,19 @@ import pymanuf
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from ..models import ClientProfile, ClientTrafficSample, NetworkClient
+from ..models import (
+    ClientActivityEvent,
+    ClientProfile,
+    ClientTrafficSample,
+    NetworkClient,
+)
 from .telemetry import normalize_clients_summary
 
 
 WEEKDAYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 TIME_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 CLIENT_TRAFFIC_RETENTION = 96
+CLIENT_ACTIVITY_RETENTION = 200
 MINIMUM_ONLINE_TTL_SECONDS = 30
 MINIMUM_RECENT_TTL_SECONDS = 300
 
@@ -116,6 +122,107 @@ def inferred_vendor(mac: str, reported: Any = None) -> str | None:
         return None
 
 
+CLIENT_DEVICE_TYPES = {
+    "phone",
+    "tablet",
+    "computer",
+    "tv",
+    "speaker",
+    "camera",
+    "printer",
+    "storage",
+    "router",
+    "iot",
+    "unknown",
+}
+
+
+def infer_device_type(*values: Any) -> str:
+    identity = " ".join(str(value).lower() for value in values if value)
+    rules = (
+        ("tv", ("smart tv", "android tv", "television", "chromecast", "fire tv")),
+        ("phone", ("phone", "iphone", "android", "redmi", "poco", "mobile")),
+        ("tablet", ("tablet", "ipad", "tab ")),
+        (
+            "computer",
+            (
+                "desktop",
+                "computer",
+                "laptop",
+                "notebook",
+                "macbook",
+                "windows",
+                "workstation",
+            ),
+        ),
+        (
+            "speaker",
+            ("speaker", "alexa", "echo dot", "homepod", "яндекс станц", "sberboom"),
+        ),
+        ("camera", ("camera", "cam ", "ipcam", "doorbell", "видеокамер")),
+        ("printer", ("printer", "laserjet", "officejet", "pixma", "epson")),
+        ("storage", ("nas", "synology", "qnap", "truenas")),
+        ("router", ("router", "openwrt", "gateway", "access point")),
+        (
+            "iot",
+            (
+                "iot",
+                "sensor",
+                "socket",
+                "plug",
+                "bulb",
+                "thermostat",
+                "esp32",
+                "esp8266",
+            ),
+        ),
+    )
+    for device_type, markers in rules:
+        if any(marker in identity for marker in markers):
+            return device_type
+    return "unknown"
+
+
+def validate_device_type(value: str | None) -> str:
+    normalized = str(value or "unknown").strip().lower()
+    if normalized not in CLIENT_DEVICE_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid client device type")
+    return normalized
+
+
+def record_client_activity(
+    db: Session,
+    client: NetworkClient,
+    state: str,
+    source: str | None,
+    occurred_at: datetime,
+) -> None:
+    db.add(
+        ClientActivityEvent(
+            id=uuid4(),
+            client_id=client.id,
+            state=state,
+            source=source,
+            ip_address=client.ip_address,
+            interface=client.interface,
+            occurred_at=occurred_at,
+        )
+    )
+    db.flush()
+    retained_ids = (
+        select(ClientActivityEvent.id)
+        .where(ClientActivityEvent.client_id == client.id)
+        .order_by(ClientActivityEvent.occurred_at.desc())
+        .limit(CLIENT_ACTIVITY_RETENTION)
+    )
+    db.execute(
+        delete(ClientActivityEvent).where(
+            ClientActivityEvent.client_id == client.id,
+            ClientActivityEvent.id.not_in(retained_ids),
+        )
+    )
+
+
 def validate_client_policy(value: dict[str, Any] | None) -> dict[str, Any]:
     policy = dict(value or {})
     blocked = bool(policy.get("blocked", False))
@@ -162,28 +269,34 @@ def sync_client_inventory(
     now = now or datetime.now(UTC)
     online_ttl = client_presence_ttl(telemetry)
     recent_ttl = client_recent_ttl(telemetry)
+    observed_macs: set[str] = set()
     for item in normalize_clients_summary(telemetry).get("items") or []:
         try:
             mac = normalize_mac(str(item.get("mac") or ""))
         except HTTPException:
             continue
+        observed_macs.add(mac)
         client = db.scalars(
             select(NetworkClient).where(
                 NetworkClient.device_id == device_id, NetworkClient.mac == mac
             )
         ).first()
+        created = client is None
         if client is None:
             client = NetworkClient(
                 id=uuid4(),
                 device_id=device_id,
                 mac=mac,
                 policy={},
+                device_type="unknown",
+                device_type_source="automatic",
                 first_seen_at=now,
                 last_seen_at=now,
                 updated_at=now,
             )
             db.add(client)
             db.flush()
+        previous_state = None if created else effective_client_presence(client, now)
         latest_sample = db.scalars(
             select(ClientTrafficSample)
             .where(ClientTrafficSample.client_id == client.id)
@@ -194,6 +307,13 @@ def sync_client_inventory(
         client.ip_address = item.get("ip") or client.ip_address
         client.interface = item.get("interface") or client.interface
         client.vendor = inferred_vendor(mac, item.get("vendor")) or client.vendor
+        if client.device_type_source != "user":
+            client.device_type = infer_device_type(
+                client.display_name,
+                client.hostname,
+                client.vendor,
+            )
+            client.device_type_source = "automatic"
         client.is_static = bool(item.get("is_static", False))
         client.updated_at = now
         try:
@@ -223,6 +343,11 @@ def sync_client_inventory(
             online_ttl,
             recent_ttl,
         )
+        current_state = effective_client_presence(client, now)
+        if current_state != previous_state:
+            record_client_activity(
+                db, client, current_state, client.presence_source, now
+            )
         if rx_bytes or tx_bytes:
             db.add(
                 ClientTrafficSample(
@@ -246,6 +371,23 @@ def sync_client_inventory(
                     ClientTrafficSample.id.not_in(retained_ids),
                 )
             )
+
+    missing_clients = db.scalars(
+        select(NetworkClient).where(
+            NetworkClient.device_id == device_id,
+            NetworkClient.mac.not_in(observed_macs) if observed_macs else True,
+        )
+    ).all()
+    for client in missing_clients:
+        if (
+            client.presence_state != "offline"
+            and client.presence_expires_at
+            and now > client.presence_expires_at
+        ):
+            apply_client_presence(
+                client, "offline", "observation_expired", now, online_ttl, recent_ttl
+            )
+            record_client_activity(db, client, "offline", client.presence_source, now)
 
 
 def effective_policy(db: Session, client: NetworkClient) -> dict[str, Any]:
@@ -272,6 +414,12 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
         .order_by(ClientTrafficSample.created_at.desc())
         .limit(1)
     ).first()
+    activity = db.scalars(
+        select(ClientActivityEvent)
+        .where(ClientActivityEvent.client_id == client.id)
+        .order_by(ClientActivityEvent.occurred_at.desc())
+        .limit(5)
+    ).all()
     traffic_is_current = bool(
         latest_sample
         and online
@@ -283,6 +431,8 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
         "display_name": client.display_name,
         "hostname": client.hostname,
         "vendor": client.vendor,
+        "device_type": client.device_type or "unknown",
+        "device_type_source": client.device_type_source or "automatic",
         "ip_address": client.ip_address,
         "interface": client.interface,
         "online": online,
@@ -310,6 +460,16 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
         }
         if traffic_is_current
         else None,
+        "recent_activity": [
+            {
+                "state": event.state,
+                "source": event.source,
+                "ip_address": event.ip_address,
+                "interface": event.interface,
+                "occurred_at": event.occurred_at.isoformat(),
+            }
+            for event in activity
+        ],
     }
 
 

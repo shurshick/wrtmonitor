@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from ..models import DeviceTelemetry, DeviceTelemetryMetric
 from .telemetry_common import (
-    TELEMETRY_STALE_SECONDS,
     TELEMETRY_WINDOWS,
     _average_optional,
     _optional_float,

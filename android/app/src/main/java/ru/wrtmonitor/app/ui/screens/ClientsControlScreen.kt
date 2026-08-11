@@ -193,13 +193,20 @@ fun ClientsControlScreen(
         }
     }
 
-    fun saveClient(client: NetworkClientDto, name: String, profileId: String?, policy: JsonObject) {
+    fun saveClient(
+        client: NetworkClientDto,
+        name: String,
+        deviceType: String,
+        profileId: String?,
+        policy: JsonObject,
+    ) {
         scope.launch {
             val storedPolicy = if (profileId == null) policy else JsonObject()
             when (val update = repository.updateClient(
                 device.id,
                 client.id,
                 name,
+                deviceType,
                 profileId,
                 storedPolicy,
             )) {
@@ -241,7 +248,9 @@ fun ClientsControlScreen(
                 view = ClientsView.List
                 selectedClientId = null
             },
-            onSave = { name, profileId, policy -> saveClient(selectedClient, name, profileId, policy) },
+            onSave = { name, deviceType, profileId, policy ->
+                saveClient(selectedClient, name, deviceType, profileId, policy)
+            },
             onSetLease = { hostname, ip ->
                 pendingCommand = PendingSafeCommand(
                     "dhcp.set_lease",

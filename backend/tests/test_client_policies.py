@@ -1,7 +1,12 @@
 import pytest
 from fastapi import HTTPException
 
-from backend.app.services.client_registry import inferred_vendor, validate_client_policy
+from backend.app.services.client_registry import (
+    infer_device_type,
+    inferred_vendor,
+    validate_client_policy,
+    validate_device_type,
+)
 from backend.app.services.commands import validate_command_payload
 from backend.app.services.config_transactions import build_command_preview
 from backend.app.services.telemetry import normalize_clients_summary
@@ -26,6 +31,26 @@ def test_client_policy_normalizes_schedule_and_qos():
         "download_kbps": 50000,
         "upload_kbps": 0,
     }
+
+
+@pytest.mark.parametrize(
+    ("identity", "expected"),
+    [
+        ("POCO-F8-Ultra", "phone"),
+        ("living-room Android TV", "tv"),
+        ("office Synology NAS", "storage"),
+        ("front door IP camera", "camera"),
+        ("OpenWrt access point", "router"),
+        ("unnamed-client", "unknown"),
+    ],
+)
+def test_client_device_type_inference(identity, expected):
+    assert infer_device_type(identity) == expected
+
+
+def test_client_device_type_rejects_unknown_values():
+    with pytest.raises(HTTPException):
+        validate_device_type("spaceship")
 
 
 @pytest.mark.parametrize(

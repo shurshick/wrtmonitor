@@ -16,6 +16,8 @@ data class NetworkClientDto(
     val displayName: String?,
     val hostname: String?,
     val vendor: String?,
+    val deviceType: String,
+    val deviceTypeSource: String,
     val ipAddress: String?,
     val currentIpv4: String?,
     val staticIpv4: String?,
@@ -39,6 +41,15 @@ data class NetworkClientDto(
     val traffic: JsonObject?,
     val firstSeenAt: String?,
     val lastSeenAt: String?,
+    val recentActivity: List<ClientActivityDto>,
+)
+
+data class ClientActivityDto(
+    val state: String,
+    val source: String?,
+    val ipAddress: String?,
+    val networkInterface: String?,
+    val occurredAt: String,
 )
 
 data class ClientProfileDto(

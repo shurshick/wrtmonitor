@@ -405,6 +405,12 @@ class NetworkClient(Base):
     mac: Mapped[str] = mapped_column(String(17), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(120))
     vendor: Mapped[str | None] = mapped_column(String(160))
+    device_type: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="unknown"
+    )
+    device_type_source: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="automatic"
+    )
     hostname: Mapped[str | None] = mapped_column(String(120))
     ip_address: Mapped[str | None] = mapped_column(String(45))
     interface: Mapped[str | None] = mapped_column(String(80))
@@ -447,6 +453,24 @@ class ClientTrafficSample(Base):
     rx_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     tx_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class ClientActivityEvent(Base):
+    __tablename__ = "client_activity_events"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    client_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("network_clients.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    state: Mapped[str] = mapped_column(String(20), nullable=False)
+    source: Mapped[str | None] = mapped_column(String(40))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+    interface: Mapped[str | None] = mapped_column(String(80))
+    occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
 
@@ -630,6 +654,11 @@ Index(
     "ix_client_traffic_client_created",
     ClientTrafficSample.client_id,
     ClientTrafficSample.created_at,
+)
+Index(
+    "ix_client_activity_client_occurred",
+    ClientActivityEvent.client_id,
+    ClientActivityEvent.occurred_at.desc(),
 )
 Index("ix_audit_log_created", AuditLog.created_at.desc())
 Index(

@@ -741,6 +741,8 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert clients_response.status_code == 200
     registered_client = clients_response.json()[0]
     assert registered_client["vendor"] == "Example Corp"
+    assert registered_client["device_type"] == "computer"
+    assert registered_client["device_type_source"] == "automatic"
     assert registered_client["is_static"] is True
     assert registered_client["current_ipv4"] == "192.168.1.42"
     assert registered_client["static_ipv4"] == "192.168.1.42"
@@ -762,6 +764,7 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         headers=admin_headers,
         json={
             "display_name": "Desk PC",
+            "device_type": "computer",
             "profile_id": profile_id,
             "policy": {
                 "blocked": False,
@@ -771,18 +774,33 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     )
     assert update_response.status_code == 200
     assert update_response.json()["display_name"] == "Desk PC"
+    assert update_response.json()["device_type"] == "computer"
+    assert update_response.json()["device_type_source"] == "user"
     assert update_response.json()["effective_policy"]["qos"]["priority"] == "high"
     apply_response = client.post(
         f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/apply-policy",
         headers=admin_headers,
     )
     assert apply_response.status_code == 200
+    detail_response = client.get(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}",
+        headers=admin_headers,
+    )
+    assert detail_response.status_code == 200
+    assert detail_response.json()["current_ipv4"] == "192.168.1.42"
+    activity_response = client.get(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/activity",
+        headers=admin_headers,
+    )
+    assert activity_response.status_code == 200
+    assert activity_response.json()[0]["state"] == "online"
     traffic_response = client.get(
         f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/traffic",
         headers=admin_headers,
     )
     assert traffic_response.status_code == 200
     assert len(traffic_response.json()) == 96
+    assert "rx_delta" in traffic_response.json()[-1]
 
     outdated_agent = {
         **telemetry["agent"],

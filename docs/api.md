@@ -64,8 +64,10 @@ Android подключается только к WrtMonitor Server. Pairing не
 - `GET /api/v1/devices/{device_id}/events` — SSE telemetry и статусов команд для авторизованного Web/Android-клиента
 - `GET /api/v1/devices/{device_id}/agent`
 - `GET /api/v1/devices/{device_id}/clients`
+- `GET /api/v1/devices/{device_id}/clients/{client_id}`
 - `PUT|PATCH /api/v1/devices/{device_id}/clients/{client_id}`
 - `POST /api/v1/devices/{device_id}/clients/{client_id}/apply-policy`
+- `GET /api/v1/devices/{device_id}/clients/{client_id}/activity?limit=1..200`
 - `GET /api/v1/devices/{device_id}/clients/{client_id}/traffic`
 - `GET|POST /api/v1/devices/{device_id}/client-profiles`
 - `PUT|DELETE /api/v1/devices/{device_id}/client-profiles/{profile_id}`
@@ -76,6 +78,18 @@ Android подключается только к WrtMonitor Server. Pairing не
 - `GET /api/v1/agent/commands?wait=0..30` — короткий polling или ожидающий long-poll
 - `POST /api/v1/agent/commands/{command_id}/result`
 - `GET /api/v1/meta/contracts`
+
+### Идентичность клиентов
+
+Реестр считает MAC-адрес устойчивым идентификатором клиента. Смена IPv4/IPv6,
+SSID или проводного интерфейса обновляет существующую запись. Разные private MAC
+не объединяются по IP, hostname или vendor: такое объединение может связать
+чужие устройства. Пользователь может вручную выбрать тип устройства; значение с
+источником `user` не перезаписывается последующей telemetry.
+
+Состояние присутствия имеет три значения: `online` подтверждено текущей
+telemetry, `recent` означает недавнее наблюдение, `offline` означает истёкшее
+наблюдение. История переходов ограничена 200 последними событиями на клиента.
 
 ## Web-терминал
 

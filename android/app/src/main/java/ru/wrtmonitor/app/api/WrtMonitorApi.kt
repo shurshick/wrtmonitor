@@ -9,6 +9,7 @@ import ru.wrtmonitor.app.api.dto.AutomationTemplateDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
+import ru.wrtmonitor.app.api.dto.ClientActivityDto
 import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.EventDto
@@ -272,6 +273,8 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     displayName = item.optString("display_name").takeIf { it.isNotBlank() && it != "null" },
                     hostname = item.optString("hostname").takeIf { it.isNotBlank() && it != "null" },
                     vendor = item.optString("vendor").takeIf { it.isNotBlank() && it != "null" },
+                    deviceType = item.optString("device_type", "unknown"),
+                    deviceTypeSource = item.optString("device_type_source", "automatic"),
                     ipAddress = item.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
                     currentIpv4 = item.optString("current_ipv4").takeIf { it.isNotBlank() && it != "null" },
                     staticIpv4 = item.optString("static_ipv4").takeIf { it.isNotBlank() && it != "null" },
@@ -297,6 +300,19 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     traffic = item.optJSONObject("traffic")?.toJsonObject(),
                     firstSeenAt = item.optString("first_seen_at").takeIf { it.isNotBlank() && it != "null" },
                     lastSeenAt = item.optString("last_seen_at").takeIf { it.isNotBlank() && it != "null" },
+                    recentActivity = item.optJSONArray("recent_activity")?.let { events ->
+                        (0 until events.length()).mapNotNull { eventIndex ->
+                            events.optJSONObject(eventIndex)?.let { event ->
+                                ClientActivityDto(
+                                    state = event.optString("state", "offline"),
+                                    source = event.optString("source").takeIf { it.isNotBlank() && it != "null" },
+                                    ipAddress = event.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
+                                    networkInterface = event.optString("interface").takeIf { it.isNotBlank() && it != "null" },
+                                    occurredAt = event.optString("occurred_at"),
+                                )
+                            }
+                        }
+                    } ?: emptyList(),
                 )
             }
         }
@@ -335,13 +351,18 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         deviceId: String,
         clientId: String,
         displayName: String,
+        deviceType: String,
         profileId: String?,
         policy: JsonObject,
     ): ApiResult<Unit> = runCatching {
         val (status, _) = request(
             "/api/v1/devices/$deviceId/clients/$clientId",
             "PUT",
-            JSONObject().put("display_name", displayName).put("profile_id", profileId ?: JSONObject.NULL).put("policy", policy.raw),
+            JSONObject()
+                .put("display_name", displayName)
+                .put("device_type", deviceType)
+                .put("profile_id", profileId ?: JSONObject.NULL)
+                .put("policy", policy.raw),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
     }.fold({ ApiResult.Success(Unit) }, ::toApiError)

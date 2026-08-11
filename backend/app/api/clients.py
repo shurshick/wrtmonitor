@@ -6,13 +6,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import ClientProfile, ClientTrafficSample, NetworkClient, User
+from ..models import (
+    ClientActivityEvent,
+    ClientProfile,
+    ClientTrafficSample,
+    NetworkClient,
+    User,
+)
 from ..schemas import ClientProfileRequest, ClientUpdateRequest
 from ..services.audit import audit
 from ..services.auth import current_user
 from ..services.client_registry import (
     client_response,
     effective_policy,
+    infer_device_type,
+    validate_device_type,
     validate_client_policy,
 )
 from ..services.commands import create_device_command, validate_command_request
@@ -71,6 +79,53 @@ def get_client(db: Session, device_id: UUID, client_id: UUID) -> NetworkClient:
     return client
 
 
+def _enrich_client(
+    item: dict,
+    telemetry_payload: dict,
+    connection_by_mac: dict[str, dict] | None = None,
+) -> dict:
+    mac_key = str(item.get("mac") or "").lower()
+    dhcp = (
+        telemetry_payload.get("dhcp")
+        or (telemetry_payload.get("clients") or {}).get("dhcp")
+        or {}
+    )
+    lease_ipv4_by_mac = {
+        str(lease.get("mac") or "").lower(): str(lease.get("ip") or "")
+        for lease in dhcp.get("leases") or []
+        if isinstance(lease, dict) and "." in str(lease.get("ip") or "")
+    }
+    static_ipv4_by_mac = {
+        str(lease.get("mac") or "").lower(): str(lease.get("ip") or "")
+        for lease in dhcp.get("static_leases") or []
+        if isinstance(lease, dict) and "." in str(lease.get("ip") or "")
+    }
+    connection = (
+        connection_by_mac or _client_connection_details(telemetry_payload)
+    ).get(mac_key) or {}
+    registry_address = str(item.get("ip_address") or "")
+    item["current_ipv4"] = (
+        lease_ipv4_by_mac.get(mac_key)
+        or static_ipv4_by_mac.get(mac_key)
+        or connection.get("ipv4")
+        or (registry_address if "." in registry_address else "")
+    )
+    item["static_ipv4"] = static_ipv4_by_mac.get(mac_key) or ""
+    item["ipv6_addresses"] = connection.get("ipv6") or (
+        [registry_address] if ":" in registry_address else []
+    )
+    item["connection_type"] = connection.get("connection_type") or (
+        "wired" if connection.get("interface") or item.get("interface") else "unknown"
+    )
+    item["connection_name"] = connection.get("connection_name") or ""
+    item["wifi_ssid"] = connection.get("wifi_ssid") or ""
+    item["wifi_band"] = connection.get("wifi_band") or ""
+    item["signal_dbm"] = connection.get("signal_dbm")
+    item["rx_bitrate"] = connection.get("rx_bitrate")
+    item["tx_bitrate"] = connection.get("tx_bitrate")
+    return item
+
+
 @router.get("/{device_id}/clients")
 def list_clients(
     device_id: UUID, user: User = Depends(current_user), db: Session = Depends(get_db)
@@ -84,47 +139,9 @@ def list_clients(
     response = [client_response(db, client) for client in clients]
     telemetry = latest_device_telemetry(db, device_id)
     telemetry_payload = telemetry.payload if telemetry else {}
-    dhcp = (
-        telemetry_payload.get("dhcp")
-        or (telemetry_payload.get("clients") or {}).get("dhcp")
-        or {}
-    )
-    lease_ipv4_by_mac = {
-        str(item.get("mac") or "").lower(): str(item.get("ip") or "")
-        for item in dhcp.get("leases") or []
-        if isinstance(item, dict) and "." in str(item.get("ip") or "")
-    }
-    static_ipv4_by_mac = {
-        str(item.get("mac") or "").lower(): str(item.get("ip") or "")
-        for item in dhcp.get("static_leases") or []
-        if isinstance(item, dict) and "." in str(item.get("ip") or "")
-    }
     connection_by_mac = _client_connection_details(telemetry_payload)
     for item in response:
-        mac_key = str(item.get("mac") or "").lower()
-        registry_address = str(item.get("ip_address") or "")
-        connection = connection_by_mac.get(mac_key) or {}
-        item["current_ipv4"] = (
-            lease_ipv4_by_mac.get(mac_key)
-            or static_ipv4_by_mac.get(mac_key)
-            or connection.get("ipv4")
-            or (registry_address if "." in registry_address else "")
-        )
-        item["static_ipv4"] = static_ipv4_by_mac.get(mac_key) or ""
-        item["ipv6_addresses"] = connection.get("ipv6") or (
-            [registry_address] if ":" in registry_address else []
-        )
-        item["connection_type"] = connection.get("connection_type") or (
-            "wired"
-            if connection.get("interface") or item.get("interface")
-            else "unknown"
-        )
-        item["connection_name"] = connection.get("connection_name") or ""
-        item["wifi_ssid"] = connection.get("wifi_ssid") or ""
-        item["wifi_band"] = connection.get("wifi_band") or ""
-        item["signal_dbm"] = connection.get("signal_dbm")
-        item["rx_bitrate"] = connection.get("rx_bitrate")
-        item["tx_bitrate"] = connection.get("tx_bitrate")
+        _enrich_client(item, telemetry_payload, connection_by_mac)
     rank = {"online": 0, "recent": 1, "offline": 2}
     response.sort(
         key=lambda item: (
@@ -133,6 +150,21 @@ def list_clients(
         )
     )
     return response
+
+
+@router.get("/{device_id}/clients/{client_id}")
+def client_detail(
+    device_id: UUID,
+    client_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    get_user_device_or_404(db, user, device_id)
+    client = get_client(db, device_id, client_id)
+    telemetry = latest_device_telemetry(db, device_id)
+    return _enrich_client(
+        client_response(db, client), telemetry.payload if telemetry else {}
+    )
 
 
 @router.patch("/{device_id}/clients/{client_id}")
@@ -158,6 +190,16 @@ def update_client(
             client.profile_id = profile.id
     if payload.display_name is not None:
         client.display_name = payload.display_name.strip() or None
+    if payload.device_type is not None:
+        selected_type = validate_device_type(payload.device_type)
+        if selected_type == "unknown":
+            client.device_type = infer_device_type(
+                client.display_name, client.hostname, client.vendor
+            )
+            client.device_type_source = "automatic"
+        else:
+            client.device_type = selected_type
+            client.device_type_source = "user"
     if payload.policy is not None:
         client.policy = validate_client_policy(payload.policy)
     client.updated_at = datetime.now(UTC)
@@ -171,6 +213,34 @@ def update_client(
     )
     db.commit()
     return client_response(db, client)
+
+
+@router.get("/{device_id}/clients/{client_id}/activity")
+def client_activity(
+    device_id: UUID,
+    client_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    get_user_device_or_404(db, user, device_id)
+    client = get_client(db, device_id, client_id)
+    events = db.scalars(
+        select(ClientActivityEvent)
+        .where(ClientActivityEvent.client_id == client.id)
+        .order_by(ClientActivityEvent.occurred_at.desc())
+        .limit(limit)
+    ).all()
+    return [
+        {
+            "state": event.state,
+            "source": event.source,
+            "ip_address": event.ip_address,
+            "interface": event.interface,
+            "occurred_at": event.occurred_at.isoformat(),
+        }
+        for event in events
+    ]
 
 
 @router.get("/{device_id}/clients/{client_id}/traffic")
@@ -189,14 +259,25 @@ def client_traffic(
         .order_by(ClientTrafficSample.created_at.desc())
         .limit(limit)
     ).all()
-    return [
-        {
-            "rx_bytes": item.rx_bytes,
-            "tx_bytes": item.tx_bytes,
-            "created_at": item.created_at.isoformat(),
-        }
-        for item in reversed(samples)
-    ]
+    ordered = list(reversed(samples))
+    result: list[dict] = []
+    previous: ClientTrafficSample | None = None
+    for item in ordered:
+        result.append(
+            {
+                "rx_bytes": item.rx_bytes,
+                "tx_bytes": item.tx_bytes,
+                "rx_delta": max(0, item.rx_bytes - previous.rx_bytes)
+                if previous
+                else 0,
+                "tx_delta": max(0, item.tx_bytes - previous.tx_bytes)
+                if previous
+                else 0,
+                "created_at": item.created_at.isoformat(),
+            }
+        )
+        previous = item
+    return result
 
 
 @router.post("/{device_id}/clients/{client_id}/apply-policy")

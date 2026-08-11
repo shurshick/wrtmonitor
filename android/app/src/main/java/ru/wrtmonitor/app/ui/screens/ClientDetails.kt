@@ -85,7 +85,7 @@ internal fun ClientDetails(
     canSetLease: Boolean,
     canDeleteLease: Boolean,
     onBack: () -> Unit,
-    onSave: (String, String?, JsonObject) -> Unit,
+    onSave: (String, String, String?, JsonObject) -> Unit,
     onSetLease: (String, String) -> Unit,
     onDeleteLease: () -> Unit,
 ) {
@@ -94,6 +94,11 @@ internal fun ClientDetails(
     val qos = policy.optJsonObject("qos") ?: JsonObject()
     val dnsPolicy = policy.optJsonObject("dns") ?: JsonObject()
     var displayName by remember(client.id, client.displayName) { mutableStateOf(client.displayName.orEmpty()) }
+    var deviceType by remember(client.id, client.deviceType, client.deviceTypeSource) {
+        mutableStateOf(
+            if (client.deviceTypeSource == "user") client.deviceType else "unknown"
+        )
+    }
     var profileId by remember(client.id, client.profileId) { mutableStateOf(client.profileId) }
     var blocked by remember(client.id, policy.toString()) { mutableStateOf(policy.optBoolean("blocked")) }
     var scheduleEnabled by remember(client.id, schedule.toString()) { mutableStateOf(schedule.optBoolean("enabled")) }
@@ -162,6 +167,24 @@ internal fun ClientDetails(
                 label = { Text(stringResource(R.string.device_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+            )
+            OptionSelector(
+                stringResource(R.string.client_device_type),
+                deviceType,
+                listOf(
+                    SelectOption("unknown", stringResource(R.string.client_type_auto)),
+                    SelectOption("phone", stringResource(R.string.client_type_phone)),
+                    SelectOption("tablet", stringResource(R.string.client_type_tablet)),
+                    SelectOption("computer", stringResource(R.string.client_type_computer)),
+                    SelectOption("tv", stringResource(R.string.client_type_tv)),
+                    SelectOption("speaker", stringResource(R.string.client_type_speaker)),
+                    SelectOption("camera", stringResource(R.string.client_type_camera)),
+                    SelectOption("printer", stringResource(R.string.client_type_printer)),
+                    SelectOption("storage", stringResource(R.string.client_type_storage)),
+                    SelectOption("router", stringResource(R.string.client_type_router)),
+                    SelectOption("iot", stringResource(R.string.client_type_iot)),
+                ),
+                { deviceType = it },
             )
             OptionSelector(
                 stringResource(R.string.client_profile),
@@ -279,6 +302,39 @@ internal fun ClientDetails(
         InfoRow(stringResource(R.string.traffic_sent), formatClientBytes(traffic?.optLong("tx_bytes") ?: 0))
     }
 
+    SectionCard(stringResource(R.string.client_activity)) {
+        if (client.recentActivity.isEmpty()) {
+            Text(
+                stringResource(R.string.client_activity_empty),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            client.recentActivity.forEachIndexed { index, event ->
+                InfoRow(
+                    when (event.state) {
+                        "online" -> stringResource(R.string.online)
+                        "recent" -> stringResource(R.string.client_recent)
+                        else -> stringResource(R.string.offline)
+                    },
+                    formatClientDate(event.occurredAt),
+                    stringResource(R.string.no_data),
+                )
+                val details = listOfNotNull(
+                    event.ipAddress,
+                    event.networkInterface,
+                ).joinToString(" · ")
+                if (details.isNotBlank()) {
+                    Text(
+                        details,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (index < client.recentActivity.lastIndex) HorizontalDivider()
+            }
+        }
+    }
+
     if (canManagePolicy) {
         PrimaryActionButton(
             label = stringResource(R.string.save_policy),
@@ -287,6 +343,7 @@ internal fun ClientDetails(
                 weekdays.sorted().forEach(days::put)
                 onSave(
                     displayName,
+                    deviceType,
                     profileId,
                     JsonObject()
                         .put("blocked", blocked)

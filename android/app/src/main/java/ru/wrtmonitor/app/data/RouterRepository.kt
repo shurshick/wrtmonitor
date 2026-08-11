@@ -91,10 +91,13 @@ class RouterRepository(
         deviceId: String,
         clientId: String,
         displayName: String,
+        deviceType: String,
         profileId: String?,
         policy: JsonObject,
     ): ApiResult<Unit> = onIo {
-        api.updateNetworkClient(deviceId, clientId, displayName, profileId, policy)
+        api.updateNetworkClient(
+            deviceId, clientId, displayName, deviceType, profileId, policy
+        )
     }
 
     suspend fun applyClientPolicy(deviceId: String, clientId: String): ApiResult<String> =
