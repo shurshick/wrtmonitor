@@ -774,7 +774,7 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         },
     )
     assert update_response.status_code == 200
-    assert update_response.json()["status"] == "pending"
+    assert update_response.json()["status"] == "queued"
     configured_client = update_response.json()["client"]
     assert configured_client["display_name"] == "Desk PC"
     assert configured_client["device_type"] == "computer"
