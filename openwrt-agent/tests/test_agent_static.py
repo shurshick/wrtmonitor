@@ -445,6 +445,7 @@ def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
     (system_root / "proc").mkdir(parents=True)
     (system_root / "etc" / "init.d").mkdir(parents=True)
     (system_root / "etc" / "config").mkdir(parents=True)
+    (system_root / "sys" / "class" / "ieee80211" / "phy0").mkdir(parents=True)
     (system_root / "tmp").mkdir(parents=True)
     command_dir.mkdir()
     for name in ("uptime", "loadavg", "cpuinfo"):

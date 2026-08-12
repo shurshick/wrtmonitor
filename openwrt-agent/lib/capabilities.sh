@@ -82,7 +82,7 @@ has_uci_config() {
 has_wifi_radio() {
     has_uci_config wireless || return 1
     uci -q get 'wireless.@wifi-device[0]' >/dev/null 2>&1
-    for phy_path in /sys/class/ieee80211/phy*; do
+    for phy_path in "$(capability_path /sys/class/ieee80211)"/phy*; do
         [ -e "$phy_path" ] && return 0
     done
     has_commands iw && [ -n "$(iw phy 2>/dev/null | head -n 1)" ]

@@ -107,7 +107,8 @@ wifi_radio_runtime_json() {
 }
 
 wifi_hardware_available() {
-    for phy_path in /sys/class/ieee80211/phy*; do
+    wifi_sys_root="${WRTMONITOR_SYSTEM_ROOT:-}/sys/class/ieee80211"
+    for phy_path in "$wifi_sys_root"/phy*; do
         [ -e "$phy_path" ] && return 0
     done
     command -v iw >/dev/null 2>&1 && [ -n "$(iw phy 2>/dev/null | head -n 1)" ]
