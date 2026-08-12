@@ -1,8 +1,9 @@
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ from ..services.devices import (
     get_user_device_or_404,
     latest_device_telemetry,
 )
-from ..schemas import CommandCreateRequest
+from ..schemas import CommandCreateRequest, WifiQrRequest
 from ..services.commands import (
     ALLOWED_COMMANDS,
     cleanup_device_command_history,
@@ -30,6 +31,53 @@ from ..services.config_transactions import build_command_preview, ensure_preflig
 
 
 router = APIRouter(prefix="/api/v1/devices")
+
+
+@router.post("/{device_id}/wifi/qr")
+async def create_wifi_qr(
+    device_id: UUID,
+    payload: WifiQrRequest,
+    response: Response,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Return a one-time QR payload without persisting the Wi-Fi key."""
+    response.headers["Cache-Control"] = "no-store, private"
+    get_user_device_or_404(db, user, device_id)
+    normalized = validate_command_request(
+        command_type="wifi.get_qr",
+        payload={"iface": payload.iface},
+        confirmed=True,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    command = create_device_command(
+        db,
+        device_id=device_id,
+        command_type="wifi.get_qr",
+        payload=normalized,
+        created_by=user.id,
+        source="api",
+    )
+    db.commit()
+
+    from ..services.wifi_qr_broker import consume_wifi_qr_result
+
+    for _ in range(120):
+        result = consume_wifi_qr_result(command.id)
+        if result is not None:
+            wifi_uri = result.get("wifi_uri")
+            if isinstance(wifi_uri, str) and wifi_uri.startswith("WIFI:"):
+                return {
+                    "ssid": str(result.get("ssid") or ""),
+                    "security": str(result.get("security") or ""),
+                    "wifi_uri": wifi_uri,
+                }
+            raise HTTPException(
+                status_code=422,
+                detail=str(result.get("error") or "Wi-Fi QR is unavailable"),
+            )
+        await asyncio.sleep(0.25)
+    raise HTTPException(status_code=504, detail="Router did not return Wi-Fi QR")
 
 
 @router.post("/{device_id}/commands/preview")

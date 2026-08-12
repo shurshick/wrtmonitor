@@ -3,7 +3,7 @@
 Файл генерируется из исполнимого контракта и исходников командой
 `python scripts/generate_command_matrix.py --write`. Ручное редактирование запрещено.
 
-Всего команд: **93**.
+Всего команд: **94**.
 
 | Команда | Web | Android | API | Agent | Capability | Риск | Post-condition | Rollback |
 |---|:---:|:---:|:---:|:---:|---|---|---|---|
@@ -89,6 +89,7 @@
 | `vpn.wireguard.set_peer` | да | да | да | да | `vpn.wireguard.configure` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `wifi.add_ssid` | да | да | да | да | `wifi.manage_ssid` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `wifi.delete_ssid` | да | да | да | да | `wifi.manage_ssid` | level_3_reversible_config | read_after_write_config | configuration_backup |
+| `wifi.get_qr` | да | да | да | да | `wifi.qr` | level_1_readonly | result_payload | not_required |
 | `wifi.set_channel` | да | да | да | да | `wifi.set_channel` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `wifi.set_country` | да | да | да | да | `wifi.set_country` | level_3_reversible_config | read_after_write_config | configuration_backup |
 | `wifi.set_enabled` | да | да | да | да | `wifi.enable` | level_3_reversible_config | read_after_write_config | configuration_backup |

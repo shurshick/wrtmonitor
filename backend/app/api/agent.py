@@ -197,31 +197,44 @@ def command_result(
     if command.status in TERMINAL_STATUSES:
         return {"status": command.status}
     now = datetime.now(UTC)
+    transient_wifi_qr = command.command_type == "wifi.get_qr"
     if payload.status == "running":
         if command.status not in {"sent", "running"}:
             raise HTTPException(status_code=409, detail="Command cannot start")
         command.status = "running"
         command.updated_at = now
-        command.result = payload.result or None
+        command.result = None if transient_wifi_qr else payload.result or None
         command.last_error = None
     elif payload.status in {"done", "success", "failed"}:
         command.status = (
             "success" if payload.status in {"done", "success"} else "failed"
         )
+        if transient_wifi_qr:
+            from ..services.wifi_qr_broker import (
+                persistent_wifi_qr_result,
+                publish_wifi_qr_result,
+            )
+
+            publish_wifi_qr_result(command.id, dict(payload.result))
+        persisted_result = (
+            persistent_wifi_qr_result(payload.status, dict(payload.result))
+            if transient_wifi_qr
+            else payload.result
+        )
         command.result, command.updated_at, command.completed_at = (
-            payload.result,
+            persisted_result,
             now,
             now,
         )
-        error_detail = payload.result.get("error_detail")
+        error_detail = persisted_result.get("error_detail")
         if isinstance(error_detail, dict):
             error_code = str(error_detail.get("code") or "command_failed")
             error_message = str(error_detail.get("message") or "Command failed")
             command.last_error = f"{error_code}: {error_message}"
         else:
             command.last_error = (
-                str(payload.result.get("error"))
-                if payload.result.get("error")
+                str(persisted_result.get("error"))
+                if persisted_result.get("error")
                 else None
             )
     else:

@@ -80,6 +80,39 @@ wifi_radio_ifname() {
     fi
 }
 
+wifi_radio_runtime_json() {
+    requested_radio="$1"
+    runtime_state=unsupported
+    runtime_up=null
+    runtime_pending=null
+    runtime_ifname=""
+    runtime_reason=""
+    if command -v wifi >/dev/null 2>&1 && command -v jsonfilter >/dev/null 2>&1; then
+        runtime_file="/tmp/wrtmonitor-wifi-runtime-$$"
+        wifi status "$requested_radio" >"$runtime_file" 2>/dev/null || true
+        runtime_up_value="$(jsonfilter -i "$runtime_file" -e "@.$requested_radio.up" 2>/dev/null || true)"
+        runtime_pending_value="$(jsonfilter -i "$runtime_file" -e "@.$requested_radio.pending" 2>/dev/null || true)"
+        runtime_failed_value="$(jsonfilter -i "$runtime_file" -e "@.$requested_radio.retry_setup_failed" 2>/dev/null || true)"
+        runtime_ifname="$(jsonfilter -i "$runtime_file" -e "@.$requested_radio.interfaces[0].ifname" 2>/dev/null || true)"
+        rm -f "$runtime_file"
+        case "$runtime_up_value" in
+            true|1) runtime_up=true; runtime_state=up ;;
+            false|0) runtime_up=false; runtime_state=down ;;
+        esac
+        case "$runtime_pending_value" in true|1) runtime_pending=true ;; false|0) runtime_pending=false ;; esac
+        case "$runtime_failed_value" in true|1) runtime_state=error; runtime_reason=setup_failed ;; esac
+    fi
+    printf '{"state":"%s","reason":"%s","up":%s,"pending":%s,"ifname":"%s"}' \
+        "$runtime_state" "$runtime_reason" "$runtime_up" "$runtime_pending" "$(json_escape "$runtime_ifname")"
+}
+
+wifi_hardware_available() {
+    for phy_path in /sys/class/ieee80211/phy*; do
+        [ -e "$phy_path" ] && return 0
+    done
+    command -v iw >/dev/null 2>&1 && [ -n "$(iw phy 2>/dev/null | head -n 1)" ]
+}
+
 wifi_survey_json() {
     survey_interface="$1"
     if ! command -v iw >/dev/null 2>&1; then
@@ -137,7 +170,9 @@ wifi_supported_channels_json() {
     fi
     wiphy_index="$(iw dev "$channel_interface" info 2>/dev/null | awk '$1 == "wiphy" {print $2; exit}')"
     case "$wiphy_index" in ''|*[!0-9]*) printf '[]'; return 0 ;; esac
-    channel_values="$(iw phy "phy$wiphy_index" info 2>/dev/null | sed -n 's/.*\[\([0-9][0-9]*\)\].*/\1/p' | sort -nu)"
+    channel_values="$(iw phy "phy$wiphy_index" info 2>/dev/null \
+        | awk '/MHz \[[0-9]+\]/ && $0 !~ /disabled/ && $0 !~ /no IR/ { if (match($0, /\[[0-9]+\]/)) print substr($0, RSTART + 1, RLENGTH - 2) }' \
+        | sort -nu)"
     channels=""
     for supported_channel in $channel_values; do
         [ -n "$channels" ] && channels="$channels,"
@@ -147,6 +182,10 @@ wifi_supported_channels_json() {
 }
 
 wifi_status_json() {
+    if ! wifi_hardware_available; then
+        printf '{"available":false,"state":"unsupported","reason":"no_wifi_radio","radios":[],"stations":[]}'
+        return 0
+    fi
     radios=""
     index=0
     while uci -q get "wireless.@wifi-device[$index]" >/dev/null 2>&1; do
@@ -185,9 +224,16 @@ wifi_status_json() {
             fi
             iface_index=$((iface_index + 1))
         done
-        up=true
-        [ "$disabled" = "1" ] && up=false
-        radio="{\"id\":\"$name\",\"name\":\"$name\",\"up\":$up,\"disabled\":$( [ "$disabled" = "1" ] && printf true || printf false ),\"ssid\":[$ssids],\"interfaces\":[${interfaces}]"
+        runtime="$(wifi_radio_runtime_json "$name")"
+        runtime_file="/tmp/wrtmonitor-wifi-runtime-value-$$"
+        printf '%s' "$runtime" >"$runtime_file"
+        runtime_up="$(json_get_bool "$runtime_file" '@.up')"
+        rm -f "$runtime_file"
+        configured_enabled=true
+        [ "$disabled" = "1" ] && configured_enabled=false
+        up="$runtime_up"
+        [ -n "$up" ] || up="$configured_enabled"
+        radio="{\"id\":\"$name\",\"name\":\"$name\",\"up\":$up,\"configured_enabled\":$configured_enabled,\"disabled\":$( [ "$disabled" = "1" ] && printf true || printf false ),\"runtime\":$runtime,\"ssid\":[$ssids],\"interfaces\":[${interfaces}]"
         [ -n "$channel" ] && radio="$radio,\"channel\":\"$(json_escape "$channel")\""
         [ -n "$band" ] && radio="$radio,\"band\":\"$(json_escape "$band")\""
         country="$(uci -q get "wireless.@wifi-device[$index].country" 2>/dev/null || true)"
@@ -207,8 +253,8 @@ wifi_status_json() {
         index=$((index + 1))
     done
     if [ "$index" -gt 0 ]; then
-        printf '{"available":true,"radios":[%s],"stations":%s}' "$radios" "$(wifi_stations_json)"
+        printf '{"available":true,"state":"observed","reason":"","radios":[%s],"stations":%s}' "$radios" "$(wifi_stations_json)"
     else
-        printf '{"available":false,"radios":[],"stations":[]}'
+        printf '{"available":false,"state":"unsupported","reason":"no_wifi_radio","radios":[],"stations":[]}'
     fi
 }

@@ -75,6 +75,10 @@ class CommandResultRequest(BaseModel):
     result: CommandResult = Field(default_factory=dict)
 
 
+class WifiQrRequest(BaseModel):
+    iface: str = Field(min_length=1, max_length=80)
+
+
 class ClientUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, max_length=120)
     device_type: str | None = Field(default=None, max_length=24)

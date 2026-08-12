@@ -2067,6 +2067,33 @@
         "rollback": "configuration_backup"
       }
     },
+    "wifi.get_qr": {
+      "risk_level": "level_1_readonly",
+      "capability": "wifi.qr",
+      "requires_confirmation": false,
+      "secret_fields": [
+        "wifi_uri"
+      ],
+      "reliability": {
+        "subsystem": "wifi",
+        "idempotency": {
+          "strategy": "command_uuid_result_cache",
+          "semantic": true
+        },
+        "delivery": {
+          "timeout_seconds": 180,
+          "lease_seconds": 45,
+          "max_deliveries": 3
+        },
+        "post_condition": "result_payload",
+        "verification": {
+          "required": true,
+          "mode": "result_payload",
+          "fail_closed": true
+        },
+        "rollback": "not_required"
+      }
+    },
     "wifi.set_channel": {
       "risk_level": "level_3_reversible_config",
       "capability": "wifi.set_channel",

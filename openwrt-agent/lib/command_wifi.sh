@@ -4,12 +4,49 @@ handle_wifi_command() {
         wifi.status)
             result="$(wifi_status_json)"
             ;;
+        wifi.get_qr)
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
+            iface="$(json_get_string "$payload_file" '@.iface')"; rm -f "$payload_file"
+            resolved_iface="$(resolve_wifi_iface "$iface" "" || true)"
+            if ! wifi_hardware_available; then
+                status="failed"; result="$(command_failed_result "wifi radio is unavailable")"
+            elif [ -z "$resolved_iface" ]; then
+                status="failed"; result="$(command_failed_result "wifi interface not found")"
+            else
+                qr_ssid="$(uci -q get "wireless.$resolved_iface.ssid" 2>/dev/null || true)"
+                qr_encryption="$(uci -q get "wireless.$resolved_iface.encryption" 2>/dev/null || true)"
+                qr_key="$(uci -q get "wireless.$resolved_iface.key" 2>/dev/null || true)"
+                qr_hidden="$(uci -q get "wireless.$resolved_iface.hidden" 2>/dev/null || echo 0)"
+                qr_mode="$(uci -q get "wireless.$resolved_iface.mode" 2>/dev/null || true)"
+                qr_disabled="$(uci -q get "wireless.$resolved_iface.disabled" 2>/dev/null || echo 0)"
+                case "$qr_encryption" in
+                    none|'') qr_security=nopass ;;
+                    wep*) qr_security=WEP ;;
+                    *) qr_security=WPA ;;
+                esac
+                if [ "$qr_mode" != ap ] || [ "$qr_disabled" = 1 ]; then
+                    status="failed"; result="$(command_failed_result "wifi network is not active")"
+                elif [ -z "$qr_ssid" ]; then
+                    status="failed"; result="$(command_failed_result "wifi network has no SSID")"
+                elif [ "$qr_security" != nopass ] && [ -z "$qr_key" ]; then
+                    status="failed"; result="$(command_failed_result "wifi network key is unavailable")"
+                else
+                    qr_escape() { printf '%s' "$1" | sed 's/[\\;,:\"]/\\&/g'; }
+                    qr_password=""
+                    [ "$qr_security" = nopass ] || qr_password="P:$(qr_escape "$qr_key");"
+                    qr_uri="WIFI:T:$qr_security;S:$(qr_escape "$qr_ssid");${qr_password}H:$( [ "$qr_hidden" = 1 ] && printf true || printf false );;"
+                    result="$(command_success_result "Wi-Fi QR generated" "\"wifi_uri\":\"$(json_escape "$qr_uri")\",\"ssid\":\"$(json_escape "$qr_ssid")\",\"security\":\"$qr_security\"")"
+                    qr_key=; qr_password=; qr_uri=
+                fi
+            fi
+            ;;
         wifi.set_radio)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
-            radio="$(json_get_string "$payload_file" '@.radio')"; channel="$(json_get_string "$payload_file" '@.channel')"; country="$(json_get_string "$payload_file" '@.country')"; htmode="$(json_get_string "$payload_file" '@.htmode')"; txpower="$(json_get_number "$payload_file" '@.txpower')"; rm -f "$payload_file"
+            radio="$(json_get_string "$payload_file" '@.radio')"; enabled="$(json_get_bool "$payload_file" '@.enabled')"; channel="$(json_get_string "$payload_file" '@.channel')"; country="$(json_get_string "$payload_file" '@.country')"; htmode="$(json_get_string "$payload_file" '@.htmode')"; txpower="$(json_get_number "$payload_file" '@.txpower')"; rm -f "$payload_file"
             resolved_radio="$(resolve_wifi_radio "$radio" || true)"
             if [ -z "$resolved_radio" ]; then status="failed"; result="$(command_failed_result "wifi radio not found")"
             else
+                [ -z "$enabled" ] || uci set "wireless.$resolved_radio.disabled=$( [ "$enabled" = true ] && printf 0 || printf 1 )" || status="failed"
                 [ -z "$channel" ] || uci set "wireless.$resolved_radio.channel=$channel" || status="failed"
                 [ -z "$country" ] || uci set "wireless.$resolved_radio.country=$country" || status="failed"
                 [ -z "$htmode" ] || uci set "wireless.$resolved_radio.htmode=$htmode" || status="failed"

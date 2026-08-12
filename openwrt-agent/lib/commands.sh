@@ -11,7 +11,7 @@ execute_command() {
     recovery_mode="$(uci -q get "$CONFIG.recovery_mode" 2>/dev/null || echo 0)"
     if [ "$recovery_mode" = 1 ]; then
         case "$command_type" in
-            wifi.status|network.interfaces|diagnostics.run|maintenance.packages.refresh|maintenance.backup.create|maintenance.logs.read|maintenance.processes.read|maintenance.cron.read|maintenance.services.read|maintenance.diagnostics.bundle|maintenance.recovery.disable|agent.status) ;;
+            wifi.status|wifi.get_qr|network.interfaces|diagnostics.run|maintenance.packages.refresh|maintenance.backup.create|maintenance.logs.read|maintenance.processes.read|maintenance.cron.read|maintenance.services.read|maintenance.diagnostics.bundle|maintenance.recovery.disable|agent.status) ;;
             *)
                 result="$(command_failed_result "recovery mode blocks configuration changes")"
                 report_command_result "$command_id" failed "$result" >/dev/null || true
@@ -74,7 +74,12 @@ execute_command() {
     # Read-after-write is handled by the explicit post-condition above. Full
     # telemetry belongs to the next daemon cycle: running it here can stall the
     # command lifecycle or race a connectivity transaction helper.
-    report_command_result "$command_id" "$status" "$result" >/dev/null || true
+    if [ "$command_type" = wifi.get_qr ]; then
+        report_transient_command_result "$command_id" "$status" "$result" >/dev/null || true
+        result=; qr_key=; qr_uri=
+    else
+        report_command_result "$command_id" "$status" "$result" >/dev/null || true
+    fi
     if [ "$disconnect_after" = "1" ] && [ "$status" = "done" ]; then
         uci set "$CONFIG.enabled=0"
         uci commit wrtmonitor

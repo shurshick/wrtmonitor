@@ -1,5 +1,5 @@
 {
-  "command_count": 93,
+  "command_count": 94,
   "commands": [
     {
       "command": "agent.bash_script",
@@ -2244,6 +2244,36 @@
       },
       "rollback": "configuration_backup",
       "surface_equivalents": {}
+    },
+    {
+      "command": "wifi.get_qr",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.qr",
+      "risk": "level_1_readonly",
+      "confirmation": false,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": true
+      },
+      "timeout_seconds": 180,
+      "max_deliveries": 3,
+      "post_condition": "result_payload",
+      "verification": {
+        "required": true,
+        "mode": "result_payload",
+        "fail_closed": true
+      },
+      "rollback": "not_required",
+      "surface_equivalents": {
+        "android": "wifiQr(",
+        "web": "wifi-qr.svg"
+      }
     },
     {
       "command": "wifi.set_channel",

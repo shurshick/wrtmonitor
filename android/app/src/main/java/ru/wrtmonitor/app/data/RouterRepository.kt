@@ -21,6 +21,8 @@ import ru.wrtmonitor.app.api.dto.ClientActivityDto
 import ru.wrtmonitor.app.api.dto.ClientConfigureResultDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
+import ru.wrtmonitor.app.api.dto.WifiExperienceDto
+import ru.wrtmonitor.app.api.dto.WifiQrDto
 import ru.wrtmonitor.app.api.dto.DeviceEventDto
 import ru.wrtmonitor.app.api.dto.AutomationRuleDto
 import ru.wrtmonitor.app.api.dto.AutomationRunDto
@@ -52,6 +54,12 @@ class RouterRepository(
 
     suspend fun latestTelemetry(deviceId: String): ApiResult<TelemetryDto> =
         onIo { api.getLatestTelemetry(deviceId) }
+
+    suspend fun wifi(deviceId: String): ApiResult<WifiExperienceDto> =
+        onIo { api.getWifi(deviceId) }
+
+    suspend fun wifiQr(deviceId: String, iface: String): ApiResult<WifiQrDto> =
+        onIo { api.getWifiQr(deviceId, iface) }
 
     suspend fun managementOptions(deviceId: String): ApiResult<ManagementOptionsDto> =
         onIo { api.getManagementOptions(deviceId) }

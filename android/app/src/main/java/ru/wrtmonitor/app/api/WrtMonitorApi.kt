@@ -23,6 +23,11 @@ import ru.wrtmonitor.app.api.dto.ClientPolicyPresetDto
 import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
 import ru.wrtmonitor.app.api.dto.FirmwareImageDto
 import ru.wrtmonitor.app.api.dto.WifiRadioOptionDto
+import ru.wrtmonitor.app.api.dto.WifiExperienceDto
+import ru.wrtmonitor.app.api.dto.WifiNetworkDto
+import ru.wrtmonitor.app.api.dto.WifiQrDto
+import ru.wrtmonitor.app.api.dto.WifiRadioDto
+import ru.wrtmonitor.app.api.dto.WifiStationDto
 import ru.wrtmonitor.app.api.dto.DataStateDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.NotificationRuleDto
@@ -701,6 +706,22 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         (0 until array.length()).map { index -> parseCommand(array.getJSONObject(index)) }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
+    fun getWifi(deviceId: String): ApiResult<WifiExperienceDto> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/wifi")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        parseWifiExperience(JSONObject(response))
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getWifiQr(deviceId: String, iface: String): ApiResult<WifiQrDto> = runCatching {
+        val (status, response) = request(
+            "/api/v1/devices/$deviceId/wifi/qr", "POST", JSONObject().put("iface", iface)
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        JSONObject(response).let {
+            WifiQrDto(it.optString("ssid"), it.optString("security"), it.optString("wifi_uri"))
+        }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
     fun createCommand(
         deviceId: String,
         type: String,
@@ -906,6 +927,55 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
             statusCode = http?.statusCode,
             code = http?.code,
             cause = error,
+        )
+    }
+
+    private fun parseWifiExperience(json: JSONObject): WifiExperienceDto {
+        val radios = json.optJSONArray("radios") ?: JSONArray()
+        val networks = json.optJSONArray("networks") ?: JSONArray()
+        val stations = json.optJSONArray("stations") ?: JSONArray()
+        return WifiExperienceDto(
+            state = json.optString("state", "unsupported"),
+            reason = json.optString("reason"),
+            observedAt = json.optString("observed_at").takeIf(String::isNotBlank),
+            radios = (0 until radios.length()).map { index ->
+                val item = radios.getJSONObject(index)
+                val runtime = item.optJSONObject("runtime") ?: JSONObject()
+                val survey = item.optJSONObject("survey") ?: JSONObject()
+                val channels = item.optJSONArray("supported_channels") ?: JSONArray()
+                WifiRadioDto(
+                    id = item.optString("id"), name = item.optString("name"), band = item.optString("band"),
+                    channel = item.optString("channel", "auto"), country = item.optString("country"),
+                    htmode = item.optString("htmode"), txpower = item.optString("txpower"),
+                    configuredEnabled = item.optBoolean("configured_enabled", true),
+                    runtimeState = runtime.optString("state", "unsupported"),
+                    runtimeReason = runtime.optString("reason"),
+                    runtimeUp = runtime.opt("up").takeUnless { it == null || it == JSONObject.NULL } as? Boolean,
+                    runtimePending = runtime.opt("pending").takeUnless { it == null || it == JSONObject.NULL } as? Boolean,
+                    supportedChannels = (0 until channels.length()).map { channels.optString(it) },
+                    surveyUtilization = survey.optInt("utilization_percent").takeUnless { survey.isNull("utilization_percent") },
+                    surveyNoise = survey.optInt("noise_dbm").takeUnless { survey.isNull("noise_dbm") },
+                )
+            },
+            networks = (0 until networks.length()).map { index ->
+                val item = networks.getJSONObject(index)
+                WifiNetworkDto(
+                    id = item.optString("id"), radioId = item.optString("radio_id"), band = item.optString("band"),
+                    ssid = item.optString("ssid"), enabled = item.optBoolean("enabled"), encryption = item.optString("encryption"),
+                    network = item.optString("network"), role = item.optString("role"), hidden = item.optBoolean("hidden"),
+                    isolate = item.optBoolean("isolate"), stationCount = item.optInt("station_count"),
+                )
+            },
+            stations = (0 until stations.length()).map { index ->
+                val item = stations.getJSONObject(index)
+                WifiStationDto(
+                    mac = item.optString("mac"), interfaceName = item.optString("interface"), ssid = item.optString("ssid"),
+                    band = item.optString("band"), signal = item.optInt("signal").takeUnless { item.isNull("signal") },
+                    noise = item.optInt("noise").takeUnless { item.isNull("noise") },
+                    rxBitrate = item.opt("rx_bitrate")?.takeUnless { it == JSONObject.NULL }?.toString(),
+                    txBitrate = item.opt("tx_bitrate")?.takeUnless { it == JSONObject.NULL }?.toString(),
+                )
+            },
         )
     }
 

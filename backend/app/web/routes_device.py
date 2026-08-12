@@ -274,6 +274,7 @@ def device_page(
         "wifi_roaming": has("wifi.roaming"),
         "wifi_mesh": has("wifi.mesh"),
         "wifi_stations": has("telemetry.wifi.stations"),
+        "wifi_qr": has("wifi.qr"),
         "client_traffic": has("telemetry.clients.traffic"),
         "system_timezone": has("system.set_timezone"),
         "system_ntp": has("system.set_ntp"),

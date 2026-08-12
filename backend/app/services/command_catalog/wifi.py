@@ -8,6 +8,12 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": False,
         "secret_fields": [],
     },
+    "wifi.get_qr": {
+        "risk_level": "level_1_readonly",
+        "capability": "wifi.qr",
+        "requires_confirmation": False,
+        "secret_fields": ["wifi_uri"],
+    },
     "wifi.set_enabled": {
         "risk_level": "level_3_reversible_config",
         "capability": "wifi.enable",

@@ -13,6 +13,7 @@ def test_wifi_v060_command_contracts():
         "wifi.set_radio",
         {
             "radio": "radio0",
+            "enabled": True,
             "channel": "36",
             "country": "ru",
             "htmode": "he80",
@@ -20,6 +21,7 @@ def test_wifi_v060_command_contracts():
         },
     ) == {
         "radio": "radio0",
+        "enabled": True,
         "channel": "36",
         "country": "RU",
         "htmode": "HE80",
@@ -198,3 +200,103 @@ def test_wifi_radio_survey_is_normalized_without_inventing_metrics():
     }
     assert summary["radios"][1]["survey"]["state"] == "unsupported"
     assert summary["radios"][1]["survey"]["utilization_percent"] is None
+
+
+def test_wifi_contract_preserves_runtime_channels_and_network_roles():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "available": True,
+                "state": "observed",
+                "radios": [
+                    {
+                        "id": "radio1",
+                        "band": "5g",
+                        "configured_enabled": True,
+                        "runtime": {
+                            "state": "up",
+                            "up": True,
+                            "pending": False,
+                            "ifname": "phy1-ap0",
+                        },
+                        "supported_channels": ["auto", "36", "40"],
+                        "interfaces": [
+                            {
+                                "id": "default_radio1",
+                                "ssid": "HomeNET",
+                                "mode": "ap",
+                                "network": "lan",
+                                "enabled": True,
+                            },
+                            {
+                                "id": "guest_radio1",
+                                "ssid": "Guest",
+                                "mode": "ap",
+                                "network": "guest",
+                                "isolate": True,
+                                "enabled": True,
+                            },
+                        ],
+                    }
+                ],
+                "stations": [],
+            }
+        }
+    )
+    radio = summary["radios"][0]
+    assert radio["runtime"]["ifname"] == "phy1-ap0"
+    assert radio["supported_channels"] == ["auto", "36", "40"]
+    assert [item["role"] for item in summary["networks"]] == [
+        "primary",
+        "guest",
+    ]
+
+
+def test_wifi_contract_marks_router_without_radio_as_unsupported():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "available": False,
+                "state": "unsupported",
+                "reason": "no_wifi_radio",
+                "radios": [],
+                "stations": [],
+            }
+        }
+    )
+    assert summary["state"] == "unsupported"
+    assert summary["reason"] == "no_wifi_radio"
+    assert summary["radios"] == []
+    assert summary["networks"] == []
+
+
+def test_wifi_station_count_does_not_duplicate_same_ssid_across_bands():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "available": True,
+                "radios": [
+                    {
+                        "id": "radio0",
+                        "band": "2g",
+                        "interfaces": [{"id": "ap2", "mode": "ap", "ssid": "Home"}],
+                    },
+                    {
+                        "id": "radio1",
+                        "band": "5g",
+                        "interfaces": [{"id": "ap5", "mode": "ap", "ssid": "Home"}],
+                    },
+                ],
+                "stations": [
+                    {
+                        "interface": "phy1-ap0",
+                        "ssid": "Home",
+                        "band": "5g",
+                        "clients": {"00:11:22:33:44:55": {"signal": -48}},
+                    }
+                ],
+            }
+        }
+    )
+
+    assert [item["station_count"] for item in summary["networks"]] == [0, 1]

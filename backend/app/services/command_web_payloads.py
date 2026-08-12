@@ -104,6 +104,7 @@ def build_command_payload_from_web_form(
     elif command_type == "wifi.set_radio":
         payload = {
             "radio": radio,
+            "enabled": enabled.lower() == "true",
             "channel": channel,
             "country": country,
             "htmode": htmode,

@@ -1,3 +1,6 @@
+import asyncio
+from io import BytesIO
+
 from fastapi import APIRouter
 from .route_shared import (
     ALLOWED_COMMANDS,
@@ -31,11 +34,65 @@ from .route_shared import (
     require_web_csrf,
     select,
     settings,
+    segno,
     validate_command_request,
     web_user_from_session,
 )
 
 router = APIRouter()
+
+
+@router.post("/devices/{device_id}/wifi-qr.svg")
+async def web_wifi_qr(
+    device_id: UUID,
+    iface: str = Form(...),
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> Response:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    get_user_device_or_404(db, user, device_id)
+    payload = validate_command_request(
+        command_type="wifi.get_qr",
+        payload={"iface": iface},
+        confirmed=True,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    command = create_device_command(
+        db,
+        device_id=device_id,
+        command_type="wifi.get_qr",
+        payload=payload,
+        created_by=user.id,
+        source="web",
+    )
+    db.commit()
+    from ..services.wifi_qr_broker import consume_wifi_qr_result
+
+    for _ in range(120):
+        result = consume_wifi_qr_result(command.id)
+        if result is not None:
+            wifi_uri = result.get("wifi_uri")
+            if not isinstance(wifi_uri, str) or not wifi_uri.startswith("WIFI:"):
+                raise HTTPException(
+                    status_code=422,
+                    detail=str(result.get("error") or "Wi-Fi QR is unavailable"),
+                )
+            image = BytesIO()
+            segno.make(wifi_uri, error="m").save(
+                image, kind="svg", scale=7, border=2, xmldecl=False
+            )
+            return Response(
+                content=image.getvalue(),
+                media_type="image/svg+xml",
+                headers={"Cache-Control": "no-store, private"},
+            )
+        await asyncio.sleep(0.25)
+    raise HTTPException(status_code=504, detail="Router did not return Wi-Fi QR")
 
 
 @router.get("/devices/{device_id}/commands/{command_id}/download/{kind}")

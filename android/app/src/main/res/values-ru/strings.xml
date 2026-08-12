@@ -85,6 +85,12 @@
     <string name="seconds_value">%1$d сек</string>
     <string name="select_router_hint">Сначала откройте карточку нужного роутера.</string>
     <string name="wifi_unavailable">Wi-Fi модуль не обнаружен</string>
+    <string name="wifi_no_radio_explanation">На этом роутере нет беспроводного радиомодуля</string>
+    <string name="wifi_no_empty_controls">Настройки Wi-Fi скрыты, потому что устройство их не поддерживает.</string>
+    <string name="wifi_show_qr">Показать QR</string>
+    <string name="wifi_qr_private_hint">Отсканируйте другим устройством. Пароль читается с роутера один раз и не сохраняется на сервере.</string>
+    <string name="wifi_clients_count">Клиентов: %1$d</string>
+    <string name="close">Закрыть</string>
     <string name="wifi_enabled">Wi-Fi включён</string>
     <string name="apply_ssid">Применить SSID</string>
     <string name="command_queued">Команда поставлена в очередь. Роутер выполнит её при следующей проверке связи.</string>

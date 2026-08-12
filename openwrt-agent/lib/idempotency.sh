@@ -63,3 +63,12 @@ report_command_result() {
     fi
     return 1
 }
+
+report_transient_command_result() {
+    command_id="$1"
+    status="$2"
+    result="${3:-}"
+    [ -n "$result" ] || result="{}"
+    body="{\"status\":\"$(json_escape "$status")\",\"result\":$result}"
+    api POST "/api/v1/agent/commands/$command_id/result" "$body"
+}

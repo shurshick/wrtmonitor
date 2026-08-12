@@ -15,7 +15,7 @@ private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 internal object SharedHttpClient {
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(35, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()

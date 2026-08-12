@@ -15,7 +15,7 @@ def test_android_exposes_current_management_contract() -> None:
         if "android" in row.get("surface_exclusions", {})
     }
 
-    assert matrix["command_count"] == 93
+    assert matrix["command_count"] == 94
     assert all(row["surfaces"]["web"] for row in matrix["commands"])
     assert android_exclusions == {"agent.bash_script", "agent.ssh_session"}
     assert all(

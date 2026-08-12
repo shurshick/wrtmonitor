@@ -21,6 +21,7 @@ from ..services.devices import (
 from ..services.management_options import build_management_options
 from ..services.firmware_catalog import firmware_catalog
 from ..services.hardware_catalog import hardware_report
+from ..services.telemetry import normalize_wifi_summary
 from ..schemas import DeviceProvisionRequest
 from ..security import hash_token
 
@@ -179,6 +180,22 @@ def get_device_management_options(
     get_user_device_or_404(db, user, device_id)
     telemetry = latest_device_telemetry(db, device_id)
     return build_management_options(telemetry.payload if telemetry else {})
+
+
+@router.get("/{device_id}/wifi")
+def get_device_wifi(
+    device_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    get_user_device_or_404(db, user, device_id)
+    telemetry = latest_device_telemetry(db, device_id)
+    summary = normalize_wifi_summary(telemetry.payload if telemetry else {})
+    return {
+        "device_id": str(device_id),
+        "observed_at": telemetry.created_at.isoformat() if telemetry else None,
+        **summary,
+    }
 
 
 @router.get("/{device_id}/firmware-catalog")

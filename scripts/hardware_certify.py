@@ -358,6 +358,7 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
         "wifi.set_country": {"radio": f["radio"], "country": f["wifi_country"]},
         "wifi.set_radio": {
             "radio": f["radio"],
+            "enabled": True,
             "channel": f["wifi_channel"],
             "country": f["wifi_country"],
             "htmode": f["wifi_htmode"],

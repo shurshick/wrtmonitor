@@ -45,6 +45,7 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 }
             )
     normalized_radios: list[dict[str, Any]] = []
+    normalized_networks: list[dict[str, Any]] = []
     for radio in radios:
         if not isinstance(radio, dict):
             continue
@@ -53,31 +54,64 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
         for iface in interfaces:
             if not isinstance(iface, dict):
                 continue
-            normalized_interfaces.append(
+            network_name = str(iface.get("network") or "")
+            mode = str(iface.get("mode") or "")
+            isolate = bool(iface.get("isolate", False))
+            role = (
+                "mesh"
+                if mode == "mesh"
+                else "guest"
+                if isolate or "guest" in network_name.lower()
+                else "primary"
+                if mode == "ap" and network_name == "lan"
+                else "additional"
+            )
+            normalized_iface = {
+                "id": iface.get("id"),
+                "index": iface.get("index"),
+                "ssid": iface.get("ssid"),
+                "enabled": iface.get("enabled"),
+                "encryption": iface.get("encryption"),
+                "mode": mode,
+                "network": network_name,
+                "role": role,
+                "hidden": iface.get("hidden"),
+                "isolate": iface.get("isolate"),
+                "ieee80211r": iface.get("ieee80211r"),
+                "ieee80211k": iface.get("ieee80211k"),
+                "bss_transition": iface.get("bss_transition"),
+                "mobility_domain": iface.get("mobility_domain"),
+                "mesh_id": iface.get("mesh_id"),
+            }
+            normalized_interfaces.append(normalized_iface)
+            normalized_networks.append(
                 {
-                    "id": iface.get("id"),
-                    "index": iface.get("index"),
-                    "ssid": iface.get("ssid"),
-                    "enabled": iface.get("enabled"),
-                    "encryption": iface.get("encryption"),
-                    "mode": iface.get("mode"),
-                    "network": iface.get("network"),
-                    "hidden": iface.get("hidden"),
-                    "isolate": iface.get("isolate"),
-                    "ieee80211r": iface.get("ieee80211r"),
-                    "ieee80211k": iface.get("ieee80211k"),
-                    "bss_transition": iface.get("bss_transition"),
-                    "mobility_domain": iface.get("mobility_domain"),
-                    "mesh_id": iface.get("mesh_id"),
+                    **normalized_iface,
+                    "radio_id": radio.get("id") or radio.get("name"),
+                    "band": radio.get("band"),
                 }
             )
         survey = radio.get("survey") if isinstance(radio.get("survey"), dict) else {}
+        runtime = radio.get("runtime") if isinstance(radio.get("runtime"), dict) else {}
+        supported_channels = radio.get("supported_channels") or []
+        if not isinstance(supported_channels, list):
+            supported_channels = []
         normalized_radios.append(
             {
                 "id": radio.get("id") or radio.get("name"),
                 "name": radio.get("name"),
                 "up": radio.get("up"),
+                "configured_enabled": radio.get(
+                    "configured_enabled", not bool(radio.get("disabled", False))
+                ),
                 "disabled": radio.get("disabled"),
+                "runtime": {
+                    "state": str(runtime.get("state") or "unsupported"),
+                    "reason": str(runtime.get("reason") or ""),
+                    "up": runtime.get("up"),
+                    "pending": runtime.get("pending"),
+                    "ifname": runtime.get("ifname"),
+                },
                 "band": radio.get("band"),
                 "channel": radio.get("channel"),
                 "country": radio.get("country"),
@@ -87,6 +121,7 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "ssid": radio.get("ssid"),
                 "encryption": radio.get("encryption"),
                 "schedule": radio.get("schedule"),
+                "supported_channels": [str(item) for item in supported_channels],
                 "survey": {
                     "state": str(survey.get("state") or "unsupported"),
                     "reason": str(survey.get("reason") or ""),
@@ -113,9 +148,35 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
         item.get("airtime_rx_us") is not None or item.get("airtime_tx_us") is not None
         for item in normalized_stations
     )
+    for network in normalized_networks:
+        network["station_count"] = sum(
+            1
+            for station in normalized_stations
+            if (
+                network.get("ssid")
+                and station.get("ssid") == network.get("ssid")
+                and (
+                    not station.get("band")
+                    or not network.get("band")
+                    or station.get("band") == network.get("band")
+                )
+            )
+        )
+    available = wifi.get("available")
+    state = str(
+        wifi.get("state")
+        or ("observed" if available is True or normalized_radios else "unsupported")
+    )
+    reason = str(
+        wifi.get("reason") or ("no_wifi_radio" if state == "unsupported" else "")
+    )
     return {
-        "available": wifi.get("available"),
+        "available": available,
+        "state": state,
+        "reason": reason,
         "radios": normalized_radios,
+        "networks": normalized_networks,
+        "network_count": len(normalized_networks),
         "stations": normalized_stations,
         "station_count": len(normalized_stations) if "stations" in wifi else None,
         "has_station_rates": has_station_rates if "stations" in wifi else None,

@@ -843,6 +843,12 @@ html[data-theme="light"] .resource-gauge { background: conic-gradient(var(--gaug
 .encrypted-dns-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
 .encrypted-dns-grid > section { border: 1px solid var(--border); padding: 16px; }
 
+.wifi-qr-dialog { width: min(420px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.wifi-qr-dialog::backdrop { background: rgba(2, 8, 16, .78); }
+.wifi-qr-dialog__content { display: grid; justify-items: center; gap: 16px; padding: 24px; text-align: center; }
+.wifi-qr-dialog__content h2, .wifi-qr-dialog__content p { margin: 0; }
+.wifi-qr-dialog__content img { width: min(300px, 75vw); aspect-ratio: 1; padding: 10px; background: #fff; }
+
 .terminal-card { padding: 0; overflow: hidden; }
 .terminal-card__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 22px 24px; border-bottom: 1px solid var(--border); }
 .terminal-card__heading h2, .terminal-card__heading p { margin-bottom: 0; }

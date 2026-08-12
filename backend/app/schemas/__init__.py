@@ -12,6 +12,7 @@ from .requests import (
     MobilePairingExchangeRequest,
     SetupRequest,
     TelemetryRequest,
+    WifiQrRequest,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "MobilePairingExchangeRequest",
     "SetupRequest",
     "TelemetryRequest",
+    "WifiQrRequest",
 ]

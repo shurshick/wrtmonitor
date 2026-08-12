@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="18"
+CAPABILITIES_VERSION="19"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -8,7 +8,7 @@ capability_keys() {
     printf '%s\n' \
         agent.status agent.update agent.set_interval agent.rotate_token agent.rollback agent.disable agent.dependencies agent.long_poll agent.ssh_session agent.bash_script config.transaction \
         telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.wifi.stations telemetry.clients telemetry.clients.traffic telemetry.services \
-        wifi.read wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
+        wifi.read wifi.qr wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
         wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
         network.ipv6.configure network.segments.configure network.vlan.configure network.multiwan.configure network.routes.configure network.ddns.configure \
@@ -82,6 +82,10 @@ has_uci_config() {
 has_wifi_radio() {
     has_uci_config wireless || return 1
     uci -q get 'wireless.@wifi-device[0]' >/dev/null 2>&1
+    for phy_path in /sys/class/ieee80211/phy*; do
+        [ -e "$phy_path" ] && return 0
+    done
+    has_commands iw && [ -n "$(iw phy 2>/dev/null | head -n 1)" ]
 }
 
 has_wifi_iface() {
@@ -158,6 +162,7 @@ capability_supported() {
         telemetry.clients|clients.read) has_commands ip || [ -r "$(capability_path /tmp/dhcp.leases)" ] ;;
         telemetry.clients.traffic) has_client_traffic ;;
         telemetry.services) [ -d "$(capability_path /etc/init.d)" ] ;;
+        wifi.qr) has_wifi_radio && has_wifi_iface ;;
         wifi.enable|wifi.disable|wifi.set_channel|wifi.set_country) has_wifi_radio && has_commands wifi ;;
         wifi.set_ssid|wifi.set_password) has_wifi_iface && has_commands wifi ;;
         wifi.guest) has_wifi_iface && has_network_write && has_dhcp_write && has_firewall_write && has_commands wifi ;;

@@ -85,6 +85,12 @@
     <string name="seconds_value">%1$d sec</string>
     <string name="select_router_hint">Open a router card first to use this section.</string>
     <string name="wifi_unavailable">No Wi-Fi radio detected</string>
+    <string name="wifi_no_radio_explanation">This router has no wireless radio</string>
+    <string name="wifi_no_empty_controls">Wi-Fi controls are hidden because the feature is unsupported on this device.</string>
+    <string name="wifi_show_qr">Show QR</string>
+    <string name="wifi_qr_private_hint">Scan with another device. The password is read once from the router and is not stored on the server.</string>
+    <string name="wifi_clients_count">Clients: %1$d</string>
+    <string name="close">Close</string>
     <string name="wifi_enabled">Wi-Fi enabled</string>
     <string name="apply_ssid">Apply SSID</string>
     <string name="command_queued">Command queued. The router will apply it on the next check-in.</string>

@@ -34,5 +34,9 @@
   "wifi.status": {
     "android": "wifi.status",
     "web": "normalize_wifi_summary"
+  },
+  "wifi.get_qr": {
+    "android": "wifiQr(",
+    "web": "wifi-qr.svg"
   }
 }

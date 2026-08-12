@@ -77,6 +77,8 @@ def validate_command_payload(
     normalized_payload = dict(payload or {})
     if command_type == "wifi.set_enabled":
         return _normalize_wifi_enabled_payload(normalized_payload)
+    if command_type == "wifi.get_qr":
+        return {"iface": _wifi_selector(normalized_payload, "iface")}
     if command_type == "wifi.set_ssid":
         return _normalize_wifi_ssid_payload(normalized_payload)
     if command_type == "wifi.set_password":

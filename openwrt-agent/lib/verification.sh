@@ -7,7 +7,7 @@ verify_uci_value() {
 
 postcondition_mode_for_command() {
     case "$1" in
-        diagnostics.run|maintenance.backup.create|maintenance.cron.read|maintenance.diagnostics.bundle|maintenance.logs.read|maintenance.packages.refresh|maintenance.processes.read|maintenance.services.read|network.interfaces|vpn.openvpn.export_client|vpn.wireguard.export_peer|wifi.status)
+        diagnostics.run|maintenance.backup.create|maintenance.cron.read|maintenance.diagnostics.bundle|maintenance.logs.read|maintenance.packages.refresh|maintenance.processes.read|maintenance.services.read|network.interfaces|vpn.openvpn.export_client|vpn.wireguard.export_peer|wifi.status|wifi.get_qr)
             printf result_payload ;;
         agent.disconnect|agent.rollback|agent.update|maintenance.backup.restore|maintenance.sysupgrade.apply|network.interface_restart|network.restart|router.reboot)
             printf service_or_connectivity_state ;;

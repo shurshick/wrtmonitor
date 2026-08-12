@@ -112,6 +112,8 @@ def _wifi_key(payload: dict[str, Any], encryption: str, *, required: bool) -> st
 
 def _normalize_wifi_radio_payload(payload: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {"radio": _wifi_selector(payload, "radio")}
+    if "enabled" in payload:
+        result["enabled"] = _boolean(payload, "enabled")
     channel = _optional_string(payload, "channel")
     if channel:
         result.update(
