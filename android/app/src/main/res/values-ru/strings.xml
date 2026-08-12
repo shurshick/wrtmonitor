@@ -255,6 +255,9 @@
     <string name="client_type_iot">Умное устройство</string>
     <string name="client_activity">Последняя активность</string>
     <string name="client_activity_empty">История появится после смены состояния подключения.</string>
+    <string name="client_traffic_samples">Последние интервалы: %1$d</string>
+    <string name="forget_client">Удалить запись устройства</string>
+    <string name="forget_client_warning">Будут удалены сохранённое имя, правила и локальная история. Активное устройство может появиться снова после следующего опроса роутера.</string>
     <string name="client_priority_limits">Приоритет и лимиты</string>
     <string name="client_source">Источник</string>
     <string name="static_lease">Статическая DHCP-выдача</string>

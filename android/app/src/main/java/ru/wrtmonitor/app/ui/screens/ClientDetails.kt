@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,6 +57,8 @@ import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
+import ru.wrtmonitor.app.api.dto.ClientTrafficPointDto
+import ru.wrtmonitor.app.api.dto.ClientActivityDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
@@ -80,6 +83,8 @@ import java.util.Locale
 @Composable
 internal fun ClientDetails(
     client: NetworkClientDto,
+    trafficPoints: List<ClientTrafficPointDto>,
+    activity: List<ClientActivityDto>,
     profiles: List<ClientProfileDto>,
     canManagePolicy: Boolean,
     canSetLease: Boolean,
@@ -88,7 +93,9 @@ internal fun ClientDetails(
     onSave: (String, String, String?, JsonObject) -> Unit,
     onSetLease: (String, String) -> Unit,
     onDeleteLease: () -> Unit,
+    onDeleteClient: () -> Unit,
 ) {
+    var confirmDelete by remember(client.id) { mutableStateOf(false) }
     val policy = client.effectivePolicy
     val schedule = policy.optJsonObject("schedule") ?: JsonObject()
     val qos = policy.optJsonObject("qos") ?: JsonObject()
@@ -300,16 +307,28 @@ internal fun ClientDetails(
         val traffic = client.traffic
         InfoRow(stringResource(R.string.traffic_received), formatClientBytes(traffic?.optLong("rx_bytes") ?: 0))
         InfoRow(stringResource(R.string.traffic_sent), formatClientBytes(traffic?.optLong("tx_bytes") ?: 0))
+        if (trafficPoints.isNotEmpty()) {
+            Text(
+                stringResource(R.string.client_traffic_samples, trafficPoints.size),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            trafficPoints.takeLast(8).asReversed().forEach { point ->
+                InfoRow(
+                    formatClientDate(point.createdAt),
+                    "RX ${formatClientBytes(point.rxDelta)} · TX ${formatClientBytes(point.txDelta)}",
+                )
+            }
+        }
     }
 
     SectionCard(stringResource(R.string.client_activity)) {
-        if (client.recentActivity.isEmpty()) {
+        if (activity.isEmpty()) {
             Text(
                 stringResource(R.string.client_activity_empty),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            client.recentActivity.forEachIndexed { index, event ->
+            activity.forEachIndexed { index, event ->
                 InfoRow(
                     when (event.state) {
                         "online" -> stringResource(R.string.online)
@@ -330,7 +349,7 @@ internal fun ClientDetails(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (index < client.recentActivity.lastIndex) HorizontalDivider()
+                if (index < activity.lastIndex) HorizontalDivider()
             }
         }
     }
@@ -351,6 +370,27 @@ internal fun ClientDetails(
                         .put("qos", JsonObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0))
                         .put("dns", JsonObject().put("provider", dnsProvider).put("blocked_domains", JsonArray())),
                 )
+            },
+        )
+    }
+
+    TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.forget_client), color = MaterialTheme.colorScheme.error)
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.forget_client)) },
+            text = { Text(stringResource(R.string.forget_client_warning)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    onDeleteClient()
+                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

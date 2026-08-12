@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -77,6 +77,66 @@ def get_client(db: Session, device_id: UUID, client_id: UUID) -> NetworkClient:
     if not client or client.device_id != device_id:
         raise HTTPException(status_code=404, detail="Client not found")
     return client
+
+
+def _update_client_record(
+    db: Session,
+    device_id: UUID,
+    client: NetworkClient,
+    payload: ClientUpdateRequest,
+) -> None:
+    if "profile_id" in payload.model_fields_set:
+        if payload.profile_id is None:
+            client.profile_id = None
+        else:
+            profile = db.get(ClientProfile, payload.profile_id)
+            if not profile or profile.device_id != device_id:
+                raise HTTPException(
+                    status_code=422, detail="Profile does not belong to this router"
+                )
+            client.profile_id = profile.id
+    if payload.display_name is not None:
+        client.display_name = payload.display_name.strip() or None
+    if payload.device_type is not None:
+        selected_type = validate_device_type(payload.device_type)
+        if selected_type == "unknown":
+            client.device_type = infer_device_type(
+                client.display_name, client.hostname, client.vendor
+            )
+            client.device_type_source = "automatic"
+        else:
+            client.device_type = selected_type
+            client.device_type_source = "user"
+    if payload.policy is not None:
+        client.policy = (
+            {}
+            if client.profile_id is not None and not payload.policy
+            else validate_client_policy(payload.policy)
+        )
+    client.updated_at = datetime.now(UTC)
+
+
+def _queue_client_policy(
+    db: Session,
+    device_id: UUID,
+    client: NetworkClient,
+    user: User,
+    source: str,
+):
+    normalized = validate_command_request(
+        command_type="client.set_policy",
+        payload={"mac": client.mac, **effective_policy(db, client)},
+        confirmed=True,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    return create_device_command(
+        db,
+        device_id=device_id,
+        command_type="client.set_policy",
+        payload=normalized,
+        created_by=user.id,
+        source=source,
+    )
 
 
 def _enrich_client(
@@ -178,31 +238,7 @@ def update_client(
 ) -> dict:
     get_user_device_or_404(db, user, device_id)
     client = get_client(db, device_id, client_id)
-    if "profile_id" in payload.model_fields_set:
-        if payload.profile_id is None:
-            client.profile_id = None
-        else:
-            profile = db.get(ClientProfile, payload.profile_id)
-            if not profile or profile.device_id != device_id:
-                raise HTTPException(
-                    status_code=422, detail="Profile does not belong to this router"
-                )
-            client.profile_id = profile.id
-    if payload.display_name is not None:
-        client.display_name = payload.display_name.strip() or None
-    if payload.device_type is not None:
-        selected_type = validate_device_type(payload.device_type)
-        if selected_type == "unknown":
-            client.device_type = infer_device_type(
-                client.display_name, client.hostname, client.vendor
-            )
-            client.device_type_source = "automatic"
-        else:
-            client.device_type = selected_type
-            client.device_type_source = "user"
-    if payload.policy is not None:
-        client.policy = validate_client_policy(payload.policy)
-    client.updated_at = datetime.now(UTC)
+    _update_client_record(db, device_id, client, payload)
     audit(
         db,
         user.id,
@@ -213,6 +249,38 @@ def update_client(
     )
     db.commit()
     return client_response(db, client)
+
+
+@router.post("/{device_id}/clients/{client_id}/configure")
+def configure_client(
+    device_id: UUID,
+    client_id: UUID,
+    payload: ClientUpdateRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Persist client settings and queue their router policy atomically."""
+    get_user_device_or_404(db, user, device_id)
+    client = get_client(db, device_id, client_id)
+    _update_client_record(db, device_id, client, payload)
+    command = _queue_client_policy(db, device_id, client, user, "api")
+    audit(
+        db,
+        user.id,
+        "client.configure",
+        "network_client",
+        str(client.id),
+        {"mac": client.mac, "command_id": str(command.id)},
+    )
+    db.commit()
+    telemetry = latest_device_telemetry(db, device_id)
+    return {
+        "client": _enrich_client(
+            client_response(db, client), telemetry.payload if telemetry else {}
+        ),
+        "command_id": str(command.id),
+        "status": command.status,
+    }
 
 
 @router.get("/{device_id}/clients/{client_id}/activity")
@@ -289,21 +357,7 @@ def apply_policy(
 ) -> dict[str, str]:
     get_user_device_or_404(db, user, device_id)
     client = get_client(db, device_id, client_id)
-    payload = {"mac": client.mac, **effective_policy(db, client)}
-    normalized = validate_command_request(
-        command_type="client.set_policy",
-        payload=payload,
-        confirmed=True,
-        device_supports=lambda capability: device_supports(db, device_id, capability),
-    )
-    command = create_device_command(
-        db,
-        device_id=device_id,
-        command_type="client.set_policy",
-        payload=normalized,
-        created_by=user.id,
-        source="api",
-    )
+    command = _queue_client_policy(db, device_id, client, user, "api")
     audit(
         db,
         user.id,
@@ -314,6 +368,35 @@ def apply_policy(
     )
     db.commit()
     return {"command_id": str(command.id), "status": command.status}
+
+
+@router.delete("/{device_id}/clients/{client_id}")
+def delete_client(
+    device_id: UUID,
+    client_id: UUID,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """Forget a client and its local history; active clients may be observed again."""
+    get_user_device_or_404(db, user, device_id)
+    client = get_client(db, device_id, client_id)
+    audit(
+        db,
+        user.id,
+        "client.delete",
+        "network_client",
+        str(client.id),
+        {"mac": client.mac},
+    )
+    db.execute(
+        delete(ClientTrafficSample).where(ClientTrafficSample.client_id == client.id)
+    )
+    db.execute(
+        delete(ClientActivityEvent).where(ClientActivityEvent.client_id == client.id)
+    )
+    db.delete(client)
+    db.commit()
+    return {"status": "deleted"}
 
 
 @router.get("/{device_id}/client-profiles")

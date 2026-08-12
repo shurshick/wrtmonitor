@@ -54,6 +54,8 @@ import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
+import ru.wrtmonitor.app.api.dto.ClientTrafficPointDto
+import ru.wrtmonitor.app.api.dto.ClientActivityDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
@@ -103,6 +105,9 @@ fun ClientsControlScreen(
     var profiles by remember(device.id) { mutableStateOf<List<ClientProfileDto>>(emptyList()) }
     var view by rememberSaveable(device.id) { mutableStateOf(ClientsView.List) }
     var selectedClientId by rememberSaveable(device.id) { mutableStateOf<String?>(null) }
+    var selectedClientDetails by remember(device.id) { mutableStateOf<NetworkClientDto?>(null) }
+    var selectedClientTraffic by remember(device.id) { mutableStateOf<List<ClientTrafficPointDto>>(emptyList()) }
+    var selectedClientActivity by remember(device.id) { mutableStateOf<List<ClientActivityDto>>(emptyList()) }
     var search by rememberSaveable(device.id) { mutableStateOf("") }
     var filter by rememberSaveable(device.id) { mutableStateOf(ClientsFilter.All) }
     var profileName by remember(device.id) { mutableStateOf("") }
@@ -202,7 +207,7 @@ fun ClientsControlScreen(
     ) {
         scope.launch {
             val storedPolicy = if (profileId == null) policy else JsonObject()
-            when (val update = repository.updateClient(
+            when (val update = repository.configureClient(
                 device.id,
                 client.id,
                 name,
@@ -210,16 +215,11 @@ fun ClientsControlScreen(
                 profileId,
                 storedPolicy,
             )) {
-                is ApiResult.Success -> when (val apply = repository.applyClientPolicy(device.id, client.id)) {
-                    is ApiResult.Success -> {
-                        message = commandQueued
-                        messageIsError = false
-                        refresh()
-                    }
-                    is ApiResult.Error -> if (apply.isUnauthorized()) onSessionExpired() else {
-                        message = apply.message
-                        messageIsError = true
-                    }
+                is ApiResult.Success -> {
+                    selectedClientDetails = update.data
+                    message = commandQueued
+                    messageIsError = false
+                    refresh()
                 }
                 is ApiResult.Error -> if (update.isUnauthorized()) onSessionExpired() else {
                     message = update.message
@@ -233,13 +233,44 @@ fun ClientsControlScreen(
     BackHandler(view != ClientsView.List) {
         view = ClientsView.List
         selectedClientId = null
+        selectedClientDetails = null
+        selectedClientTraffic = emptyList()
+        selectedClientActivity = emptyList()
     }
 
     val capabilities = telemetry?.agent?.capabilities ?: emptyMap()
-    val selectedClient = clients.firstOrNull { it.id == selectedClientId }
+    LaunchedEffect(selectedClientId) {
+        val clientId = selectedClientId ?: return@LaunchedEffect
+        when (val result = repository.client(device.id, clientId)) {
+            is ApiResult.Success -> selectedClientDetails = result.data
+            is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                message = result.message
+                messageIsError = true
+            }
+        }
+        when (val result = repository.clientTraffic(device.id, clientId)) {
+            is ApiResult.Success -> selectedClientTraffic = result.data
+            is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                message = result.message
+                messageIsError = true
+            }
+        }
+        when (val result = repository.clientActivity(device.id, clientId)) {
+            is ApiResult.Success -> selectedClientActivity = result.data
+            is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                message = result.message
+                messageIsError = true
+            }
+        }
+    }
+
+    val selectedClient = selectedClientDetails
+        ?: clients.firstOrNull { it.id == selectedClientId }
     when {
         view == ClientsView.Details && selectedClient != null -> ClientDetails(
             client = selectedClient,
+            trafficPoints = selectedClientTraffic,
+            activity = selectedClientActivity.ifEmpty { selectedClient.recentActivity },
             profiles = profiles,
             canManagePolicy = capabilities["clients.policy"] == true,
             canSetLease = capabilities["dhcp.set_lease"] == true,
@@ -247,6 +278,9 @@ fun ClientsControlScreen(
             onBack = {
                 view = ClientsView.List
                 selectedClientId = null
+                selectedClientDetails = null
+                selectedClientTraffic = emptyList()
+                selectedClientActivity = emptyList()
             },
             onSave = { name, deviceType, profileId, policy ->
                 saveClient(selectedClient, name, deviceType, profileId, policy)
@@ -264,6 +298,25 @@ fun ClientsControlScreen(
                     JsonObject().put("mac", selectedClient.mac),
                     commandQueued,
                 )
+            },
+            onDeleteClient = {
+                scope.launch {
+                    when (val result = repository.deleteClient(device.id, selectedClient.id)) {
+                        is ApiResult.Success -> {
+                            view = ClientsView.List
+                            selectedClientId = null
+                            selectedClientDetails = null
+                            selectedClientTraffic = emptyList()
+                            selectedClientActivity = emptyList()
+                            message = ""
+                            refresh()
+                        }
+                        is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                            message = result.message
+                            messageIsError = true
+                        }
+                    }
+                }
             },
         )
         view == ClientsView.Settings -> ClientsSettings(
@@ -351,6 +404,9 @@ fun ClientsControlScreen(
             onOpenSettings = { view = ClientsView.Settings },
             onOpenClient = {
                 selectedClientId = it.id
+                selectedClientDetails = it
+                selectedClientTraffic = emptyList()
+                selectedClientActivity = emptyList()
                 view = ClientsView.Details
             },
         )

@@ -255,6 +255,9 @@
     <string name="client_type_iot">Smart device</string>
     <string name="client_activity">Recent activity</string>
     <string name="client_activity_empty">Activity appears after the device changes its connection state.</string>
+    <string name="client_traffic_samples">Recent intervals: %1$d</string>
+    <string name="forget_client">Forget device</string>
+    <string name="forget_client_warning">The saved name, policy and local history will be removed. An active device may appear again after the next router poll.</string>
     <string name="client_priority_limits">Priority and limits</string>
     <string name="client_source">Source</string>
     <string name="static_lease">Static DHCP lease</string>

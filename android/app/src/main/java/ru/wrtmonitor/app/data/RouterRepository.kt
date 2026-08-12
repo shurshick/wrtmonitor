@@ -16,6 +16,8 @@ import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
 import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
+import ru.wrtmonitor.app.api.dto.ClientTrafficPointDto
+import ru.wrtmonitor.app.api.dto.ClientActivityDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.api.dto.DeviceEventDto
@@ -75,6 +77,15 @@ class RouterRepository(
     suspend fun clients(deviceId: String): ApiResult<List<NetworkClientDto>> =
         onIo { api.getNetworkClients(deviceId) }
 
+    suspend fun client(deviceId: String, clientId: String): ApiResult<NetworkClientDto> =
+        onIo { api.getNetworkClient(deviceId, clientId) }
+
+    suspend fun clientTraffic(deviceId: String, clientId: String): ApiResult<List<ClientTrafficPointDto>> =
+        onIo { api.getClientTraffic(deviceId, clientId) }
+
+    suspend fun clientActivity(deviceId: String, clientId: String): ApiResult<List<ClientActivityDto>> =
+        onIo { api.getClientActivity(deviceId, clientId) }
+
     suspend fun clientProfiles(deviceId: String): ApiResult<List<ClientProfileDto>> =
         onIo { api.getClientProfiles(deviceId) }
 
@@ -87,21 +98,21 @@ class RouterRepository(
     suspend fun deleteClientProfile(deviceId: String, profileId: String): ApiResult<Unit> =
         onIo { api.deleteClientProfile(deviceId, profileId) }
 
-    suspend fun updateClient(
+    suspend fun configureClient(
         deviceId: String,
         clientId: String,
         displayName: String,
         deviceType: String,
         profileId: String?,
         policy: JsonObject,
-    ): ApiResult<Unit> = onIo {
-        api.updateNetworkClient(
+    ): ApiResult<NetworkClientDto> = onIo {
+        api.configureNetworkClient(
             deviceId, clientId, displayName, deviceType, profileId, policy
         )
     }
 
-    suspend fun applyClientPolicy(deviceId: String, clientId: String): ApiResult<String> =
-        onIo { api.applyNetworkClientPolicy(deviceId, clientId) }
+    suspend fun deleteClient(deviceId: String, clientId: String): ApiResult<Unit> =
+        onIo { api.deleteNetworkClient(deviceId, clientId) }
 
     suspend fun telemetryHistory(
         deviceId: String,

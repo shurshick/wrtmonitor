@@ -252,7 +252,7 @@
       },
       "rollback": "configuration_backup",
       "surface_equivalents": {
-        "android": "applyClientPolicy(",
+        "android": "configureClient(",
         "web": "/devices/{device_id}/clients/{client_id}/policy"
       }
     },
@@ -282,7 +282,7 @@
       },
       "rollback": "configuration_backup",
       "surface_equivalents": {
-        "android": "applyClientPolicy(",
+        "android": "configureClient(",
         "web": "/devices/{device_id}/clients/{client_id}/policy"
       }
     },

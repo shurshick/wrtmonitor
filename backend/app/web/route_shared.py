@@ -26,7 +26,7 @@ from fastapi.responses import (  # noqa: F401
     Response,
 )
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select  # noqa: F401
+from sqlalchemy import delete, func, select  # noqa: F401
 from sqlalchemy.orm import Session  # noqa: F401
 
 from ..config import APP_NAME, APP_VERSION, Settings  # noqa: F401
@@ -39,7 +39,9 @@ from ..management_options import (  # noqa: F401
 )
 from ..models import (  # noqa: F401
     AuditLog,
+    ClientActivityEvent,
     ClientProfile,
+    ClientTrafficSample,
     Device,
     DeviceCommand,
     MobilePairingToken,

@@ -2,6 +2,8 @@ from fastapi import APIRouter
 from ..services.client_registry import infer_device_type, validate_device_type
 from .route_shared import (
     ClientProfile,
+    ClientActivityEvent,
+    ClientTrafficSample,
     Cookie,
     Depends,
     Form,
@@ -15,6 +17,7 @@ from .route_shared import (
     audit,
     create_device_command,
     datetime,
+    delete,
     device_supports,
     effective_policy,
     get_db,
@@ -211,9 +214,46 @@ def web_delete_client_profile(
     return RedirectResponse(f"/devices/{device_id}?section=clients", status_code=303)
 
 
+@router.post("/devices/{device_id}/clients/{client_id}/delete")
+def web_delete_client(
+    device_id: UUID,
+    client_id: UUID,
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    get_user_device_or_404(db, user, device_id)
+    client = db.get(NetworkClient, client_id)
+    if not client or client.device_id != device_id:
+        raise HTTPException(status_code=404, detail="Client not found")
+    audit(
+        db,
+        user.id,
+        "client.delete",
+        "network_client",
+        str(client.id),
+        {"mac": client.mac},
+    )
+    db.execute(
+        delete(ClientTrafficSample).where(ClientTrafficSample.client_id == client.id)
+    )
+    db.execute(
+        delete(ClientActivityEvent).where(ClientActivityEvent.client_id == client.id)
+    )
+    db.delete(client)
+    db.commit()
+    return RedirectResponse(f"/devices/{device_id}?section=clients", status_code=303)
+
+
 __all__ = [
     "router",
     "web_client_policy",
     "web_create_client_profile",
     "web_delete_client_profile",
+    "web_delete_client",
 ]

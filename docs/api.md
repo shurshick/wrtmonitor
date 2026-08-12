@@ -67,6 +67,8 @@ Android подключается только к WrtMonitor Server. Pairing не
 - `GET /api/v1/devices/{device_id}/clients/{client_id}`
 - `PUT|PATCH /api/v1/devices/{device_id}/clients/{client_id}`
 - `POST /api/v1/devices/{device_id}/clients/{client_id}/apply-policy`
+- `POST /api/v1/devices/{device_id}/clients/{client_id}/configure` - атомарно сохраняет карточку и ставит применение политики
+- `DELETE /api/v1/devices/{device_id}/clients/{client_id}` - удаляет запись и локальную историю; активный клиент может появиться снова
 - `GET /api/v1/devices/{device_id}/clients/{client_id}/activity?limit=1..200`
 - `GET /api/v1/devices/{device_id}/clients/{client_id}/traffic`
 - `GET|POST /api/v1/devices/{device_id}/client-profiles`

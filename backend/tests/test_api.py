@@ -18,6 +18,7 @@ from backend.app.models import (
     AppSetting,
     AuthAttempt,
     AuditLog,
+    ClientActivityEvent,
     ClientTrafficSample,
     MobilePairingAttempt,
     Device,
@@ -759,8 +760,8 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     )
     assert profile_response.status_code == 200
     profile_id = profile_response.json()["id"]
-    update_response = client.patch(
-        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}",
+    update_response = client.post(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/configure",
         headers=admin_headers,
         json={
             "display_name": "Desk PC",
@@ -773,15 +774,13 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         },
     )
     assert update_response.status_code == 200
-    assert update_response.json()["display_name"] == "Desk PC"
-    assert update_response.json()["device_type"] == "computer"
-    assert update_response.json()["device_type_source"] == "user"
-    assert update_response.json()["effective_policy"]["qos"]["priority"] == "high"
-    apply_response = client.post(
-        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/apply-policy",
-        headers=admin_headers,
-    )
-    assert apply_response.status_code == 200
+    assert update_response.json()["status"] == "pending"
+    configured_client = update_response.json()["client"]
+    assert configured_client["display_name"] == "Desk PC"
+    assert configured_client["device_type"] == "computer"
+    assert configured_client["device_type_source"] == "user"
+    assert configured_client["effective_policy"]["qos"]["priority"] == "high"
+    assert update_response.json()["command_id"]
     detail_response = client.get(
         f"/api/v1/devices/{device_id}/clients/{registered_client['id']}",
         headers=admin_headers,
@@ -801,6 +800,19 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert traffic_response.status_code == 200
     assert len(traffic_response.json()) == 96
     assert "rx_delta" in traffic_response.json()[-1]
+
+    profile_only_response = client.post(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/configure",
+        headers=admin_headers,
+        json={
+            "display_name": "Desk PC",
+            "device_type": "computer",
+            "profile_id": profile_id,
+            "policy": {},
+        },
+    )
+    assert profile_only_response.status_code == 200
+    assert profile_only_response.json()["client"]["effective_policy"]["blocked"] is True
 
     outdated_agent = {
         **telemetry["agent"],
@@ -834,6 +846,23 @@ def test_router_registration_telemetry_and_latest_api_e2e():
         traffic_count = session.query(ClientTrafficSample).count()
     assert count == 100
     assert traffic_count == 96
+
+    delete_client_response = client.delete(
+        f"/api/v1/devices/{device_id}/clients/{registered_client['id']}",
+        headers=admin_headers,
+    )
+    assert delete_client_response.status_code == 200
+    assert delete_client_response.json()["status"] == "deleted"
+    assert (
+        client.get(
+            f"/api/v1/devices/{device_id}/clients/{registered_client['id']}",
+            headers=admin_headers,
+        ).status_code
+        == 404
+    )
+    with session_factory() as session:
+        assert session.query(ClientTrafficSample).count() == 0
+        assert session.query(ClientActivityEvent).count() == 0
 
 
 def test_managed_sessions_rotation_and_password_change_e2e():

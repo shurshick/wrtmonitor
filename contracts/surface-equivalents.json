@@ -4,11 +4,11 @@
     "web": "/devices/{device_id}/disconnect"
   },
   "client.set_blocked": {
-    "android": "applyClientPolicy(",
+    "android": "configureClient(",
     "web": "/devices/{device_id}/clients/{client_id}/policy"
   },
   "client.set_policy": {
-    "android": "applyClientPolicy(",
+    "android": "configureClient(",
     "web": "/devices/{device_id}/clients/{client_id}/policy"
   },
   "firewall.set_port_forward": {

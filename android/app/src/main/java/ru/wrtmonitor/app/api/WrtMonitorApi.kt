@@ -10,6 +10,7 @@ import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.ClientActivityDto
+import ru.wrtmonitor.app.api.dto.ClientTrafficPointDto
 import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.EventDto
@@ -266,53 +267,45 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
         val array = JSONArray(response)
         (0 until array.length()).map { index ->
+            parseNetworkClient(array.getJSONObject(index))
+        }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getNetworkClient(deviceId: String, clientId: String): ApiResult<NetworkClientDto> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/clients/$clientId")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        parseNetworkClient(JSONObject(response))
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getClientTraffic(deviceId: String, clientId: String): ApiResult<List<ClientTrafficPointDto>> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/clients/$clientId/traffic?limit=96")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val array = JSONArray(response)
+        (0 until array.length()).map { index ->
             array.getJSONObject(index).let { item ->
-                NetworkClientDto(
-                    id = item.optString("id"),
-                    mac = item.optString("mac"),
-                    displayName = item.optString("display_name").takeIf { it.isNotBlank() && it != "null" },
-                    hostname = item.optString("hostname").takeIf { it.isNotBlank() && it != "null" },
-                    vendor = item.optString("vendor").takeIf { it.isNotBlank() && it != "null" },
-                    deviceType = item.optString("device_type", "unknown"),
-                    deviceTypeSource = item.optString("device_type_source", "automatic"),
+                ClientTrafficPointDto(
+                    rxBytes = item.optLong("rx_bytes"),
+                    txBytes = item.optLong("tx_bytes"),
+                    rxDelta = item.optLong("rx_delta"),
+                    txDelta = item.optLong("tx_delta"),
+                    createdAt = item.optString("created_at"),
+                )
+            }
+        }
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun getClientActivity(deviceId: String, clientId: String): ApiResult<List<ClientActivityDto>> = runCatching {
+        val (status, response) = request("/api/v1/devices/$deviceId/clients/$clientId/activity?limit=50")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        val array = JSONArray(response)
+        (0 until array.length()).map { index ->
+            array.getJSONObject(index).let { item ->
+                ClientActivityDto(
+                    state = item.optString("state", "offline"),
+                    source = item.optString("source").takeIf { it.isNotBlank() && it != "null" },
                     ipAddress = item.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
-                    currentIpv4 = item.optString("current_ipv4").takeIf { it.isNotBlank() && it != "null" },
-                    staticIpv4 = item.optString("static_ipv4").takeIf { it.isNotBlank() && it != "null" },
-                    ipv6Addresses = item.optJSONArray("ipv6_addresses")?.let { values ->
-                        (0 until values.length()).map(values::optString).filter(String::isNotBlank)
-                    } ?: emptyList(),
                     networkInterface = item.optString("interface").takeIf { it.isNotBlank() && it != "null" },
-                    connectionType = item.optString("connection_type", "unknown"),
-                    connectionName = item.optString("connection_name").takeIf { it.isNotBlank() && it != "null" },
-                    wifiSsid = item.optString("wifi_ssid").takeIf { it.isNotBlank() && it != "null" },
-                    wifiBand = item.optString("wifi_band").takeIf { it.isNotBlank() && it != "null" },
-                    signalDbm = item.optInt("signal_dbm").takeIf { !item.isNull("signal_dbm") },
-                    rxBitrate = item.optLong("rx_bitrate").takeIf { !item.isNull("rx_bitrate") },
-                    txBitrate = item.optLong("tx_bitrate").takeIf { !item.isNull("tx_bitrate") },
-                    online = item.optBoolean("online"),
-                    presenceState = item.optString("presence_state", if (item.optBoolean("online")) "online" else "offline"),
-                    presenceSource = item.optString("presence_source").takeIf { it.isNotBlank() && it != "null" },
-                    lastObservedAt = item.optString("last_observed_at").takeIf { it.isNotBlank() && it != "null" },
-                    lastConfirmedAt = item.optString("last_confirmed_at").takeIf { it.isNotBlank() && it != "null" },
-                    isStatic = item.optBoolean("is_static"),
-                    profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },
-                    effectivePolicy = (item.optJSONObject("effective_policy") ?: JSONObject()).toJsonObject(),
-                    traffic = item.optJSONObject("traffic")?.toJsonObject(),
-                    firstSeenAt = item.optString("first_seen_at").takeIf { it.isNotBlank() && it != "null" },
-                    lastSeenAt = item.optString("last_seen_at").takeIf { it.isNotBlank() && it != "null" },
-                    recentActivity = item.optJSONArray("recent_activity")?.let { events ->
-                        (0 until events.length()).mapNotNull { eventIndex ->
-                            events.optJSONObject(eventIndex)?.let { event ->
-                                ClientActivityDto(
-                                    state = event.optString("state", "offline"),
-                                    source = event.optString("source").takeIf { it.isNotBlank() && it != "null" },
-                                    ipAddress = event.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
-                                    networkInterface = event.optString("interface").takeIf { it.isNotBlank() && it != "null" },
-                                    occurredAt = event.optString("occurred_at"),
-                                )
-                            }
-                        }
-                    } ?: emptyList(),
+                    occurredAt = item.optString("occurred_at"),
                 )
             }
         }
@@ -347,17 +340,17 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
     }.fold({ ApiResult.Success(Unit) }, ::toApiError)
 
-    fun updateNetworkClient(
+    fun configureNetworkClient(
         deviceId: String,
         clientId: String,
         displayName: String,
         deviceType: String,
         profileId: String?,
         policy: JsonObject,
-    ): ApiResult<Unit> = runCatching {
-        val (status, _) = request(
-            "/api/v1/devices/$deviceId/clients/$clientId",
-            "PUT",
+    ): ApiResult<NetworkClientDto> = runCatching {
+        val (status, response) = request(
+            "/api/v1/devices/$deviceId/clients/$clientId/configure",
+            "POST",
             JSONObject()
                 .put("display_name", displayName)
                 .put("device_type", deviceType)
@@ -365,17 +358,13 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 .put("policy", policy.raw),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
-    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
-
-    fun applyNetworkClientPolicy(deviceId: String, clientId: String): ApiResult<String> = runCatching {
-        val (status, response) = request(
-            "/api/v1/devices/$deviceId/clients/$clientId/apply-policy",
-            "POST",
-            JSONObject(),
-        )
-        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
-        JSONObject(response).optString("status", "queued")
+        parseNetworkClient(JSONObject(response).getJSONObject("client"))
     }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    fun deleteNetworkClient(deviceId: String, clientId: String): ApiResult<Unit> = runCatching {
+        val (status, _) = request("/api/v1/devices/$deviceId/clients/$clientId", "DELETE")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
 
     fun getDeviceAgent(deviceId: String): ApiResult<AgentStatusDto> = runCatching {
         val (status, response) = request("/api/v1/devices/$deviceId/agent")
@@ -517,6 +506,54 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
             }
         }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
+
+    private fun parseNetworkClient(item: JSONObject) = NetworkClientDto(
+        id = item.optString("id"),
+        mac = item.optString("mac"),
+        displayName = item.optString("display_name").takeIf { it.isNotBlank() && it != "null" },
+        hostname = item.optString("hostname").takeIf { it.isNotBlank() && it != "null" },
+        vendor = item.optString("vendor").takeIf { it.isNotBlank() && it != "null" },
+        deviceType = item.optString("device_type", "unknown"),
+        deviceTypeSource = item.optString("device_type_source", "automatic"),
+        ipAddress = item.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
+        currentIpv4 = item.optString("current_ipv4").takeIf { it.isNotBlank() && it != "null" },
+        staticIpv4 = item.optString("static_ipv4").takeIf { it.isNotBlank() && it != "null" },
+        ipv6Addresses = item.optJSONArray("ipv6_addresses")?.let { values ->
+            (0 until values.length()).map(values::optString).filter(String::isNotBlank)
+        } ?: emptyList(),
+        networkInterface = item.optString("interface").takeIf { it.isNotBlank() && it != "null" },
+        connectionType = item.optString("connection_type", "unknown"),
+        connectionName = item.optString("connection_name").takeIf { it.isNotBlank() && it != "null" },
+        wifiSsid = item.optString("wifi_ssid").takeIf { it.isNotBlank() && it != "null" },
+        wifiBand = item.optString("wifi_band").takeIf { it.isNotBlank() && it != "null" },
+        signalDbm = item.optInt("signal_dbm").takeIf { !item.isNull("signal_dbm") },
+        rxBitrate = item.optLong("rx_bitrate").takeIf { !item.isNull("rx_bitrate") },
+        txBitrate = item.optLong("tx_bitrate").takeIf { !item.isNull("tx_bitrate") },
+        online = item.optBoolean("online"),
+        presenceState = item.optString("presence_state", if (item.optBoolean("online")) "online" else "offline"),
+        presenceSource = item.optString("presence_source").takeIf { it.isNotBlank() && it != "null" },
+        lastObservedAt = item.optString("last_observed_at").takeIf { it.isNotBlank() && it != "null" },
+        lastConfirmedAt = item.optString("last_confirmed_at").takeIf { it.isNotBlank() && it != "null" },
+        isStatic = item.optBoolean("is_static"),
+        profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },
+        effectivePolicy = (item.optJSONObject("effective_policy") ?: JSONObject()).toJsonObject(),
+        traffic = item.optJSONObject("traffic")?.toJsonObject(),
+        firstSeenAt = item.optString("first_seen_at").takeIf { it.isNotBlank() && it != "null" },
+        lastSeenAt = item.optString("last_seen_at").takeIf { it.isNotBlank() && it != "null" },
+        recentActivity = item.optJSONArray("recent_activity")?.let { events ->
+            (0 until events.length()).mapNotNull { eventIndex ->
+                events.optJSONObject(eventIndex)?.let { event ->
+                    ClientActivityDto(
+                        state = event.optString("state", "offline"),
+                        source = event.optString("source").takeIf { it.isNotBlank() && it != "null" },
+                        ipAddress = event.optString("ip_address").takeIf { it.isNotBlank() && it != "null" },
+                        networkInterface = event.optString("interface").takeIf { it.isNotBlank() && it != "null" },
+                        occurredAt = event.optString("occurred_at"),
+                    )
+                }
+            }
+        } ?: emptyList(),
+    )
 
     private fun parseEvent(item: JSONObject) = EventDto(
         id = item.optString("id"),

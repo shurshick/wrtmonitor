@@ -52,6 +52,14 @@ data class ClientActivityDto(
     val occurredAt: String,
 )
 
+data class ClientTrafficPointDto(
+    val rxBytes: Long,
+    val txBytes: Long,
+    val rxDelta: Long,
+    val txDelta: Long,
+    val createdAt: String,
+)
+
 data class ClientProfileDto(
     val id: String,
     val name: String,
