@@ -76,7 +76,7 @@ execute_command() {
     # command lifecycle or race a connectivity transaction helper.
     if [ "$command_type" = wifi.get_qr ]; then
         report_transient_command_result "$command_id" "$status" "$result" >/dev/null || true
-        result=; qr_key=; qr_uri=
+        unset result qr_key qr_password qr_uri qr_ssid
     else
         report_command_result "$command_id" "$status" "$result" >/dev/null || true
     fi
