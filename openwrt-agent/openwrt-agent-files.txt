@@ -19,6 +19,7 @@ lib/capabilities.sh
 lib/diagnostics.sh
 lib/transactions.sh
 lib/commands.sh
+lib/client_policy.sh
 lib/idempotency.sh
 lib/verification.sh
 lib/command_runtime.sh

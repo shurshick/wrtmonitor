@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="17"
+CAPABILITIES_VERSION="18"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -16,7 +16,7 @@ capability_keys() {
         vpn.wireguard.read vpn.wireguard.configure vpn.openvpn.read vpn.openvpn.configure vpn.policy.read vpn.policy.configure telemetry.vpn \
         maintenance.packages.read maintenance.packages.write maintenance.backup maintenance.sysupgrade.check maintenance.sysupgrade.apply \
         maintenance.logs maintenance.processes maintenance.cron maintenance.diagnostics.bundle maintenance.recovery maintenance.modules.read maintenance.modules.write telemetry.maintenance telemetry.modules \
-        clients.read clients.block clients.policy qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure dns.encrypted.install dns.dot.configure dns.doh.configure firewall.port_forward \
+        clients.read clients.block clients.policy clients.shaping qos.sqm dhcp.set_lease dhcp.delete_lease dhcp.configure dns.configure dns.encrypted.install dns.dot.configure dns.doh.configure firewall.port_forward \
         system.reboot system.set_hostname system.restart_service system.set_timezone system.set_ntp \
         diagnostics.check_server diagnostics.check_dependencies diagnostics.check_dns diagnostics.check_route diagnostics.check_wifi
 }
@@ -194,6 +194,7 @@ capability_supported() {
         maintenance.modules.write) package_manager_name >/dev/null 2>&1 && [ -d "$(capability_path /etc/init.d)" ] ;;
         telemetry.maintenance) capability_supported maintenance.packages.read || capability_supported maintenance.recovery ;;
         clients.block|clients.policy|firewall.port_forward) has_firewall_write ;;
+        clients.shaping) has_firewall_write && has_commands tc ip && traffic_control_healthy ;;
         qos.sqm) has_uci_config sqm && [ -x "$(capability_path /etc/init.d/sqm)" ] ;;
         dhcp.set_lease|dhcp.delete_lease|dhcp.configure|dns.configure) has_dhcp_write ;;
         dns.encrypted.install) package_manager_name >/dev/null 2>&1 ;;
@@ -241,6 +242,7 @@ capability_unavailable_reason() {
         maintenance.recovery|telemetry.maintenance) printf 'maintenance runtime is unavailable' ;;
         maintenance.modules.*|telemetry.modules) printf 'package manager or module telemetry runtime is unavailable' ;;
         clients.block|clients.policy|firewall.port_forward) printf 'firewall UCI configuration or service is unavailable' ;;
+        clients.shaping) printf 'tc-full, flower classifier or police action is unavailable' ;;
         qos.sqm) printf 'sqm-scripts package or SQM init service is unavailable' ;;
         dhcp.*|dns.configure) printf 'DHCP configuration or dnsmasq service is unavailable' ;;
         dns.encrypted.install) printf 'package manager is unavailable' ;;

@@ -720,4 +720,9 @@
     <string name="thermal_state_critical">Критическая температура</string>
     <string name="thermal_state_stale">Данные устарели</string>
     <string name="thermal_state_unknown">Порог не известен</string>
+    <string name="client_policy_applying">Настройки применяются на роутере</string>
+    <string name="client_policy_applied">Настройки подтверждены роутером</string>
+    <string name="client_policy_failed">Роутер не подтвердил настройки клиента</string>
+    <string name="client_policy_still_applying">Роутер ещё применяет настройки. Статус обновится автоматически.</string>
+    <string name="client_shaping_unsupported">Для ограничения скорости нужен обновлённый агент и tc-full на роутере.</string>
 </resources>

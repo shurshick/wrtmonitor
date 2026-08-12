@@ -10,6 +10,8 @@ import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.ClientActivityDto
+import ru.wrtmonitor.app.api.dto.ClientConfigureResultDto
+import ru.wrtmonitor.app.api.dto.ClientPolicyApplicationDto
 import ru.wrtmonitor.app.api.dto.ClientTrafficPointDto
 import ru.wrtmonitor.app.api.dto.ConfigChangeDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
@@ -347,7 +349,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         deviceType: String,
         profileId: String?,
         policy: JsonObject,
-    ): ApiResult<NetworkClientDto> = runCatching {
+    ): ApiResult<ClientConfigureResultDto> = runCatching {
         val (status, response) = request(
             "/api/v1/devices/$deviceId/clients/$clientId/configure",
             "POST",
@@ -358,7 +360,12 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 .put("policy", policy.raw),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
-        parseNetworkClient(JSONObject(response).getJSONObject("client"))
+        val result = JSONObject(response)
+        ClientConfigureResultDto(
+            client = parseNetworkClient(result.getJSONObject("client")),
+            commandId = result.optString("command_id"),
+            status = result.optString("status", "queued"),
+        )
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
     fun deleteNetworkClient(deviceId: String, clientId: String): ApiResult<Unit> = runCatching {
@@ -537,6 +544,16 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         isStatic = item.optBoolean("is_static"),
         profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },
         effectivePolicy = (item.optJSONObject("effective_policy") ?: JSONObject()).toJsonObject(),
+        policyApplication = (item.optJSONObject("policy_application") ?: JSONObject()).let { application ->
+            ClientPolicyApplicationDto(
+                state = application.optString("state", "unconfigured"),
+                status = application.optString("status").takeIf { it.isNotBlank() && it != "null" },
+                commandId = application.optString("command_id").takeIf { it.isNotBlank() && it != "null" },
+                matches = application.optBoolean("matches"),
+                error = application.optString("error").takeIf { it.isNotBlank() && it != "null" },
+                observed = application.optJSONObject("observed")?.toJsonObject(),
+            )
+        },
         traffic = item.optJSONObject("traffic")?.toJsonObject(),
         firstSeenAt = item.optString("first_seen_at").takeIf { it.isNotBlank() && it != "null" },
         lastSeenAt = item.optString("last_seen_at").takeIf { it.isNotBlank() && it != "null" },

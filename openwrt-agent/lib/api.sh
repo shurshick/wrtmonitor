@@ -70,6 +70,7 @@ poll_commands() {
 daemon() {
     agent_enabled || exit 0
     transaction_recover_pending
+    restore_client_policy_runtime || log_notice "client traffic limits could not be restored"
     next_update_check=0
     next_telemetry_at=0
     poll_backoff=5

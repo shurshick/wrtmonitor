@@ -14,6 +14,7 @@ from ..models import (
     ClientActivityEvent,
     ClientProfile,
     ClientTrafficSample,
+    DeviceCommand,
     NetworkClient,
 )
 from .telemetry import normalize_clients_summary
@@ -233,16 +234,17 @@ def validate_client_policy(value: dict[str, Any] | None) -> dict[str, Any]:
     for key in ("start", "stop"):
         if schedule.get(key) and not TIME_PATTERN.fullmatch(str(schedule[key])):
             raise HTTPException(status_code=422, detail=f"Invalid schedule {key} time")
-    qos = dict(policy.get("qos") or {})
+    qos_input = dict(policy.get("qos") or {})
+    qos: dict[str, Any] = {}
     for key in ("download_kbps", "upload_kbps"):
         try:
-            value = int(qos.get(key) or 0)
+            value = int(qos_input.get(key) or 0)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=f"Invalid QoS {key}") from exc
         if value < 0 or value > 10_000_000:
             raise HTTPException(status_code=422, detail=f"Invalid QoS {key}")
         qos[key] = value
-    priority = str(qos.get("priority") or "normal")
+    priority = str(qos_input.get("priority") or "normal")
     if priority not in {"low", "normal", "high", "realtime"}:
         raise HTTPException(status_code=422, detail="Invalid QoS priority")
     qos["priority"] = priority
@@ -401,6 +403,52 @@ def effective_policy(db: Session, client: NetworkClient) -> dict[str, Any]:
     return validate_client_policy(merged)
 
 
+def client_policy_application(db: Session, client: NetworkClient) -> dict[str, Any]:
+    command = db.scalars(
+        select(DeviceCommand)
+        .where(
+            DeviceCommand.device_id == client.device_id,
+            DeviceCommand.command_type == "client.set_policy",
+            DeviceCommand.payload["mac"].as_string() == client.mac,
+        )
+        .order_by(DeviceCommand.created_at.desc())
+        .limit(1)
+    ).first()
+    if command is None:
+        return {"state": "unconfigured", "status": None, "matches": False}
+
+    result = command.result or {}
+    observed_raw = result.get("observed") if isinstance(result, dict) else None
+    observed = (
+        validate_client_policy(observed_raw) if isinstance(observed_raw, dict) else None
+    )
+    desired = effective_policy(db, client)
+    matches = bool(observed is not None and observed == desired)
+    if command.status in {"queued", "sent", "running"}:
+        state = "applying"
+    elif command.status == "success" and matches:
+        state = "applied"
+    else:
+        state = "error"
+    error = command.last_error
+    if not error and command.status == "success" and not matches:
+        error = "Router did not confirm the requested policy"
+    if not error and isinstance(result, dict):
+        error = str(result.get("error") or result.get("message") or "") or None
+    return {
+        "state": state,
+        "status": command.status,
+        "command_id": str(command.id),
+        "matches": matches,
+        "error": error if state == "error" else None,
+        "observed": observed,
+        "updated_at": command.updated_at.isoformat(),
+        "completed_at": command.completed_at.isoformat()
+        if command.completed_at
+        else None,
+    }
+
+
 def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
     now = datetime.now(UTC)
     presence_state = effective_client_presence(client, now)
@@ -451,6 +499,7 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
         "profile_id": str(client.profile_id) if client.profile_id else None,
         "policy": client.policy or {},
         "effective_policy": effective_policy(db, client),
+        "policy_application": client_policy_application(db, client),
         "first_seen_at": client.first_seen_at.isoformat(),
         "last_seen_at": client.last_seen_at.isoformat(),
         "traffic": {

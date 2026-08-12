@@ -18,6 +18,7 @@ import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.ClientTrafficPointDto
 import ru.wrtmonitor.app.api.dto.ClientActivityDto
+import ru.wrtmonitor.app.api.dto.ClientConfigureResultDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.api.dto.DeviceEventDto
@@ -105,7 +106,7 @@ class RouterRepository(
         deviceType: String,
         profileId: String?,
         policy: JsonObject,
-    ): ApiResult<NetworkClientDto> = onIo {
+    ): ApiResult<ClientConfigureResultDto> = onIo {
         api.configureNetworkClient(
             deviceId, clientId, displayName, deviceType, profileId, policy
         )

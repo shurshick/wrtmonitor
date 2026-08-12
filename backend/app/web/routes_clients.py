@@ -111,9 +111,18 @@ def web_client_policy(
         client.profile_id = None
         client.policy = policy
     client.updated_at = datetime.now(UTC)
+    effective = effective_policy(db, client)
+    qos = effective.get("qos") or {}
+    if (
+        int(qos.get("download_kbps") or 0) > 0 or int(qos.get("upload_kbps") or 0) > 0
+    ) and not device_supports(db, device_id, "clients.shaping"):
+        raise HTTPException(
+            status_code=409,
+            detail="Для ограничения скорости обновите агент и установите tc-full",
+        )
     command_payload = validate_command_request(
         command_type="client.set_policy",
-        payload={"mac": client.mac, **effective_policy(db, client)},
+        payload={"mac": client.mac, **effective},
         confirmed=True,
         device_supports=lambda capability: device_supports(db, device_id, capability),
     )

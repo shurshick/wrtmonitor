@@ -123,9 +123,18 @@ def _queue_client_policy(
     user: User,
     source: str,
 ):
+    policy = effective_policy(db, client)
+    qos = policy.get("qos") or {}
+    if (
+        int(qos.get("download_kbps") or 0) > 0 or int(qos.get("upload_kbps") or 0) > 0
+    ) and not device_supports(db, device_id, "clients.shaping"):
+        raise HTTPException(
+            status_code=409,
+            detail="Agent update or tc-full is required for client speed limits",
+        )
     normalized = validate_command_request(
         command_type="client.set_policy",
-        payload={"mac": client.mac, **effective_policy(db, client)},
+        payload={"mac": client.mac, **policy},
         confirmed=True,
         device_supports=lambda capability: device_supports(db, device_id, capability),
     )

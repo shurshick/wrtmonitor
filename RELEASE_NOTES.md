@@ -1,21 +1,23 @@
-# WrtMonitor v0.42.0 - Client Control
+# WrtMonitor v0.43.0 - Client Policies
 
-Тестовый релиз завершает ежедневный сценарий управления конкретным клиентом домашней сети.
+Тестовый релиз делает применение клиентских политик проверяемым и добавляет реальные индивидуальные лимиты скорости.
 
 ## Изменено
 
-- имя, тип, профиль и индивидуальная политика клиента сохраняются и ставятся на применение одной атомарной операцией;
-- Android открывает детальную карточку с актуальными данными выбранного устройства, а не копию строки общего списка;
-- Android загружает до 50 событий присутствия и 96 интервалов клиентского RX/TX;
-- Web UI и Android позволяют удалить сохранённую запись клиента вместе с историей присутствия и трафика;
-- перед удалением интерфейс предупреждает, что активное устройство будет обнаружено повторно;
-- старые API `PUT/PATCH` и `apply-policy` оставлены совместимыми, основной контракт — `POST .../configure`.
+- Web UI, Android и API различают `applying`, `applied` и `error` по фактическому результату команды;
+- успешной считается только политика, которую агент прочитал после записи и сопоставил с требуемым состоянием;
+- блокировка, расписание, приоритет, DNS-ограничения и DHCP lease получили точные post-condition проверки;
+- лимиты upload/download применяются к MAC клиента через `tc flower + police` на LAN bridge;
+- лимиты автоматически восстанавливаются после перезапуска агента;
+- capability `clients.shaping` включается только при наличии `tc-full`, `kmod-sched-core`, `kmod-sched-flower` и `kmod-sched-act-police`;
+- installer и updater автоматически устанавливают эти зависимости через `apk` или `opkg`;
+- TrueNAS YAML снова использует `ghcr.io/shurshick/wrtmonitor:latest`.
 
 ## Проверки
 
-- backend и OpenWrt agent tests;
-- PostgreSQL E2E атомарной настройки и каскадного удаления истории;
-- Android compile, unit tests, lint и release build;
-- Web browser smoke, Docker smoke и release metadata checks в CI.
+- backend, OpenWrt agent и Android unit tests;
+- hardware-проверка `tc flower + police` на Netis NX31 и OpenWrt x86;
+- проверка независимых upload/download filters, чтения результата и очистки;
+- Android compile и release metadata checks.
 
-Android `versionCode`: `99`.
+Android `versionCode`: `100`.

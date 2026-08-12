@@ -720,4 +720,9 @@
     <string name="thermal_state_critical">Critical temperature</string>
     <string name="thermal_state_stale">Data is stale</string>
     <string name="thermal_state_unknown">Threshold is unknown</string>
+    <string name="client_policy_applying">Settings are being applied on the router</string>
+    <string name="client_policy_applied">Settings confirmed by the router</string>
+    <string name="client_policy_failed">The router did not confirm the client settings</string>
+    <string name="client_policy_still_applying">The router is still applying the settings. Their status will update automatically.</string>
+    <string name="client_shaping_unsupported">Speed limits require an updated agent and tc-full on the router.</string>
 </resources>

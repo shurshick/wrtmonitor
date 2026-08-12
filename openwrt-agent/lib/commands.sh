@@ -55,7 +55,16 @@ execute_command() {
         fi
         if [ "$status" = "done" ]; then
             transaction_set_state "$command_id" "confirmed"
-            result="$(transaction_success_result "$command_id")"
+            if [ "$command_type" = client.set_policy ]; then
+                policy_file="/tmp/wrtmonitor-policy-result-$$"
+                printf '%s' "$command_payload" >"$policy_file"
+                policy_mac="$(json_get_string "$policy_file" '@.mac')"
+                rm -f "$policy_file"
+                observed="$(client_policy_observed_json "$policy_mac")"
+                result="{\"message\":\"client policy applied and verified\",\"observed\":$observed,\"transaction\":{\"id\":\"$(json_escape "$command_id")\",\"state\":\"confirmed\",\"configs\":\"firewall wrtmonitor\",\"rollback\":false}}"
+            else
+                result="$(transaction_success_result "$command_id")"
+            fi
         elif transaction_restore "$command_id"; then
             result="$(transaction_failure_result "$command_id" "configuration command failed; backup restored" "rolled_back")"
         else

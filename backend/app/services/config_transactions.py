@@ -66,7 +66,7 @@ CONFIG_TRANSACTION_SCOPES: dict[str, tuple[str, ...]] = {
     "firewall.set_redirect": ("firewall",),
     "firewall.delete_redirect": ("firewall",),
     "client.set_blocked": ("firewall",),
-    "client.set_policy": ("firewall",),
+    "client.set_policy": ("firewall", "wrtmonitor"),
     "qos.set_sqm": ("sqm",),
     "system.set_hostname": ("system",),
     "system.set_timezone": ("system",),
@@ -76,7 +76,7 @@ CONFIG_TRANSACTION_SCOPES: dict[str, tuple[str, ...]] = {
 CONNECTIVITY_SENSITIVE_COMMANDS = {
     command_type
     for command_type in CONFIG_TRANSACTION_SCOPES
-    if not command_type.startswith("system.")
+    if not command_type.startswith("system.") and command_type != "client.set_policy"
 }
 
 SECRET_FIELDS = {

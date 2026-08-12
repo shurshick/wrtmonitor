@@ -35,6 +35,7 @@ REQUIRED_LIBS = [
     "diagnostics.sh",
     "transactions.sh",
     "commands.sh",
+    "client_policy.sh",
     "idempotency.sh",
     "verification.sh",
     "command_runtime.sh",
@@ -660,11 +661,31 @@ def test_required_dependency_manifest_covers_runtime_features():
         "ethtool|ethtool",
         "iwinfo|iwinfo",
         "ip|ip-full",
+        "tc|tc-full",
+        "kmod-sched-core",
+        "kmod-sched-flower",
+        "kmod-sched-act-police",
         "ca-bundle",
     ):
         assert dependency in source
     assert "ensure_nlbwmon_runtime" in source
     assert "nlbwmon_runtime_status" in source
+    assert "traffic_control_healthy" in source
+
+
+def test_client_policy_verifier_checks_exact_runtime_filter_and_rollback():
+    policy = read_text(LIB_DIR / "client_policy.sh")
+    verification = read_text(LIB_DIR / "verification.sh")
+    transactions = read_text(LIB_DIR / "transactions.sh")
+    assert "client_policy_filter_matches" in policy
+    assert 'grep -Fq "_mac $mac"' in policy
+    assert 'actual_kbps' in policy
+    assert 'other_pref' in policy
+    assert 'candidate=$((candidate + 1))' in policy
+    assert 'client_policy_filter_matches "$device" ingress' in verification
+    assert 'client_policy_filter_matches "$device" egress' in verification
+    assert '[ "$command_type" = client.set_policy ]' in transactions
+    assert 'client_policy_delete_filter "$current_device" ingress' in transactions
 
 
 def test_update_manifest_signature_is_required_and_valid(tmp_path: Path):
@@ -1145,6 +1166,7 @@ def test_management_capabilities_cover_full_router_foundation():
         "network.lan.configure",
         "clients.block",
         "clients.policy",
+        "clients.shaping",
         "qos.sqm",
         "dhcp.set_lease",
         "dhcp.delete_lease",
@@ -1187,6 +1209,19 @@ def test_management_capabilities_cover_full_router_foundation():
     assert '"wifi.set_password":true' not in source
     assert "capability_supported()" in source
     assert "capability_unavailable_reason()" in source
+
+
+def test_client_policy_uses_real_traffic_control_and_exact_verification():
+    policy = read_text(ROOT / "lib" / "client_policy.sh")
+    verifier = read_text(ROOT / "lib" / "verification.sh")
+    assert "tc filter replace" in policy
+    assert "flower src_mac" in policy
+    assert "flower dst_mac" in policy
+    assert "restore_client_policy_runtime" in policy
+    assert "verify_client_policy_postcondition" in verifier
+    assert "client_policy_filter_matches" in verifier
+    assert "dhcp.set_lease)" in verifier
+    assert "resolve_dhcp_host_by_mac" in verifier
 
 
 def test_management_commands_have_openwrt_handlers():

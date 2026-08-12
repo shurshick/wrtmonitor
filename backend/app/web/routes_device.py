@@ -249,6 +249,7 @@ def device_page(
         "clients_read": has("clients.read"),
         "clients_block": has("clients.block"),
         "clients_policy": has("clients.policy"),
+        "clients_shaping": has("clients.shaping"),
         "qos_sqm": has("qos.sqm"),
         "dhcp_set_lease": has("dhcp.set_lease"),
         "dhcp_delete_lease": has("dhcp.delete_lease"),

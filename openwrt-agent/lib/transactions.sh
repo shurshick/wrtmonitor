@@ -18,7 +18,8 @@ transaction_configs_for_command() {
         dhcp.set_lease|dhcp.delete_lease|dhcp.set_pool|dns.set_servers) printf 'dhcp' ;;
         dns.set_dot) printf 'dhcp stubby' ;;
         dns.set_doh) printf 'dhcp https-dns-proxy' ;;
-        firewall.set_port_forward|firewall.delete_port_forward|client.set_blocked|client.set_policy) printf 'firewall' ;;
+        firewall.set_port_forward|firewall.delete_port_forward|client.set_blocked) printf 'firewall' ;;
+        client.set_policy) printf 'firewall wrtmonitor' ;;
         firewall.set_zone|firewall.delete_zone|firewall.set_forwarding|firewall.delete_forwarding|firewall.set_rule|firewall.delete_rule|firewall.set_redirect|firewall.delete_redirect) printf 'firewall' ;;
         qos.set_sqm) printf 'sqm' ;;
         system.set_hostname|system.set_timezone|system.set_ntp) printf 'system' ;;
@@ -36,7 +37,7 @@ transaction_service() {
 
 transaction_is_connectivity_sensitive() {
     case "$1" in
-        wifi.*|network.set_*|network.delete_*|dhcp.*|dns.set_*|firewall.*|vpn.*|client.set_blocked|client.set_policy|qos.set_sqm) return 0 ;;
+        wifi.*|network.set_*|network.delete_*|dhcp.*|dns.set_*|firewall.*|vpn.*|qos.set_sqm) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -115,6 +116,17 @@ transaction_restore() {
     directory="$(transaction_dir "$command_id")" || return 1
     configs="$(transaction_meta_value "$command_id" configs)"
     [ -n "$configs" ] || return 1
+    command_type="$(transaction_meta_value "$command_id" command_type)"
+    if [ "$command_type" = client.set_policy ] && [ -r "$directory/payload.json" ]; then
+        policy_mac="$(json_get_string "$directory/payload.json" '@.mac')"
+        if [ -n "$policy_mac" ]; then
+            current_section="$(client_policy_section "$policy_mac")"
+            current_device="$(uci -q get "wrtmonitor.$current_section.shaping_device" 2>/dev/null || client_policy_lan_device)"
+            current_pref="$(uci -q get "wrtmonitor.$current_section.shaping_pref" 2>/dev/null || client_policy_filter_pref "$policy_mac")"
+            client_policy_delete_filter "$current_device" ingress "$current_pref"
+            client_policy_delete_filter "$current_device" egress "$current_pref"
+        fi
+    fi
     restore_status=0
     for config_name in $configs; do
         backup_file="$directory/$config_name.bak"
@@ -122,7 +134,6 @@ transaction_restore() {
     done
     if printf '%s' "$configs" | grep -qw wireless; then wifi reload >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw network; then
-        command_type="$(transaction_meta_value "$command_id" command_type)"
         payload_file="$directory/payload.json"
         case "$command_type" in
             network.set_lan|network.set_wan)
@@ -149,6 +160,7 @@ transaction_restore() {
     if printf '%s' "$configs" | grep -qw stubby; then service_action stubby restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw https-dns-proxy; then service_action https-dns-proxy restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw firewall; then service_action firewall restart 20 >/dev/null 2>&1 || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw wrtmonitor; then restore_client_policy_runtime || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw sqm; then service_action sqm restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw mwan3; then service_action mwan3 restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw ddns; then service_action ddns restart 20 >/dev/null 2>&1 || restore_status=1; fi

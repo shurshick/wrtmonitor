@@ -657,6 +657,7 @@ def test_router_registration_telemetry_and_latest_api_e2e():
             "capabilities_version": 6,
             "capabilities": {
                 "clients.policy": True,
+                "clients.shaping": True,
                 "config.transaction": True,
                 "qos.sqm": True,
             },
@@ -781,12 +782,33 @@ def test_router_registration_telemetry_and_latest_api_e2e():
     assert configured_client["device_type_source"] == "user"
     assert configured_client["effective_policy"]["qos"]["priority"] == "high"
     assert update_response.json()["command_id"]
+    assert configured_client["policy_application"]["state"] == "applying"
+    pending_policy_commands = client.get(
+        "/api/v1/agent/commands", headers=agent_headers
+    ).json()
+    policy_command = next(
+        item
+        for item in pending_policy_commands
+        if item["type"] == "client.set_policy"
+        and item["payload"]["mac"] == "00:11:22:33:44:55"
+    )
+    observed_policy = configured_client["effective_policy"] | {
+        "mac": "00:11:22:33:44:55"
+    }
+    policy_result = client.post(
+        f"/api/v1/agent/commands/{policy_command['id']}/result",
+        headers=agent_headers,
+        json={"status": "success", "result": {"observed": observed_policy}},
+    )
+    assert policy_result.status_code == 200
     detail_response = client.get(
         f"/api/v1/devices/{device_id}/clients/{registered_client['id']}",
         headers=admin_headers,
     )
     assert detail_response.status_code == 200
     assert detail_response.json()["current_ipv4"] == "192.168.1.42"
+    assert detail_response.json()["policy_application"]["state"] == "applied"
+    assert detail_response.json()["policy_application"]["matches"] is True
     activity_response = client.get(
         f"/api/v1/devices/{device_id}/clients/{registered_client['id']}/activity",
         headers=admin_headers,

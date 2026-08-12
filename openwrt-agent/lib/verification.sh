@@ -119,6 +119,73 @@ verify_module_postcondition() {
     esac
 }
 
+verify_client_policy_postcondition() {
+    payload_file="$1"
+    mac="$(json_get_string "$payload_file" '@.mac')"
+    [ -n "$mac" ] || return 1
+    blocked="$(json_get_bool "$payload_file" '@.blocked')"
+    schedule_enabled="$(json_get_bool "$payload_file" '@.schedule.enabled')"
+    weekdays="$(jsonfilter -i "$payload_file" -e '@.schedule.weekdays[*]' 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+    start="$(json_get_string "$payload_file" '@.schedule.start')"
+    stop="$(json_get_string "$payload_file" '@.schedule.stop')"
+    priority="$(json_get_string "$payload_file" '@.qos.priority')"
+    download="$(json_get_number "$payload_file" '@.qos.download_kbps')"
+    upload="$(json_get_number "$payload_file" '@.qos.upload_kbps')"
+    dns="$(json_get_string "$payload_file" '@.dns.provider')"
+    [ -n "$priority" ] || priority=normal
+    [ -n "$download" ] || download=0
+    [ -n "$upload" ] || upload=0
+    [ -n "$dns" ] || dns=none
+    suffix="$(client_policy_suffix "$mac")"
+    policy_ref="wrtmonitor_policy_$suffix"
+    qos_ref="wrtmonitor_qos_$suffix"
+    dns_ref="wrtmonitor_dns_$suffix"
+    dot_ref="wrtmonitor_dot_$suffix"
+    state_ref="$(client_policy_section "$mac")"
+
+    verify_uci_value "wrtmonitor.$state_ref.mac" "$mac" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.blocked" "$( [ "$blocked" = true ] && echo 1 || echo 0 )" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.schedule_enabled" "$( [ "$schedule_enabled" = true ] && echo 1 || echo 0 )" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.weekdays" "$weekdays" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.start" "$start" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.stop" "$stop" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.priority" "$priority" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.download_kbps" "$download" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.upload_kbps" "$upload" || return 1
+    verify_uci_value "wrtmonitor.$state_ref.dns_provider" "$dns" || return 1
+
+    if [ "$blocked" = true ] || [ "$schedule_enabled" = true ]; then
+        verify_uci_value "firewall.$policy_ref.src_mac" "$mac" \
+            && verify_uci_value "firewall.$policy_ref.target" REJECT || return 1
+        if [ "$blocked" != true ] && [ "$schedule_enabled" = true ]; then
+            [ -z "$weekdays" ] || verify_uci_value "firewall.$policy_ref.weekdays" "$weekdays" || return 1
+            [ -z "$start" ] || verify_uci_value "firewall.$policy_ref.start_time" "$start" || return 1
+            [ -z "$stop" ] || verify_uci_value "firewall.$policy_ref.stop_time" "$stop" || return 1
+        fi
+    else
+        [ -z "$(uci -q get "firewall.$policy_ref" 2>/dev/null || true)" ] || return 1
+    fi
+    if [ "$priority" = normal ]; then
+        [ -z "$(uci -q get "firewall.$qos_ref" 2>/dev/null || true)" ] || return 1
+    else
+        case "$priority" in low) mark=0x10 ;; high) mark=0x30 ;; realtime) mark=0x40 ;; *) return 1 ;; esac
+        verify_uci_value "firewall.$qos_ref.src_mac" "$mac" \
+            && verify_uci_value "firewall.$qos_ref.set_mark" "$mark" || return 1
+    fi
+    if [ "$dns" = none ]; then
+        [ -z "$(uci -q get "firewall.$dns_ref" 2>/dev/null || true)" ] \
+            && [ -z "$(uci -q get "firewall.$dot_ref" 2>/dev/null || true)" ] || return 1
+    else
+        case "$dns" in cloudflare-security) expected_dns=1.1.1.2 ;; cloudflare-family) expected_dns=1.1.1.3 ;; *) return 1 ;; esac
+        verify_uci_value "firewall.$dns_ref.dest_ip" "$expected_dns" \
+            && verify_uci_value "firewall.$dot_ref.dest_port" 853 || return 1
+    fi
+    device="$(uci -q get "wrtmonitor.$state_ref.shaping_device" 2>/dev/null || true)"
+    pref="$(uci -q get "wrtmonitor.$state_ref.shaping_pref" 2>/dev/null || true)"
+    if [ "$upload" -gt 0 ]; then client_policy_filter_matches "$device" ingress "$pref" "$mac" "$upload" || return 1; fi
+    if [ "$download" -gt 0 ]; then client_policy_filter_matches "$device" egress "$pref" "$mac" "$download" || return 1; fi
+}
+
 verify_command_postcondition() {
     command_type="$1"
     command_payload="$2"
@@ -152,6 +219,35 @@ verify_command_postcondition() {
     esac
     verified=0
     case "$command_type" in
+        client.set_policy)
+            verify_client_policy_postcondition "$payload_file" || verified=1
+            ;;
+        client.set_blocked)
+            mac="$(json_get_string "$payload_file" '@.mac')"
+            blocked="$(json_get_bool "$payload_file" '@.blocked')"
+            ref="wrtmonitor_block_$(printf '%s' "$mac" | tr -d ':')"
+            if [ "$blocked" = true ]; then
+                verify_uci_value "firewall.$ref.src_mac" "$mac" \
+                    && verify_uci_value "firewall.$ref.target" REJECT || verified=1
+            else
+                [ -z "$(uci -q get "firewall.$ref" 2>/dev/null || true)" ] || verified=1
+            fi
+            ;;
+        dhcp.set_lease)
+            mac="$(json_get_string "$payload_file" '@.mac')"
+            expected_ip="$(json_get_string "$payload_file" '@.ip')"
+            expected_name="$(json_get_string "$payload_file" '@.hostname')"
+            lease_ref="$(resolve_dhcp_host_by_mac "$mac" || true)"
+            [ -n "$lease_ref" ] \
+                && verify_uci_value "dhcp.$lease_ref.mac" "$mac" \
+                && verify_uci_value "dhcp.$lease_ref.ip" "$expected_ip" \
+                && verify_uci_value "dhcp.$lease_ref.name" "$expected_name" \
+                || verified=1
+            ;;
+        dhcp.delete_lease)
+            mac="$(json_get_string "$payload_file" '@.mac')"
+            [ -z "$(resolve_dhcp_host_by_mac "$mac" || true)" ] || verified=1
+            ;;
         agent.set_interval)
             expected="$(json_get_number "$payload_file" '@.interval_seconds')"
             verify_uci_value "$CONFIG.interval" "$expected" || verified=1

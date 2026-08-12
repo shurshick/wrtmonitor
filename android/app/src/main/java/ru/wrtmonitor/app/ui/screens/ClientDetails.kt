@@ -87,6 +87,7 @@ internal fun ClientDetails(
     activity: List<ClientActivityDto>,
     profiles: List<ClientProfileDto>,
     canManagePolicy: Boolean,
+    canShapePolicy: Boolean,
     canSetLease: Boolean,
     canDeleteLease: Boolean,
     onBack: () -> Unit,
@@ -166,6 +167,15 @@ internal fun ClientDetails(
         InfoRow(stringResource(R.string.presence_source), presenceSourceLabel(client.presenceSource), stringResource(R.string.no_data))
     }
 
+    when (client.policyApplication.state) {
+        "applying" -> MessageBanner(stringResource(R.string.client_policy_applying), false)
+        "applied" -> MessageBanner(stringResource(R.string.client_policy_applied), false)
+        "error" -> MessageBanner(
+            client.policyApplication.error ?: stringResource(R.string.client_policy_failed),
+            true,
+        )
+    }
+
     if (canManagePolicy) {
         SectionCard(stringResource(R.string.client_main_settings)) {
             OutlinedTextField(
@@ -217,7 +227,7 @@ internal fun ClientDetails(
                 clientPriorityOptions,
                 { priority = it },
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (canShapePolicy) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     download,
                     { download = it.filter(Char::isDigit) },
@@ -233,6 +243,11 @@ internal fun ClientDetails(
                     singleLine = true,
                 )
             }
+            else Text(
+                stringResource(R.string.client_shaping_unsupported),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         ExpandableSettingsCard(

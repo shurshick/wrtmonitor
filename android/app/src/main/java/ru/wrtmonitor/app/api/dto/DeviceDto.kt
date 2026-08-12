@@ -38,10 +38,26 @@ data class NetworkClientDto(
     val isStatic: Boolean,
     val profileId: String?,
     val effectivePolicy: JsonObject,
+    val policyApplication: ClientPolicyApplicationDto,
     val traffic: JsonObject?,
     val firstSeenAt: String?,
     val lastSeenAt: String?,
     val recentActivity: List<ClientActivityDto>,
+)
+
+data class ClientPolicyApplicationDto(
+    val state: String,
+    val status: String?,
+    val commandId: String?,
+    val matches: Boolean,
+    val error: String?,
+    val observed: JsonObject?,
+)
+
+data class ClientConfigureResultDto(
+    val client: NetworkClientDto,
+    val commandId: String,
+    val status: String,
 )
 
 data class ClientActivityDto(

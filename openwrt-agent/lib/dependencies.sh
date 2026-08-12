@@ -15,6 +15,7 @@ gzip|gzip
 sysupgrade|base-files
 nlbw|nlbwmon
 ethtool|ethtool
+tc|tc-full
 script|script-utils
 EOF
 }
@@ -32,6 +33,12 @@ required_dependency_packages() {
     done
     has_ca_bundle || printf '%s\n' ca-bundle
     } | awk '!seen[$0]++'
+}
+
+dependency_package_installed() {
+    package_name="$1"
+    package_list_installed 2>/dev/null \
+        | grep -Eq "^${package_name}([|[:space:]]|$)"
 }
 
 ensure_nlbwmon_runtime() {
@@ -93,7 +100,8 @@ dependencies_healthy() {
         command -v "$command_name" >/dev/null 2>&1 || exit 1
     done || return 1
     has_ca_bundle || return 1
-    [ "$(nlbwmon_runtime_status)" = ready ]
+    [ "$(nlbwmon_runtime_status)" = ready ] || return 1
+    traffic_control_healthy
 }
 
 ensure_agent_dependencies() {
@@ -111,11 +119,28 @@ ensure_agent_dependencies() {
         done || return 1
     fi
 
+    if command -v tc >/dev/null 2>&1; then
+        for package_name in kmod-sched-core kmod-sched-flower kmod-sched-act-police; do
+            dependency_package_installed "$package_name" && continue
+            package_apply install "$package_name" >/dev/null 2>&1 || {
+                echo "Traffic-control dependency is unavailable: $package_name" >&2
+                return 1
+            }
+        done
+    fi
+
     ensure_nlbwmon_runtime || {
         echo "nlbwmon is installed but its service is not running" >&2
         return 1
     }
     dependencies_healthy
+}
+
+traffic_control_healthy() {
+    command -v tc >/dev/null 2>&1 || return 1
+    dependency_package_installed kmod-sched-core || return 1
+    dependency_package_installed kmod-sched-flower || return 1
+    dependency_package_installed kmod-sched-act-police || return 1
 }
 
 dependency_manifest_json() {
@@ -129,11 +154,18 @@ dependency_manifest_json() {
     done
     items="$(cat "/tmp/wrtmonitor-dependencies-$$" 2>/dev/null || true)"
     rm -f "/tmp/wrtmonitor-dependencies-$$"
+    for package_name in kmod-sched-core kmod-sched-flower kmod-sched-act-police; do
+        available=false
+        dependency_package_installed "$package_name" && available=true
+        [ -n "$items" ] && items="$items,"
+        items="$items{\"command\":\"kernel module\",\"package\":\"$(json_escape "$package_name")\",\"available\":$available}"
+    done
     nlbw_running=false
     nlbwmon_init="${WRTMONITOR_SYSTEM_ROOT:-}/etc/init.d/nlbwmon"
     [ -x "$nlbwmon_init" ] && "$nlbwmon_init" running >/dev/null 2>&1 && nlbw_running=true
-    printf '{"required":[%s],"ca_bundle":%s,"nlbwmon":{"installed":%s,"running":%s,"status":"%s"}}' \
+    printf '{"required":[%s],"ca_bundle":%s,"traffic_control":{"status":"%s"},"nlbwmon":{"installed":%s,"running":%s,"status":"%s"}}' \
         "$items" "$(has_ca_bundle && printf true || printf false)" \
+        "$(traffic_control_healthy && printf ready || printf unavailable)" \
         "$(command -v nlbw >/dev/null 2>&1 && printf true || printf false)" "$nlbw_running" \
         "$(nlbwmon_runtime_status)"
 }

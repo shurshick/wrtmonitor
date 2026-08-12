@@ -535,6 +535,8 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .inline-actions label { min-width: 170px; }
 
 .notice--compact { margin-bottom: 14px; padding: 9px 12px; font-size: 13px; }
+.notice--success { border-left-color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--surface)); }
+.notice--error { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); color: var(--danger); }
 .radio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .radio-card { display: grid; gap: 15px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .radio-card__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }

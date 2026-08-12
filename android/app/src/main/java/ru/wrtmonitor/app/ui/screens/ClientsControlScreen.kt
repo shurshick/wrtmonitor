@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.wrtmonitor.app.api.dto.JsonArray
 import ru.wrtmonitor.app.api.dto.JsonObject
@@ -127,6 +128,9 @@ fun ClientsControlScreen(
     var pendingCommand by remember(device.id) { mutableStateOf<PendingSafeCommand?>(null) }
     val commandQueued = stringResource(R.string.command_queued)
     val leaseQueued = stringResource(R.string.lease_queued)
+    val policyApplied = stringResource(R.string.client_policy_applied)
+    val policyApplyFailed = stringResource(R.string.client_policy_failed)
+    val policyStillApplying = stringResource(R.string.client_policy_still_applying)
 
     val refresh: () -> Unit = {
         scope.launch {
@@ -216,10 +220,35 @@ fun ClientsControlScreen(
                 storedPolicy,
             )) {
                 is ApiResult.Success -> {
-                    selectedClientDetails = update.data
+                    selectedClientDetails = update.data.client
                     message = commandQueued
                     messageIsError = false
-                    refresh()
+                    repeat(20) {
+                        delay(1_000)
+                        when (val checked = repository.client(device.id, client.id)) {
+                            is ApiResult.Success -> {
+                                selectedClientDetails = checked.data
+                                when (checked.data.policyApplication.state) {
+                                    "applied" -> {
+                                        message = policyApplied
+                                        messageIsError = false
+                                        return@launch
+                                    }
+                                    "error" -> {
+                                        message = checked.data.policyApplication.error
+                                            ?: policyApplyFailed
+                                        messageIsError = true
+                                        return@launch
+                                    }
+                                }
+                            }
+                            is ApiResult.Error -> if (checked.isUnauthorized()) {
+                                onSessionExpired()
+                                return@launch
+                            }
+                        }
+                    }
+                    message = policyStillApplying
                 }
                 is ApiResult.Error -> if (update.isUnauthorized()) onSessionExpired() else {
                     message = update.message
@@ -273,6 +302,7 @@ fun ClientsControlScreen(
             activity = selectedClientActivity.ifEmpty { selectedClient.recentActivity },
             profiles = profiles,
             canManagePolicy = capabilities["clients.policy"] == true,
+            canShapePolicy = capabilities["clients.shaping"] == true,
             canSetLease = capabilities["dhcp.set_lease"] == true,
             canDeleteLease = capabilities["dhcp.delete_lease"] == true,
             onBack = {

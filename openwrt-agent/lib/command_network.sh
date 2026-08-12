@@ -355,13 +355,21 @@ handle_network_command() {
             upload_kbps="$(json_get_number "$payload_file" '@.qos.upload_kbps')"
             dns_provider="$(json_get_string "$payload_file" '@.dns.provider')"
             rm -f "$payload_file"
-            client_suffix="$(printf '%s' "$client_mac" | tr -d ':')"
+            [ -n "$qos_priority" ] || qos_priority=normal
+            [ -n "$download_kbps" ] || download_kbps=0
+            [ -n "$upload_kbps" ] || upload_kbps=0
+            [ -n "$dns_provider" ] || dns_provider=none
+            client_suffix="$(client_policy_suffix "$client_mac")"
             client_ref="wrtmonitor_policy_$client_suffix"
             qos_ref="wrtmonitor_qos_$client_suffix"
             dns_ref="wrtmonitor_dns_$client_suffix"
             dot_ref="wrtmonitor_dot_$client_suffix"
+            shaping_device="$(client_policy_lan_device)"
+            shaping_pref="$(client_policy_filter_pref "$client_mac")"
             backup_file="$(backup_config firewall "$command_id" "$command_type" || true)"
-            if [ -z "$backup_file" ]; then
+            if { [ "$download_kbps" -gt 0 ] || [ "$upload_kbps" -gt 0 ]; } && ! traffic_control_healthy; then
+                status="failed"; result="$(command_failed_result "client speed limits require tc-full, kmod-sched-flower and kmod-sched-act-police" "dependency_missing" true)"
+            elif [ -z "$backup_file" ]; then
                 status="failed"; result="$(command_failed_result "failed to create firewall backup")"
             else
                 uci -q delete "firewall.$client_ref" || true
@@ -375,13 +383,13 @@ handle_network_command() {
                     uci set "firewall.$client_ref.dest=wan"
                     uci set "firewall.$client_ref.src_mac=$client_mac"
                     uci set "firewall.$client_ref.target=REJECT"
-                    if [ "$schedule_enabled" = "true" ]; then
+                    if [ "$client_blocked" != "true" ] && [ "$schedule_enabled" = "true" ]; then
                         [ -z "$schedule_days" ] || uci set "firewall.$client_ref.weekdays=$schedule_days"
                         [ -z "$schedule_start" ] || uci set "firewall.$client_ref.start_time=$schedule_start"
                         [ -z "$schedule_stop" ] || uci set "firewall.$client_ref.stop_time=$schedule_stop"
                     fi
                 fi
-                if [ -n "$qos_priority" ] && [ "$qos_priority" != "normal" ]; then
+                if [ "$qos_priority" != "normal" ]; then
                     case "$qos_priority" in low) policy_mark="0x10" ;; high) policy_mark="0x30" ;; realtime) policy_mark="0x40" ;; *) policy_mark="0x20" ;; esac
                     uci set "firewall.$qos_ref=rule"
                     uci set "firewall.$qos_ref.name=WrtMonitor priority $client_mac"
@@ -415,10 +423,16 @@ handle_network_command() {
                     uci set "firewall.$dot_ref.dest_port=853"
                     uci set "firewall.$dot_ref.target=REJECT"
                 fi
-                if [ "$status" = "done" ] && uci commit firewall && service_action firewall reload 20 >/dev/null 2>&1; then
-                    result="$(command_success_result "client policy applied" "\"backup\":\"$(json_escape "$backup_file")\",\"mac\":\"$(json_escape "$client_mac")\",\"qos_priority\":\"$(json_escape "$qos_priority")\",\"dns_provider\":\"$(json_escape "$dns_provider")\",\"download_kbps\":${download_kbps:-0},\"upload_kbps\":${upload_kbps:-0}")"
+                if [ "$status" = "done" ] \
+                    && client_policy_save_state "$client_mac" "$client_blocked" "$schedule_enabled" "$schedule_days" "$schedule_start" "$schedule_stop" "$qos_priority" "$download_kbps" "$upload_kbps" "$dns_provider" "$shaping_device" "$shaping_pref" \
+                    && uci commit firewall \
+                    && uci commit wrtmonitor \
+                    && service_action firewall reload 20 >/dev/null 2>&1 \
+                    && client_policy_apply_runtime_limits "$client_mac" "$download_kbps" "$upload_kbps" "$shaping_device" "$shaping_pref"; then
+                    observed="$(client_policy_observed_json "$client_mac")"
+                    result="$(command_success_result "client policy applied" "\"backup\":\"$(json_escape "$backup_file")\",\"observed\":$observed")"
                 else
-                    status="failed"; result="$(command_failed_result "failed to apply client policy")"
+                    status="failed"; result="$(command_failed_result "client policy could not be applied or verified" "post_condition_failed")"
                 fi
             fi
             ;;
