@@ -59,6 +59,8 @@ import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.dto.ClientProfileDto
 import ru.wrtmonitor.app.api.dto.ClientTrafficPointDto
 import ru.wrtmonitor.app.api.dto.ClientActivityDto
+import ru.wrtmonitor.app.api.dto.ClientPolicyPresetDto
+import ru.wrtmonitor.app.api.dto.ManagementOptionDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
@@ -70,6 +72,7 @@ import ru.wrtmonitor.app.ui.components.MessageBanner
 import ru.wrtmonitor.app.ui.components.MultiOptionSelector
 import ru.wrtmonitor.app.ui.components.OptionSelector
 import ru.wrtmonitor.app.ui.components.PrimaryActionButton
+import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
 import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.SelectOption
@@ -86,6 +89,8 @@ internal fun ClientDetails(
     trafficPoints: List<ClientTrafficPointDto>,
     activity: List<ClientActivityDto>,
     profiles: List<ClientProfileDto>,
+    policyPresets: List<ClientPolicyPresetDto>,
+    speedOptions: List<ManagementOptionDto>,
     canManagePolicy: Boolean,
     canShapePolicy: Boolean,
     canSetLease: Boolean,
@@ -121,11 +126,53 @@ internal fun ClientDetails(
     var download by remember(client.id, qos.toString()) { mutableStateOf(qos.optInt("download_kbps").toString()) }
     var upload by remember(client.id, qos.toString()) { mutableStateOf(qos.optInt("upload_kbps").toString()) }
     var dnsProvider by remember(client.id, dnsPolicy.toString()) { mutableStateOf(dnsPolicy.optString("provider", "none")) }
+    var selectedPreset by remember(client.id, client.policyPreset) { mutableStateOf(client.policyPreset) }
     var leaseIp by remember(client.id, client.currentIpv4, client.staticIpv4) {
         mutableStateOf(client.staticIpv4 ?: client.currentIpv4.orEmpty())
     }
     val profileOptions = listOf(SelectOption("", stringResource(R.string.no_profile))) +
         profiles.map { SelectOption(it.id, it.name) }
+    val useRussian = Locale.getDefault().language == "ru"
+    val availablePresets = policyPresets.filter { canShapePolicy || !it.requiresShaping }
+    val presetOptions = listOf(SelectOption("custom", stringResource(R.string.client_mode_custom))) +
+        availablePresets.map { SelectOption(it.id, if (useRussian) it.label else it.labelEn) }
+    fun rateOptions(current: String): List<SelectOption> {
+        val options = speedOptions.map {
+            SelectOption(it.value, if (useRussian) it.label else speedLabelEnglish(it.value))
+        }
+        return if (options.any { it.value == current }) options else {
+            options + SelectOption(current, speedLabel(current, useRussian))
+        }
+    }
+    fun policyPayload(blockedValue: Boolean = blocked): JsonObject {
+        val days = JsonArray()
+        weekdays.sorted().forEach(days::put)
+        return JsonObject()
+            .put("blocked", blockedValue)
+            .put("schedule", JsonObject().put("enabled", scheduleEnabled).put("weekdays", days).put("start", start).put("stop", stop))
+            .put("qos", JsonObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0))
+            .put("dns", JsonObject().put("provider", dnsProvider).put("blocked_domains", JsonArray()))
+    }
+    fun applyPreset(id: String) {
+        selectedPreset = id
+        val selected = availablePresets.firstOrNull { it.id == id } ?: return
+        val selectedPolicy = selected.policy
+        val selectedSchedule = selectedPolicy.optJsonObject("schedule") ?: JsonObject()
+        val selectedQos = selectedPolicy.optJsonObject("qos") ?: JsonObject()
+        val selectedDns = selectedPolicy.optJsonObject("dns") ?: JsonObject()
+        blocked = selectedPolicy.optBoolean("blocked")
+        scheduleEnabled = selectedSchedule.optBoolean("enabled")
+        weekdays = selectedSchedule.optJsonArray("weekdays")?.let { array ->
+            (0 until array.length()).map(array::optString).filter(String::isNotBlank).toSet()
+        } ?: emptySet()
+        start = selectedSchedule.optString("start")
+        stop = selectedSchedule.optString("stop")
+        priority = selectedQos.optString("priority", "normal")
+        download = selectedQos.optInt("download_kbps").toString()
+        upload = selectedQos.optInt("upload_kbps").toString()
+        dnsProvider = selectedDns.optString("provider", "none")
+        profileId = null
+    }
 
     ClientBackRow(onBack, stringResource(R.string.back_to_clients))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -177,7 +224,37 @@ internal fun ClientDetails(
     }
 
     if (canManagePolicy) {
+        SectionCard(stringResource(R.string.client_quick_actions)) {
+            ActionRow {
+                SecondaryActionButton(
+                    if (blocked) stringResource(R.string.unblock_client) else stringResource(R.string.block_client),
+                    { onSave(displayName, deviceType, profileId, policyPayload(!blocked)) },
+                )
+                if (canSetLease && client.staticIpv4 == null && client.currentIpv4 != null) {
+                    SecondaryActionButton(
+                        stringResource(R.string.pin_current_address),
+                        { onSetLease(displayName.ifBlank { client.hostname ?: "client" }, client.currentIpv4) },
+                    )
+                }
+            }
+        }
+    }
+
+    if (canManagePolicy) {
         SectionCard(stringResource(R.string.client_main_settings)) {
+            OptionSelector(
+                stringResource(R.string.client_ready_mode),
+                selectedPreset,
+                presetOptions,
+                ::applyPreset,
+            )
+            availablePresets.firstOrNull { it.id == selectedPreset }?.let {
+                Text(
+                    if (useRussian) it.description else it.descriptionEn,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             OutlinedTextField(
                 value = displayName,
                 onValueChange = { displayName = it },
@@ -227,20 +304,16 @@ internal fun ClientDetails(
                 clientPriorityOptions,
                 { priority = it },
             )
-            if (canShapePolicy) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    download,
-                    { download = it.filter(Char::isDigit) },
-                    label = { Text(stringResource(R.string.download_limit)) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    upload,
-                    { upload = it.filter(Char::isDigit) },
-                    label = { Text(stringResource(R.string.upload_limit)) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
+            if (canShapePolicy) {
+                OptionSelector(stringResource(R.string.download_limit), download, rateOptions(download), { download = it })
+                OptionSelector(stringResource(R.string.upload_limit), upload, rateOptions(upload), { upload = it })
+                val traffic = client.traffic
+                val rxBps = traffic?.optLong("rx_bps")?.takeIf { !traffic.isNull("rx_bps") }
+                val txBps = traffic?.optLong("tx_bps")?.takeIf { !traffic.isNull("tx_bps") }
+                InfoRow(
+                    stringResource(R.string.client_current_speed),
+                    if (rxBps != null && txBps != null) "↓ ${formatBitsPerSecond(rxBps)} · ↑ ${formatBitsPerSecond(txBps)}" else null,
+                    stringResource(R.string.no_data),
                 )
             }
             else Text(
@@ -373,17 +446,11 @@ internal fun ClientDetails(
         PrimaryActionButton(
             label = stringResource(R.string.save_policy),
             onClick = {
-                val days = JsonArray()
-                weekdays.sorted().forEach(days::put)
                 onSave(
                     displayName,
                     deviceType,
                     profileId,
-                    JsonObject()
-                        .put("blocked", blocked)
-                        .put("schedule", JsonObject().put("enabled", scheduleEnabled).put("weekdays", days).put("start", start).put("stop", stop))
-                        .put("qos", JsonObject().put("priority", priority).put("download_kbps", download.toIntOrNull() ?: 0).put("upload_kbps", upload.toIntOrNull() ?: 0))
-                        .put("dns", JsonObject().put("provider", dnsProvider).put("blocked_domains", JsonArray())),
+                    policyPayload(),
                 )
             },
         )
@@ -409,4 +476,20 @@ internal fun ClientDetails(
             },
         )
     }
+}
+
+private fun speedLabelEnglish(value: String): String =
+    if (value == "0") "Unlimited" else "${value.toIntOrNull()?.div(1000) ?: value} Mbps"
+
+private fun speedLabel(value: String, russian: Boolean): String = when {
+    value == "0" -> if (russian) "Без ограничения" else "Unlimited"
+    russian -> "${value.toIntOrNull()?.div(1000) ?: value} Мбит/с"
+    else -> speedLabelEnglish(value)
+}
+
+private fun formatBitsPerSecond(value: Long): String = when {
+    value >= 1_000_000_000 -> String.format(Locale.US, "%.1f Gbps", value / 1_000_000_000.0)
+    value >= 1_000_000 -> String.format(Locale.US, "%.1f Mbps", value / 1_000_000.0)
+    value >= 1_000 -> String.format(Locale.US, "%.1f Kbps", value / 1_000.0)
+    else -> "$value bps"
 }

@@ -19,6 +19,7 @@ import ru.wrtmonitor.app.api.dto.EventDto
 import ru.wrtmonitor.app.api.dto.JsonObject
 import ru.wrtmonitor.app.api.dto.ManagementOptionDto
 import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
+import ru.wrtmonitor.app.api.dto.ClientPolicyPresetDto
 import ru.wrtmonitor.app.api.dto.FirmwareCatalogDto
 import ru.wrtmonitor.app.api.dto.FirmwareImageDto
 import ru.wrtmonitor.app.api.dto.WifiRadioOptionDto
@@ -544,6 +545,7 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         isStatic = item.optBoolean("is_static"),
         profileId = item.optString("profile_id").takeIf { it.isNotBlank() && it != "null" },
         effectivePolicy = (item.optJSONObject("effective_policy") ?: JSONObject()).toJsonObject(),
+        policyPreset = item.optString("policy_preset", "custom"),
         policyApplication = (item.optJSONObject("policy_application") ?: JSONObject()).let { application ->
             ClientPolicyApplicationDto(
                 state = application.optString("state", "unconfigured"),
@@ -651,6 +653,22 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 val raw = catalogs.optJSONArray("sqm_profiles")?.optJSONObject(index)
                 item.copy(metadata = listOf(raw?.optString("qdisc"), raw?.optString("script"), raw?.optString("qdisc_options")).joinToString("|"))
             },
+            clientPolicyPresets = (catalogs.optJSONArray("client_policy_presets") ?: JSONArray()).let { values ->
+                (0 until values.length()).map { index ->
+                    values.getJSONObject(index).let { item ->
+                        ClientPolicyPresetDto(
+                            id = item.optString("id"),
+                            label = item.optString("label"),
+                            labelEn = item.optString("label_en", item.optString("label")),
+                            description = item.optString("description"),
+                            descriptionEn = item.optString("description_en", item.optString("description")),
+                            requiresShaping = item.optBoolean("requires_shaping"),
+                            policy = (item.optJSONObject("policy") ?: JSONObject()).toJsonObject(),
+                        )
+                    }
+                }
+            },
+            clientSpeedOptions = catalog("client_speed_options"),
         )
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 

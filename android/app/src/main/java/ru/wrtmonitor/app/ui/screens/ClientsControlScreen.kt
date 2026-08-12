@@ -60,6 +60,7 @@ import ru.wrtmonitor.app.api.dto.ClientActivityDto
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
+import ru.wrtmonitor.app.api.dto.ManagementOptionsDto
 import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.ui.components.ActionRow
@@ -104,6 +105,7 @@ fun ClientsControlScreen(
     var telemetry by remember(device.id) { mutableStateOf<TelemetryDto?>(null) }
     var clients by remember(device.id) { mutableStateOf<List<NetworkClientDto>>(emptyList()) }
     var profiles by remember(device.id) { mutableStateOf<List<ClientProfileDto>>(emptyList()) }
+    var managementOptions by remember(device.id) { mutableStateOf<ManagementOptionsDto?>(null) }
     var view by rememberSaveable(device.id) { mutableStateOf(ClientsView.List) }
     var selectedClientId by rememberSaveable(device.id) { mutableStateOf<String?>(null) }
     var selectedClientDetails by remember(device.id) { mutableStateOf<NetworkClientDto?>(null) }
@@ -177,6 +179,13 @@ fun ClientsControlScreen(
             }
             when (val result = repository.clientProfiles(device.id)) {
                 is ApiResult.Success -> profiles = result.data
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                    message = result.message
+                    messageIsError = true
+                }
+            }
+            when (val result = repository.managementOptions(device.id)) {
+                is ApiResult.Success -> managementOptions = result.data
                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
                     message = result.message
                     messageIsError = true
@@ -301,6 +310,8 @@ fun ClientsControlScreen(
             trafficPoints = selectedClientTraffic,
             activity = selectedClientActivity.ifEmpty { selectedClient.recentActivity },
             profiles = profiles,
+            policyPresets = managementOptions?.clientPolicyPresets.orEmpty(),
+            speedOptions = managementOptions?.clientSpeedOptions.orEmpty(),
             canManagePolicy = capabilities["clients.policy"] == true,
             canShapePolicy = capabilities["clients.shaping"] == true,
             canSetLease = capabilities["dhcp.set_lease"] == true,

@@ -162,6 +162,19 @@ def _normalize_client_policy_payload(payload: dict[str, Any]) -> dict[str, Any]:
             r"(?:[01]\d|2[0-3]):[0-5]\d", result_schedule[field]
         ):
             raise HTTPException(status_code=400, detail=f"Invalid schedule {field}")
+    if result_schedule["enabled"]:
+        if not result_schedule["weekdays"]:
+            raise HTTPException(
+                status_code=400, detail="Enabled schedule requires access days"
+            )
+        if not result_schedule["start"] or not result_schedule["stop"]:
+            raise HTTPException(
+                status_code=400, detail="Enabled schedule requires start and stop"
+            )
+        if result_schedule["start"] == result_schedule["stop"]:
+            raise HTTPException(
+                status_code=400, detail="Schedule start and stop must differ"
+            )
     qos = payload.get("qos") or {}
     if not isinstance(qos, dict):
         raise HTTPException(status_code=400, detail="Field 'qos' must be an object")

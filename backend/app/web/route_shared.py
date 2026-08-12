@@ -202,6 +202,19 @@ def format_station_rate(value: int | float | str | None) -> str:
     return f"{rate:.0f} Кбит/с"
 
 
+def format_bit_rate(value: int | float | None) -> str:
+    if value is None:
+        return "нет данных"
+    rate = float(value)
+    if rate >= 1_000_000_000:
+        return f"{rate / 1_000_000_000:.1f} Гбит/с"
+    if rate >= 1_000_000:
+        return f"{rate / 1_000_000:.1f} Мбит/с"
+    if rate >= 1_000:
+        return f"{rate / 1_000:.1f} Кбит/с"
+    return f"{rate:.0f} бит/с"
+
+
 def format_size_kb(value: int | float | None) -> str:
     if value is None:
         return "нет данных"
@@ -246,6 +259,7 @@ templates.env.filters["timestamp"] = format_timestamp
 templates.env.filters["duration"] = format_duration
 templates.env.filters["microseconds"] = format_microseconds
 templates.env.filters["station_rate"] = format_station_rate
+templates.env.filters["bit_rate"] = format_bit_rate
 templates.env.filters["size_kb"] = format_size_kb
 templates.env.filters["bytes"] = format_bytes
 templates.env.filters["status_label"] = format_device_status

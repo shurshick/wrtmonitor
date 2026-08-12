@@ -2,11 +2,13 @@ import pytest
 from fastapi import HTTPException
 
 from backend.app.services.client_registry import (
+    client_policy_preset,
     infer_device_type,
     inferred_vendor,
     validate_client_policy,
     validate_device_type,
 )
+from backend.app.services.policy_catalog import CLIENT_POLICY_PRESETS
 from backend.app.services.commands import validate_command_payload
 from backend.app.services.config_transactions import build_command_preview
 from backend.app.services.telemetry import normalize_clients_summary
@@ -31,6 +33,29 @@ def test_client_policy_normalizes_schedule_and_qos():
         "download_kbps": 50000,
         "upload_kbps": 0,
     }
+
+
+def test_every_client_preset_is_valid_and_detected_after_normalization():
+    for preset in CLIENT_POLICY_PRESETS:
+        normalized = validate_client_policy(preset["policy"])
+        assert client_policy_preset(normalized) == preset["id"]
+
+
+def test_modified_preset_is_reported_as_custom():
+    assert client_policy_preset({"qos": {"download_kbps": 42_000}}) == "custom"
+
+
+@pytest.mark.parametrize(
+    "schedule",
+    [
+        {"enabled": True, "weekdays": [], "start": "07:00", "stop": "22:00"},
+        {"enabled": True, "weekdays": ["mon"], "start": "", "stop": "22:00"},
+        {"enabled": True, "weekdays": ["mon"], "start": "07:00", "stop": "07:00"},
+    ],
+)
+def test_enabled_client_schedule_requires_a_real_access_window(schedule):
+    with pytest.raises(HTTPException):
+        validate_client_policy({"schedule": schedule})
 
 
 @pytest.mark.parametrize(

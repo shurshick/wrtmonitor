@@ -16,6 +16,16 @@ data class WifiRadioOptionDto(
     val supportedChannels: List<String>,
 )
 
+data class ClientPolicyPresetDto(
+    val id: String,
+    val label: String,
+    val labelEn: String,
+    val description: String,
+    val descriptionEn: String,
+    val requiresShaping: Boolean,
+    val policy: JsonObject,
+)
+
 data class ManagementOptionsDto(
     val source: String,
     val interfaces: List<String>,
@@ -28,4 +38,6 @@ data class ManagementOptionsDto(
     val wifiCountries: List<ManagementOptionDto>,
     val fallbackWifiChannels: List<String>,
     val sqmProfiles: List<ManagementOptionDto>,
+    val clientPolicyPresets: List<ClientPolicyPresetDto>,
+    val clientSpeedOptions: List<ManagementOptionDto>,
 )

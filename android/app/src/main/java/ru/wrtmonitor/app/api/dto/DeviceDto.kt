@@ -38,6 +38,7 @@ data class NetworkClientDto(
     val isStatic: Boolean,
     val profileId: String?,
     val effectivePolicy: JsonObject,
+    val policyPreset: String,
     val policyApplication: ClientPolicyApplicationDto,
     val traffic: JsonObject?,
     val firstSeenAt: String?,

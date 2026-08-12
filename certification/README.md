@@ -19,3 +19,6 @@ ID, deadline, post-condition и предусмотренный контракт�
 нет паролей администратора, SSH-паролей и device token.
 
 Повторный запуск описан в [инструкции](../docs/real-router-testing.md).
+
+Дополнительная проверка готовых клиентских режимов `v0.44.0` описана в
+[`v0.44.0-client-experience.md`](v0.44.0-client-experience.md).

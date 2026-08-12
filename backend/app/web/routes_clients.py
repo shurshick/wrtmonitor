@@ -42,9 +42,10 @@ def web_client_policy(
     display_name: str = Form(""),
     device_type: str = Form("unknown"),
     profile_id: str = Form(""),
+    preserve_profile_policy: bool = Form(False),
     blocked: bool = Form(False),
     schedule_enabled: bool = Form(False),
-    weekdays: str = Form(""),
+    weekdays: list[str] = Form(default=[]),
     start: str = Form(""),
     stop: str = Form(""),
     priority: str = Form("normal"),
@@ -68,9 +69,7 @@ def web_client_policy(
             "blocked": blocked,
             "schedule": {
                 "enabled": schedule_enabled,
-                "weekdays": [
-                    item.strip() for item in weekdays.split(",") if item.strip()
-                ],
+                "weekdays": weekdays,
                 "start": start,
                 "stop": stop,
             },
@@ -106,7 +105,7 @@ def web_client_policy(
         if not profile or profile.device_id != device_id:
             raise HTTPException(status_code=422, detail="Client profile not found")
         client.profile_id = profile.id
-        client.policy = {}
+        client.policy = policy if preserve_profile_policy else {}
     else:
         client.profile_id = None
         client.policy = policy

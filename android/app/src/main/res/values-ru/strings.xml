@@ -725,4 +725,8 @@
     <string name="client_policy_failed">Роутер не подтвердил настройки клиента</string>
     <string name="client_policy_still_applying">Роутер ещё применяет настройки. Статус обновится автоматически.</string>
     <string name="client_shaping_unsupported">Для ограничения скорости нужен обновлённый агент и tc-full на роутере.</string>
+    <string name="client_quick_actions">Быстрые действия</string>
+    <string name="client_ready_mode">Готовый режим</string>
+    <string name="client_mode_custom">Свои настройки</string>
+    <string name="client_current_speed">Текущая скорость</string>
 </resources>

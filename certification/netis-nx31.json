@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T13:36:27.280723+00:00",
+  "generated_at": "2026-08-12T13:17:52.033759+00:00",
   "router": "netis-nx31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
   "target": "netis-nx31",
   "contract_version": 1,
@@ -843,5 +843,5 @@
     }
   },
   "agent_source": "worktree",
-  "agent_version": "0.35.15"
+  "agent_version": "0.44.0"
 }

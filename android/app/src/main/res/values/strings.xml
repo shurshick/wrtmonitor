@@ -725,4 +725,8 @@
     <string name="client_policy_failed">The router did not confirm the client settings</string>
     <string name="client_policy_still_applying">The router is still applying the settings. Their status will update automatically.</string>
     <string name="client_shaping_unsupported">Speed limits require an updated agent and tc-full on the router.</string>
+    <string name="client_quick_actions">Quick actions</string>
+    <string name="client_ready_mode">Ready mode</string>
+    <string name="client_mode_custom">Custom settings</string>
+    <string name="client_current_speed">Current speed</string>
 </resources>

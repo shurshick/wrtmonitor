@@ -61,6 +61,24 @@ def test_policy_catalog_exposes_only_supported_presets():
         "cloudflare-security",
         "cloudflare-family",
     }
+    assert {item["id"] for item in catalog["client_policy_presets"]} == {
+        "unrestricted",
+        "child",
+        "guest",
+        "iot",
+    }
+    assert [item["value"] for item in catalog["client_speed_options"]] == [
+        0,
+        1000,
+        5000,
+        10000,
+        25000,
+        50000,
+        100000,
+        250000,
+        500000,
+        1000000,
+    ]
 
 
 def test_mwan_state_keeps_runtime_member_order_and_roles():

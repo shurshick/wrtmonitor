@@ -138,6 +138,8 @@ verify_client_policy_postcondition() {
     [ -n "$dns" ] || dns=none
     suffix="$(client_policy_suffix "$mac")"
     policy_ref="wrtmonitor_policy_$suffix"
+    policy_after_ref="${policy_ref}_after"
+    policy_days_ref="${policy_ref}_days"
     qos_ref="wrtmonitor_qos_$suffix"
     dns_ref="wrtmonitor_dns_$suffix"
     dot_ref="wrtmonitor_dot_$suffix"
@@ -154,16 +156,44 @@ verify_client_policy_postcondition() {
     verify_uci_value "wrtmonitor.$state_ref.upload_kbps" "$upload" || return 1
     verify_uci_value "wrtmonitor.$state_ref.dns_provider" "$dns" || return 1
 
-    if [ "$blocked" = true ] || [ "$schedule_enabled" = true ]; then
+    if [ "$blocked" = true ]; then
         verify_uci_value "firewall.$policy_ref.src_mac" "$mac" \
             && verify_uci_value "firewall.$policy_ref.target" REJECT || return 1
-        if [ "$blocked" != true ] && [ "$schedule_enabled" = true ]; then
-            [ -z "$weekdays" ] || verify_uci_value "firewall.$policy_ref.weekdays" "$weekdays" || return 1
-            [ -z "$start" ] || verify_uci_value "firewall.$policy_ref.start_time" "$start" || return 1
-            [ -z "$stop" ] || verify_uci_value "firewall.$policy_ref.stop_time" "$stop" || return 1
+        [ -z "$(uci -q get "firewall.$policy_after_ref" 2>/dev/null || true)" ] || return 1
+        [ -z "$(uci -q get "firewall.$policy_days_ref" 2>/dev/null || true)" ] || return 1
+    elif [ "$schedule_enabled" = true ]; then
+        blocked_days="$(client_policy_complement_weekdays "$weekdays")"
+        if client_policy_time_before "$start" "$stop"; then
+            if [ "$start" = "00:00" ]; then
+                [ -z "$(uci -q get "firewall.$policy_ref" 2>/dev/null || true)" ] || return 1
+            else
+                verify_uci_value "firewall.$policy_ref.weekdays" "$weekdays" \
+                    && verify_uci_value "firewall.$policy_ref.start_time" "00:00" \
+                    && verify_uci_value "firewall.$policy_ref.stop_time" "$start" || return 1
+            fi
+            if [ "$stop" = "23:59" ]; then
+                [ -z "$(uci -q get "firewall.$policy_after_ref" 2>/dev/null || true)" ] || return 1
+            else
+                verify_uci_value "firewall.$policy_after_ref.weekdays" "$weekdays" \
+                    && verify_uci_value "firewall.$policy_after_ref.start_time" "$stop" \
+                    && verify_uci_value "firewall.$policy_after_ref.stop_time" "23:59" || return 1
+            fi
+        else
+            verify_uci_value "firewall.$policy_ref.weekdays" "$weekdays" \
+                && verify_uci_value "firewall.$policy_ref.start_time" "$stop" \
+                && verify_uci_value "firewall.$policy_ref.stop_time" "$start" || return 1
+            [ -z "$(uci -q get "firewall.$policy_after_ref" 2>/dev/null || true)" ] || return 1
+        fi
+        if [ -n "$blocked_days" ]; then
+            verify_uci_value "firewall.$policy_days_ref.weekdays" "$blocked_days" \
+                && verify_uci_value "firewall.$policy_days_ref.target" REJECT || return 1
+        else
+            [ -z "$(uci -q get "firewall.$policy_days_ref" 2>/dev/null || true)" ] || return 1
         fi
     else
         [ -z "$(uci -q get "firewall.$policy_ref" 2>/dev/null || true)" ] || return 1
+        [ -z "$(uci -q get "firewall.$policy_after_ref" 2>/dev/null || true)" ] || return 1
+        [ -z "$(uci -q get "firewall.$policy_days_ref" 2>/dev/null || true)" ] || return 1
     fi
     if [ "$priority" = normal ]; then
         [ -z "$(uci -q get "firewall.$qos_ref" 2>/dev/null || true)" ] || return 1

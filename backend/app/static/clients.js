@@ -41,5 +41,30 @@
         if (item !== row) item.open = false;
       });
     });
+    const form = row.querySelector('.client-policy-form');
+    const preset = form?.querySelector('[data-client-preset]');
+    const description = form?.querySelector('[data-client-preset-description]');
+    preset?.addEventListener('change', () => {
+      const option = preset.selectedOptions[0];
+      if (!option?.dataset.policy) return;
+      const policy = JSON.parse(option.dataset.policy);
+      const setValue = (name, value) => {
+        const field = form.querySelector(`[name="${name}"]`);
+        if (field) field.value = String(value ?? '');
+      };
+      form.querySelector('[name="blocked"]').checked = Boolean(policy.blocked);
+      form.querySelector('[name="schedule_enabled"]').checked = Boolean(policy.schedule.enabled);
+      form.querySelectorAll('[name="weekdays"]').forEach((field) => {
+        field.checked = policy.schedule.weekdays.includes(field.value);
+      });
+      setValue('start', policy.schedule.start);
+      setValue('stop', policy.schedule.stop);
+      setValue('priority', policy.qos.priority);
+      setValue('download_kbps', policy.qos.download_kbps);
+      setValue('upload_kbps', policy.qos.upload_kbps);
+      setValue('dns_provider', policy.dns.provider);
+      setValue('profile_id', '');
+      if (description) description.textContent = option.dataset.description || '';
+    });
   });
 })();

@@ -361,6 +361,8 @@ handle_network_command() {
             [ -n "$dns_provider" ] || dns_provider=none
             client_suffix="$(client_policy_suffix "$client_mac")"
             client_ref="wrtmonitor_policy_$client_suffix"
+            client_after_ref="${client_ref}_after"
+            client_days_ref="${client_ref}_days"
             qos_ref="wrtmonitor_qos_$client_suffix"
             dns_ref="wrtmonitor_dns_$client_suffix"
             dot_ref="wrtmonitor_dot_$client_suffix"
@@ -372,22 +374,21 @@ handle_network_command() {
             elif [ -z "$backup_file" ]; then
                 status="failed"; result="$(command_failed_result "failed to create firewall backup")"
             else
-                uci -q delete "firewall.$client_ref" || true
-                uci -q delete "firewall.$qos_ref" || true
-                uci -q delete "firewall.$dns_ref" || true
-                uci -q delete "firewall.$dot_ref" || true
-                if [ "$client_blocked" = "true" ] || [ "$schedule_enabled" = "true" ]; then
-                    uci set "firewall.$client_ref=rule"
-                    uci set "firewall.$client_ref.name=WrtMonitor policy $client_mac"
-                    uci set "firewall.$client_ref.src=lan"
-                    uci set "firewall.$client_ref.dest=wan"
-                    uci set "firewall.$client_ref.src_mac=$client_mac"
-                    uci set "firewall.$client_ref.target=REJECT"
-                    if [ "$client_blocked" != "true" ] && [ "$schedule_enabled" = "true" ]; then
-                        [ -z "$schedule_days" ] || uci set "firewall.$client_ref.weekdays=$schedule_days"
-                        [ -z "$schedule_start" ] || uci set "firewall.$client_ref.start_time=$schedule_start"
-                        [ -z "$schedule_stop" ] || uci set "firewall.$client_ref.stop_time=$schedule_stop"
+                client_policy_clear_firewall_rules "$client_mac"
+                if [ "$client_blocked" = "true" ]; then
+                    client_policy_set_reject_rule "$client_ref" "$client_mac" "WrtMonitor block $client_mac"
+                elif [ "$schedule_enabled" = "true" ]; then
+                    blocked_days="$(client_policy_complement_weekdays "$schedule_days")"
+                    if client_policy_time_before "$schedule_start" "$schedule_stop"; then
+                        [ "$schedule_start" = "00:00" ] \
+                            || client_policy_set_reject_rule "$client_ref" "$client_mac" "WrtMonitor before access $client_mac" "$schedule_days" "00:00" "$schedule_start"
+                        [ "$schedule_stop" = "23:59" ] \
+                            || client_policy_set_reject_rule "$client_after_ref" "$client_mac" "WrtMonitor after access $client_mac" "$schedule_days" "$schedule_stop" "23:59"
+                    else
+                        client_policy_set_reject_rule "$client_ref" "$client_mac" "WrtMonitor outside overnight access $client_mac" "$schedule_days" "$schedule_stop" "$schedule_start"
                     fi
+                    [ -z "$blocked_days" ] \
+                        || client_policy_set_reject_rule "$client_days_ref" "$client_mac" "WrtMonitor outside access days $client_mac" "$blocked_days"
                 fi
                 if [ "$qos_priority" != "normal" ]; then
                     case "$qos_priority" in low) policy_mark="0x10" ;; high) policy_mark="0x30" ;; realtime) policy_mark="0x40" ;; *) policy_mark="0x20" ;; esac

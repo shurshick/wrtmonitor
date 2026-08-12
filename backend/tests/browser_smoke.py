@@ -66,6 +66,7 @@ def prepare_router() -> tuple[str, str]:
             "clients.read": True,
             "clients.block": True,
             "clients.policy": True,
+            "clients.shaping": True,
             "qos.sqm": True,
             "dhcp.set_lease": True,
             "dhcp.delete_lease": True,
@@ -764,6 +765,32 @@ def run() -> None:
                     assert client_row.is_visible()
                     client_row.locator("summary").click()
                     assert client_row.get_attribute("open") is not None
+                    preset = client_row.locator("[data-client-preset]")
+                    assert preset.count() == 1
+                    assert preset.locator("option").all_text_contents() == [
+                        "Свои настройки",
+                        "Без ограничений",
+                        "Ребёнок",
+                        "Гость",
+                        "Умное устройство",
+                    ]
+                    preset.select_option("guest")
+                    assert (
+                        client_row.locator('select[name="download_kbps"]').input_value()
+                        == "25000"
+                    )
+                    assert (
+                        client_row.locator('select[name="upload_kbps"]').input_value()
+                        == "10000"
+                    )
+                    assert client_row.locator(".client-quick-actions").count() == 1
+                    assert (
+                        client_row.locator(
+                            '.client-quick-actions input[name="preserve_profile_policy"]'
+                        ).input_value()
+                        == "true"
+                    )
+                    assert "Закрепить 192.168.1.10" in client_row.inner_text()
                     assert page.locator(".client-address-panel").count() == 1
                     ipv6_panel = (
                         page.locator("details.settings-panel")

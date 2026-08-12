@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T13:53:30.759731+00:00",
+  "generated_at": "2026-08-12T13:18:30.382752+00:00",
   "router": "openwrt-x86 / innotek GmbH VirtualBox / OpenWrt 22.03.5 r20134-5f15225c1e",
   "target": "openwrt-x86",
   "contract_version": 1,
@@ -843,5 +843,5 @@
     }
   },
   "agent_source": "worktree",
-  "agent_version": "0.35.15"
+  "agent_version": "0.44.0"
 }

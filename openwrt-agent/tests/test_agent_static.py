@@ -686,6 +686,13 @@ def test_client_policy_verifier_checks_exact_runtime_filter_and_rollback():
     assert 'client_policy_filter_matches "$device" egress' in verification
     assert '[ "$command_type" = client.set_policy ]' in transactions
     assert 'client_policy_delete_filter "$current_device" ingress' in transactions
+    assert "client_policy_complement_weekdays" in policy
+    assert "client_policy_clear_firewall_rules" in policy
+    assert 'client_policy_set_reject_rule "$client_after_ref"' in read_text(
+        LIB_DIR / "command_network.sh"
+    )
+    assert 'firewall.$policy_after_ref.start_time' in verification
+    assert 'firewall.$policy_days_ref.weekdays' in verification
 
 
 def test_update_manifest_signature_is_required_and_valid(tmp_path: Path):

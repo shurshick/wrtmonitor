@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:40:39.280187+00:00",
+  "tested_at": "2026-08-12T13:18:30.381767+00:00",
   "command": "client.set_policy",
   "payload": {
     "mac": "02:00:00:00:ce:01",
@@ -21,16 +21,37 @@
   },
   "status": "success",
   "result": {
-    "message": "configuration applied and verified",
+    "message": "client policy applied and verified",
+    "observed": {
+      "dns": {
+        "provider": "none"
+      },
+      "mac": "02:00:00:00:ce:01",
+      "qos": {
+        "device": "br-lan",
+        "priority": "normal",
+        "upload_kbps": 0,
+        "download_kbps": 0,
+        "upload_active": false,
+        "download_active": false
+      },
+      "blocked": false,
+      "schedule": {
+        "stop": "",
+        "start": "",
+        "enabled": false,
+        "weekdays": []
+      }
+    },
     "transaction": {
-      "id": "dccf3134-964b-4093-90c7-954f5ec2ad42",
+      "id": "1ddc3d95-1012-4388-a6d8-f9440d732f04",
       "state": "confirmed",
-      "configs": "firewall",
+      "configs": "firewall wrtmonitor",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.843,
+  "elapsed_seconds": 4.422,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

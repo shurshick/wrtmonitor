@@ -17,6 +17,7 @@ from ..models import (
     DeviceCommand,
     NetworkClient,
 )
+from .policy_catalog import CLIENT_POLICY_PRESETS
 from .telemetry import normalize_clients_summary
 
 
@@ -234,6 +235,19 @@ def validate_client_policy(value: dict[str, Any] | None) -> dict[str, Any]:
     for key in ("start", "stop"):
         if schedule.get(key) and not TIME_PATTERN.fullmatch(str(schedule[key])):
             raise HTTPException(status_code=422, detail=f"Invalid schedule {key} time")
+    if bool(schedule.get("enabled", False)):
+        if not weekdays:
+            raise HTTPException(
+                status_code=422, detail="Enabled schedule requires access days"
+            )
+        if not schedule.get("start") or not schedule.get("stop"):
+            raise HTTPException(
+                status_code=422, detail="Enabled schedule requires start and stop"
+            )
+        if str(schedule["start"]) == str(schedule["stop"]):
+            raise HTTPException(
+                status_code=422, detail="Schedule start and stop must differ"
+            )
     qos_input = dict(policy.get("qos") or {})
     qos: dict[str, Any] = {}
     for key in ("download_kbps", "upload_kbps"):
@@ -403,6 +417,14 @@ def effective_policy(db: Session, client: NetworkClient) -> dict[str, Any]:
     return validate_client_policy(merged)
 
 
+def client_policy_preset(policy: dict[str, Any]) -> str:
+    normalized = validate_client_policy(policy)
+    for preset in CLIENT_POLICY_PRESETS:
+        if normalized == validate_client_policy(preset["policy"]):
+            return str(preset["id"])
+    return "custom"
+
+
 def client_policy_application(db: Session, client: NetworkClient) -> dict[str, Any]:
     command = db.scalars(
         select(DeviceCommand)
@@ -456,12 +478,14 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
     presence_source = client.presence_source
     if presence_state == "recent" and client.presence_state == "online":
         presence_source = "confirmation_expired"
-    latest_sample = db.scalars(
+    latest_samples = db.scalars(
         select(ClientTrafficSample)
         .where(ClientTrafficSample.client_id == client.id)
         .order_by(ClientTrafficSample.created_at.desc())
-        .limit(1)
-    ).first()
+        .limit(2)
+    ).all()
+    latest_sample = latest_samples[0] if latest_samples else None
+    previous_sample = latest_samples[1] if len(latest_samples) > 1 else None
     activity = db.scalars(
         select(ClientActivityEvent)
         .where(ClientActivityEvent.client_id == client.id)
@@ -473,6 +497,33 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
         and online
         and abs((client.last_seen_at - latest_sample.created_at).total_seconds()) <= 1
     )
+    traffic = None
+    if traffic_is_current and latest_sample:
+        interval_seconds = (
+            (latest_sample.created_at - previous_sample.created_at).total_seconds()
+            if previous_sample
+            else 0
+        )
+        traffic = {
+            "rx_bytes": latest_sample.rx_bytes,
+            "tx_bytes": latest_sample.tx_bytes,
+            "created_at": latest_sample.created_at.isoformat(),
+            "rx_bps": round(
+                max(0, latest_sample.rx_bytes - previous_sample.rx_bytes)
+                * 8
+                / interval_seconds
+            )
+            if previous_sample and interval_seconds > 0
+            else None,
+            "tx_bps": round(
+                max(0, latest_sample.tx_bytes - previous_sample.tx_bytes)
+                * 8
+                / interval_seconds
+            )
+            if previous_sample and interval_seconds > 0
+            else None,
+        }
+    resolved_policy = effective_policy(db, client)
     return {
         "id": str(client.id),
         "mac": client.mac,
@@ -498,17 +549,12 @@ def client_response(db: Session, client: NetworkClient) -> dict[str, Any]:
         "is_static": client.is_static,
         "profile_id": str(client.profile_id) if client.profile_id else None,
         "policy": client.policy or {},
-        "effective_policy": effective_policy(db, client),
+        "effective_policy": resolved_policy,
+        "policy_preset": client_policy_preset(resolved_policy),
         "policy_application": client_policy_application(db, client),
         "first_seen_at": client.first_seen_at.isoformat(),
         "last_seen_at": client.last_seen_at.isoformat(),
-        "traffic": {
-            "rx_bytes": latest_sample.rx_bytes,
-            "tx_bytes": latest_sample.tx_bytes,
-            "created_at": latest_sample.created_at.isoformat(),
-        }
-        if traffic_is_current
-        else None,
+        "traffic": traffic,
         "recent_activity": [
             {
                 "state": event.state,

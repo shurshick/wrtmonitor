@@ -595,6 +595,11 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .client-policy-form h3 { margin: 0 0 2px; font-size: 15px; }
 .client-policy-form .form-grid { grid-template-columns: 1fr; }
 .client-policy-form > .form-actions { grid-column: 1 / -1; padding-top: 16px; }
+.client-quick-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.client-quick-actions form { margin: 0; }
+.client-preset-description { min-height: 32px; margin: -4px 0 0; color: var(--muted); font-size: 12px; }
+.client-live-rate { display: grid; gap: 2px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-muted); }
+.client-live-rate span { color: var(--muted); font-size: 11px; }
 .client-delete-lease { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .client-address-panel { display: grid; grid-template-columns: minmax(180px, .75fr) minmax(0, 1.5fr) auto; align-items: end; gap: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 .client-address-panel h3 { margin: 0 0 3px; font-size: 15px; }

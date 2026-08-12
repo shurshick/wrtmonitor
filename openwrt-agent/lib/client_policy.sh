@@ -44,6 +44,59 @@ client_policy_lan_device() {
     printf '%s' "$device"
 }
 
+client_policy_complement_weekdays() {
+    selected=" $1 "
+    complement=""
+    for day in mon tue wed thu fri sat sun; do
+        case "$selected" in
+            *" $day "*) ;;
+            *) complement="$complement $day" ;;
+        esac
+    done
+    printf '%s' "${complement# }"
+}
+
+client_policy_time_before() {
+    left_hour="${1%:*}"
+    left_minute="${1#*:}"
+    right_hour="${2%:*}"
+    right_minute="${2#*:}"
+    left_hour="${left_hour#0}"; [ -n "$left_hour" ] || left_hour=0
+    left_minute="${left_minute#0}"; [ -n "$left_minute" ] || left_minute=0
+    right_hour="${right_hour#0}"; [ -n "$right_hour" ] || right_hour=0
+    right_minute="${right_minute#0}"; [ -n "$right_minute" ] || right_minute=0
+    [ $((left_hour * 60 + left_minute)) -lt $((right_hour * 60 + right_minute)) ]
+}
+
+client_policy_set_reject_rule() {
+    ref="$1"
+    mac="$2"
+    label="$3"
+    weekdays="${4:-}"
+    start_time="${5:-}"
+    stop_time="${6:-}"
+    uci set "firewall.$ref=rule" \
+        && uci set "firewall.$ref.name=$label" \
+        && uci set "firewall.$ref.src=lan" \
+        && uci set "firewall.$ref.dest=wan" \
+        && uci set "firewall.$ref.src_mac=$mac" \
+        && uci set "firewall.$ref.target=REJECT" \
+        && { [ -z "$weekdays" ] || uci set "firewall.$ref.weekdays=$weekdays"; } \
+        && { [ -z "$start_time" ] || uci set "firewall.$ref.start_time=$start_time"; } \
+        && { [ -z "$stop_time" ] || uci set "firewall.$ref.stop_time=$stop_time"; }
+}
+
+client_policy_clear_firewall_rules() {
+    suffix="$(client_policy_suffix "$1")"
+    base_ref="wrtmonitor_policy_$suffix"
+    uci -q delete "firewall.$base_ref" || true
+    uci -q delete "firewall.${base_ref}_after" || true
+    uci -q delete "firewall.${base_ref}_days" || true
+    uci -q delete "firewall.wrtmonitor_qos_$suffix" || true
+    uci -q delete "firewall.wrtmonitor_dns_$suffix" || true
+    uci -q delete "firewall.wrtmonitor_dot_$suffix" || true
+}
+
 client_policy_delete_filter() {
     device="$1"
     direction="$2"
