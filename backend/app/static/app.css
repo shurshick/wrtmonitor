@@ -537,16 +537,17 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .notice--compact { margin-bottom: 14px; padding: 9px 12px; font-size: 13px; }
 .notice--success { border-left-color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--surface)); }
 .notice--error { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); color: var(--danger); }
-.radio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
-.radio-card { display: grid; gap: 15px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.radio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; min-width: 0; }
+.radio-card { display: grid; gap: 15px; min-width: 0; max-width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .radio-card__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.radio-card__heading > div { display: grid; }
+.radio-card__heading > div { display: grid; min-width: 0; }
 .radio-card__band { color: var(--primary); font-size: 12px; font-weight: 750; text-transform: uppercase; }
 .radio-card__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-.radio-card__facts > span { display: grid; gap: 2px; padding: 8px; border-radius: 6px; background: var(--surface-muted); }
-.ssid-list { display: grid; gap: 7px; }
+.radio-card__facts > span { display: grid; min-width: 0; gap: 2px; padding: 8px; border-radius: 6px; background: var(--surface-muted); }
+.radio-card__facts strong, .ssid-list strong, .ssid-list small { overflow-wrap: anywhere; }
+.ssid-list { display: grid; min-width: 0; gap: 7px; }
 .ssid-list > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 9px; border-top: 1px solid var(--border); }
-.ssid-list > div > span:first-child { display: grid; }
+.ssid-list > div > span:first-child { display: grid; min-width: 0; }
 .ssid-list small { color: var(--muted); }
 
 .clients-summary { display: flex; align-items: center; gap: 18px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-muted); }
@@ -781,7 +782,7 @@ html[data-theme="light"] .resource-gauge { background: conic-gradient(var(--gaug
   .resource-item > div:first-child, .system-reboot, .clients-summary { align-items: flex-start; flex-direction: column; }
   .clients-summary > div { width: 100%; padding: 0 0 10px; border-right: 0; border-bottom: 1px solid var(--border); }
   .radio-grid { grid-template-columns: 1fr; }
-  .radio-card__facts { grid-template-columns: 1fr 1fr 1fr; }
+  .radio-card__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inline-actions, .inline-actions form { align-items: stretch; flex-direction: column; }
   .inline-actions form, .inline-actions label { width: 100%; }
   .inline-actions button { align-self: flex-start; }
