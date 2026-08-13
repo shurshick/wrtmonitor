@@ -10,3 +10,11 @@ local.properties
 *.apk
 *.aab
 work/
+.browser-*/
+.ci-*.log
+.release-artifacts-*/
+.vendor-tmp/
+artifacts/
+backend-job.zip
+openwrt-agent/*.sig.bin
+openwrt-agent/update-public-key.pem

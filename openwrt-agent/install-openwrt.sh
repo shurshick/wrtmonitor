@@ -14,6 +14,10 @@ CLEAN_MODE="0"
 REMOVE_CONFIG="0"
 WORK_DIR=""
 KEEP_CONFIG="1"
+AGENT_INSTALL_PATH="/usr/bin/wrtmonitor-agent"
+INIT_INSTALL_PATH="/etc/init.d/wrtmonitor"
+LIB_INSTALL_DIR="/usr/lib/wrtmonitor"
+RELEASES_DIR="$LIB_INSTALL_DIR/releases"
 
 missing_packages=""
 
@@ -305,6 +309,60 @@ post_json() {
     fi
 }
 
+resolve_device_identity() {
+    hostname_value="$(json_escape "$(uci -q get system.@system[0].hostname 2>/dev/null || hostname)")"
+    model_value="$(json_escape "$(cat /tmp/sysinfo/model 2>/dev/null || echo OpenWrt)")"
+    firmware_value="$(json_escape "$(openwrt_firmware_description)")"
+    name_value="$(json_escape "$NAME")"
+    register_body="{\"device_token\":\"$(json_escape "$DEVICE_TOKEN")\",\"hostname\":\"$hostname_value\",\"model\":\"$model_value\",\"firmware\":\"$firmware_value\",\"name\":\"$name_value\"}"
+    register_response="$(post_json /api/v1/agent/register "$register_body")"
+    DEVICE_ID="$(printf '%s' "$register_response" | sed -n 's/.*"device_id":"\([^"]*\)".*/\1/p')"
+    [ -n "$DEVICE_ID" ] || { echo "Failed to resolve device identity from token" >&2; exit 1; }
+}
+
+directory_is_writable() {
+    directory="$1"
+    probe="$directory/.wrtmonitor-install-test.$$"
+    [ -d "$directory" ] || mkdir -p "$directory" || return 1
+    : >"$probe" 2>/dev/null || return 1
+    rm -f "$probe"
+}
+
+installation_preflight() {
+    for directory in "$(dirname "$AGENT_INSTALL_PATH")" "$(dirname "$INIT_INSTALL_PATH")" "$LIB_INSTALL_DIR" /etc/config; do
+        directory_is_writable "$directory" || {
+            echo "Installation stopped: filesystem is read-only or not writable: $directory" >&2
+            exit 1
+        }
+    done
+    required_kb="$(du -sk "$WORK_DIR" 2>/dev/null | awk 'NR == 1 { print $1 }')"
+    available_kb="$(df -Pk "$LIB_INSTALL_DIR" 2>/dev/null | awk 'NR == 2 { print $4 }')"
+    case "$required_kb:$available_kb" in
+        *[!0-9:]*|:*|*:) echo "Installation stopped: cannot determine free disk space" >&2; exit 1 ;;
+    esac
+    required_kb=$((required_kb * 2 + 512))
+    [ "$available_kb" -ge "$required_kb" ] || {
+        echo "Installation stopped: not enough free space (${available_kb} KB available, ${required_kb} KB required)" >&2
+        exit 1
+    }
+}
+
+system_preflight() {
+    for directory in /usr/bin /usr/lib /etc/init.d /etc/config; do
+        directory_is_writable "$directory" || {
+            echo "Installation stopped before package changes: filesystem is read-only or not writable: $directory" >&2
+            exit 1
+        }
+    done
+}
+
+atomic_pointer() {
+    generation_id="$1"
+    pointer_path="$2"
+    printf '%s\n' "$generation_id" >"$pointer_path.new"
+    mv -f "$pointer_path.new" "$pointer_path"
+}
+
 clean_install_targets() {
     /etc/init.d/wrtmonitor stop 2>/dev/null || true
     rm -f /usr/bin/wrtmonitor-agent
@@ -354,11 +412,7 @@ write_connection_config() {
     uci set "wrtmonitor.main.server_url=$SERVER_URL"
     uci set "wrtmonitor.main.update_source=$DOWNLOAD_BASE"
     uci set "wrtmonitor.main.device_token=$DEVICE_TOKEN"
-    if [ -n "$DEVICE_ID" ]; then
-        uci set "wrtmonitor.main.device_id=$DEVICE_ID"
-    else
-        uci -q delete wrtmonitor.main.device_id 2>/dev/null || true
-    fi
+    uci set "wrtmonitor.main.device_id=$DEVICE_ID"
     uci set "wrtmonitor.main.name=$NAME"
     set_config_default interval 60
     set_config_default auto_update 1
@@ -390,14 +444,30 @@ stop_existing_agent() {
 }
 
 install_payload() {
-    cp "$WORK_DIR/wrtmonitor-agent" /usr/bin/wrtmonitor-agent
-    chmod 0755 /usr/bin/wrtmonitor-agent
-    cp "$WORK_DIR/wrtmonitor.init" /etc/init.d/wrtmonitor
-    chmod 0755 /etc/init.d/wrtmonitor
-    mkdir -p /usr/lib/wrtmonitor
-    rm -f /usr/lib/wrtmonitor/*.sh
-    cp "$WORK_DIR"/lib/*.sh /usr/lib/wrtmonitor/
-    chmod 0755 /usr/lib/wrtmonitor/*.sh
+    version="$(tr -d '\r\n' <"$WORK_DIR/agent-version.txt")"
+    digest="$(sha256sum "$WORK_DIR/SHA256SUMS.txt" | awk '{print substr($1, 1, 12)}')"
+    generation="$RELEASES_DIR/$version-$digest"
+    generation_tmp="$RELEASES_DIR/.$version-$digest.$$"
+    rm -rf "$generation_tmp"
+    mkdir -p "$generation_tmp"
+    cp "$WORK_DIR"/lib/*.sh "$generation_tmp"/
+    chmod 0755 "$generation_tmp"/*.sh
+    printf '%s\n' "$version" >"$generation_tmp/agent-version.txt"
+    if [ -d "$generation" ]; then
+        rm -rf "$generation_tmp"
+    else
+        mv "$generation_tmp" "$generation"
+    fi
+    generation_id="$(basename "$generation")"
+    atomic_pointer "$generation_id" "$RELEASES_DIR/version-$version"
+
+    cp "$WORK_DIR/wrtmonitor.init" "$INIT_INSTALL_PATH.new"
+    chmod 0755 "$INIT_INSTALL_PATH.new"
+    cp "$WORK_DIR/wrtmonitor-agent" "$AGENT_INSTALL_PATH.new"
+    chmod 0755 "$AGENT_INSTALL_PATH.new"
+    atomic_pointer "$generation_id" "$RELEASES_DIR/current"
+    mv "$INIT_INSTALL_PATH.new" "$INIT_INSTALL_PATH"
+    mv "$AGENT_INSTALL_PATH.new" "$AGENT_INSTALL_PATH"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -414,6 +484,7 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
+system_preflight
 ensure_dependencies
 ensure_optional_dependencies
 
@@ -454,9 +525,12 @@ if [ -z "$DEVICE_TOKEN" ]; then
     DEVICE_TOKEN="$(printf '%s' "$provision_response" | sed -n 's/.*"device_token":"\([^"]*\)".*/\1/p')"
     [ -n "$DEVICE_ID" ] || { echo "Failed to provision device" >&2; exit 1; }
     [ -n "$DEVICE_TOKEN" ] || { echo "Failed to receive device token" >&2; exit 1; }
+else
+    resolve_device_identity
 fi
 
 prepare_work_dir
+installation_preflight
 
 if [ "$CLEAN_MODE" = "1" ]; then
     clean_install_targets

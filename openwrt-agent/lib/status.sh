@@ -1,7 +1,8 @@
 backup_available() {
     [ -r "$BACKUP_DIR/wrtmonitor-agent.previous" ] \
         && [ -r "$BACKUP_DIR/wrtmonitor.init.previous" ] \
-        && [ -d "$BACKUP_DIR/lib.previous" ]
+        && [ -r "$BACKUP_DIR/VERSION.previous" ] \
+        && [ -r "$BACKUP_DIR/lib.previous/common.sh" ]
 }
 
 load_status() {

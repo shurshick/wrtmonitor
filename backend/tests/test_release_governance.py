@@ -26,16 +26,19 @@ def test_version_code_may_stay_equal_for_followup_commit_in_same_release(
 ):
     from scripts import validate_release_metadata as metadata
 
-    monkeypatch.setattr(metadata, "version_code_at", lambda _ref: 103)
-    monkeypatch.setattr(metadata, "release_tag_at", lambda _ref: "v0.45.1")
+    current_code = int((ROOT / "VERSION_CODE").read_text().strip())
+    current_tag = (ROOT / "RELEASE_TAG").read_text().strip()
+    monkeypatch.setattr(metadata, "version_code_at", lambda _ref: current_code)
+    monkeypatch.setattr(metadata, "release_tag_at", lambda _ref: current_tag)
     validate("current-release")
 
 
 def test_version_code_must_increase_for_new_release(monkeypatch: pytest.MonkeyPatch):
     from scripts import validate_release_metadata as metadata
 
-    monkeypatch.setattr(metadata, "version_code_at", lambda _ref: 103)
-    monkeypatch.setattr(metadata, "release_tag_at", lambda _ref: "v0.45.0")
+    current_code = int((ROOT / "VERSION_CODE").read_text().strip())
+    monkeypatch.setattr(metadata, "version_code_at", lambda _ref: current_code)
+    monkeypatch.setattr(metadata, "release_tag_at", lambda _ref: "v0.0.0")
     with pytest.raises(ValueError, match="must not decrease"):
         validate("previous-release")
 

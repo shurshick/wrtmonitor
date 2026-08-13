@@ -9,7 +9,7 @@ AGENT_SCRIPT="/usr/bin/wrtmonitor-agent"
 # shellcheck disable=SC2034
 AGENT_NAME="wrtmonitor-agent"
 # shellcheck disable=SC2034
-AGENT_VERSION="0.45.1"
+AGENT_VERSION="0.45.2"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
@@ -19,10 +19,32 @@ case "$SCRIPT_PATH" in
     *) SCRIPT_DIR="." ;;
 esac
 
+RELEASES_DIR="${WRTMONITOR_RELEASES_DIR:-/usr/lib/wrtmonitor/releases}"
+CURRENT_RELEASE_POINTER="$RELEASES_DIR/current"
+CURRENT_RELEASE=""
+if [ -r "$CURRENT_RELEASE_POINTER" ]; then
+    generation="$(head -n 1 "$CURRENT_RELEASE_POINTER" 2>/dev/null || true)"
+    case "$generation" in
+        ""|*[!A-Za-z0-9._-]*) ;;
+        *) CURRENT_RELEASE="$RELEASES_DIR/$generation" ;;
+    esac
+fi
+if [ -z "$CURRENT_RELEASE" ] && [ -r "$RELEASES_DIR/version-$AGENT_VERSION" ]; then
+    generation="$(head -n 1 "$RELEASES_DIR/version-$AGENT_VERSION" 2>/dev/null || true)"
+    case "$generation" in
+        ""|*[!A-Za-z0-9._-]*) ;;
+        *) CURRENT_RELEASE="$RELEASES_DIR/$generation" ;;
+    esac
+fi
+
 if [ -n "${WRTMONITOR_LIB_DIR:-}" ]; then
     LIB_DIR="$WRTMONITOR_LIB_DIR"
 elif [ -d "$SCRIPT_DIR/lib" ]; then
     LIB_DIR="$SCRIPT_DIR/lib"
+elif [ -n "$CURRENT_RELEASE" ] \
+    && [ -r "$CURRENT_RELEASE/agent-version.txt" ] \
+    && [ "$(tr -d '\r\n' <"$CURRENT_RELEASE/agent-version.txt")" = "$AGENT_VERSION" ]; then
+    LIB_DIR="$CURRENT_RELEASE"
 else
     LIB_DIR="/usr/lib/wrtmonitor"
 fi

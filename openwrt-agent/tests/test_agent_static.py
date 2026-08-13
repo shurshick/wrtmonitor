@@ -52,13 +52,18 @@ REQUIRED_LIBS = [
 
 
 def shell_path() -> str | None:
-    return shutil.which("sh")
+    discovered = shutil.which("sh")
+    if discovered:
+        return discovered
+    git_bash = Path(r"C:\Program Files\Git\usr\bin\sh.exe")
+    return str(git_bash) if git_bash.is_file() else None
 
 
 def shell_env() -> dict[str, str]:
     env = os.environ.copy()
-    git_usr_bin = r"C:\Program Files\Git\usr\bin"
-    env["PATH"] = git_usr_bin + os.pathsep + env.get("PATH", "")
+    # Git Bash consumes its own POSIX paths; a Windows PATH separated with
+    # semicolons makes even rm, awk and sleep disappear inside test scripts.
+    env["PATH"] = "/usr/bin:/mingw64/bin"
     env["WRTMONITOR_LIB_DIR"] = str(LIB_DIR)
     return env
 
@@ -355,6 +360,113 @@ def test_installer_replaces_stale_connection_identity_and_probes_server():
     )
 
 
+def test_token_reinstall_resolves_identity_before_touching_runtime():
+    source = read_text(INSTALLER)
+    assert "resolve_device_identity()" in source
+    assert "post_json /api/v1/agent/register" in source
+    assert 'uci -q delete wrtmonitor.main.device_id' not in source
+    assert source.index("resolve_device_identity\n") < source.index("prepare_work_dir\n")
+    assert source.index("system_preflight\n") < source.index("ensure_dependencies\n")
+    assert source.index("installation_preflight\n") < source.index("stop_existing_agent\n")
+
+
+def test_update_checks_version_before_writable_filesystem_preflight():
+    source = read_text(LIB_DIR / "update.sh")
+    flow = source.split("check_for_update()", 1)[1]
+    assert flow.index('comparison="$(compare_versions') < flow.index(
+        'preflight_downloaded_files "$tmp_dir"'
+    )
+
+
+def test_agent_update_uses_complete_generations_and_switches_entrypoint_last():
+    source = read_text(LIB_DIR / "update.sh")
+    apply_flow = source.split("apply_downloaded_files()", 1)[1].split(
+        "validate_download_set()", 1
+    )[0]
+    assert 'generation_tmp="$RELEASES_DIR/.${generation_id}.$$"' in apply_flow
+    assert 'atomic_pointer "$generation_id" "$RELEASES_DIR/current"' in apply_flow
+    assert apply_flow.index(
+        'atomic_pointer "$generation_id" "$RELEASES_DIR/current"'
+    ) < apply_flow.index('mv "$AGENT_INSTALL_PATH.new" "$AGENT_INSTALL_PATH"')
+    entrypoint = read_text(AGENT)
+    assert 'CURRENT_RELEASE_POINTER="$RELEASES_DIR/current"' in entrypoint
+    assert 'agent-version.txt")" = "$AGENT_VERSION"' in entrypoint
+    status = read_text(LIB_DIR / "status.sh")
+    assert 'lib.previous/common.sh' in status
+    assert 'VERSION.previous' in status
+    assert "prune_release_generations" in source
+
+
+def test_incomplete_generation_never_replaces_installed_entrypoint(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    install_root = tmp_path / "install"
+    payload = tmp_path / "payload"
+    (install_root / "bin").mkdir(parents=True)
+    (install_root / "init.d").mkdir(parents=True)
+    (install_root / "lib").mkdir(parents=True)
+    payload.mkdir()
+    agent_path = install_root / "bin" / "wrtmonitor-agent"
+    init_path = install_root / "init.d" / "wrtmonitor"
+    agent_path.write_text("old-agent\n", encoding="utf-8")
+    init_path.write_text("old-init\n", encoding="utf-8")
+    (payload / "agent-version.txt").write_text("9.9.9\n", encoding="utf-8")
+    (payload / "SHA256SUMS.txt").write_text("fixture\n", encoding="utf-8")
+    script = f"""
+        . '{(LIB_DIR / "update.sh").as_posix()}'
+        AGENT_INSTALL_PATH='{agent_path.as_posix()}'
+        INIT_INSTALL_PATH='{init_path.as_posix()}'
+        LIB_INSTALL_DIR='{(install_root / "lib").as_posix()}'
+        RELEASES_DIR="$LIB_INSTALL_DIR/releases"
+        if apply_downloaded_files '{payload.as_posix()}'; then
+            exit 91
+        fi
+    """
+    subprocess.run([shell, "-c", script], check=True, env=shell_env())
+    assert agent_path.read_text(encoding="utf-8") == "old-agent\n"
+    assert init_path.read_text(encoding="utf-8") == "old-init\n"
+    assert not (install_root / "lib" / "releases" / "current").exists()
+
+
+def test_complete_generation_is_activated_as_one_runtime(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    install_root = tmp_path / "install"
+    payload = tmp_path / "payload"
+    (install_root / "bin").mkdir(parents=True)
+    (install_root / "init.d").mkdir(parents=True)
+    (install_root / "lib").mkdir(parents=True)
+    (payload / "lib").mkdir(parents=True)
+    agent_path = install_root / "bin" / "wrtmonitor-agent"
+    init_path = install_root / "init.d" / "wrtmonitor"
+    agent_path.write_text("old-agent\n", encoding="utf-8")
+    init_path.write_text("old-init\n", encoding="utf-8")
+    (payload / "wrtmonitor-agent").write_text("#!/bin/sh\necho new-agent\n", encoding="utf-8")
+    (payload / "wrtmonitor.init").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (payload / "lib" / "common.sh").write_text("fixture=complete\n", encoding="utf-8")
+    (payload / "agent-version.txt").write_text("9.9.9\n", encoding="utf-8")
+    (payload / "SHA256SUMS.txt").write_text("fixture\n", encoding="utf-8")
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "update.sh").as_posix()}'
+        AGENT_INSTALL_PATH='{agent_path.as_posix()}'
+        INIT_INSTALL_PATH='{init_path.as_posix()}'
+        LIB_INSTALL_DIR='{(install_root / "lib").as_posix()}'
+        RELEASES_DIR="$LIB_INSTALL_DIR/releases"
+        apply_downloaded_files '{payload.as_posix()}'
+        current_id="$(cat "$RELEASES_DIR/current")"
+        test "$(cat "$RELEASES_DIR/$current_id/agent-version.txt")" = 9.9.9
+        test -r "$RELEASES_DIR/$current_id/common.sh"
+    """
+    subprocess.run([shell, "-c", script], check=True, env=shell_env())
+    assert "new-agent" in agent_path.read_text(encoding="utf-8")
+    releases = install_root / "lib" / "releases"
+    current_id = (releases / "current").read_text(encoding="utf-8").strip()
+    assert (releases / current_id / "common.sh").read_text(encoding="utf-8") == "fixture=complete\n"
+
+
 def test_daemon_handoffs_after_command_driven_update():
     source = read_text(LIB_DIR / "api.sh")
     polling = source.index('if poll_commands "$wait_seconds"; then')
@@ -506,7 +618,7 @@ def test_capability_detection_reflects_openwrt_runtime(tmp_path: Path):
         path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
         path.chmod(0o755)
     env = shell_env()
-    env["PATH"] = str(command_dir) + os.pathsep + env["PATH"]
+    env["PATH"] = command_dir.as_posix() + ":" + env["PATH"]
     env["WRTMONITOR_SYSTEM_ROOT"] = system_root.as_posix()
     completed = subprocess.run(
         [shell, str(AGENT), "capabilities", "--json"],
@@ -547,7 +659,7 @@ esac
     )
     apk.chmod(0o755)
     env = shell_env()
-    env["PATH"] = str(command_dir) + os.pathsep + env["PATH"]
+    env["PATH"] = command_dir.as_posix() + ":" + env["PATH"]
     script = f"""
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
@@ -585,7 +697,7 @@ def test_apk_package_operations_use_native_commands(tmp_path: Path):
     )
     apk.chmod(0o755)
     env = shell_env()
-    env["PATH"] = str(command_dir) + os.pathsep + env["PATH"]
+    env["PATH"] = command_dir.as_posix() + ":" + env["PATH"]
     env["APK_LOG"] = "apk.log"
     script = f"""
         set -eu
@@ -624,7 +736,7 @@ def test_config_transaction_restores_saved_uci_file(tmp_path: Path):
     network_service.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     network_service.chmod(0o755)
     env = shell_env()
-    env["PATH"] = str(command_dir) + os.pathsep + env["PATH"]
+    env["PATH"] = command_dir.as_posix() + ":" + env["PATH"]
     env["WRTMONITOR_SYSTEM_ROOT"] = system_root.as_posix()
     env["WRTMONITOR_STATUS_DIR"] = status_dir.as_posix()
     script = f"""
