@@ -775,6 +775,7 @@ def run() -> None:
                         == "false"
                     )
                     schedule = page.locator("[data-wifi-schedule-form]")
+                    schedule.locator("xpath=ancestor::details[1]/summary").click()
                     schedule.locator("[data-wifi-schedule-radio]").select_option(
                         "radio1"
                     )
