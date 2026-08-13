@@ -756,75 +756,26 @@ fun NetworkControlScreen(
             ActionRow { PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("firewall.set_rule", JsonObject().put("section", ruleSection).put("name", ruleNameValue).put("src", ruleSource).put("dest", ruleDestination).put("protocol", ruleProtocol).put("dest_port", rulePort).put("target", ruleTarget), genericCommandQueued) }, enabled = ruleNameValue.isNotBlank() && ruleSource.isNotBlank()) }
         }
     }
-    if (mode == NetworkScreenMode.Vpn && capabilities["vpn.wireguard.configure"] == true) {
-        ExpandableSettingsCard(stringResource(R.string.wireguard_interface), wgName) {
-            OutlinedTextField(wgName, { wgName = it }, label = { Text(stringResource(R.string.interface_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgAddress, { wgAddress = it }, label = { Text(stringResource(R.string.tunnel_address)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgPort, { wgPort = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.listen_port)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgPrivateKey, { wgPrivateKey = it }, label = { Text(stringResource(R.string.private_key_optional)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-            ActionRow {
-                PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("vpn.wireguard.set_interface", JsonObject().put("name", wgName).put("enabled", true).put("mode", "server").put("addresses", JsonArray(listOf(wgAddress))).put("listen_port", wgPort.toIntOrNull() ?: 51820).put("private_key", wgPrivateKey).put("mtu", 1420), genericCommandQueued) }, enabled = wgName.isNotBlank() && wgAddress.isNotBlank())
-                TextButton({ pendingCommand = PendingSafeCommand("vpn.wireguard.delete_interface", JsonObject().put("name", wgName), genericCommandQueued) }, enabled = wgName.isNotBlank()) { Text(stringResource(R.string.delete)) }
-            }
-        }
-        ExpandableSettingsCard(stringResource(R.string.wireguard_peer), wgPeerName) {
-            OutlinedTextField(wgName, { wgName = it }, label = { Text(stringResource(R.string.interface_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgPeerName, { wgPeerName = it }, label = { Text(stringResource(R.string.peer_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgPeerPublicKey, { wgPeerPublicKey = it }, label = { Text(stringResource(R.string.public_key)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgPeerPresharedKey, { wgPeerPresharedKey = it }, label = { Text(stringResource(R.string.preshared_key_optional)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgPeerAllowedIps, { wgPeerAllowedIps = it }, label = { Text(stringResource(R.string.allowed_ips)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(wgPeerEndpoint, { wgPeerEndpoint = it }, label = { Text(stringResource(R.string.endpoint_optional)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("vpn.wireguard.set_peer", JsonObject().put("interface", wgName).put("name", wgPeerName).put("public_key", wgPeerPublicKey).put("preshared_key", wgPeerPresharedKey).put("allowed_ips", JsonArray(listOf(wgPeerAllowedIps))).put("endpoint", wgPeerEndpoint).put("persistent_keepalive", 25).put("route_allowed_ips", true), genericCommandQueued) }, Modifier.align(Alignment.End), enabled = wgPeerName.isNotBlank() && wgPeerPublicKey.isNotBlank())
-            ActionRow {
-                TextButton({ pendingCommand = PendingSafeCommand("vpn.wireguard.export_peer", JsonObject().put("interface", wgName).put("name", wgPeerName), genericCommandQueued) }, enabled = wgPeerName.isNotBlank()) { Text(stringResource(R.string.export)) }
-                TextButton({ pendingCommand = PendingSafeCommand("vpn.wireguard.delete_peer", JsonObject().put("interface", wgName).put("name", wgPeerName), genericCommandQueued) }, enabled = wgPeerName.isNotBlank()) { Text(stringResource(R.string.delete)) }
-            }
-        }
-    }
-    if (mode == NetworkScreenMode.Vpn && capabilities["vpn.openvpn.configure"] == true) {
-        ExpandableSettingsCard(stringResource(R.string.openvpn_client), openVpnName) {
-            val openVpnClients = vpn?.optJsonObject("openvpn")?.optJsonArray("clients") ?: JsonArray()
-            for (index in 0 until openVpnClients.length()) {
-                val item = openVpnClients.optJsonObject(index) ?: continue
-                val name = item.optString("name")
-                val isEnabled = item.optBoolean("enabled")
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(name, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            if (item.optBoolean("runtime")) stringResource(R.string.connected) else if (isEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    TextButton({ pendingCommand = PendingSafeCommand("vpn.openvpn.set_enabled", JsonObject().put("name", name).put("enabled", !isEnabled), genericCommandQueued) }) {
-                        Text(stringResource(if (isEnabled) R.string.disable_action else R.string.enable_action))
-                    }
-                    if (item.optBoolean("export_available")) {
-                        TextButton({ pendingCommand = PendingSafeCommand("vpn.openvpn.export_client", JsonObject().put("name", name), genericCommandQueued) }) { Text(stringResource(R.string.export)) }
-                    }
-                }
-                if (index < openVpnClients.length() - 1) HorizontalDivider()
-            }
-            OutlinedTextField(openVpnName, { openVpnName = it }, label = { Text(stringResource(R.string.profile_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(openVpnConfig, { openVpnConfig = it }, label = { Text(stringResource(R.string.openvpn_config)) }, modifier = Modifier.fillMaxWidth(), minLines = 6)
-            ActionRow {
-                PrimaryActionButton(stringResource(R.string.import_profile), { pendingCommand = PendingSafeCommand("vpn.openvpn.set_client", JsonObject().put("name", openVpnName).put("enabled", true).put("config", openVpnConfig), genericCommandQueued) }, enabled = openVpnName.isNotBlank() && openVpnConfig.isNotBlank())
-                TextButton({ pendingCommand = PendingSafeCommand("vpn.openvpn.delete_client", JsonObject().put("name", openVpnName), genericCommandQueued) }, enabled = openVpnName.isNotBlank()) { Text(stringResource(R.string.delete)) }
-            }
-        }
-    }
-    if (mode == NetworkScreenMode.Vpn && capabilities["vpn.policy.configure"] == true) {
-        ExpandableSettingsCard(stringResource(R.string.policy_routing), vpnPolicyName) {
-            OutlinedTextField(vpnPolicyName, { vpnPolicyName = it }, label = { Text(stringResource(R.string.rule_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(vpnPolicyInterface, { vpnPolicyInterface = it }, label = { Text(stringResource(R.string.vpn_interface)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(vpnPolicySource, { vpnPolicySource = it }, label = { Text(stringResource(R.string.policy_source)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(vpnPolicyDestination, { vpnPolicyDestination = it }, label = { Text(stringResource(R.string.policy_destination)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            ActionRow {
-                PrimaryActionButton(stringResource(R.string.save), { pendingCommand = PendingSafeCommand("vpn.policy.set", JsonObject().put("name", vpnPolicyName).put("enabled", true).put("interface", vpnPolicyInterface).put("source", vpnPolicySource).put("destination", vpnPolicyDestination).put("protocol", "all"), genericCommandQueued) }, enabled = vpnPolicyName.isNotBlank() && vpnPolicyInterface.isNotBlank() && (vpnPolicySource.isNotBlank() || vpnPolicyDestination.isNotBlank()))
-                TextButton({ pendingCommand = PendingSafeCommand("vpn.policy.delete", JsonObject().put("name", vpnPolicyName), genericCommandQueued) }, enabled = vpnPolicyName.isNotBlank()) { Text(stringResource(R.string.delete)) }
-            }
-        }
+    if (mode == NetworkScreenMode.Vpn) {
+        VpnControlSections(
+            capabilities = capabilities,
+            vpn = vpn,
+            wireGuard = WireGuardFormState(
+                wgName, wgAddress, wgPort, wgPrivateKey, wgPeerName, wgPeerPublicKey,
+                wgPeerPresharedKey, wgPeerAllowedIps, wgPeerEndpoint,
+                { wgName = it }, { wgAddress = it }, { wgPort = it }, { wgPrivateKey = it },
+                { wgPeerName = it }, { wgPeerPublicKey = it }, { wgPeerPresharedKey = it },
+                { wgPeerAllowedIps = it }, { wgPeerEndpoint = it },
+            ),
+            openVpn = OpenVpnFormState(openVpnName, openVpnConfig, { openVpnName = it }, { openVpnConfig = it }),
+            policy = VpnPolicyFormState(
+                vpnPolicyName, vpnPolicyInterface, vpnPolicySource, vpnPolicyDestination,
+                { vpnPolicyName = it }, { vpnPolicyInterface = it },
+                { vpnPolicySource = it }, { vpnPolicyDestination = it },
+            ),
+            successMessage = genericCommandQueued,
+            onCommand = { pendingCommand = it },
+        )
     }
     if (mode == NetworkScreenMode.Internet) {
         NetworkMaintenanceCard(

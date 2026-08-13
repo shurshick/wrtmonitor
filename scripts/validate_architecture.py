@@ -11,6 +11,10 @@ LIMITS = {
     "backend/app/web/routes.py": 100,
     "openwrt-agent/lib/commands.sh": 150,
     "openwrt-agent/lib/telemetry.sh": 100,
+    "android/app/src/main/java/ru/wrtmonitor/app/api/WrtMonitorApi.kt": 600,
+    "backend/app/static/app.css": 600,
+    "backend/app/static/css/components.css": 600,
+    "backend/app/static/css/responsive.css": 300,
 }
 
 
@@ -67,6 +71,31 @@ def main() -> int:
         ):
             failures.append(
                 f"router control UI bypasses RouterRepository: {path.relative_to(ROOT)}"
+            )
+
+    api_root = ROOT / "android/app/src/main/java/ru/wrtmonitor/app/api"
+    for path in api_root.glob("*.kt"):
+        lines = line_count(path)
+        if lines > 600:
+            failures.append(
+                f"Android API file exceeds 600-line limit: {path.relative_to(ROOT)} ({lines})"
+            )
+
+    screen_limits = {
+        "NetworkControlScreen.kt": 800,
+        "SystemControlScreen.kt": 600,
+        "WifiControlScreen.kt": 650,
+    }
+    screens_root = android_ui / "screens"
+    for filename, limit in screen_limits.items():
+        path = screens_root / filename
+        if not path.exists():
+            failures.append(f"missing Android screen: {path.relative_to(ROOT)}")
+            continue
+        lines = line_count(path)
+        if lines > limit:
+            failures.append(
+                f"Android screen exceeds architecture limit: {path.relative_to(ROOT)} ({lines}, limit {limit})"
             )
 
     if failures:

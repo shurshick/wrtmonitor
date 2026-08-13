@@ -23,7 +23,7 @@ def test_web_theme_is_explicit_and_persisted() -> None:
 
 def test_maintenance_services_are_bounded_and_scrollable() -> None:
     template = read("backend/app/templates/partials/router_maintenance.html")
-    styles = read("backend/app/static/app.css")
+    styles = read("backend/app/static/css/components.css")
 
     assert "service-list-scroll" in template
     assert "maintenance-card--services" in template

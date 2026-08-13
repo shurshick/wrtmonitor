@@ -76,8 +76,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import android.graphics.Bitmap
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
 
 @Composable
 fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto, onSessionExpired: () -> Unit) {
@@ -611,18 +609,4 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             confirmButton = { TextButton(onClick = { wifiQr = null }) { Text(stringResource(R.string.close)) } },
         )
     }
-}
-
-private fun createWifiQrBitmap(content: String): Bitmap {
-    val matrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, 768, 768)
-    return Bitmap.createBitmap(768, 768, Bitmap.Config.RGB_565).also { bitmap ->
-        for (x in 0 until 768) for (y in 0 until 768) {
-            bitmap.setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-        }
-    }
-}
-enum class NetworkScreenMode {
-    Internet,
-    Rules,
-    Vpn,
 }
