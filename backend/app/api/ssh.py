@@ -219,9 +219,11 @@ async def browser_terminal_ws(
     except WebSocketDisconnect:
         pass
     finally:
-        await asyncio.to_thread(_close_browser_session, terminal.id, close_reason)
         output_task.cancel()
         await asyncio.gather(output_task, return_exceptions=True)
+        # Persist closure synchronously: Starlette may cancel the websocket task as
+        # soon as the browser context exits, which must not leave a connected PTY.
+        _close_browser_session(terminal.id, close_reason)
 
 
 def _require_agent_terminal(
