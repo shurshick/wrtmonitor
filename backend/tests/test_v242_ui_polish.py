@@ -25,7 +25,9 @@ def test_theme_bootstrap_is_external_and_runs_before_styles() -> None:
     assert bootstrap in base
     assert base.index(bootstrap) < base.index("/static/app.css")
     assert base.index("/static/app.css") < base.index("/static/css/components.css")
-    assert base.index("/static/css/components.css") < base.index("/static/css/responsive.css")
+    assert base.index("/static/css/components.css") < base.index(
+        "/static/css/responsive.css"
+    )
     assert "wrtmonitor-theme" in read("backend/app/static/theme-bootstrap.js")
 
 
