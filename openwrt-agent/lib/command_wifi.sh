@@ -46,12 +46,18 @@ handle_wifi_command() {
             resolved_radio="$(resolve_wifi_radio "$radio" || true)"
             if [ -z "$resolved_radio" ]; then status="failed"; result="$(command_failed_result "wifi radio not found")"
             else
-                [ -z "$enabled" ] || uci set "wireless.$resolved_radio.disabled=$( [ "$enabled" = true ] && printf 0 || printf 1 )" || status="failed"
+                schedule_ref="$(find_wifi_schedule "$resolved_radio" || true)"
+                if [ -n "$enabled" ] && [ -n "$schedule_ref" ]; then
+                    uci set "wrtmonitor.$schedule_ref.base_enabled=$( [ "$enabled" = true ] && printf 1 || printf 0 )" || status="failed"
+                    uci commit wrtmonitor || status="failed"
+                elif [ -n "$enabled" ]; then
+                    uci set "wireless.$resolved_radio.disabled=$( [ "$enabled" = true ] && printf 0 || printf 1 )" || status="failed"
+                fi
                 [ -z "$channel" ] || uci set "wireless.$resolved_radio.channel=$channel" || status="failed"
                 [ -z "$country" ] || uci set "wireless.$resolved_radio.country=$country" || status="failed"
                 [ -z "$htmode" ] || uci set "wireless.$resolved_radio.htmode=$htmode" || status="failed"
                 [ -z "$txpower" ] || uci set "wireless.$resolved_radio.txpower=$txpower" || status="failed"
-                if [ "$status" = "done" ] && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi radio updated" "\"radio\":\"$(json_escape "$resolved_radio")\"")"; else status="failed"; result="$(command_failed_result "failed to update Wi-Fi radio")"; fi
+                if [ "$status" = "done" ] && uci commit wireless && apply_wifi_schedules && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi radio updated" "\"radio\":\"$(json_escape "$resolved_radio")\"")"; else status="failed"; result="$(command_failed_result "failed to update Wi-Fi radio")"; fi
             fi
             ;;
         wifi.add_ssid)
@@ -77,14 +83,30 @@ handle_wifi_command() {
             if [ -n "$resolved_iface" ] && uci delete "wireless.$resolved_iface" && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi network deleted")"; else status="failed"; result="$(command_failed_result "failed to delete Wi-Fi network")"; fi
             ;;
         wifi.set_schedule)
-            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; radio="$(json_get_string "$payload_file" '@.radio')"; enabled="$(json_get_bool "$payload_file" '@.enabled')"; weekdays="$(jsonfilter -i "$payload_file" -e '@.weekdays[*]' 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"; schedule_start="$(json_get_string "$payload_file" '@.start')"; schedule_stop="$(json_get_string "$payload_file" '@.stop')"; rm -f "$payload_file"; resolved_radio="$(resolve_wifi_radio "$radio" || true)"; schedule_ref="$(find_wifi_schedule "$resolved_radio" || uci add wrtmonitor wifi_schedule)"
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; radio="$(json_get_string "$payload_file" '@.radio')"; enabled="$(json_get_bool "$payload_file" '@.enabled')"; weekdays="$(jsonfilter -i "$payload_file" -e '@.weekdays[*]' 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"; schedule_start="$(json_get_string "$payload_file" '@.start')"; schedule_stop="$(json_get_string "$payload_file" '@.stop')"; rm -f "$payload_file"; resolved_radio="$(resolve_wifi_radio "$radio" || true)"; schedule_ref=""
+            if [ -n "$resolved_radio" ]; then schedule_ref="$(find_wifi_schedule "$resolved_radio" || uci add wrtmonitor wifi_schedule)"; fi
+            if [ -n "$resolved_radio" ] && [ -n "$schedule_ref" ]; then
+                current_schedule_enabled="$(uci -q get "wrtmonitor.$schedule_ref.enabled" 2>/dev/null || echo 0)"
+                if [ "$current_schedule_enabled" = 1 ] && ! uci -q get "wrtmonitor.$schedule_ref.base_enabled" >/dev/null 2>&1; then
+                    uci set "wrtmonitor.$schedule_ref.base_enabled=1"
+                fi
+                if [ "$enabled" = true ] && [ "$current_schedule_enabled" != 1 ]; then
+                    current_disabled="$(uci -q get "wireless.$resolved_radio.disabled" 2>/dev/null || echo 0)"
+                    uci set "wrtmonitor.$schedule_ref.base_enabled=$( [ "$current_disabled" = 1 ] && printf 0 || printf 1 )"
+                fi
+            fi
             if [ -n "$resolved_radio" ] && [ -n "$schedule_ref" ] && uci set "wrtmonitor.$schedule_ref.radio=$resolved_radio" && uci set "wrtmonitor.$schedule_ref.enabled=$( [ "$enabled" = true ] && printf 1 || printf 0 )" && uci set "wrtmonitor.$schedule_ref.weekdays=$weekdays" && uci set "wrtmonitor.$schedule_ref.start=$schedule_start" && uci set "wrtmonitor.$schedule_ref.stop=$schedule_stop" && uci commit wrtmonitor && apply_wifi_schedules; then result="$(command_success_result "Wi-Fi schedule updated")"; else status="failed"; result="$(command_failed_result "failed to update Wi-Fi schedule")"; fi
             ;;
         wifi.set_mesh)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; radio="$(json_get_string "$payload_file" '@.radio')"; enabled="$(json_get_bool "$payload_file" '@.enabled')"; mesh_id="$(json_get_string "$payload_file" '@.mesh_id')"; network="$(json_get_string "$payload_file" '@.network')"; encryption="$(json_get_string "$payload_file" '@.encryption')"; wifi_key="$(json_get_string "$payload_file" '@.key')"; rm -f "$payload_file"; resolved_radio="$(resolve_wifi_radio "$radio" || true)"; mesh_iface="$(find_mesh_iface "$resolved_radio" || true)"
             if [ "$enabled" = true ] && [ -n "$resolved_radio" ]; then
-                [ -n "$mesh_iface" ] || mesh_iface="$(uci add wireless wifi-iface)"
-                if uci set "wireless.$mesh_iface.device=$resolved_radio" && uci set "wireless.$mesh_iface.mode=mesh" && uci set "wireless.$mesh_iface.mesh_id=$mesh_id" && uci set "wireless.$mesh_iface.network=$network" && uci set "wireless.$mesh_iface.encryption=$encryption" && { [ "$encryption" = none ] || uci set "wireless.$mesh_iface.key=$wifi_key"; } && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi mesh enabled")"; else status="failed"; result="$(command_failed_result "failed to enable Wi-Fi mesh")"; fi
+                if [ "$encryption" != none ] && [ -z "$wifi_key" ] && { [ -z "$mesh_iface" ] || ! uci -q get "wireless.$mesh_iface.key" >/dev/null 2>&1; }; then
+                    status="failed"
+                    result="$(command_failed_result "mesh password is required for a new secured network")"
+                else
+                    [ -n "$mesh_iface" ] || mesh_iface="$(uci add wireless wifi-iface)"
+                    if uci set "wireless.$mesh_iface.device=$resolved_radio" && uci set "wireless.$mesh_iface.mode=mesh" && uci set "wireless.$mesh_iface.mesh_id=$mesh_id" && uci set "wireless.$mesh_iface.network=$network" && uci set "wireless.$mesh_iface.encryption=$encryption" && { if [ "$encryption" = none ]; then uci -q delete "wireless.$mesh_iface.key" || true; elif [ -n "$wifi_key" ]; then uci set "wireless.$mesh_iface.key=$wifi_key"; else true; fi; } && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi mesh enabled")"; else status="failed"; result="$(command_failed_result "failed to enable Wi-Fi mesh")"; fi
+                fi
             elif [ "$enabled" = false ] && [ -n "$mesh_iface" ] && uci delete "wireless.$mesh_iface" && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi mesh disabled")"
             elif [ "$enabled" = false ] && [ -z "$mesh_iface" ]; then
                 transaction_noop=1
@@ -106,13 +128,17 @@ handle_wifi_command() {
                     status="failed"
                     result="$(command_failed_result "failed to create wireless config backup")"
                 else
-                    if [ "$enabled" = "false" ]; then
+                    schedule_ref="$(find_wifi_schedule "$resolved_radio" || true)"
+                    if [ -n "$schedule_ref" ]; then
+                        uci set "wrtmonitor.$schedule_ref.base_enabled=$( [ "$enabled" = true ] && printf 1 || printf 0 )" >/dev/null 2>&1 || status="failed"
+                        uci commit wrtmonitor >/dev/null 2>&1 || status="failed"
+                    elif [ "$enabled" = "false" ]; then
                         uci set "wireless.$resolved_radio.disabled=1" >/dev/null 2>&1 || status="failed"
                     else
                         uci set "wireless.$resolved_radio.disabled=0" >/dev/null 2>&1 || status="failed"
                     fi
                     uci commit wireless >/dev/null 2>&1 || status="failed"
-                    wifi reload >/dev/null 2>&1 || status="failed"
+                    if [ -n "$schedule_ref" ]; then apply_wifi_schedules || status="failed"; else wifi reload >/dev/null 2>&1 || status="failed"; fi
                     if [ "$status" = "done" ]; then
                         result="$(command_success_result "Wi-Fi state updated" "\"backup\":\"$(json_escape "$backup_file")\",\"radio\":\"$(json_escape "$resolved_radio")\"")"
                     else

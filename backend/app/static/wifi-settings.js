@@ -32,16 +32,16 @@
 
   const source = document.getElementById('wifi-radio-data');
   const form = document.querySelector('[data-wifi-radio-form]');
-  if (!source || !form) return;
+  if (!source) return;
 
   const radios = JSON.parse(source.textContent || '[]');
-  const select = form.querySelector('[data-wifi-radio-select]');
-  const enabled = form.querySelector('[data-wifi-field="enabled"]');
-  const channel = form.querySelector('[data-wifi-field="channel"]');
-  const htmode = form.querySelector('[data-wifi-field="htmode"]');
-  const country = form.querySelector('[data-wifi-field="country"]');
-  const txpower = form.querySelector('[data-wifi-field="txpower"]');
-  const current = form.querySelector('[data-wifi-radio-current]');
+  const select = form?.querySelector('[data-wifi-radio-select]');
+  const enabled = form?.querySelector('[data-wifi-field="enabled"]');
+  const channel = form?.querySelector('[data-wifi-field="channel"]');
+  const htmode = form?.querySelector('[data-wifi-field="htmode"]');
+  const country = form?.querySelector('[data-wifi-field="country"]');
+  const txpower = form?.querySelector('[data-wifi-field="txpower"]');
+  const current = form?.querySelector('[data-wifi-radio-current]');
 
   const setSelectValue = (element, value) => {
     if (!element) return;
@@ -68,6 +68,64 @@
     current.textContent = `${radio.name || radio.id} · ${radio.band || 'Wi-Fi'} · ${runtime} · канал ${radio.channel || 'авто'} · ${radio.htmode || 'авто'}`;
   };
 
-  select.addEventListener('change', renderRadio);
-  renderRadio();
+  if (form && select) {
+    select.addEventListener('change', renderRadio);
+    renderRadio();
+  }
+
+  const scheduleForm = document.querySelector('[data-wifi-schedule-form]');
+  const scheduleRadio = scheduleForm?.querySelector('[data-wifi-schedule-radio]');
+  if (scheduleForm && scheduleRadio) {
+    const renderSchedule = () => {
+      const radio = radios.find((item) => String(item.id) === scheduleRadio.value) || radios[0];
+      const schedule = radio?.schedule || {};
+      scheduleForm.querySelector('[data-wifi-schedule-field="enabled"]').value = schedule.enabled === true ? 'true' : 'false';
+      scheduleForm.querySelector('[data-wifi-schedule-field="start"]').value = schedule.start || '00:00';
+      scheduleForm.querySelector('[data-wifi-schedule-field="stop"]').value = schedule.stop || '00:00';
+      const weekdays = new Set(Array.isArray(schedule.weekdays) ? schedule.weekdays : []);
+      scheduleForm.querySelectorAll('[data-wifi-schedule-day]').forEach((item) => { item.checked = weekdays.has(item.value); });
+      const current = scheduleForm.querySelector('[data-wifi-schedule-current]');
+      if (schedule.enabled === true) {
+        current.textContent = schedule.active_now === true
+          ? 'Сейчас расписание разрешает работу радиомодуля.'
+          : 'Сейчас радиомодуль выключен расписанием.';
+      } else {
+        current.textContent = 'Расписание для выбранного радиомодуля выключено.';
+      }
+    };
+    scheduleRadio.addEventListener('change', renderSchedule);
+    renderSchedule();
+  }
+
+  const bindNetworkForm = (kind, predicate) => {
+    const networkForm = document.querySelector(`[data-wifi-${kind}-form]`);
+    const radioSelect = networkForm?.querySelector(`[data-wifi-${kind}-radio]`);
+    if (!networkForm || !radioSelect) return;
+    const render = () => {
+      const radio = radios.find((item) => String(item.id) === radioSelect.value) || radios[0];
+      const network = (radio?.interfaces || []).find(predicate);
+      const assign = (field, value) => {
+        const element = networkForm.querySelector(`[data-wifi-${kind}-field="${field}"]`);
+        if (element) element.value = value == null ? '' : String(value);
+      };
+      assign('enabled', network?.enabled === true ? 'true' : 'false');
+      assign('ssid', network?.ssid || '');
+      assign('mesh_id', network?.mesh_id || '');
+      assign('network', network?.network || 'lan');
+      assign('encryption', network?.encryption || 'sae');
+      if (kind === 'guest') {
+        const ssid = networkForm.querySelector('[data-wifi-guest-field="ssid"]');
+        if (ssid) ssid.required = networkForm.querySelector('[data-wifi-guest-field="enabled"]')?.value === 'true';
+      }
+    };
+    radioSelect.addEventListener('change', render);
+    networkForm.querySelector(`[data-wifi-${kind}-field="enabled"]`)?.addEventListener('change', (event) => {
+      if (kind !== 'guest') return;
+      const ssid = networkForm.querySelector('[data-wifi-guest-field="ssid"]');
+      if (ssid) ssid.required = event.target.value === 'true';
+    });
+    render();
+  };
+  bindNetworkForm('guest', (item) => item.role === 'guest' || item.isolate === true || item.network === 'wrtmonitor_guest');
+  bindNetworkForm('mesh', (item) => item.mode === 'mesh');
 })();

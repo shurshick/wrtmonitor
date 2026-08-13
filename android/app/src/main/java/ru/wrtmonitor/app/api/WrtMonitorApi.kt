@@ -27,6 +27,7 @@ import ru.wrtmonitor.app.api.dto.WifiExperienceDto
 import ru.wrtmonitor.app.api.dto.WifiNetworkDto
 import ru.wrtmonitor.app.api.dto.WifiQrDto
 import ru.wrtmonitor.app.api.dto.WifiRadioDto
+import ru.wrtmonitor.app.api.dto.WifiScheduleDto
 import ru.wrtmonitor.app.api.dto.WifiStationDto
 import ru.wrtmonitor.app.api.dto.DataStateDto
 import ru.wrtmonitor.app.api.dto.NetworkClientDto
@@ -942,7 +943,9 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                 val item = radios.getJSONObject(index)
                 val runtime = item.optJSONObject("runtime") ?: JSONObject()
                 val survey = item.optJSONObject("survey") ?: JSONObject()
+                val schedule = item.optJSONObject("schedule") ?: JSONObject()
                 val channels = item.optJSONArray("supported_channels") ?: JSONArray()
+                val scheduleDays = schedule.optJSONArray("weekdays") ?: JSONArray()
                 WifiRadioDto(
                     id = item.optString("id"), name = item.optString("name"), band = item.optString("band"),
                     channel = item.optString("channel", "auto"), country = item.optString("country"),
@@ -955,6 +958,15 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
                     supportedChannels = (0 until channels.length()).map { channels.optString(it) },
                     surveyUtilization = survey.optInt("utilization_percent").takeUnless { survey.isNull("utilization_percent") },
                     surveyNoise = survey.optInt("noise_dbm").takeUnless { survey.isNull("noise_dbm") },
+                    schedule = WifiScheduleDto(
+                        enabled = schedule.optBoolean("enabled"),
+                        weekdays = (0 until scheduleDays.length()).map { scheduleDays.optString(it) },
+                        start = schedule.optString("start"),
+                        stop = schedule.optString("stop"),
+                        activeNow = schedule.optBoolean("active_now"),
+                        baseEnabled = schedule.optBoolean("base_enabled", item.optBoolean("configured_enabled", true)),
+                        effectiveEnabled = schedule.optBoolean("effective_enabled", runtime.optBoolean("up")),
+                    ),
                 )
             },
             networks = (0 until networks.length()).map { index ->

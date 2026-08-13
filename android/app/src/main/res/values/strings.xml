@@ -327,6 +327,10 @@
     <string name="event_severity_warning">Warning</string>
     <string name="event_severity_info">Information</string>
     <string name="wifi_password">Wi-Fi password</string>
+    <string name="keep_current_password">Leave blank to keep the current password</string>
+    <string name="wifi_configured_state">Configured: %1$s</string>
+    <string name="wifi_runtime_state">Runtime: %1$s</string>
+    <string name="wifi_schedule_state">Schedule: %1$s</string>
     <string name="apply_guest_wifi">Apply guest Wi-Fi</string>
     <string name="wan_settings">WAN connection</string>
     <string name="connection_type">Connection type</string>

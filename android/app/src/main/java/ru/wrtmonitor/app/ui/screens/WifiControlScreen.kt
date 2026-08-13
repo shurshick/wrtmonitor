@@ -103,8 +103,8 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var newPassword by remember { mutableStateOf("") }
     var scheduleEnabled by remember { mutableStateOf(false) }
     var scheduleDays by remember { mutableStateOf(weekdayOptions.map { it.value }.toSet()) }
-    var scheduleStart by remember { mutableStateOf("07:00") }
-    var scheduleStop by remember { mutableStateOf("23:00") }
+    var scheduleStart by remember { mutableStateOf("00:00") }
+    var scheduleStop by remember { mutableStateOf("00:00") }
     var meshEnabled by remember { mutableStateOf(false) }
     var meshId by remember { mutableStateOf("") }
     var meshPassword by remember { mutableStateOf("") }
@@ -209,10 +209,11 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     val routerCountryOptions = managementOptions?.wifiCountries.orEmpty().map {
         SelectOption(it.value, it.label)
     }.ifEmpty { listOf(SelectOption(country, country)) }
-    LaunchedEffect(telemetry, selectedRadioId) {
+    LaunchedEffect(telemetry, wifiExperience, selectedRadioId) {
         val selected = findRadio(radios, selectedRadioId) ?: radios.optJsonObject(0) ?: return@LaunchedEffect
         if (selectedRadioId != selected.optString("id")) selectedRadioId = selected.optString("id")
-        enabled = selected.optBoolean("up", true)
+        val observed = wifiExperience?.radios?.firstOrNull { it.id == selected.optString("id") }
+        enabled = observed?.configuredEnabled ?: selected.optBoolean("configured_enabled", true)
         channel = selected.optString("channel").ifBlank { "auto" }
         country = selected.optString("country")
         htmode = selected.optString("htmode")
@@ -221,13 +222,27 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         selectedInterfaceId = selectedIface?.optString("id").orEmpty()
         ssid = selectedIface?.optString("ssid").orEmpty()
         newNetwork = selectedIface?.optString("network").orEmpty()
-        val schedule = selected.optJsonObject("schedule")
-        scheduleEnabled = schedule?.optBoolean("enabled") ?: false
-        scheduleDays = schedule?.optJsonArray("weekdays")?.let { array ->
+        val observedSchedule = observed?.schedule
+        val rawSchedule = selected.optJsonObject("schedule")
+        scheduleEnabled = observedSchedule?.enabled ?: rawSchedule?.optBoolean("enabled") ?: false
+        scheduleDays = observedSchedule?.weekdays?.toSet() ?: rawSchedule?.optJsonArray("weekdays")?.let { array ->
             (0 until array.length()).map { array.optString(it) }.filter(String::isNotBlank).toSet()
-        } ?: scheduleDays
-        scheduleStart = schedule?.optString("start").orEmpty().ifBlank { scheduleStart }
-        scheduleStop = schedule?.optString("stop").orEmpty().ifBlank { scheduleStop }
+        }.orEmpty()
+        scheduleStart = observedSchedule?.start?.ifBlank { "00:00" }
+            ?: rawSchedule?.optString("start").orEmpty().ifBlank { "00:00" }
+        scheduleStop = observedSchedule?.stop?.ifBlank { "00:00" }
+            ?: rawSchedule?.optString("stop").orEmpty().ifBlank { "00:00" }
+        val observedNetworks = wifiExperience?.networks?.filter { it.radioId == selected.optString("id") }.orEmpty()
+        val guestNetwork = observedNetworks.firstOrNull { it.role == "guest" }
+        guestEnabled = guestNetwork?.enabled ?: false
+        guestSsid = guestNetwork?.ssid.orEmpty()
+        guestPassword = ""
+        val meshNetwork = selected.optJsonArray("interfaces")?.let { items ->
+            (0 until items.length()).mapNotNull(items::optJsonObject).firstOrNull { it.optString("mode") == "mesh" }
+        }
+        meshEnabled = meshNetwork?.optBoolean("enabled") ?: false
+        meshId = meshNetwork?.optString("mesh_id").orEmpty()
+        meshPassword = ""
     }
     LaunchedEffect(selectedInterfaceId) {
         val selected = findInterface(interfaces, selectedInterfaceId) ?: return@LaunchedEffect
@@ -260,6 +275,31 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     if (radioOptions.isNotEmpty()) {
         SectionCard(title = stringResource(R.string.wifi_selected_radio), subtitle = radio?.optString("name").orEmpty()) {
             OptionSelector(stringResource(R.string.wifi_radio), selectedRadioId, radioOptions, { selectedRadioId = it })
+            val selectedRadio = wifiExperience?.radios?.firstOrNull { it.id == selectedRadioId }
+            if (selectedRadio != null) {
+                Text(
+                    stringResource(R.string.wifi_configured_state, if (selectedRadio.configuredEnabled) stringResource(R.string.enabled_value) else stringResource(R.string.disabled_value)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    stringResource(
+                        R.string.wifi_runtime_state,
+                        when (selectedRadio.runtimeUp) {
+                            true -> stringResource(R.string.enabled_value)
+                            false -> stringResource(R.string.disabled_value)
+                            null -> stringResource(R.string.no_data)
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    stringResource(R.string.wifi_schedule_state, if (selectedRadio.schedule.enabled) "${selectedRadio.schedule.start}–${selectedRadio.schedule.stop}" else stringResource(R.string.disabled_value)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             val selectedSurvey = radio?.optJsonObject("survey")
             if (selectedSurvey?.optString("state") == "observed") {
                 val surveyDetails = listOfNotNull(
@@ -385,7 +425,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     }
 
     if (capabilities["wifi.schedule"] == true) {
-        ExpandableSettingsCard(title = stringResource(R.string.wifi_schedule), summary = "$scheduleStart–$scheduleStop") {
+        ExpandableSettingsCard(title = stringResource(R.string.wifi_schedule), summary = if (scheduleEnabled) "$scheduleStart–$scheduleStop" else stringResource(R.string.wifi_disabled_state)) {
             SwitchSettingRow(stringResource(R.string.wifi_schedule), checked = scheduleEnabled, onCheckedChange = { scheduleEnabled = it })
             MultiOptionSelector(stringResource(R.string.wifi_weekdays_hint), scheduleDays, weekdayOptions, { scheduleDays = it })
             OutlinedTextField(scheduleStart, { scheduleStart = it }, label = { Text(stringResource(R.string.wifi_start_time)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -398,8 +438,8 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         ExpandableSettingsCard(title = stringResource(R.string.wifi_mesh), summary = meshId) {
             SwitchSettingRow(stringResource(R.string.wifi_state), checked = meshEnabled, onCheckedChange = { meshEnabled = it })
             OutlinedTextField(meshId, { meshId = it }, label = { Text(stringResource(R.string.wifi_mesh_id)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(meshPassword, { meshPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
-            PrimaryActionButton(label = stringResource(R.string.save), onClick = { pendingCommand = PendingSafeCommand("wifi.set_mesh", JsonObject().put("radio", radioId).put("enabled", meshEnabled).put("mesh_id", meshId).put("network", "lan").put("encryption", "sae").put("key", meshPassword), wifiToggleQueued) }, enabled = !meshEnabled || (meshId.isNotBlank() && meshPassword.length >= 8), modifier = Modifier.align(Alignment.End))
+            OutlinedTextField(meshPassword, { meshPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, placeholder = { Text(stringResource(R.string.keep_current_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+            PrimaryActionButton(label = stringResource(R.string.save), onClick = { pendingCommand = PendingSafeCommand("wifi.set_mesh", JsonObject().put("radio", radioId).put("enabled", meshEnabled).put("mesh_id", meshId).put("network", "lan").put("encryption", "sae").put("key", meshPassword), wifiToggleQueued) }, enabled = !meshEnabled || (meshId.isNotBlank() && (meshPassword.isBlank() || meshPassword.length >= 8)), modifier = Modifier.align(Alignment.End))
         }
     }
 
@@ -532,15 +572,15 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     if (capabilities["wifi.guest"] == true) {
         ExpandableSettingsCard(
             title = stringResource(R.string.guest_wifi),
-            summary = guestSsid,
+            summary = guestSsid.ifBlank { stringResource(R.string.disabled_value) },
         ) {
             SwitchSettingRow(stringResource(R.string.wifi_state), checked = guestEnabled, onCheckedChange = { guestEnabled = it })
             OutlinedTextField(guestSsid, { guestSsid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(guestPassword, { guestPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+            OutlinedTextField(guestPassword, { guestPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, placeholder = { Text(stringResource(R.string.keep_current_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
             PrimaryActionButton(
                 label = stringResource(R.string.apply_guest_wifi),
                 onClick = { pendingCommand = PendingSafeCommand("wifi.set_guest", JsonObject().put("enabled", guestEnabled).put("ssid", guestSsid).put("password", guestPassword).put("radio", radioId), wifiToggleQueued) },
-                enabled = !guestEnabled || (guestSsid.isNotBlank() && guestPassword.length >= 8),
+                enabled = !guestEnabled || guestSsid.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             )
         }

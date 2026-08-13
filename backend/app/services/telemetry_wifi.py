@@ -93,6 +93,28 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
             )
         survey = radio.get("survey") if isinstance(radio.get("survey"), dict) else {}
         runtime = radio.get("runtime") if isinstance(radio.get("runtime"), dict) else {}
+        raw_schedule = (
+            radio.get("schedule") if isinstance(radio.get("schedule"), dict) else {}
+        )
+        schedule_weekdays = raw_schedule.get("weekdays") or []
+        if not isinstance(schedule_weekdays, list):
+            schedule_weekdays = []
+        schedule = {
+            "enabled": raw_schedule.get("enabled") is True,
+            "weekdays": [str(item) for item in schedule_weekdays],
+            "start": str(raw_schedule.get("start") or ""),
+            "stop": str(raw_schedule.get("stop") or ""),
+            "active_now": raw_schedule.get("active_now") is True,
+            "base_enabled": raw_schedule.get(
+                "base_enabled",
+                radio.get("configured_enabled", not bool(radio.get("disabled", False))),
+            )
+            is True,
+            "effective_enabled": raw_schedule.get(
+                "effective_enabled", runtime.get("up")
+            )
+            is True,
+        }
         supported_channels = radio.get("supported_channels") or []
         if not isinstance(supported_channels, list):
             supported_channels = []
@@ -120,7 +142,7 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "interfaces": normalized_interfaces,
                 "ssid": radio.get("ssid"),
                 "encryption": radio.get("encryption"),
-                "schedule": radio.get("schedule"),
+                "schedule": schedule,
                 "supported_channels": [str(item) for item in supported_channels],
                 "survey": {
                     "state": str(survey.get("state") or "unsupported"),

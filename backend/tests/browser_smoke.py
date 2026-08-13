@@ -272,6 +272,16 @@ def prepare_router() -> tuple[str, str]:
                                 "country": "RU",
                                 "htmode": "HT40",
                                 "txpower": 18,
+                                "configured_enabled": True,
+                                "schedule": {
+                                    "enabled": False,
+                                    "weekdays": [],
+                                    "start": "00:00",
+                                    "stop": "00:00",
+                                    "active_now": False,
+                                    "base_enabled": True,
+                                    "effective_enabled": True,
+                                },
                                 "interfaces": [
                                     {
                                         "id": "default_radio0",
@@ -290,6 +300,16 @@ def prepare_router() -> tuple[str, str]:
                                 "country": "DE",
                                 "htmode": "VHT80",
                                 "txpower": 23,
+                                "configured_enabled": False,
+                                "schedule": {
+                                    "enabled": True,
+                                    "weekdays": ["mon", "fri"],
+                                    "start": "09:15",
+                                    "stop": "22:45",
+                                    "active_now": False,
+                                    "base_enabled": False,
+                                    "effective_enabled": False,
+                                },
                                 "interfaces": [
                                     {
                                         "id": "default_radio1",
@@ -749,6 +769,35 @@ def run() -> None:
                     assert (
                         page.locator('[data-wifi-field="txpower"]').input_value()
                         == "23"
+                    )
+                    assert (
+                        page.locator('[data-wifi-field="enabled"]').input_value()
+                        == "false"
+                    )
+                    schedule = page.locator("[data-wifi-schedule-form]")
+                    schedule.locator("[data-wifi-schedule-radio]").select_option(
+                        "radio1"
+                    )
+                    assert (
+                        schedule.locator(
+                            '[data-wifi-schedule-field="enabled"]'
+                        ).input_value()
+                        == "true"
+                    )
+                    assert (
+                        schedule.locator(
+                            '[data-wifi-schedule-field="start"]'
+                        ).input_value()
+                        == "09:15"
+                    )
+                    schedule.locator("[data-wifi-schedule-radio]").select_option(
+                        "radio0"
+                    )
+                    assert (
+                        schedule.locator(
+                            '[data-wifi-schedule-field="enabled"]'
+                        ).input_value()
+                        == "false"
                     )
                     page.screenshot(
                         path=str(ARTIFACTS / f"{name}-wifi-5g.png"), full_page=True

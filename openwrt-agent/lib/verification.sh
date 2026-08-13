@@ -303,9 +303,16 @@ verify_command_postcondition() {
             radio="$(json_get_string "$payload_file" '@.radio')"
             enabled="$(json_get_bool "$payload_file" '@.enabled')"
             radio="$(resolve_wifi_radio "$radio" || true)"
-            expected=1
-            [ "$enabled" = true ] && expected=0
-            [ -n "$radio" ] && verify_uci_value "wireless.$radio.disabled" "$expected" || verified=1
+            schedule_ref="$(find_wifi_schedule "$radio" || true)"
+            if [ -n "$schedule_ref" ]; then
+                expected=0
+                [ "$enabled" = true ] && expected=1
+                verify_uci_value "wrtmonitor.$schedule_ref.base_enabled" "$expected" || verified=1
+            else
+                expected=1
+                [ "$enabled" = true ] && expected=0
+                [ -n "$radio" ] && verify_uci_value "wireless.$radio.disabled" "$expected" || verified=1
+            fi
             ;;
         wifi.set_ssid)
             iface="$(json_get_string "$payload_file" '@.iface')"
@@ -324,6 +331,39 @@ verify_command_postcondition() {
             expected="$(json_get_string "$payload_file" '@.country')"
             radio="$(resolve_wifi_radio "$radio" || true)"
             [ -n "$radio" ] && verify_uci_value "wireless.$radio.country" "$expected" || verified=1
+            ;;
+        wifi.set_radio)
+            radio="$(resolve_wifi_radio "$(json_get_string "$payload_file" '@.radio')" || true)"
+            [ -n "$radio" ] || verified=1
+            expected_enabled="$(json_get_bool "$payload_file" '@.enabled')"
+            schedule_ref="$(find_wifi_schedule "$radio" || true)"
+            if [ -n "$expected_enabled" ] && [ -n "$schedule_ref" ]; then
+                expected=0; [ "$expected_enabled" = true ] && expected=1
+                verify_uci_value "wrtmonitor.$schedule_ref.base_enabled" "$expected" || verified=1
+            elif [ -n "$expected_enabled" ]; then
+                expected=1; [ "$expected_enabled" = true ] && expected=0
+                verify_uci_value "wireless.$radio.disabled" "$expected" || verified=1
+            fi
+            for field in channel country htmode; do
+                expected="$(json_get_string "$payload_file" "@.$field")"
+                [ -z "$expected" ] || verify_uci_value "wireless.$radio.$field" "$expected" || verified=1
+            done
+            expected="$(json_get_number "$payload_file" '@.txpower')"
+            [ -z "$expected" ] || verify_uci_value "wireless.$radio.txpower" "$expected" || verified=1
+            ;;
+        wifi.set_schedule)
+            radio="$(resolve_wifi_radio "$(json_get_string "$payload_file" '@.radio')" || true)"
+            schedule_ref="$(find_wifi_schedule "$radio" || true)"
+            enabled="$(json_get_bool "$payload_file" '@.enabled')"
+            expected_enabled=0; [ "$enabled" = true ] && expected_enabled=1
+            weekdays="$(jsonfilter -i "$payload_file" -e '@.weekdays[*]' 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+            [ -n "$schedule_ref" ] \
+                && verify_uci_value "wrtmonitor.$schedule_ref.radio" "$radio" \
+                && verify_uci_value "wrtmonitor.$schedule_ref.enabled" "$expected_enabled" \
+                && verify_uci_value "wrtmonitor.$schedule_ref.weekdays" "$weekdays" \
+                && verify_uci_value "wrtmonitor.$schedule_ref.start" "$(json_get_string "$payload_file" '@.start')" \
+                && verify_uci_value "wrtmonitor.$schedule_ref.stop" "$(json_get_string "$payload_file" '@.stop')" \
+                || verified=1
             ;;
         network.set_wan)
             interface="$(json_get_string "$payload_file" '@.interface')"

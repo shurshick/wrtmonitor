@@ -13,6 +13,7 @@ lib/telemetry_maintenance.sh
 lib/telemetry_modules.sh
 lib/telemetry_vpn.sh
 lib/telemetry_network.sh
+lib/wifi_schedule.sh
 lib/telemetry_wifi.sh
 lib/telemetry.sh
 lib/capabilities.sh

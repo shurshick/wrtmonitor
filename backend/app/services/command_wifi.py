@@ -235,8 +235,10 @@ def _normalize_wifi_mesh_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 str(payload.get("network") or "lan"), "network", r"[A-Za-z0-9_.-]+"
             ),
             encryption=encryption,
-            key=_wifi_key(payload, encryption, required=encryption != "none"),
         )
+        key = _wifi_key(payload, encryption, required=False)
+        if key:
+            result["key"] = key
     return result
 
 

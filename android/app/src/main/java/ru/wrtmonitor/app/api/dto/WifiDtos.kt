@@ -25,6 +25,17 @@ data class WifiRadioDto(
     val supportedChannels: List<String>,
     val surveyUtilization: Int?,
     val surveyNoise: Int?,
+    val schedule: WifiScheduleDto,
+)
+
+data class WifiScheduleDto(
+    val enabled: Boolean,
+    val weekdays: List<String>,
+    val start: String,
+    val stop: String,
+    val activeNow: Boolean,
+    val baseEnabled: Boolean,
+    val effectiveEnabled: Boolean,
 )
 
 data class WifiNetworkDto(

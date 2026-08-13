@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from fastapi import HTTPException
 
@@ -250,6 +252,95 @@ def test_wifi_contract_preserves_runtime_channels_and_network_roles():
         "primary",
         "guest",
     ]
+
+
+def test_wifi_schedule_keeps_configured_runtime_and_effective_state_separate():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "available": True,
+                "radios": [
+                    {
+                        "id": "radio0",
+                        "configured_enabled": True,
+                        "runtime": {"state": "down", "up": False},
+                        "schedule": {
+                            "enabled": True,
+                            "weekdays": ["mon", "tue"],
+                            "start": "07:00",
+                            "stop": "23:00",
+                            "active_now": False,
+                            "base_enabled": True,
+                            "effective_enabled": False,
+                        },
+                    },
+                    {
+                        "id": "radio1",
+                        "configured_enabled": True,
+                        "runtime": {"state": "up", "up": True},
+                        "schedule": {
+                            "enabled": False,
+                            "weekdays": [],
+                            "start": "",
+                            "stop": "",
+                        },
+                    },
+                ],
+                "stations": [],
+            }
+        }
+    )
+    first, second = summary["radios"]
+    assert first["configured_enabled"] is True
+    assert first["runtime"]["up"] is False
+    assert first["schedule"] == {
+        "enabled": True,
+        "weekdays": ["mon", "tue"],
+        "start": "07:00",
+        "stop": "23:00",
+        "active_now": False,
+        "base_enabled": True,
+        "effective_enabled": False,
+    }
+    assert second["schedule"]["enabled"] is False
+    assert second["schedule"]["weekdays"] == []
+    assert second["schedule"]["effective_enabled"] is True
+
+
+def test_existing_mesh_can_keep_its_password():
+    payload = validate_command_payload(
+        "wifi.set_mesh",
+        {
+            "radio": "radio1",
+            "enabled": True,
+            "mesh_id": "WrtMesh",
+            "network": "lan",
+            "encryption": "sae",
+            "key": "",
+        },
+    )
+    assert payload == {
+        "radio": "radio1",
+        "enabled": True,
+        "mesh_id": "WrtMesh",
+        "network": "lan",
+        "encryption": "sae",
+    }
+
+
+def test_wifi_web_forms_are_populated_from_selected_radio():
+    template = (
+        Path(__file__).parents[1] / "app" / "templates" / "partials" / "wifi.html"
+    ).read_text(encoding="utf-8")
+    script = (
+        Path(__file__).parents[1] / "app" / "static" / "wifi-settings.js"
+    ).read_text(encoding="utf-8")
+    assert 'data-wifi-schedule-field="enabled"' in template
+    assert 'value="true" selected' not in template
+    assert "radio?.schedule || {}" in script
+    assert "scheduleRadio.addEventListener('change', renderSchedule)" in script
+    assert "bindNetworkForm('guest'" in script
+    assert "bindNetworkForm('mesh'" in script
 
 
 def test_wifi_contract_marks_router_without_radio_as_unsupported():

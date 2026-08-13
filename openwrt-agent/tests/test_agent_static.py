@@ -29,6 +29,7 @@ REQUIRED_LIBS = [
     "telemetry_maintenance.sh",
     "telemetry_vpn.sh",
     "telemetry_network.sh",
+    "wifi_schedule.sh",
     "telemetry_wifi.sh",
     "telemetry.sh",
     "capabilities.sh",
@@ -92,6 +93,36 @@ def test_lib_directory_contains_required_modules():
     assert LIB_DIR.is_dir()
     for name in REQUIRED_LIBS:
         assert (LIB_DIR / name).is_file()
+
+
+def test_wifi_schedule_preserves_owner_state_and_reports_effective_state():
+    source = read_text(LIB_DIR / "wifi_schedule.sh")
+    telemetry = read_text(LIB_DIR / "telemetry_wifi.sh")
+    command = read_text(LIB_DIR / "command_wifi.sh")
+    assert "base_enabled" in source
+    assert "applied" in source
+    assert "effective_enabled" in telemetry
+    assert "active_now" in telemetry
+    assert 'wrtmonitor.$schedule_ref.base_enabled' in command
+    verification = read_text(LIB_DIR / "verification.sh")
+    assert 'wifi.set_schedule)' in verification
+    assert 'wrtmonitor.$schedule_ref.weekdays' in verification
+    assert 'wifi.set_radio)' in verification
+
+
+def test_disabled_wifi_schedule_does_not_publish_stale_window():
+    telemetry = read_text(LIB_DIR / "telemetry_wifi.sh")
+    assert 'if [ "$schedule_enabled" != 1 ]' in telemetry
+    assert 'schedule_start=""' in telemetry
+    assert 'schedule_stop=""' in telemetry
+    assert 'days_json=""' in telemetry
+
+
+def test_existing_mesh_password_is_not_replaced_by_an_empty_value():
+    command = read_text(LIB_DIR / "command_wifi.sh")
+    assert 'mesh password is required for a new secured network' in command
+    assert 'elif [ -n "$wifi_key" ]' in command
+    assert 'uci -q delete "wireless.$mesh_iface.key"' in command
 
 
 def test_manifest_lists_required_files():

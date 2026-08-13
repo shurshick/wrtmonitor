@@ -327,6 +327,10 @@
     <string name="event_severity_warning">Предупреждение</string>
     <string name="event_severity_info">Информация</string>
     <string name="wifi_password">Пароль Wi-Fi</string>
+    <string name="keep_current_password">Оставьте пустым, чтобы сохранить текущий пароль</string>
+    <string name="wifi_configured_state">Настройка: %1$s</string>
+    <string name="wifi_runtime_state">Фактически: %1$s</string>
+    <string name="wifi_schedule_state">Расписание: %1$s</string>
     <string name="apply_guest_wifi">Применить гостевую сеть</string>
     <string name="wan_settings">Подключение WAN</string>
     <string name="connection_type">Тип подключения</string>

@@ -16,19 +16,37 @@ wifi_schedule_json() {
             schedule_start="$(uci -q get "wrtmonitor.@wifi_schedule[$schedule_index].start" 2>/dev/null || true)"
             schedule_stop="$(uci -q get "wrtmonitor.@wifi_schedule[$schedule_index].stop" 2>/dev/null || true)"
             schedule_days="$(uci -q get "wrtmonitor.@wifi_schedule[$schedule_index].weekdays" 2>/dev/null || true)"
+            schedule_ref="@wifi_schedule[$schedule_index]"
+            base_enabled="$(wifi_schedule_base_enabled "$schedule_ref" "$requested_radio")"
+            schedule_active=false
+            if [ "$schedule_enabled" = 1 ] && [ -n "$schedule_start" ] && [ -n "$schedule_stop" ]; then
+                wifi_schedule_active_now "$schedule_days" "$schedule_start" "$schedule_stop" && schedule_active=true
+            fi
+            effective_enabled=false
+            if [ "$base_enabled" = 1 ] && { [ "$schedule_enabled" != 1 ] || [ "$schedule_active" = true ]; }; then
+                effective_enabled=true
+            fi
             days_json=""
             for schedule_day in $schedule_days; do
                 [ -n "$days_json" ] && days_json="$days_json,"
                 days_json="$days_json\"$(json_escape "$schedule_day")\""
             done
-            printf '{"enabled":%s,"weekdays":[%s],"start":"%s","stop":"%s"}' \
+            if [ "$schedule_enabled" != 1 ]; then
+                schedule_start=""
+                schedule_stop=""
+                days_json=""
+            fi
+            printf '{"enabled":%s,"weekdays":[%s],"start":"%s","stop":"%s","active_now":%s,"base_enabled":%s,"effective_enabled":%s}' \
                 "$( [ "$schedule_enabled" = "1" ] && printf true || printf false )" \
-                "$days_json" "$(json_escape "$schedule_start")" "$(json_escape "$schedule_stop")"
+                "$days_json" "$(json_escape "$schedule_start")" "$(json_escape "$schedule_stop")" \
+                "$schedule_active" "$( [ "$base_enabled" = 1 ] && printf true || printf false )" "$effective_enabled"
             return 0
         fi
         schedule_index=$((schedule_index + 1))
     done
-    printf '{"enabled":false,"weekdays":[],"start":"","stop":""}'
+    current_disabled="$(uci -q get "wireless.$requested_radio.disabled" 2>/dev/null || echo 0)"
+    current_enabled="$( [ "$current_disabled" = 1 ] && printf false || printf true )"
+    printf '{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":false,"base_enabled":%s,"effective_enabled":%s}' "$current_enabled" "$current_enabled"
 }
 
 wifi_stations_json() {
@@ -232,6 +250,14 @@ wifi_status_json() {
         rm -f "$runtime_file"
         configured_enabled=true
         [ "$disabled" = "1" ] && configured_enabled=false
+        schedule_ref="$(find_wifi_schedule "$name" || true)"
+        if [ -n "$schedule_ref" ]; then
+            schedule_enabled="$(uci -q get "wrtmonitor.$schedule_ref.enabled" 2>/dev/null || echo 0)"
+            schedule_applied="$(uci -q get "wrtmonitor.$schedule_ref.applied" 2>/dev/null || echo 0)"
+            if [ "$schedule_enabled" = 1 ] || [ "$schedule_applied" = 1 ]; then
+                [ "$(wifi_schedule_base_enabled "$schedule_ref" "$name")" = 1 ] && configured_enabled=true || configured_enabled=false
+            fi
+        fi
         up="$runtime_up"
         [ -n "$up" ] || up="$configured_enabled"
         radio="{\"id\":\"$name\",\"name\":\"$name\",\"up\":$up,\"configured_enabled\":$configured_enabled,\"disabled\":$( [ "$disabled" = "1" ] && printf true || printf false ),\"runtime\":$runtime,\"ssid\":[$ssids],\"interfaces\":[${interfaces}]"
