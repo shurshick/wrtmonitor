@@ -19,6 +19,12 @@ def version_code_at(ref: str) -> int:
     return int(value)
 
 
+def release_tag_at(ref: str) -> str:
+    return subprocess.check_output(
+        ["git", "show", f"{ref}:RELEASE_TAG"], cwd=ROOT, text=True
+    ).strip()
+
+
 def validate(previous_ref: str | None = None) -> None:
     version = read_text(ROOT / "VERSION")
     release_tag = read_text(ROOT / "RELEASE_TAG")
@@ -39,9 +45,15 @@ def validate(previous_ref: str | None = None) -> None:
 
     if previous_ref:
         previous_code = version_code_at(previous_ref)
-        if version_code <= previous_code:
+        previous_tag = release_tag_at(previous_ref)
+        same_release = release_tag == previous_tag
+        invalid_code = version_code < previous_code or (
+            not same_release and version_code <= previous_code
+        )
+        if invalid_code:
             raise ValueError(
-                f"VERSION_CODE must increase: current={version_code}, "
+                "VERSION_CODE must not decrease within a release and must increase "
+                f"for a new release: current={version_code}, "
                 f"{previous_ref}={previous_code}"
             )
 
