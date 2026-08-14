@@ -6,9 +6,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LIMITS = {
+    "backend/app/models.py": 100,
     "backend/app/services/commands.py": 100,
     "backend/app/services/telemetry.py": 100,
     "backend/app/web/routes.py": 100,
+    "backend/app/web/routes_device.py": 300,
+    "backend/app/web/routes_commands.py": 300,
+    "backend/app/services/client_registry.py": 450,
+    "backend/app/services/hardware_catalog.py": 350,
     "openwrt-agent/lib/commands.sh": 150,
     "openwrt-agent/lib/telemetry.sh": 100,
     "android/app/src/main/java/ru/wrtmonitor/app/api/WrtMonitorApi.kt": 600,
@@ -35,13 +40,15 @@ def main() -> int:
 
     oversized = []
     for base, pattern in (
+        (ROOT / "backend/app/domain_models", "*.py"),
         (ROOT / "backend/app/services", "*.py"),
         (ROOT / "backend/app/web", "*.py"),
         (ROOT / "openwrt-agent/lib", "command_*.sh"),
         (ROOT / "openwrt-agent/lib", "telemetry_*.sh"),
     ):
         for path in base.glob(pattern):
-            if line_count(path) > 600:
+            limit = 250 if base.name == "domain_models" else 600
+            if line_count(path) > limit:
                 oversized.append(f"{path.relative_to(ROOT)} ({line_count(path)})")
     if oversized:
         failures.append("subsystem files exceed 600 lines: " + ", ".join(oversized))

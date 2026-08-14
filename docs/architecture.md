@@ -7,6 +7,8 @@
 3. OpenWrt agent работает на роутере как `init.d`-сервис.
 4. Android и Web UI подключаются только к серверу, а не напрямую к роутеру.
 
+Подробные границы backend и правила роста модулей описаны в [backend-architecture.md](backend-architecture.md).
+
 ## Подключение Android
 
 Владелец создаёт одноразовый QR в Web UI. Android проверяет формат v1 и адрес, затем обменивает pairing token на обычную access/refresh-сессию. Пароль владельца и секреты агента через QR не передаются.

@@ -48,13 +48,13 @@ def test_reboot_is_an_icon_action_in_web_and_android_lists() -> None:
 
 
 def test_system_load_is_explained_relative_to_cpu_capacity() -> None:
-    routes = read("backend/app/web/routes_device.py")
+    device_context = read("backend/app/web/device_context.py")
     template = read("backend/app/templates/partials/system.html")
     android = read(
         "android/app/src/main/java/ru/wrtmonitor/app/ui/screens/DeviceDetailScreen.kt"
     )
 
-    assert "load_capacity_percent" in routes
+    assert "load_capacity_percent" in device_context
     assert "Нагрузка системы" in template
     assert "очередь задач" in template
     assert "loadCapacityPercent" in android

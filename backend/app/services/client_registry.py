@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-import pymanuf
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -18,6 +17,21 @@ from ..models import (
     NetworkClient,
 )
 from .policy_catalog import CLIENT_POLICY_PRESETS
+from .client_identity import (
+    CLIENT_DEVICE_TYPES as CLIENT_DEVICE_TYPES,
+    infer_device_type,
+    inferred_vendor,
+    normalize_mac,
+    validate_device_type as validate_device_type,
+)
+from .client_presence import (
+    MINIMUM_ONLINE_TTL_SECONDS as MINIMUM_ONLINE_TTL_SECONDS,
+    MINIMUM_RECENT_TTL_SECONDS as MINIMUM_RECENT_TTL_SECONDS,
+    apply_client_presence,
+    client_presence_ttl,
+    client_recent_ttl,
+    effective_client_presence,
+)
 from .telemetry import normalize_clients_summary
 
 
@@ -25,171 +39,6 @@ WEEKDAYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 TIME_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 CLIENT_TRAFFIC_RETENTION = 96
 CLIENT_ACTIVITY_RETENTION = 200
-MINIMUM_ONLINE_TTL_SECONDS = 30
-MINIMUM_RECENT_TTL_SECONDS = 300
-
-
-def client_presence_ttl(telemetry: dict[str, Any]) -> timedelta:
-    agent = telemetry.get("agent") or {}
-    try:
-        interval = int(agent.get("telemetry_interval_seconds") or 60)
-    except (TypeError, ValueError):
-        interval = 60
-    interval = min(max(interval, 5), 3600)
-    return timedelta(seconds=max(MINIMUM_ONLINE_TTL_SECONDS, interval * 3))
-
-
-def client_recent_ttl(telemetry: dict[str, Any]) -> timedelta:
-    agent = telemetry.get("agent") or {}
-    try:
-        interval = int(agent.get("telemetry_interval_seconds") or 60)
-    except (TypeError, ValueError):
-        interval = 60
-    interval = min(max(interval, 5), 3600)
-    return timedelta(seconds=max(MINIMUM_RECENT_TTL_SECONDS, interval * 10))
-
-
-def effective_client_presence(
-    client: NetworkClient, now: datetime | None = None
-) -> str:
-    now = now or datetime.now(UTC)
-    if client.presence_state == "offline":
-        return "offline"
-    if not client.presence_expires_at or now > client.presence_expires_at:
-        return "offline"
-    if client.online and client.online_until and now <= client.online_until:
-        return "online"
-    if client.presence_state in {"online", "recent"}:
-        return "recent"
-    return "offline"
-
-
-def apply_client_presence(
-    client: NetworkClient,
-    evidence: str,
-    source: str | None,
-    now: datetime,
-    online_ttl: timedelta,
-    recent_ttl: timedelta,
-) -> None:
-    previous_presence_source = client.presence_source
-    if evidence == "confirmed":
-        client.online = True
-        client.presence_state = "online"
-        client.presence_source = source or "confirmed"
-        client.last_observed_at = now
-        client.last_confirmed_at = now
-        client.last_seen_at = now
-        client.online_until = now + online_ttl
-        client.presence_expires_at = now + recent_ttl
-    elif evidence == "recent":
-        repeated_stale = previous_presence_source in {
-            "neighbour_stale",
-            "neighbour_grace",
-        }
-        still_confirmed = bool(client.online_until and now <= client.online_until)
-        client.online = still_confirmed
-        client.presence_state = "online" if still_confirmed else "recent"
-        client.presence_source = (
-            "neighbour_grace" if still_confirmed else source or "recent"
-        )
-        if not repeated_stale:
-            client.last_observed_at = now
-            client.presence_expires_at = now + recent_ttl
-    elif evidence == "offline":
-        client.online = False
-        client.presence_state = "offline"
-        client.presence_source = source
-        client.last_observed_at = now
-        client.online_until = None
-        client.presence_expires_at = now
-
-
-def normalize_mac(value: str) -> str:
-    mac = value.strip().lower().replace("-", ":")
-    if not re.fullmatch(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", mac):
-        raise HTTPException(status_code=422, detail="Invalid client MAC address")
-    return mac
-
-
-def inferred_vendor(mac: str, reported: Any = None) -> str | None:
-    if reported:
-        return str(reported)[:160]
-    first_octet = int(mac[:2], 16)
-    if first_octet & 2:
-        return "Private/randomized MAC"
-    try:
-        return pymanuf.lookup(mac) or None
-    except (KeyError, TypeError, ValueError):
-        return None
-
-
-CLIENT_DEVICE_TYPES = {
-    "phone",
-    "tablet",
-    "computer",
-    "tv",
-    "speaker",
-    "camera",
-    "printer",
-    "storage",
-    "router",
-    "iot",
-    "unknown",
-}
-
-
-def infer_device_type(*values: Any) -> str:
-    identity = " ".join(str(value).lower() for value in values if value)
-    rules = (
-        ("tv", ("smart tv", "android tv", "television", "chromecast", "fire tv")),
-        ("phone", ("phone", "iphone", "android", "redmi", "poco", "mobile")),
-        ("tablet", ("tablet", "ipad", "tab ")),
-        (
-            "computer",
-            (
-                "desktop",
-                "computer",
-                "laptop",
-                "notebook",
-                "macbook",
-                "windows",
-                "workstation",
-            ),
-        ),
-        (
-            "speaker",
-            ("speaker", "alexa", "echo dot", "homepod", "яндекс станц", "sberboom"),
-        ),
-        ("camera", ("camera", "cam ", "ipcam", "doorbell", "видеокамер")),
-        ("printer", ("printer", "laserjet", "officejet", "pixma", "epson")),
-        ("storage", ("nas", "synology", "qnap", "truenas")),
-        ("router", ("router", "openwrt", "gateway", "access point")),
-        (
-            "iot",
-            (
-                "iot",
-                "sensor",
-                "socket",
-                "plug",
-                "bulb",
-                "thermostat",
-                "esp32",
-                "esp8266",
-            ),
-        ),
-    )
-    for device_type, markers in rules:
-        if any(marker in identity for marker in markers):
-            return device_type
-    return "unknown"
-
-
-def validate_device_type(value: str | None) -> str:
-    normalized = str(value or "unknown").strip().lower()
-    if normalized not in CLIENT_DEVICE_TYPES:
-        raise HTTPException(status_code=422, detail="Invalid client device type")
-    return normalized
 
 
 def record_client_activity(

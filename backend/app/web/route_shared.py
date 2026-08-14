@@ -113,7 +113,7 @@ from ..services.telemetry import (  # noqa: F401
     normalize_wifi_summary,
     telemetry_alerts,
 )
-from .csrf import generate_csrf_token, verify_csrf_token  # noqa: F401
+from .csrf import generate_csrf_token, require_web_csrf, verify_csrf_token  # noqa: F401
 
 
 templates = Jinja2Templates(directory="backend/app/templates")
@@ -334,15 +334,6 @@ def capabilities_hint(capabilities: dict[str, bool]) -> str | None:
     if capabilities:
         return None
     return "Агент ещё не передал capabilities. Обновите или переустановите агент."
-
-
-def require_web_csrf(
-    session_token: str | None, csrf_token: str, config: Settings
-) -> None:
-    if not session_token or not verify_csrf_token(
-        session_token, csrf_token, config.jwt_secret
-    ):
-        raise HTTPException(status_code=403, detail="Invalid CSRF token")
 
 
 def request_uses_https(request: Request) -> bool:

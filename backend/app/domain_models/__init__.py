@@ -1,32 +1,30 @@
-"""Compatibility facade for domain-specific SQLAlchemy model modules."""
+"""SQLAlchemy models grouped by backend domain."""
 
-from .domain_models import (
-    AppSetting,
-    AuditLog,
-    AuthAttempt,
-    AutomationRule,
-    AutomationRun,
+from .clients import (
     ClientActivityEvent,
     ClientProfile,
     ClientTrafficSample,
-    Device,
-    DeviceCommand,
-    DeviceGroup,
-    DeviceHardwareIdentity,
-    DeviceTelemetry,
-    DeviceTelemetryMetric,
-    EventRecord,
-    HardwareProfile,
-    HardwareSensorSample,
+    NetworkClient,
+)
+from .commands import DeviceCommand, TerminalFrame, TerminalSession
+from .devices import Device, DeviceGroup
+from .hardware import DeviceHardwareIdentity, HardwareProfile, HardwareSensorSample
+from .identity import (
+    AppSetting,
+    AuthAttempt,
     MobilePairingAttempt,
     MobilePairingToken,
-    NetworkClient,
-    NotificationRule,
-    TerminalFrame,
-    TerminalSession,
     User,
     UserSession,
 )
+from .operations import (
+    AuditLog,
+    AutomationRule,
+    AutomationRun,
+    EventRecord,
+    NotificationRule,
+)
+from .telemetry import DeviceTelemetry, DeviceTelemetryMetric
 
 __all__ = [
     "AppSetting",
