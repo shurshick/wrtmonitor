@@ -16,6 +16,9 @@ LIMITS = {
     "backend/app/services/hardware_catalog.py": 350,
     "openwrt-agent/lib/commands.sh": 150,
     "openwrt-agent/lib/telemetry.sh": 100,
+    "openwrt-agent/lib/update.sh": 150,
+    "openwrt-agent/lib/transactions.sh": 100,
+    "openwrt-agent/lib/command_network.sh": 100,
     "android/app/src/main/java/ru/wrtmonitor/app/api/WrtMonitorApi.kt": 600,
     "backend/app/static/app.css": 600,
     "backend/app/static/css/components.css": 600,
@@ -43,15 +46,19 @@ def main() -> int:
         (ROOT / "backend/app/domain_models", "*.py"),
         (ROOT / "backend/app/services", "*.py"),
         (ROOT / "backend/app/web", "*.py"),
-        (ROOT / "openwrt-agent/lib", "command_*.sh"),
-        (ROOT / "openwrt-agent/lib", "telemetry_*.sh"),
+        (ROOT / "openwrt-agent/lib", "*.sh"),
     ):
         for path in base.glob(pattern):
-            limit = 250 if base.name == "domain_models" else 600
+            if base.name == "domain_models":
+                limit = 250
+            elif base.name == "lib":
+                limit = 300
+            else:
+                limit = 600
             if line_count(path) > limit:
                 oversized.append(f"{path.relative_to(ROOT)} ({line_count(path)})")
     if oversized:
-        failures.append("subsystem files exceed 600 lines: " + ", ".join(oversized))
+        failures.append("subsystem files exceed architecture limits: " + ", ".join(oversized))
 
     android_ui = ROOT / "android/app/src/main/java/ru/wrtmonitor/app/ui"
     for path in android_ui.rglob("*.kt"):

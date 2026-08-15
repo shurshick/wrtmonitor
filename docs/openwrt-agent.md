@@ -10,19 +10,15 @@
 
 ```text
 wrtmonitor-agent
-lib/common.sh
-lib/dependencies.sh
-lib/status.sh
-lib/update.sh
-lib/telemetry.sh
-lib/capabilities.sh
-lib/diagnostics.sh
-lib/transactions.sh
-lib/idempotency.sh
-lib/verification.sh
-lib/commands.sh
-lib/api.sh
+├── update: version, crypto, storage, validation
+├── telemetry: system, Wi-Fi, DHCP, clients, interfaces, topology, DNS
+├── commands: network, Wi-Fi, firewall, VPN, system, maintenance
+├── reliability: idempotency, transactions, verification
+├── terminal: PTY transport и command handler
+└── api: регистрация, polling и отправка результатов
 ```
+
+Entrypoint загружает библиотеки в явном порядке из подписанного manifest. Совместимые файлы `update.sh`, `telemetry_network.sh`, `command_network.sh` и `transactions.sh` остались тонкими фасадами; предметная реализация находится в отдельных файлах, каждый из которых ограничен 300 строками проверкой CI.
 
 Актуальный агент использует capability schema 19 и единый манифест обязательных runtime-зависимостей. Installer и обновление применяют этот манифест автоматически. Каждый payload-файл проверяется по SHA-256, а detached-манифест отдельно проверяется по встроенному Ed25519 public key.
 

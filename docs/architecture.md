@@ -68,6 +68,18 @@ flowchart LR
 - `requires_confirmation`
 - `secret_fields`
 
+### Границы OpenWrt-агента
+
+Entrypoint `wrtmonitor-agent` только выбирает активное поколение runtime, загружает библиотеки в явном порядке и передаёт управление `main`. Shell-код разделён по подсистемам:
+
+- update: версия, подписи, хранилище поколения и validation;
+- telemetry: system, Wi-Fi, DHCP, clients, interfaces, topology и DNS;
+- commands: network core/topology/services/policy, Wi-Fi, firewall, VPN, system и maintenance;
+- reliability: idempotency, transaction state/recovery и точные post-condition verifiers;
+- terminal: HTTPS transport и PTY command handler.
+
+Фасады сохраняют совместимые имена библиотек, но не содержат предметную реализацию. Каждый файл `openwrt-agent/lib/*.sh` ограничен 300 строками архитектурной проверкой CI.
+
 ## Web-терминал
 
 Терминал не является прямым SSH-подключением браузера к роутеру. Браузер открывает same-origin WebSocket к серверу, сервер создаёт UUID сессии и сохраняет двунаправленные кадры в PostgreSQL. Агент забирает ввод и отправляет вывод исходящими HTTPS-запросами, а shell работает в PTY OpenWrt.

@@ -72,7 +72,13 @@ json_get_bool() {
 }
 
 CONFIG="wrtmonitor.main"
+. "$AGENT_DIR/lib/verification_modes.sh"
+. "$AGENT_DIR/lib/verification_runtime.sh"
+. "$AGENT_DIR/lib/verification_client.sh"
 . "$AGENT_DIR/lib/verification.sh"
+. "$AGENT_DIR/lib/command_result.sh"
+. "$AGENT_DIR/lib/command_dns_runtime.sh"
+. "$AGENT_DIR/lib/command_wifi_runtime.sh"
 . "$AGENT_DIR/lib/command_runtime.sh"
 
 verify_command_postcondition agent.set_interval '{"interval_seconds":10}' \

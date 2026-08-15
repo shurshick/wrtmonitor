@@ -9,6 +9,17 @@
 - `hardware verified` - приложен полный отчёт физического OpenWrt;
 - `beta accepted` - функция выдержала публичное тестирование.
 
+## v0.48.0 - Agent Boundaries
+
+- разделение обновления агента на version, crypto, storage и validation;
+- отдельные сетевые command-модули для core, topology, services и policy;
+- отдельные telemetry-модули для DHCP, клиентов, интерфейсов, topology и DNS;
+- разделение post-condition, transaction recovery и terminal PTY transport;
+- единый структурированный результат выполнения команды;
+- архитектурные ограничения CI для всех shell-модулей агента.
+
+Статус: выпущен.
+
 ## v0.47.0 - Backend Boundaries
 
 - предметные SQLAlchemy-модели вместо единого файла;

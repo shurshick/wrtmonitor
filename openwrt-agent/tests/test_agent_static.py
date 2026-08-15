@@ -24,29 +24,56 @@ REQUIRED_LIBS = [
     "common.sh",
     "dependencies.sh",
     "status.sh",
+    "update_version.sh",
+    "update_crypto.sh",
+    "update_storage.sh",
+    "update_validation.sh",
     "update.sh",
     "telemetry_system.sh",
     "telemetry_maintenance.sh",
+    "telemetry_modules.sh",
     "telemetry_vpn.sh",
+    "telemetry_dhcp.sh",
+    "telemetry_clients.sh",
+    "telemetry_interfaces.sh",
+    "telemetry_topology.sh",
+    "telemetry_dns.sh",
     "telemetry_network.sh",
     "wifi_schedule.sh",
     "telemetry_wifi.sh",
     "telemetry.sh",
     "capabilities.sh",
     "diagnostics.sh",
+    "transaction_spec.sh",
+    "transaction_state.sh",
+    "transaction_recovery.sh",
     "transactions.sh",
     "commands.sh",
     "client_policy.sh",
     "idempotency.sh",
+    "verification_modes.sh",
+    "verification_runtime.sh",
+    "verification_client.sh",
     "verification.sh",
+    "command_result.sh",
+    "command_dns_runtime.sh",
+    "command_wifi_runtime.sh",
     "command_runtime.sh",
     "command_wifi.sh",
+    "command_network_core.sh",
+    "command_network_topology.sh",
+    "command_network_services.sh",
+    "command_network_policy.sh",
     "command_network.sh",
     "command_firewall.sh",
     "command_vpn.sh",
     "command_system.sh",
     "command_maintenance.sh",
+    "command_modules.sh",
     "command_agent.sh",
+    "command_terminal_transport.sh",
+    "command_terminal_session.sh",
+    "command_ssh.sh",
     "api.sh",
 ]
 
@@ -82,6 +109,18 @@ def source_libraries(prefix: str) -> str:
     )
 
 
+def update_sources() -> str:
+    return library_sources("update")
+
+
+def source_update_libraries() -> str:
+    return source_libraries("update")
+
+
+def transaction_sources() -> str:
+    return library_sources("transaction")
+
+
 def test_agent_entrypoint_exists_and_is_thin():
     source = read_text(AGENT)
     expected_version = read_text(REPO_ROOT / "VERSION").strip()
@@ -92,6 +131,30 @@ def test_agent_entrypoint_exists_and_is_thin():
     for name in REQUIRED_LIBS:
         assert f"load_lib {name}" in source
     assert 'main "$@"' in source
+
+
+def test_agent_loads_split_libraries_in_dependency_order():
+    source = read_text(AGENT)
+    ordered_groups = (
+        ("update_version.sh", "update_crypto.sh", "update_storage.sh", "update_validation.sh", "update.sh"),
+        ("telemetry_dhcp.sh", "telemetry_clients.sh", "telemetry_interfaces.sh", "telemetry_topology.sh", "telemetry_dns.sh", "telemetry_network.sh"),
+        ("transaction_spec.sh", "transaction_state.sh", "transaction_recovery.sh", "transactions.sh"),
+        ("verification_modes.sh", "verification_runtime.sh", "verification_client.sh", "verification.sh"),
+        ("command_result.sh", "command_dns_runtime.sh", "command_wifi_runtime.sh", "command_runtime.sh"),
+        ("command_network_core.sh", "command_network_topology.sh", "command_network_services.sh", "command_network_policy.sh", "command_network.sh"),
+        ("command_terminal_transport.sh", "command_terminal_session.sh", "command_ssh.sh"),
+    )
+    for group in ordered_groups:
+        positions = [source.index(f"load_lib {name}") for name in group]
+        assert positions == sorted(positions), group
+
+
+def test_command_results_have_a_stable_machine_readable_contract():
+    source = read_text(LIB_DIR / "command_result.sh")
+    assert '"ok":true' in source
+    assert '"ok":false' in source
+    assert '"code":"ok"' in source
+    assert '"error_detail"' in source
 
 
 def test_lib_directory_contains_required_modules():
@@ -109,7 +172,7 @@ def test_wifi_schedule_preserves_owner_state_and_reports_effective_state():
     assert "effective_enabled" in telemetry
     assert "active_now" in telemetry
     assert 'wrtmonitor.$schedule_ref.base_enabled' in command
-    verification = read_text(LIB_DIR / "verification.sh")
+    verification = library_sources("verification")
     assert 'wifi.set_schedule)' in verification
     assert 'wrtmonitor.$schedule_ref.weekdays' in verification
     assert 'wifi.set_radio)' in verification
@@ -159,7 +222,7 @@ def test_init_script_uses_procd_instead_of_a_stale_pid_file():
 
 
 def test_lan_postcondition_checks_static_address_and_netmask():
-    source = read_text(ROOT / "lib" / "verification.sh")
+    source = library_sources("verification")
     assert "network.set_lan)" in source
     assert 'verify_uci_value "network.$interface.proto" static' in source
     assert 'actual_ip="${actual%%/*}"' in source
@@ -168,7 +231,7 @@ def test_lan_postcondition_checks_static_address_and_netmask():
 
 
 def test_lan_noop_does_not_restart_the_network_stack():
-    source = read_text(ROOT / "lib" / "command_network.sh")
+    source = library_sources("command_network")
     assert "transaction_noop=1" in source
     assert "LAN configuration already matches" in source
     assert 'network_interface_cycle "$lan_interface"' in source
@@ -176,7 +239,7 @@ def test_lan_noop_does_not_restart_the_network_stack():
 
 
 def test_uci_verifier_does_not_clobber_postcondition_values():
-    verification = read_text(ROOT / "lib" / "verification.sh")
+    verification = library_sources("verification")
     helper = verification.split("postcondition_mode_for_command()", 1)[0]
 
     assert 'verify_uci_key="$1"' in helper
@@ -187,7 +250,7 @@ def test_uci_verifier_does_not_clobber_postcondition_values():
 
 
 def test_dns_server_postcondition_checks_dhcp_values_not_unrelated_network_config():
-    source = read_text(ROOT / "lib" / "verification.sh")
+    source = library_sources("verification")
     assert "dns.set_servers) verify_uci_package dhcp" in source
     assert "dns.set_servers) verify_uci_package network" not in source
     assert "actual=\"$(uci -q get 'dhcp.@dnsmasq[0].server'" in source
@@ -206,7 +269,7 @@ def test_run_lock_survives_command_substitutions_and_tracks_owner_pid():
 
 
 def test_postcondition_verification_preserves_terminal_command_status():
-    verification = (LIB_DIR / "verification.sh").read_text(encoding="utf-8")
+    verification = library_sources("verification")
     commands = (LIB_DIR / "commands.sh").read_text(encoding="utf-8")
 
     assert "verification_status=$?" in verification
@@ -216,7 +279,7 @@ def test_postcondition_verification_preserves_terminal_command_status():
 
 
 def test_telemetry_does_not_send_raw_wireless_configuration():
-    telemetry = (LIB_DIR / "telemetry.sh").read_text(encoding="utf-8")
+    telemetry = library_sources("telemetry")
 
     assert '"wireless_status"' not in telemetry
     assert "ubus_json network.wireless status" not in telemetry
@@ -235,11 +298,9 @@ def test_manifest_remains_compatible_with_legacy_updater():
     # agents and cannot checksum itself without creating a circular manifest.
     assert "SHA256SUMS.sig" not in entries
     assert "SHA256SUMS.rsa.sig" not in entries
-    assert 'download_file "$base/SHA256SUMS.sig"' in read_text(LIB_DIR / "update.sh")
+    assert 'download_file "$base/SHA256SUMS.sig"' in update_sources()
     assert 'download_file "$base/SHA256SUMS.sig"' in read_text(INSTALLER)
-    assert 'download_file "$base/SHA256SUMS.rsa.sig"' in read_text(
-        LIB_DIR / "update.sh"
-    )
+    assert 'download_file "$base/SHA256SUMS.rsa.sig"' in update_sources()
     assert 'download_file "$base/SHA256SUMS.rsa.sig"' in read_text(INSTALLER)
     for name in entries:
         if name == "SHA256SUMS.txt":
@@ -371,7 +432,7 @@ def test_token_reinstall_resolves_identity_before_touching_runtime():
 
 
 def test_update_checks_version_before_writable_filesystem_preflight():
-    source = read_text(LIB_DIR / "update.sh")
+    source = update_sources()
     flow = source.split("check_for_update()", 1)[1]
     assert flow.index('comparison="$(compare_versions') < flow.index(
         'preflight_downloaded_files "$tmp_dir"'
@@ -379,7 +440,7 @@ def test_update_checks_version_before_writable_filesystem_preflight():
 
 
 def test_agent_update_uses_complete_generations_and_switches_entrypoint_last():
-    source = read_text(LIB_DIR / "update.sh")
+    source = update_sources()
     apply_flow = source.split("apply_downloaded_files()", 1)[1].split(
         "validate_download_set()", 1
     )[0]
@@ -414,7 +475,7 @@ def test_incomplete_generation_never_replaces_installed_entrypoint(tmp_path: Pat
     (payload / "agent-version.txt").write_text("9.9.9\n", encoding="utf-8")
     (payload / "SHA256SUMS.txt").write_text("fixture\n", encoding="utf-8")
     script = f"""
-        . '{(LIB_DIR / "update.sh").as_posix()}'
+        {source_update_libraries()}
         AGENT_INSTALL_PATH='{agent_path.as_posix()}'
         INIT_INSTALL_PATH='{init_path.as_posix()}'
         LIB_INSTALL_DIR='{(install_root / "lib").as_posix()}'
@@ -450,7 +511,7 @@ def test_complete_generation_is_activated_as_one_runtime(tmp_path: Path):
     (payload / "SHA256SUMS.txt").write_text("fixture\n", encoding="utf-8")
     script = f"""
         set -eu
-        . '{(LIB_DIR / "update.sh").as_posix()}'
+        {source_update_libraries()}
         AGENT_INSTALL_PATH='{agent_path.as_posix()}'
         INIT_INSTALL_PATH='{init_path.as_posix()}'
         LIB_INSTALL_DIR='{(install_root / "lib").as_posix()}'
@@ -484,7 +545,7 @@ def test_daemon_long_poll_preserves_telemetry_deadline_and_backoff():
 
 
 def test_legacy_six_hour_update_interval_is_migrated():
-    source = read_text(LIB_DIR / "update.sh")
+    source = update_sources()
     assert 'DEFAULT_UPDATE_INTERVAL_HOURS="1"' in source
     assert 'if [ "$hours" = "6" ]; then' in source
     assert 'hours="$DEFAULT_UPDATE_INTERVAL_HOURS"' in source
@@ -742,7 +803,7 @@ def test_config_transaction_restores_saved_uci_file(tmp_path: Path):
     script = f"""
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
-        . '{(LIB_DIR / "transactions.sh").as_posix()}'
+        {source_libraries("transaction")}
         transaction_begin test-transaction network.set_lan 90
         printf 'changed\\n' >'{network_config.as_posix()}'
         transaction_restore test-transaction
@@ -819,8 +880,8 @@ def test_required_dependency_manifest_covers_runtime_features():
 
 def test_client_policy_verifier_checks_exact_runtime_filter_and_rollback():
     policy = read_text(LIB_DIR / "client_policy.sh")
-    verification = read_text(LIB_DIR / "verification.sh")
-    transactions = read_text(LIB_DIR / "transactions.sh")
+    verification = library_sources("verification")
+    transactions = transaction_sources()
     assert "client_policy_filter_matches" in policy
     assert 'grep -Fq "_mac $mac"' in policy
     assert 'actual_kbps' in policy
@@ -832,8 +893,8 @@ def test_client_policy_verifier_checks_exact_runtime_filter_and_rollback():
     assert 'client_policy_delete_filter "$current_device" ingress' in transactions
     assert "client_policy_complement_weekdays" in policy
     assert "client_policy_clear_firewall_rules" in policy
-    assert 'client_policy_set_reject_rule "$client_after_ref"' in read_text(
-        LIB_DIR / "command_network.sh"
+    assert 'client_policy_set_reject_rule "$client_after_ref"' in library_sources(
+        "command_network"
     )
     assert 'firewall.$policy_after_ref.start_time' in verification
     assert 'firewall.$policy_days_ref.weekdays' in verification
@@ -876,7 +937,7 @@ def test_update_manifest_signature_is_required_and_valid(tmp_path: Path):
     signature.write_bytes(base64.b64encode(signature_binary.read_bytes()) + b"\n")
     script = f'''
         set -eu
-        . "{(LIB_DIR / "update.sh").as_posix()}"
+        {source_update_libraries()}
         write_update_public_key() {{ cp "{public_key.as_posix()}" "$1"; }}
         verify_manifest_signature "{tmp_path.as_posix()}"
     '''
@@ -921,7 +982,7 @@ def test_rsa_manifest_signature_supports_legacy_openssl_path(tmp_path: Path):
     signature.write_bytes(base64.b64encode(signature_binary.read_bytes()) + b"\n")
     script = f'''
         set -eu
-        . "{(LIB_DIR / "update.sh").as_posix()}"
+        {source_update_libraries()}
         write_update_rsa_public_key() {{ cp "{public_key.as_posix()}" "$1"; }}
         verify_manifest_signature "{tmp_path.as_posix()}"
     '''
@@ -965,7 +1026,7 @@ def test_rsa_manifest_signature_accepts_legacy_trust_key(tmp_path: Path):
     signature.write_bytes(base64.b64encode(signature_binary.read_bytes()) + b"\n")
     script = f'''
         set -eu
-        . "{(LIB_DIR / "update.sh").as_posix()}"
+        {source_update_libraries()}
         write_update_rsa_public_key() {{ printf '%s\n' invalid >"$1"; }}
         write_update_legacy_rsa_public_key() {{ cp "{public_key.as_posix()}" "$1"; }}
         verify_manifest_signature "{tmp_path.as_posix()}"
@@ -978,7 +1039,7 @@ def test_rsa_manifest_signature_accepts_legacy_trust_key(tmp_path: Path):
 )
 def test_embedded_update_key_matches_release_key(release_key: Path):
     expected = read_text(release_key).strip()
-    for source in (read_text(LIB_DIR / "update.sh"), read_text(INSTALLER)):
+    for source in (update_sources(), read_text(INSTALLER)):
         assert expected in source
 
 
@@ -992,7 +1053,7 @@ def test_installer_stops_all_stale_agent_processes_before_reinstall():
 def test_disabled_pbr_does_not_turn_a_valid_policy_write_into_failure():
     common = read_text(LIB_DIR / "common.sh")
     vpn = read_text(LIB_DIR / "command_vpn.sh")
-    transactions = read_text(LIB_DIR / "transactions.sh")
+    transactions = transaction_sources()
     assert "service_restart_if_enabled()" in common
     assert "service_restart_if_enabled pbr config.enabled pbr" in vpn
     assert "service_restart_if_enabled pbr config.enabled pbr" in transactions
@@ -1028,7 +1089,7 @@ def test_terminal_command_result_is_cached_for_replay(tmp_path: Path):
 
 
 def test_terminal_transport_uses_finite_chunks_and_readiness_handshake():
-    source = read_text(LIB_DIR / "command_ssh.sh")
+    source = library_sources("command_terminal") + read_text(LIB_DIR / "command_ssh.sh")
     assert "--upload-file" not in source
     assert 'exec 4<"$output_fifo"' in source
     assert 'dd of="$chunk_file" bs=4096 count=1 <&4' in source
@@ -1051,6 +1112,7 @@ def test_terminal_up_loop_delivers_router_output_as_a_finite_request(tmp_path: P
     capture = tmp_path / "capture"
     script = f'''
         set -eu
+        {source_libraries("command_terminal")}
         . "{(LIB_DIR / "command_ssh.sh").as_posix()}"
         mkdir -p "{work_dir.as_posix()}"
         mkfifo "{(work_dir / "output").as_posix()}"
@@ -1098,6 +1160,7 @@ def test_terminal_command_reports_supervisor_startup_failure(tmp_path: Path):
     daemon_stub.chmod(0o755)
     script = f'''
         set -eu
+        {source_libraries("command_terminal")}
         . "{(LIB_DIR / "command_ssh.sh").as_posix()}"
         AGENT_SCRIPT=/usr/bin/wrtmonitor-agent
         script() {{ :; }}
@@ -1119,7 +1182,7 @@ def test_terminal_command_reports_supervisor_startup_failure(tmp_path: Path):
 
 def test_command_execution_does_not_run_competing_telemetry_refresh():
     commands = read_text(LIB_DIR / "commands.sh")
-    transactions = read_text(LIB_DIR / "transactions.sh")
+    transactions = transaction_sources()
     assert 'report_command_result "$command_id" "$status" "$result"' in commands
     assert 'report_command_result "$command_id" success "$result"' in transactions
     assert "refresh_state_after_command" not in commands
@@ -1154,9 +1217,14 @@ def test_service_action_stops_a_hung_init_script(tmp_path: Path):
 
 
 def test_dns_management_uses_bounded_service_actions():
-    network = read_text(LIB_DIR / "command_network.sh")
-    runtime = read_text(LIB_DIR / "command_runtime.sh")
-    transactions = read_text(LIB_DIR / "transactions.sh")
+    network = library_sources("command_network")
+    runtime = "\n".join(
+        (
+            library_sources("command_dns_runtime"),
+            library_sources("command_runtime"),
+        )
+    )
+    transactions = transaction_sources()
     assert "service_action dnsmasq restart 20" in network
     assert "service_action dnsmasq restart 20" in runtime
     assert "service_action dnsmasq restart 20" in transactions
@@ -1189,7 +1257,8 @@ def test_nlbwmon_traffic_parser_reads_real_tab_separated_counters(tmp_path: Path
     script = f"""
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
-        . '{(LIB_DIR / "telemetry_network.sh").as_posix()}'
+        {source_libraries("telemetry_dhcp")}
+        {source_libraries("telemetry_clients")}
         export WRTMONITOR_SYSTEM_ROOT='{tmp_path.as_posix()}'
         nlbw() {{ return 0; }}
         ip() {{ return 0; }}
@@ -1291,9 +1360,7 @@ def test_agent_version_comparison_is_numeric(left, right, expected):
     shell = shell_path()
     if not shell:
         pytest.skip("sh is not available")
-    script = (
-        f'. "{(LIB_DIR / "update.sh").as_posix()}"; compare_versions "{left}" "{right}"'
-    )
+    script = source_update_libraries() + f'\ncompare_versions "{left}" "{right}"'
     completed = subprocess.run(
         [shell, "-c", script],
         check=True,
@@ -1364,7 +1431,7 @@ def test_management_capabilities_cover_full_router_foundation():
 
 def test_client_policy_uses_real_traffic_control_and_exact_verification():
     policy = read_text(ROOT / "lib" / "client_policy.sh")
-    verifier = read_text(ROOT / "lib" / "verification.sh")
+    verifier = library_sources("verification")
     assert "tc filter replace" in policy
     assert "flower src_mac" in policy
     assert "flower dst_mac" in policy
@@ -1513,7 +1580,7 @@ def test_network_topology_telemetry_reads_live_uci_sections():
 
 def test_daemon_recovers_unfinished_transactions_after_restart():
     api = read_text(LIB_DIR / "api.sh")
-    transactions = read_text(LIB_DIR / "transactions.sh")
+    transactions = transaction_sources()
 
     assert "transaction_recover_pending" in api
     assert 'case "$state" in prepared|verifying)' in transactions
@@ -1526,9 +1593,9 @@ def test_daemon_recovers_unfinished_transactions_after_restart():
 
 
 def test_encrypted_dns_install_restores_plain_dns_and_checks_resolution():
-    runtime = read_text(LIB_DIR / "command_runtime.sh")
-    network = read_text(LIB_DIR / "command_network.sh")
-    verification = read_text(LIB_DIR / "verification.sh")
+    runtime = library_sources("command_")
+    network = library_sources("command_network")
+    verification = library_sources("verification")
 
     assert "restore_package_dns_backup" in runtime
     assert "doh_backup_noresolv" in runtime

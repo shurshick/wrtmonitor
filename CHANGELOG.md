@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.48.0
+
+- Update runtime агента разделён на независимые модули версии, криптографии, хранилища поколений и проверки payload.
+- Сетевые команды разделены на core, topology, services и policy; сетевой telemetry — на DHCP, clients, interfaces, topology и DNS.
+- Post-condition verification и transaction recovery разделены на небольшие предметные модули.
+- PTY transport терминала отделён от обработчика команды без изменения защищённого HTTPS-канала.
+- DNS/Wi-Fi runtime и формирование результата команды вынесены из общего command runtime.
+- Успешные и ошибочные результаты получили единые поля `ok`, `code`, `message`, `error` и `error_detail`.
+- Архитектурная проверка ограничивает каждый shell-модуль агента 300 строками; Android `versionCode` повышен до `107`.
+
 ## v0.47.0
 
 - SQLAlchemy-модели разделены на предметные модули; прежний `models.py` сохранён как тонкий совместимый фасад без изменения схемы БД.

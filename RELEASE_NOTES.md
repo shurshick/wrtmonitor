@@ -1,21 +1,22 @@
-# WrtMonitor v0.47.0 - Backend Boundaries
+# WrtMonitor v0.48.0 - Agent Boundaries
 
-Тестовый технический релиз завершает разделение backend после Android и Web cleanup в `0.46.0`. Пользовательские URL, API-контракты, PostgreSQL-схема и TrueNAS YAML не менялись.
+Тестовый технический релиз завершает разделение OpenWrt-агента. Серверные API, PostgreSQL-схема, Web UI, Android-сценарии и TrueNAS YAML не менялись.
 
 ## Изменено
 
-- SQLAlchemy-модели разделены по предметным областям, а прежний `models.py` оставлен совместимым фасадом;
-- route страницы устройства отделён от подготовки данных для шаблонов;
-- preview команд, backup и загрузка артефактов вынесены из общего command-route;
-- идентичность и присутствие клиентов отделены от инвентаризации;
-- встроенные аппаратные профили, сопоставление telemetry и отчёты разделены;
-- CI получил строгие ограничения размера backend-фасадов и доменных модулей.
+- update runtime разделён на проверку версии, криптографию, хранилище поколений и validation;
+- сетевые команды разделены на core, topology, services и policy;
+- DHCP, клиенты, интерфейсы, topology и DNS получили отдельные telemetry-модули;
+- post-condition verifiers, transaction recovery и PTY transport больше не находятся в общих монолитах;
+- command runtime разделён на результат, DNS и Wi-Fi helpers;
+- результаты команд получили единый структурированный контракт.
 
 ## Проверено
 
-- неизменность SQLAlchemy metadata и отсутствие новой миграции;
+- shell syntax и статические тесты установщика, обновления, telemetry, команд и терминала;
+- OpenWrt test harness для post-condition и структурированных ошибок;
+- архитектурные ограничения всех agent libraries;
 - backend API, Web UI и command lifecycle;
-- OpenWrt agent и его update metadata;
 - Android unit tests, lint, сборка APK и монотонный `versionCode`.
 
-Сервер обновляется обычным redeploy образа `latest` после публикации. Агент получает `0.47.0` штатным автообновлением.
+Сервер обновляется обычным redeploy образа `latest` после публикации. Агент получает `0.48.0` штатным автообновлением с проверкой подписанного manifest.

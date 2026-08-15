@@ -9,7 +9,7 @@ AGENT_SCRIPT="/usr/bin/wrtmonitor-agent"
 # shellcheck disable=SC2034
 AGENT_NAME="wrtmonitor-agent"
 # shellcheck disable=SC2034
-AGENT_VERSION="0.47.0"
+AGENT_VERSION="0.48.0"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
@@ -66,11 +66,20 @@ load_lib() {
 load_lib common.sh
 load_lib dependencies.sh
 load_lib status.sh
+load_lib update_version.sh
+load_lib update_crypto.sh
+load_lib update_storage.sh
+load_lib update_validation.sh
 load_lib update.sh
 load_lib telemetry_system.sh
 load_lib telemetry_maintenance.sh
 load_lib telemetry_modules.sh
 load_lib telemetry_vpn.sh
+load_lib telemetry_dhcp.sh
+load_lib telemetry_clients.sh
+load_lib telemetry_interfaces.sh
+load_lib telemetry_topology.sh
+load_lib telemetry_dns.sh
 load_lib telemetry_network.sh
 load_lib wifi_schedule.sh
 load_lib telemetry_wifi.sh
@@ -78,11 +87,24 @@ load_lib telemetry.sh
 load_lib capabilities.sh
 load_lib diagnostics.sh
 load_lib idempotency.sh
+load_lib transaction_spec.sh
+load_lib transaction_state.sh
+load_lib transaction_recovery.sh
 load_lib transactions.sh
+load_lib verification_modes.sh
+load_lib verification_runtime.sh
+load_lib verification_client.sh
 load_lib verification.sh
+load_lib command_result.sh
+load_lib command_dns_runtime.sh
+load_lib command_wifi_runtime.sh
 load_lib command_runtime.sh
 load_lib client_policy.sh
 load_lib command_wifi.sh
+load_lib command_network_core.sh
+load_lib command_network_topology.sh
+load_lib command_network_services.sh
+load_lib command_network_policy.sh
 load_lib command_network.sh
 load_lib command_firewall.sh
 load_lib command_vpn.sh
@@ -90,6 +112,8 @@ load_lib command_system.sh
 load_lib command_maintenance.sh
 load_lib command_modules.sh
 load_lib command_agent.sh
+load_lib command_terminal_transport.sh
+load_lib command_terminal_session.sh
 load_lib command_ssh.sh
 load_lib commands.sh
 load_lib api.sh
