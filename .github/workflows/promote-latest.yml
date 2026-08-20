@@ -7,13 +7,9 @@ on:
         description: Version without v prefix
         required: true
       minimum_age_hours:
-        description: Canary soak time
+        description: Additional release age after the certified physical soak
         required: true
-        default: "24"
-      force_confirmation:
-        description: Type PROMOTE_NOW to bypass the canary soak time
-        required: false
-        default: ""
+        default: "0"
 
 permissions:
   contents: write
@@ -24,17 +20,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Verify beta-readiness evidence
+        env:
+          VERSION: ${{ inputs.version }}
+        run: >-
+          python scripts/beta_readiness_report.py validate
+          "certification/beta-readiness-v${VERSION}.json"
+          --version "$VERSION"
       - name: Verify canary age and successful release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ inputs.version }}
           MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
-          FORCE_CONFIRMATION: ${{ inputs.force_confirmation }}
         run: |
-          if [ "$FORCE_CONFIRMATION" != "PROMOTE_NOW" ]; then
-            test "$MINIMUM_AGE_HOURS" -ge 24
-            test "$MINIMUM_AGE_HOURS" -le 72
-          fi
+          test "$MINIMUM_AGE_HOURS" -ge 0
+          test "$MINIMUM_AGE_HOURS" -le 336
           RELEASE_TAG="v${VERSION}"
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             RELEASE_TAG="$(gh release list --limit 100 --json tagName --jq ".[] | select(.tagName | startswith(\"v${VERSION}-\")) | .tagName" | head -n1)"
@@ -42,9 +45,7 @@ jobs:
           test -n "$RELEASE_TAG"
           PUBLISHED="$(gh release view "$RELEASE_TAG" --json publishedAt --jq .publishedAt)"
           AGE="$(( $(date -u +%s) - $(date -u -d "$PUBLISHED" +%s) ))"
-          if [ "$FORCE_CONFIRMATION" != "PROMOTE_NOW" ]; then
-            test "$AGE" -ge "$(( MINIMUM_AGE_HOURS * 3600 ))"
-          fi
+          test "$AGE" -ge "$(( MINIMUM_AGE_HOURS * 3600 ))"
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
       - uses: docker/login-action@v3
         with:

@@ -1,13 +1,16 @@
 package ru.wrtmonitor.app.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import ru.wrtmonitor.app.api.ApiResult
 import ru.wrtmonitor.app.api.WrtMonitorApi
 import ru.wrtmonitor.app.api.SharedHttpClient
+import ru.wrtmonitor.app.api.isUnauthorized
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.api.dto.CommandDto
 import ru.wrtmonitor.app.api.dto.CommandPreviewDto
@@ -202,6 +205,27 @@ class RouterRepository(
             listener,
         )
         awaitClose { source.cancel() }
+    }
+
+    fun reconnectingDeviceEvents(
+        deviceId: String,
+        initialDelayMs: Long = 1_000,
+        maximumDelayMs: Long = 30_000,
+    ): Flow<ApiResult<DeviceEventDto>> = flow {
+        var reconnectDelay = initialDelayMs.coerceAtLeast(1)
+        while (true) {
+            var unauthorized = false
+            deviceEvents(deviceId).collect { result ->
+                emit(result)
+                when {
+                    result is ApiResult.Success -> reconnectDelay = initialDelayMs.coerceAtLeast(1)
+                    result is ApiResult.Error && result.isUnauthorized() -> unauthorized = true
+                }
+            }
+            if (unauthorized) return@flow
+            delay(reconnectDelay)
+            reconnectDelay = (reconnectDelay * 2).coerceAtMost(maximumDelayMs.coerceAtLeast(1))
+        }
     }
 
     private suspend fun <T> onIo(block: () -> T): T = withContext(Dispatchers.IO) { block() }
