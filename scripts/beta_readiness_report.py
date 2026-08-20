@@ -34,7 +34,9 @@ def runtime_fingerprint(root: Path) -> str:
         key=lambda path: path.as_posix(),
     )
     for path in files:
-        content = path.read_bytes()
+        # Git may check out text as LF or CRLF. Certification must describe the
+        # runtime source, not the developer workstation's line-ending policy.
+        content = path.read_bytes().replace(b"\r\n", b"\n")
         if path.name == "wrtmonitor-agent":
             content = re.sub(
                 rb'^VERSION="[^"]+"$',

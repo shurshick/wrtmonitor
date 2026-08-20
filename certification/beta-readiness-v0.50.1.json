@@ -9,8 +9,8 @@
   },
   "runtime_evidence": {
     "inherited_from": "0.49.0",
-    "reason": "server and agent runtime fingerprint unchanged; candidate changes affect Android, CI, acceptance tests and documentation",
-    "source_fingerprint_sha256": "7dcbf9632ca98c329761e05df177a4c0a1ce0a128d9a5f36bca82a4bf950d12b"
+    "reason": "router control and agent runtime fingerprint unchanged; deployment and backup packaging are covered by isolated acceptance tests",
+    "source_fingerprint_sha256": "f5fcf1ea989d31b8f6ab1607ce8c30965891e11db70d7ebe5e9050621ff65a6c"
   },
   "stands": [
     {

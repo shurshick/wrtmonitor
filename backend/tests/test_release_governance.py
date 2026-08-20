@@ -69,3 +69,17 @@ def test_web_ssh_cache_key_tracks_server_version():
         ROOT / "backend" / "app" / "templates" / "partials" / "ssh.html"
     ).read_text(encoding="utf-8")
     assert "web-ssh.js?v={{ server_version }}" in template
+
+
+def test_beta_readiness_fingerprint_ignores_platform_line_endings(tmp_path: Path):
+    from scripts.beta_readiness_report import runtime_fingerprint
+
+    backend = tmp_path / "backend" / "app"
+    backend.mkdir(parents=True)
+    source = backend / "runtime.py"
+    source.write_bytes(b"first\nsecond\n")
+    lf_fingerprint = runtime_fingerprint(tmp_path)
+
+    source.write_bytes(b"first\r\nsecond\r\n")
+
+    assert runtime_fingerprint(tmp_path) == lf_fingerprint
