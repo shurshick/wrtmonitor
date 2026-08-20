@@ -249,7 +249,7 @@ jobs:
       - name: Build current server image
         run: docker build -t wrtmonitor-current .
       - name: Verify PostgreSQL backup client major
-        run: docker run --rm wrtmonitor-current pg_dump --version | grep -E ' 16\\.'
+        run: docker run --rm wrtmonitor-current pg_dump --version | grep -E ' 16\.'
       - name: Verify clean install and persistent upgrade
         env:
           IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wrtmonitor
