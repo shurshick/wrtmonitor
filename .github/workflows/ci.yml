@@ -263,7 +263,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x ./gradlew
@@ -286,7 +286,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x ./gradlew
       - name: Enable KVM
@@ -328,7 +328,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x ./gradlew
