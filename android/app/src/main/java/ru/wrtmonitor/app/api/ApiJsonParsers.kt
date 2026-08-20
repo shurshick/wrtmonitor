@@ -2,6 +2,7 @@ package ru.wrtmonitor.app.api
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 import ru.wrtmonitor.app.api.dto.*
 
 internal fun parseNetworkClient(item: JSONObject) = NetworkClientDto(
@@ -210,6 +211,14 @@ internal fun parseCommand(json: JSONObject): CommandDto = CommandDto(
     completedAt = json.optString("completed_at").takeIf { it.isNotBlank() && it != "null" },
     expiresAt = json.optString("expires_at").takeIf { it.isNotBlank() && it != "null" },
     lastError = json.optString("last_error").takeIf { it.isNotBlank() && it != "null" },
+    error = json.optJSONObject("error")?.let { error ->
+        CommandErrorDto(
+            code = error.optString("code", "command_failed"),
+            title = error.optString("title"),
+            message = error.optString("message"),
+            retryable = error.optBoolean("retryable"),
+        )
+    },
     riskLevel = json.optString("risk_level").takeIf { it.isNotBlank() && it != "null" },
     capability = json.optString("capability").takeIf { it.isNotBlank() && it != "null" },
 )
@@ -232,8 +241,22 @@ private fun JSONObject?.toCapabilityReasons(): Map<String, String> {
 
 internal fun toApiError(error: Throwable): ApiResult.Error {
     val http = error as? ApiHttpException
+    val russian = Locale.getDefault().language == "ru"
+    val message = when (http?.statusCode) {
+        401 -> if (russian) "Сессия истекла. Войдите снова." else "Session expired. Sign in again."
+        403 -> if (russian) "Недостаточно прав для этого действия." else "This action is not allowed."
+        404 -> if (russian) "Запрошенные данные не найдены." else "The requested data was not found."
+        409 -> if (russian) "Состояние изменилось. Обновите данные и повторите." else "State changed. Refresh and try again."
+        422 -> if (russian) "Проверьте введённые параметры." else "Check the entered values."
+        429 -> if (russian) "Слишком много запросов. Повторите позже." else "Too many requests. Try again later."
+        in 500..599 -> if (russian) "Сервер временно недоступен." else "The server is temporarily unavailable."
+        null -> if (russian) "Нет соединения с сервером." else "Cannot connect to the server."
+        else -> error.message
+            ?.takeUnless { it.matches(Regex("HTTP \\d+")) }
+            ?: if (russian) "Не удалось выполнить запрос." else "The request failed."
+    }
     return ApiResult.Error(
-        error.message ?: "Network request failed",
+        message,
         statusCode = http?.statusCode,
         code = http?.code,
         cause = error,

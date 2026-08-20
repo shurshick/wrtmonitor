@@ -1,6 +1,7 @@
 import base64
 import json
 import time
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -160,3 +161,114 @@ def test_browser_server_agent_terminal_roundtrip():
         with Session(get_engine()) as db:
             directions = set(db.scalars(select(TerminalFrame.direction)).all())
         assert directions == {"down", "up"}
+
+
+def test_terminal_browser_disconnect_closes_pty_and_reconnects_with_new_session():
+    if not postgres_e2e_enabled():
+        pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
+
+    clear_database()
+    with TestClient(app) as client:
+        client.post(
+            "/api/v1/setup/complete",
+            json={
+                "username": "reconnect@example.com",
+                "password": "terminal-test-password",
+                "password_confirm": "terminal-test-password",
+                "server_url": "http://127.0.0.1:8080",
+            },
+        ).raise_for_status()
+        login = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "reconnect@example.com",
+                "password": "terminal-test-password",
+            },
+        ).json()
+        provision = client.post(
+            "/api/v1/devices/provision",
+            headers={"Authorization": f"Bearer {login['access_token']}"},
+            json={
+                "name": "Reconnect Router",
+                "hostname": "reconnect-openwrt",
+                "model": "CI",
+                "firmware": "OpenWrt",
+            },
+        ).json()
+        device_id = provision["device_id"]
+        agent_headers = {"Authorization": f"Bearer {provision['device_token']}"}
+        web_login = client.post(
+            "/login",
+            data={
+                "username": "reconnect@example.com",
+                "password": "terminal-test-password",
+            },
+            follow_redirects=False,
+        )
+        assert web_login.status_code == 303
+
+        with client.websocket_connect(
+            f"/api/v1/devices/{device_id}/terminal/ws",
+            headers={"Origin": "http://testserver"},
+        ) as first_socket:
+            first_session = first_socket.receive_json()["session_id"]
+            first_command = next(
+                item
+                for item in client.get(
+                    "/api/v1/agent/commands", headers=agent_headers
+                ).json()
+                if item["payload"].get("session_id") == first_session
+            )
+            client.post(
+                f"/api/v1/agent/commands/{first_command['id']}/result",
+                headers=agent_headers,
+                json={"status": "running", "result": {}},
+            ).raise_for_status()
+            client.post(
+                f"/api/v1/agent/terminal/sessions/{first_session}/status",
+                headers=agent_headers,
+                json={"status": "connected"},
+            ).raise_for_status()
+
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            with Session(get_engine()) as db:
+                first_status = db.get(TerminalSession, UUID(first_session)).status
+            if first_status == "closed":
+                break
+            time.sleep(0.05)
+        assert first_status == "closed"
+
+        with client.websocket_connect(
+            f"/api/v1/devices/{device_id}/terminal/ws",
+            headers={"Origin": "http://testserver"},
+        ) as second_socket:
+            second_session = second_socket.receive_json()["session_id"]
+            assert second_session != first_session
+            second_command = next(
+                item
+                for item in client.get(
+                    "/api/v1/agent/commands", headers=agent_headers
+                ).json()
+                if item["payload"].get("session_id") == second_session
+            )
+            client.post(
+                f"/api/v1/agent/commands/{second_command['id']}/result",
+                headers=agent_headers,
+                json={"status": "running", "result": {}},
+            ).raise_for_status()
+            output = b"PTY reconnected\r\n"
+            client.put(
+                f"/api/v1/agent/terminal/sessions/{second_session}/up",
+                headers=agent_headers,
+                content=output,
+            ).raise_for_status()
+            output_message = None
+            for _ in range(8):
+                message = second_socket.receive_json()
+                if message.get("type") == "output":
+                    output_message = message
+                    break
+            assert output_message is not None
+            assert base64.b64decode(output_message["data"]) == output
+            second_socket.send_json({"type": "close"})

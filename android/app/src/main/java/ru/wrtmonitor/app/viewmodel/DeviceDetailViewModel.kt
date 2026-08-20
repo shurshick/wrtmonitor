@@ -39,26 +39,15 @@ class DeviceDetailViewModel(
             }
         }
         if (realtimeLoop == null) realtimeLoop = viewModelScope.launch {
-            var reconnectDelay = 1_000L
-            while (true) {
-                var sessionExpired = false
-                repository.deviceEvents(device.id).collect { result ->
-                    when (result) {
-                        is ApiResult.Success -> {
-                            reconnectDelay = 1_000L
-                            requestRealtimeRefresh()
-                        }
-                        is ApiResult.Error -> {
-                            if (result.isUnauthorized()) {
-                                state = state.copy(sessionExpired = true, error = result.message)
-                                sessionExpired = true
-                            }
+            repository.reconnectingDeviceEvents(device.id).collect { result ->
+                when (result) {
+                    is ApiResult.Success -> requestRealtimeRefresh()
+                    is ApiResult.Error -> {
+                        if (result.isUnauthorized()) {
+                            state = state.copy(sessionExpired = true, error = result.message)
                         }
                     }
                 }
-                if (sessionExpired) return@launch
-                delay(reconnectDelay)
-                reconnectDelay = (reconnectDelay * 2).coerceAtMost(30_000L)
             }
         }
         restartHistoryLoop()

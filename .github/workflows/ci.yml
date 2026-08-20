@@ -48,6 +48,11 @@ jobs:
           python scripts/runtime_validation_report.py
           certification/netis-nx31.json
           certification/openwrt-x86.json
+      - name: Validate beta-readiness soak evidence
+        run: >-
+          python scripts/beta_readiness_report.py validate
+          "certification/beta-readiness-v$(cat VERSION).json"
+          --version "$(cat VERSION)"
       - run: python scripts/generate_command_matrix.py
       - run: python scripts/command_validation_report.py artifacts/command-validation.json --init --router ci-harness
       - run: pytest backend/tests openwrt-agent/tests --junitxml=pytest-results.xml
@@ -211,15 +216,39 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
-            ${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ env.RELEASE_VERSION }}
           provenance: mode=max
           sbom: true
+
+  deployment-acceptance:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Resolve previous immutable release
+        run: |
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null)"
+          test -n "$PREVIOUS_TAG"
+          echo "PREVIOUS_VERSION=${PREVIOUS_TAG#v}" >> "$GITHUB_ENV"
+      - name: Validate TrueNAS compose file
+        env:
+          WRTMONITOR_PUBLIC_SERVER_URL: https://monitor.example.test
+        run: docker compose -f deploy/truenas/wrtmonitor-truenas.yaml config --quiet
+      - name: Build current server image
+        run: docker build -t wrtmonitor-current .
+      - name: Verify clean install and persistent upgrade
+        env:
+          IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wrtmonitor
+        run: scripts/ci/deployment-acceptance.sh "$IMAGE_NAME:$PREVIOUS_VERSION" wrtmonitor-current
 
   android:
     runs-on: ubuntu-latest
@@ -270,7 +299,7 @@ jobs:
 
   release-artifacts:
     if: github.event_name == 'push'
-    needs: [backend, docker, android, android-emulator, agent-release-metadata]
+    needs: [backend, docker, deployment-acceptance, android, android-emulator, agent-release-metadata]
     runs-on: ubuntu-latest
     permissions:
       contents: write

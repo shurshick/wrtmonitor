@@ -221,8 +221,16 @@ data class CommandDto(
     val completedAt: String?,
     val expiresAt: String?,
     val lastError: String?,
+    val error: CommandErrorDto?,
     val riskLevel: String?,
     val capability: String?,
+)
+
+data class CommandErrorDto(
+    val code: String,
+    val title: String,
+    val message: String,
+    val retryable: Boolean,
 )
 
 data class ConfigChangeDto(

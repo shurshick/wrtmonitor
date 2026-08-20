@@ -1,6 +1,7 @@
 package ru.wrtmonitor.app.data
 
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.MockResponse
@@ -35,6 +36,39 @@ class RouterRepositoryRealtimeTest {
             assertEquals("telemetry.updated", event.type)
             assertEquals("router-1", event.deviceId)
             assertEquals("Bearer token", server.takeRequest().getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun reconnectsEventStreamAfterNetworkFailure() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(503))
+        server.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "text/event-stream")
+                .setBody(
+                    "id: 10\n" +
+                        "event: telemetry.updated\n" +
+                        "data: {\"device_id\":\"router-1\",\"emitted_at\":\"recovered\"}\n\n"
+                )
+        )
+        server.start()
+        try {
+            val result = withTimeout(3_000) {
+                RouterRepository(server.url("/").toString(), "token")
+                    .reconnectingDeviceEvents(
+                        deviceId = "router-1",
+                        initialDelayMs = 5,
+                        maximumDelayMs = 10,
+                    )
+                    .filterIsInstance<ApiResult.Success<*>>()
+                    .first()
+            }
+            val event = result.data as ru.wrtmonitor.app.api.dto.DeviceEventDto
+            assertEquals("recovered", event.emittedAt)
+            assertEquals(2, server.requestCount)
         } finally {
             server.shutdown()
         }
