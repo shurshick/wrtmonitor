@@ -3,11 +3,13 @@ package ru.wrtmonitor.app.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -27,7 +29,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -56,9 +60,13 @@ import java.time.format.DateTimeFormatter
 private const val PROJECT_URL = "https://github.com/shurshick/wrtmonitor"
 private const val RELEASES_URL = "https://api.github.com/repos/shurshick/wrtmonitor/releases?per_page=10"
 
-private sealed interface UpdateState {
+internal sealed interface UpdateState {
     data class UpToDate(val latestVersion: String) : UpdateState
-    data class Available(val latestVersion: String, val releaseUrl: String) : UpdateState
+    data class Available(
+        val latestVersion: String,
+        val apkUrl: String?,
+        val releasePageUrl: String,
+    ) : UpdateState
     data object Error : UpdateState
 }
 
@@ -109,7 +117,8 @@ fun AppSettingsScreen(
                     checkingUpdate = false
                 }
             },
-            onOpenRelease = { downloadAndInstallApk(context, it) }
+            onDownloadUpdate = { version, url -> downloadAndInstallApk(context, version, url) },
+            onOpenReleasePage = { openUrl(context, it) },
         )
         return
     }
@@ -222,23 +231,94 @@ private fun formatSessionTimestamp(value: String): String? = runCatching {
 }.getOrNull()
 
 @Composable
-private fun AboutScreen(updateState: UpdateState?, checkingUpdate: Boolean, onBack: () -> Unit, onOpenProject: () -> Unit, onCheckUpdates: () -> Unit, onOpenRelease: (String) -> Unit) {
+private fun AboutScreen(
+    updateState: UpdateState?,
+    checkingUpdate: Boolean,
+    onBack: () -> Unit,
+    onOpenProject: () -> Unit,
+    onCheckUpdates: () -> Unit,
+    onDownloadUpdate: (String, String) -> Unit,
+    onOpenReleasePage: (String) -> Unit,
+) {
     BackHandler(onBack = onBack)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
-            Text(stringResource(R.string.about_app), style = MaterialTheme.typography.titleLarge)
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_back))
+            }
+            Text(
+                stringResource(R.string.about_app),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
-        SectionCard(stringResource(R.string.app_name)) {
-            InfoRow(stringResource(R.string.app_version), appVersionName(LocalContext.current))
-            Text(stringResource(R.string.copyright), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            SecondaryActionButton(stringResource(R.string.project_page), onOpenProject, Modifier.align(Alignment.End))
+        SectionCard(
+            title = stringResource(R.string.app_name),
+            subtitle = stringResource(R.string.app_tagline),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier = Modifier.size(52.dp),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        stringResource(R.string.app_version_value, appVersionName(LocalContext.current)),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(R.string.copyright_owner),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Text(
+                stringResource(R.string.app_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SecondaryActionButton(stringResource(R.string.project_page), onOpenProject)
         }
-        SectionCard(stringResource(R.string.updates)) {
+        SectionCard(
+            title = stringResource(R.string.updates),
+            subtitle = stringResource(R.string.update_check_hint),
+        ) {
             when (val state = updateState) {
-                null -> Text(stringResource(R.string.update_check_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                null -> InfoRow(
+                    stringResource(R.string.app_version),
+                    appVersionName(LocalContext.current),
+                )
                 is UpdateState.UpToDate -> Text(stringResource(R.string.app_up_to_date, state.latestVersion))
-                is UpdateState.Available -> { Text(stringResource(R.string.update_available, state.latestVersion)); PrimaryActionButton(stringResource(R.string.download_update), { onOpenRelease(state.releaseUrl) }, Modifier.align(Alignment.End)) }
+                is UpdateState.Available -> {
+                    Text(
+                        stringResource(R.string.update_available, state.latestVersion),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        stringResource(R.string.update_install_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    ActionRow {
+                        state.apkUrl?.let { apkUrl ->
+                            PrimaryActionButton(
+                                stringResource(R.string.download_update),
+                                { onDownloadUpdate(state.latestVersion, apkUrl) },
+                            )
+                        }
+                        SecondaryActionButton(
+                            stringResource(R.string.open_release_page),
+                            { onOpenReleasePage(state.releasePageUrl) },
+                        )
+                    }
+                }
                 UpdateState.Error -> Text(stringResource(R.string.update_check_error), color = MaterialTheme.colorScheme.error)
             }
             TonalActionButton(
@@ -262,6 +342,10 @@ private fun checkForUpdate(currentVersion: String): UpdateState {
         ),
     )
     if (status !in 200..299) throw IllegalStateException("HTTP $status")
+    return resolveUpdateState(currentVersion, response)
+}
+
+internal fun resolveUpdateState(currentVersion: String, response: String): UpdateState {
     val releases = JsonArray(response)
     val release = (0 until releases.length()).mapNotNull { releases.optJsonObject(it) }.firstOrNull { !it.optBoolean("draft", false) } ?: throw IllegalStateException("No published releases")
     val latestVersion = release.optString("tag_name").removePrefix("v")
@@ -276,18 +360,27 @@ private fun checkForUpdate(currentVersion: String): UpdateState {
             }
         }
     }
-    return if (VersionComparator.compare(latestVersion, currentVersion) > 0) UpdateState.Available(latestVersion, apkUrl ?: release.optString("html_url")) else UpdateState.UpToDate(latestVersion)
+    return if (VersionComparator.compare(latestVersion, currentVersion) > 0) {
+        UpdateState.Available(
+            latestVersion = latestVersion,
+            apkUrl = apkUrl?.takeIf(String::isNotBlank),
+            releasePageUrl = release.optString("html_url"),
+        )
+    } else {
+        UpdateState.UpToDate(latestVersion)
+    }
 }
 
-private fun downloadAndInstallApk(context: android.content.Context, url: String) {
-    if (!url.endsWith(".apk")) {
-        openUrl(context, url)
-        return
-    }
+private fun downloadAndInstallApk(context: android.content.Context, version: String, url: String) {
+    val safeVersion = version.replace(Regex("[^A-Za-z0-9._-]"), "-")
     val request = android.app.DownloadManager.Request(Uri.parse(url)).apply {
         setMimeType("application/vnd.android.package-archive")
-        setTitle(context.getString(R.string.app_name) + " Update")
-        setDestinationInExternalFilesDir(context, android.os.Environment.DIRECTORY_DOWNLOADS, "update.apk")
+        setTitle(context.getString(R.string.update_download_title, version))
+        setDestinationInExternalFilesDir(
+            context,
+            android.os.Environment.DIRECTORY_DOWNLOADS,
+            "wrtmonitor-$safeVersion-${System.currentTimeMillis()}.apk",
+        )
         setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
     }
     val downloadManager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager

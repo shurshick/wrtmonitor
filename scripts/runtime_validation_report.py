@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +17,29 @@ REQUIRED_RUNTIME = {
     "agent.update": ("actual_version", "service_running"),
     "agent.rollback": ("actual_version", "service_running"),
 }
+RUNTIME_MANIFEST = "openwrt-agent/openwrt-agent-files.txt"
+FINGERPRINT_EXCLUDED = {"agent-version.txt", "SHA256SUMS.txt"}
+
+
+def runtime_fingerprint(root: Path = ROOT) -> str:
+    agent_root = root / "openwrt-agent"
+    names = (root / RUNTIME_MANIFEST).read_text(encoding="utf-8").splitlines()
+    digest = hashlib.sha256()
+    for name in sorted(name.strip() for name in names if name.strip()):
+        if name in FINGERPRINT_EXCLUDED:
+            continue
+        content = (agent_root / name).read_bytes()
+        if name == "wrtmonitor-agent":
+            text = content.decode("utf-8")
+            text = re.sub(
+                r'^AGENT_VERSION="[^"]+"$',
+                'AGENT_VERSION="<release>"',
+                text,
+                flags=re.MULTILINE,
+            )
+            content = text.encode("utf-8")
+        digest.update(name.encode("utf-8") + b"\0" + content + b"\0")
+    return digest.hexdigest()
 
 
 def load_evidence(root: Path, reference: str) -> dict[str, Any]:
@@ -27,10 +52,15 @@ def validate_report(path: Path, expected_version: str, root: Path = ROOT) -> lis
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
     expected_commands = set(contract["commands"])
     actual_commands = set(report.get("commands", {}))
-    if report.get("release_version") != expected_version:
-        failures.append(
-            f"release version is {report.get('release_version')!r}, expected {expected_version!r}"
-        )
+    certified_version = report.get("release_version")
+    if certified_version != expected_version:
+        fingerprint = report.get("runtime_fingerprint")
+        current_fingerprint = runtime_fingerprint(root)
+        if fingerprint != current_fingerprint:
+            failures.append(
+                f"release version is {certified_version!r}, expected {expected_version!r}, "
+                "and the certified runtime fingerprint does not match"
+            )
     missing_commands = sorted(expected_commands - actual_commands)
     unexpected_commands = sorted(actual_commands - expected_commands)
     if missing_commands:
@@ -52,11 +82,11 @@ def validate_report(path: Path, expected_version: str, root: Path = ROOT) -> lis
                 failures.append(f"{command}: runtime post-condition {field} is missing")
         if (
             command == "agent.update"
-            and runtime.get("actual_version") != expected_version
+            and runtime.get("actual_version") != certified_version
         ):
             failures.append(
                 f"agent.update: actual version is {runtime.get('actual_version')!r}, "
-                f"expected {expected_version!r}"
+                f"expected certified version {certified_version!r}"
             )
     terminal = report.get("commands", {}).get("agent.ssh_session") or {}
     reference = terminal.get("evidence")

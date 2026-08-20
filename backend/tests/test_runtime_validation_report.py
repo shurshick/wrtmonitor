@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from scripts.runtime_validation_report import validate_report
+from scripts.runtime_validation_report import runtime_fingerprint, validate_report
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -104,4 +104,44 @@ def test_runtime_report_rejects_incomplete_contract_and_wrong_update_version(
 
     failures = validate_report(report, "0.49.0", tmp_path)
     assert any(failure.startswith("commands are missing:") for failure in failures)
-    assert "agent.update: actual version is '0.48.0', expected '0.49.0'" in failures
+    assert (
+        "agent.update: actual version is '0.48.0', expected certified version '0.49.0'"
+        in failures
+    )
+
+
+def test_runtime_report_can_be_inherited_only_for_identical_runtime(tmp_path: Path):
+    agent_root = tmp_path / "openwrt-agent"
+    agent_root.mkdir()
+    (agent_root / "openwrt-agent-files.txt").write_text(
+        "wrtmonitor-agent\nagent-version.txt\nSHA256SUMS.txt\nlib/runtime.sh\n",
+        encoding="utf-8",
+    )
+    (agent_root / "wrtmonitor-agent").write_text(
+        '#!/bin/sh\nAGENT_VERSION="0.50.0"\n', encoding="utf-8"
+    )
+    (agent_root / "agent-version.txt").write_text("0.50.0\n", encoding="utf-8")
+    (agent_root / "SHA256SUMS.txt").write_text("release metadata\n", encoding="utf-8")
+    (agent_root / "lib").mkdir()
+    (agent_root / "lib" / "runtime.sh").write_text("run_command\n", encoding="utf-8")
+
+    report = tmp_path / "report.json"
+    report.write_text(
+        json.dumps(
+            {
+                "release_version": "0.49.0",
+                "runtime_fingerprint": runtime_fingerprint(tmp_path),
+                "commands": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    failures = validate_report(report, "0.50.0", tmp_path)
+    assert not any("certified runtime fingerprint" in failure for failure in failures)
+
+    (agent_root / "lib" / "runtime.sh").write_text(
+        "changed_command\n", encoding="utf-8"
+    )
+    failures = validate_report(report, "0.50.0", tmp_path)
+    assert any("certified runtime fingerprint" in failure for failure in failures)
