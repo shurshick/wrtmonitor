@@ -1,0 +1,13 @@
+{
+  "completed_at": "2026-08-20T08:23:14Z",
+  "installed_version": "0.49.0",
+  "published_release": "v0.49.0",
+  "service_running": true,
+  "signature_verification": "passed",
+  "source_version": "0.48.0",
+  "target": "OpenWrt x86, VirtualBox",
+  "target_version": "0.49.0",
+  "telemetry_after_update": "accepted",
+  "update_exit_code": 0,
+  "update_source_restored": true
+}
