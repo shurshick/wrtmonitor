@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:14:47.224926+00:00",
+  "tested_at": "2026-08-15T19:41:34.945856+00:00",
   "command": "system.set_hostname",
   "payload": {
     "hostname": "OpenWrt"
@@ -8,14 +8,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "535c07b2-84e7-407f-9bf2-dc5ef41f8e0a",
+      "id": "eb6fe8e0-53c3-405f-8a48-47e9e75896bc",
       "state": "confirmed",
       "configs": "system",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 4.391,
+  "elapsed_seconds": 2.343,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

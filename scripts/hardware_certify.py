@@ -224,6 +224,7 @@ def fresh_report(target: Target, router_description: str) -> dict[str, Any]:
     spec = contract()
     return {
         "generated_at": now_iso(),
+        "release_version": (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
         "router": router_description,
         "target": target.name,
         "contract_version": spec["command_contract_version"],
@@ -239,6 +240,9 @@ def load_report(
         report = json.loads(path.read_text(encoding="utf-8"))
         report["router"] = router_description
         report["generated_at"] = now_iso()
+        report["release_version"] = (
+            (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        )
         return report
     return fresh_report(target, router_description)
 
@@ -351,6 +355,7 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
             "checks": ["server", "dns", "route", "wifi", "dependencies"]
         },
         "wifi.status": {},
+        "wifi.get_qr": {"iface": f["iface"]},
         "wifi.set_enabled": {"radio": f["radio"], "enabled": True},
         "wifi.set_ssid": {"iface": f["iface"], "ssid": f["ssid"]},
         "wifi.set_password": {"iface": f["iface"], "password": f["wifi_key"]},
@@ -656,6 +661,7 @@ ORDER = [
     "agent.bash_script",
     "agent.ssh_session",
     "wifi.status",
+    "wifi.get_qr",
     "network.interfaces",
     "maintenance.logs.read",
     "maintenance.processes.read",
@@ -819,15 +825,60 @@ def write_evidence(
     return str(destination.relative_to(ROOT)).replace("\\", "/")
 
 
-def wait_online(api: Api, target: Target, timeout: int = 180) -> None:
+def append_runtime_evidence(evidence: str, details: dict[str, Any]) -> None:
+    path = ROOT / evidence / "result.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["runtime_post_condition"] = details
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def device_last_seen(api: Api, target: Target) -> str | None:
+    devices = api.get("/api/v1/devices")
+    row = next((item for item in devices if item["id"] == target.device_id), None)
+    return str(row.get("last_seen_at")) if row and row.get("last_seen_at") else None
+
+
+def wait_online(
+    api: Api,
+    target: Target,
+    timeout: int = 180,
+    after_last_seen: str | None = None,
+) -> str:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         devices = api.get("/api/v1/devices")
         row = next((item for item in devices if item["id"] == target.device_id), None)
-        if row and row.get("status") == "online":
-            return
+        last_seen = (
+            str(row.get("last_seen_at")) if row and row.get("last_seen_at") else ""
+        )
+        if (
+            row
+            and row.get("status") == "online"
+            and last_seen
+            and (after_last_seen is None or last_seen > after_last_seen)
+        ):
+            return last_seen
         time.sleep(5)
     raise TimeoutError(f"router did not return online: {target.name}")
+
+
+def wait_for_boot_change(ssh: Ssh, previous_boot_id: str, timeout: int = 240) -> str:
+    ssh.close()
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            ssh.client = ssh._connect()
+            current = ssh.run("cat /proc/sys/kernel/random/boot_id", timeout=15)
+            if current and current != previous_boot_id:
+                return current
+            ssh.close()
+        except (EOFError, OSError, paramiko.SSHException, RuntimeError) as exc:
+            last_error = exc
+        time.sleep(5)
+    raise TimeoutError(f"router boot id did not change: {last_error}")
 
 
 def pin_control_plane_host(ssh: Ssh) -> None:
@@ -873,20 +924,47 @@ def deploy_worktree_agent(ssh: Ssh) -> None:
     source = ROOT / "openwrt-agent"
     remote_root = "/tmp/wrtmonitor-cert-agent"
     ssh.run(f"rm -rf {remote_root}; mkdir -p {remote_root}/lib")
-    for name in ("wrtmonitor-agent", "wrtmonitor.init"):
+    for name in ("wrtmonitor-agent", "wrtmonitor.init", "agent-version.txt"):
         ssh.put_bytes(f"{remote_root}/{name}", (source / name).read_bytes())
     for path in sorted((source / "lib").glob("*.sh")):
         ssh.put_bytes(f"{remote_root}/lib/{path.name}", path.read_bytes())
     ssh.run(
-        "/etc/init.d/wrtmonitor stop >/dev/null 2>&1 || true; "
+        "/etc/init.d/wrtmonitor stop >/dev/null 2>&1 || true; sleep 2; "
+        "pids=$(pgrep -f '[w]rtmonitor-agent daemon' 2>/dev/null || true); "
+        '[ -z "$pids" ] || kill $pids; sleep 1; '
         f"cp {remote_root}/wrtmonitor-agent /usr/bin/wrtmonitor-agent; "
         f"cp {remote_root}/wrtmonitor.init /etc/init.d/wrtmonitor; "
         "mkdir -p /usr/lib/wrtmonitor; rm -f /usr/lib/wrtmonitor/*.sh; "
         f"cp {remote_root}/lib/*.sh /usr/lib/wrtmonitor/; "
+        "version=$(tr -d '\\r\\n' "
+        f"<{remote_root}/agent-version.txt); generation=worktree-$version; "
+        "release=/usr/lib/wrtmonitor/releases/$generation; "
+        'rm -rf "$release"; mkdir -p "$release"; '
+        f'cp {remote_root}/lib/*.sh "$release"/; '
+        f'cp {remote_root}/agent-version.txt "$release"/agent-version.txt; '
+        'printf "%s\\n" "$generation" '
+        ">/usr/lib/wrtmonitor/releases/current.tmp; "
+        "mv /usr/lib/wrtmonitor/releases/current.tmp "
+        "/usr/lib/wrtmonitor/releases/current; "
         "chmod 0755 /usr/bin/wrtmonitor-agent /etc/init.d/wrtmonitor "
-        "/usr/lib/wrtmonitor/*.sh; "
+        '/usr/lib/wrtmonitor/*.sh "$release"/*.sh; '
+        "/usr/bin/wrtmonitor-agent ensure-dependencies; "
         "/etc/init.d/wrtmonitor enable; /etc/init.d/wrtmonitor start",
         timeout=120,
+    )
+    stable_singleton = 0
+    instances = "0"
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        instances = ssh.run(
+            "pgrep -f '[w]rtmonitor-agent daemon' 2>/dev/null | wc -l", timeout=15
+        )
+        stable_singleton = stable_singleton + 1 if instances == "1" else 0
+        if stable_singleton >= 3:
+            return
+        time.sleep(1)
+    raise RuntimeError(
+        f"worktree deployment did not reach a stable single daemon: {instances or '0'}"
     )
 
 
@@ -902,8 +980,10 @@ def certify(
     baseline_archive: bytes | None = None
     try:
         if deploy_worktree:
+            print(f"PREP {target.name}: deploying worktree agent", flush=True)
             deploy_worktree_agent(ssh)
             time.sleep(5)
+        print(f"PREP {target.name}: collecting router facts", flush=True)
         f = target_facts(api, target, ssh)
         description = " / ".join(
             filter(
@@ -921,7 +1001,9 @@ def certify(
         report["agent_source"] = "worktree" if deploy_worktree else "installed"
         report["agent_version"] = ssh.run("wrtmonitor-agent version", check=False)
         target_slug = slug(target.name)
+        print(f"PREP {target.name}: building command payloads", flush=True)
         recipes = payloads(f, ssh)
+        print(f"PREP {target.name}: command payloads ready", flush=True)
         baseline_archive = base64.b64decode(
             recipes["maintenance.backup.restore"]["archive_base64"]
         )
@@ -1029,7 +1111,10 @@ def certify(
                     passed = bool(
                         result.get("status") == "passed"
                         and result.get("session_id")
-                        and result.get("output_confirmed")
+                        and result.get("input_confirmed")
+                        and result.get("resize_confirmed")
+                        and result.get("reconnect_confirmed")
+                        and result.get("close_confirmed")
                     )
                     report["commands"][command].update(
                         status="pass" if passed else "fail",
@@ -1132,6 +1217,12 @@ def certify(
                         break
                     time.sleep(3)
             key = f"hardware-{target_slug}-{command}-{secrets.token_hex(6)}"
+            previous_last_seen = device_last_seen(api, target)
+            previous_boot_id = (
+                ssh.run("cat /proc/sys/kernel/random/boot_id", check=False)
+                if command == "router.reboot"
+                else ""
+            )
             started = time.monotonic()
             try:
                 command_id, duplicate_same_id = api.create_command(
@@ -1156,6 +1247,7 @@ def certify(
                     else row.get("status") == "failed"
                     and expected_error in actual_error
                 )
+                runtime_post_condition: dict[str, Any] = {}
                 rollback_kind = spec[command]["reliability"].get(
                     "rollback", "not_required"
                 )
@@ -1168,22 +1260,6 @@ def certify(
                         )
                         else "configuration_backup"
                     )
-                report["commands"][command].update(
-                    status="pass" if passed else "fail",
-                    idempotency="pass" if duplicate_same_id else "fail",
-                    timeout="pass"
-                    if elapsed
-                    <= int(spec[command]["reliability"]["delivery"]["timeout_seconds"])
-                    else "fail",
-                    redelivery="pass" if duplicate_same_id else "fail",
-                    post_condition="pass" if passed else "fail",
-                    rollback=rollback,
-                    evidence=evidence,
-                )
-                print(
-                    f"{'PASS' if passed else 'FAIL'} {target.name}: {command} ({elapsed:.1f}s)",
-                    flush=True,
-                )
                 if command == "wifi.add_ssid" and passed:
                     created_iface = ssh.run(
                         "uci -q show wireless | sed -n "
@@ -1208,14 +1284,79 @@ def certify(
                         "capabilities"
                     ) or f["capabilities"]
                 if command == "router.reboot" and passed:
-                    time.sleep(12)
-                    wait_online(api, target)
+                    current_boot_id = wait_for_boot_change(ssh, previous_boot_id)
+                    fresh_seen = wait_online(
+                        api, target, timeout=240, after_last_seen=previous_last_seen
+                    )
+                    runtime_post_condition = {
+                        "boot_id_changed": current_boot_id != previous_boot_id,
+                        "fresh_telemetry": bool(fresh_seen),
+                    }
+                if command == "network.restart" and passed:
+                    fresh_seen = wait_online(
+                        api, target, timeout=120, after_last_seen=previous_last_seen
+                    )
+                    ssh_reachable = (
+                        ssh.run("printf reachable", timeout=15, check=False)
+                        == "reachable"
+                    )
+                    runtime_post_condition = {
+                        "fresh_telemetry": bool(fresh_seen),
+                        "ssh_reachable": ssh_reachable,
+                    }
+                    passed = passed and bool(fresh_seen) and ssh_reachable
                 if command == "agent.disconnect" and passed:
                     time.sleep(3)
+                    disabled = uci(ssh, "wrtmonitor.main.enabled") == "0"
+                    daemon_stopped = not bool(
+                        ssh.run(
+                            "pgrep -f '[w]rtmonitor-agent daemon' | head -n1",
+                            check=False,
+                        )
+                    )
                     ssh.run(
                         "uci set wrtmonitor.main.enabled=1; uci commit wrtmonitor; /etc/init.d/wrtmonitor restart"
                     )
-                    wait_online(api, target)
+                    fresh_seen = wait_online(
+                        api, target, timeout=180, after_last_seen=previous_last_seen
+                    )
+                    runtime_post_condition = {
+                        "disabled_observed": disabled,
+                        "daemon_stopped": daemon_stopped,
+                        "recovered": bool(fresh_seen),
+                    }
+                    passed = passed and disabled and daemon_stopped and bool(fresh_seen)
+                if command in {"agent.update", "agent.rollback"} and passed:
+                    actual_version = ssh.run("wrtmonitor-agent version", check=False)
+                    service_running = bool(
+                        ssh.run(
+                            "pgrep -f '[w]rtmonitor-agent daemon' | head -n1",
+                            check=False,
+                        )
+                    )
+                    runtime_post_condition = {
+                        "actual_version": actual_version,
+                        "service_running": service_running,
+                    }
+                    passed = passed and service_running
+                if runtime_post_condition:
+                    append_runtime_evidence(evidence, runtime_post_condition)
+                report["commands"][command].update(
+                    status="pass" if passed else "fail",
+                    idempotency="pass" if duplicate_same_id else "fail",
+                    timeout="pass"
+                    if elapsed
+                    <= int(spec[command]["reliability"]["delivery"]["timeout_seconds"])
+                    else "fail",
+                    redelivery="pass" if duplicate_same_id else "fail",
+                    post_condition="pass" if passed else "fail",
+                    rollback=rollback,
+                    evidence=evidence,
+                )
+                print(
+                    f"{'PASS' if passed else 'FAIL'} {target.name}: {command} ({elapsed:.1f}s)",
+                    flush=True,
+                )
             except Exception as exc:
                 elapsed = time.monotonic() - started
                 evidence_dir = (

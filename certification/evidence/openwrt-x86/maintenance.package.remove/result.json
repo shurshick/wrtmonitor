@@ -1,18 +1,20 @@
 {
-  "tested_at": "2026-08-08T13:52:06.665622+00:00",
+  "tested_at": "2026-08-15T20:18:02.689651+00:00",
   "command": "maintenance.package.remove",
   "payload": {
     "package": "nano"
   },
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "output": "Removing package nano from root...",
     "manager": "opkg",
     "message": "package operation completed",
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 2.297,
+  "elapsed_seconds": 2.375,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

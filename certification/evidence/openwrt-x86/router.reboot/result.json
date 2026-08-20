@@ -1,13 +1,15 @@
 {
-  "tested_at": "2026-08-08T13:52:51.745709+00:00",
+  "tested_at": "2026-08-20T07:41:33.406184+00:00",
   "command": "router.reboot",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "reboot scheduled"
   },
   "error": null,
-  "elapsed_seconds": 8.562,
+  "elapsed_seconds": 2.328,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
@@ -28,5 +30,9 @@
       "fail_closed": true
     },
     "rollback": "not_safe_after_dispatch"
+  },
+  "runtime_post_condition": {
+    "boot_id_changed": true,
+    "fresh_telemetry": true
   }
 }

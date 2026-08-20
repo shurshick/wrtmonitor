@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:31:00.892327+00:00",
+  "tested_at": "2026-08-15T19:58:31.061806+00:00",
   "command": "network.set_ipv6",
   "payload": {
     "interface": "lan",
@@ -13,14 +13,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "e395f8b3-db6f-4925-a41c-305f453b3c82",
+      "id": "8a952f91-cddb-4c6b-a434-992eea50cbfe",
       "state": "confirmed",
       "configs": "network dhcp",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.921,
+  "elapsed_seconds": 16.907,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

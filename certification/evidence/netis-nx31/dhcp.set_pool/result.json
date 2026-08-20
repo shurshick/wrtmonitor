@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:15:52.744755+00:00",
+  "tested_at": "2026-08-15T19:42:28.510860+00:00",
   "command": "dhcp.set_pool",
   "payload": {
     "interface": "lan",
@@ -11,14 +11,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "4156a217-3c64-4bbb-a176-558d4b5e22bb",
+      "id": "a6e464b6-eaae-4569-9844-8def19443e8c",
       "state": "confirmed",
       "configs": "dhcp",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 29.375,
+  "elapsed_seconds": 29.672,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

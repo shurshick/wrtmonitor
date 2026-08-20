@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:39:22.777017+00:00",
+  "tested_at": "2026-08-15T20:09:29.322283+00:00",
   "command": "system.set_ntp",
   "payload": {
     "enabled": true,
@@ -14,14 +14,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "cffae6d4-d13b-4c32-b1a2-1e84cd965781",
+      "id": "36e25143-96be-462f-a7c2-f7566dd10774",
       "state": "confirmed",
       "configs": "system",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 6.531,
+  "elapsed_seconds": 2.359,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,16 +1,18 @@
 {
-  "tested_at": "2026-08-08T13:51:51.069815+00:00",
+  "tested_at": "2026-08-15T20:17:48.917981+00:00",
   "command": "network.interface_restart",
   "payload": {
     "interface": "lan"
   },
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "network interface restarted",
     "interface": "lan"
   },
   "error": null,
-  "elapsed_seconds": 4.437,
+  "elapsed_seconds": 4.516,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

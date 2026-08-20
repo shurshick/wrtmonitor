@@ -1,0 +1,6 @@
+{
+  "tested_at": "2026-08-15T20:08:40.099443+00:00",
+  "command": "wifi.get_qr",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.qr=false"
+}

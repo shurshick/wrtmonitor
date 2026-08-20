@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:45:52.185609+00:00",
+  "tested_at": "2026-08-15T20:12:33.166099+00:00",
   "command": "firewall.delete_forwarding",
   "payload": {
     "section": "wrtmonitor_cert_forward",
@@ -10,14 +10,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "8c1901be-2cb6-4341-b2dc-206dbdeb1c3d",
+      "id": "6c5a687a-7063-40a7-9924-fe5f9f1ebf14",
       "state": "confirmed",
       "configs": "firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.782,
+  "elapsed_seconds": 15.078,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

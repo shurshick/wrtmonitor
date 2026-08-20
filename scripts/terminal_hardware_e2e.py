@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import time
 from datetime import UTC, datetime
@@ -27,6 +28,42 @@ def terminal_text(page) -> str:
           }
           return text;
         }"""
+    )
+
+
+def wait_for_terminal_text(page, expected: str, timeout: int = 45_000) -> None:
+    page.wait_for_function(
+        """expected => {
+          const root = document.querySelector('[data-terminal-device]');
+          const terminal = root?.wrtmonitorTerminal;
+          if (!terminal) return false;
+          const buffer = terminal.buffer.active;
+          let text = '';
+          for (let index = 0; index < buffer.length; index += 1) {
+            text += buffer.getLine(index)?.translateToString(true) || '';
+          }
+          return text.includes(expected);
+        }""",
+        arg=expected,
+        timeout=timeout,
+    )
+
+
+def wait_for_terminal_size(page, marker: str, timeout: int = 45_000) -> None:
+    page.wait_for_function(
+        """marker => {
+          const root = document.querySelector('[data-terminal-device]');
+          const terminal = root?.wrtmonitorTerminal;
+          if (!terminal) return false;
+          const buffer = terminal.buffer.active;
+          let text = '';
+          for (let index = 0; index < buffer.length; index += 1) {
+            text += buffer.getLine(index)?.translateToString(true) || '';
+          }
+          return new RegExp(`${marker}:[0-9]+[ ]+[0-9]+`).test(text);
+        }""",
+        arg=marker,
+        timeout=timeout,
     )
 
 
@@ -84,6 +121,8 @@ def main() -> int:
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     marker = f"WRTMONITOR_PTY_E2E_{secrets.token_hex(8)}"
+    reconnect_marker = f"WRTMONITOR_PTY_RECONNECT_{secrets.token_hex(8)}"
+    resize_marker = f"WRTMONITOR_PTY_RESIZE_{secrets.token_hex(8)}"
     started = time.monotonic()
 
     with sync_playwright() as playwright:
@@ -105,26 +144,57 @@ def main() -> int:
         terminal_input.evaluate("node => node.focus()")
         page.keyboard.type(f"printf '{marker}:%s\\n' \"$(uname -s)\"")
         page.keyboard.press("Enter")
-        page.wait_for_function(
-            """expected => {
-              const root = document.querySelector('[data-terminal-device]');
-              const terminal = root?.wrtmonitorTerminal;
-              if (!terminal) return false;
-              const buffer = terminal.buffer.active;
-              let text = '';
-              for (let index = 0; index < buffer.length; index += 1) {
-                text += buffer.getLine(index)?.translateToString(true) || '';
-              }
-              return text.includes(expected + ':Linux');
-            }""",
-            arg=marker,
-            timeout=45_000,
-        )
-        session_id = page.locator("[data-terminal-device]").get_attribute(
+        wait_for_terminal_text(page, f"{marker}:Linux")
+        first_session_id = page.locator("[data-terminal-device]").get_attribute(
             "data-terminal-session"
         )
-        if not session_id:
+        if not first_session_id:
             raise RuntimeError("browser did not receive a terminal session identifier")
+
+        page.set_viewport_size({"width": 1180, "height": 720})
+        page.wait_for_timeout(750)
+        rows, columns = page.locator("[data-terminal-device]").evaluate(
+            "root => [root.wrtmonitorTerminal.rows, root.wrtmonitorTerminal.cols]"
+        )
+        terminal_input.evaluate("node => node.focus()")
+        page.locator("[data-terminal-device]").evaluate(
+            "(root, command) => root.wrtmonitorTerminal.paste(command)",
+            f"printf '{resize_marker}:%s\\n' \"$(stty size)\"",
+        )
+        page.keyboard.press("Enter")
+        try:
+            wait_for_terminal_size(page, resize_marker)
+        except Exception:
+            (output / "terminal-resize-failure.txt").write_text(
+                terminal_text(page), encoding="utf-8"
+            )
+            page.screenshot(
+                path=str(output / "terminal-resize-failure.png"), full_page=True
+            )
+            raise
+        first_captured = terminal_text(page)
+        resize_match = re.search(
+            rf"{re.escape(resize_marker)}:(\d+)\s+(\d+)", first_captured
+        )
+        actual_rows = int(resize_match.group(1)) if resize_match else None
+        actual_columns = int(resize_match.group(2)) if resize_match else None
+
+        page.locator("#btn-terminal-disconnect").click()
+        page.locator('[data-terminal-state="closed"]').wait_for(timeout=15_000)
+        page.locator("#btn-terminal-connect").click()
+        page.locator('[data-terminal-state="connected"]').wait_for(timeout=45_000)
+        second_session_id = page.locator("[data-terminal-device]").get_attribute(
+            "data-terminal-session"
+        )
+        if not second_session_id or second_session_id == first_session_id:
+            raise RuntimeError(
+                "terminal reconnect reused the previous session identifier"
+            )
+        terminal_input.evaluate("node => node.focus()")
+        page.keyboard.type(f"printf '{reconnect_marker}:%s\\n' \"$(uname -s)\"")
+        page.keyboard.press("Enter")
+        wait_for_terminal_text(page, f"{reconnect_marker}:Linux")
+
         captured = terminal_text(page)
         page.screenshot(path=str(output / "terminal.png"), full_page=True)
         page.keyboard.type("exit")
@@ -132,22 +202,36 @@ def main() -> int:
         page.locator('[data-terminal-state="closed"]').wait_for(timeout=15_000)
         browser.close()
 
+    (output / "terminal.txt").write_text(
+        f"FIRST SESSION\n{first_captured}\n\nSECOND SESSION\n{captured}\n",
+        encoding="utf-8",
+    )
+
     report = {
         "tested_at": datetime.now(UTC).isoformat(),
         "server": server,
         "device_id": device_id,
-        "session_id": session_id,
+        "session_id": second_session_id,
+        "previous_session_id": first_session_id,
         "marker": marker,
-        "status": "passed",
+        "status": "passed"
+        if (actual_rows, actual_columns) == (rows, columns)
+        else "failed",
         "elapsed_seconds": round(time.monotonic() - started, 3),
         "path": ["Chromium", "WebSocket", "WrtMonitor", "OpenWrt agent", "PTY"],
-        "output_confirmed": f"{marker}:Linux" in captured,
+        "input_confirmed": f"{marker}:Linux" in first_captured,
+        "resize_confirmed": (actual_rows, actual_columns) == (rows, columns),
+        "expected_size": {"rows": rows, "columns": columns},
+        "actual_size": {"rows": actual_rows, "columns": actual_columns},
+        "reconnect_confirmed": f"{reconnect_marker}:Linux" in captured,
+        "close_confirmed": True,
+        "output_confirmed": f"{reconnect_marker}:Linux" in captured,
     }
     (output / "result.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(report, ensure_ascii=False))
-    return 0
+    return 0 if report["status"] == "passed" else 1
 
 
 if __name__ == "__main__":

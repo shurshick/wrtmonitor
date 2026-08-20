@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:38:47.733515+00:00",
+  "tested_at": "2026-08-15T20:09:06.054691+00:00",
   "command": "agent.set_auto_update",
   "payload": {
     "enabled": true
@@ -7,44 +7,46 @@
   "status": "success",
   "result": {
     "status": "running",
-    "version": "0.35.15",
+    "version": "0.49.0",
     "platform": "openwrt",
     "capabilities": {
       "qos.sqm": false,
+      "wifi.qr": false,
       "wifi.mesh": false,
-      "wifi.read": true,
-      "wifi.guest": true,
-      "wifi.enable": true,
+      "wifi.read": false,
+      "wifi.guest": false,
+      "wifi.enable": false,
       "agent.status": true,
       "agent.update": true,
       "clients.read": true,
       "network.read": true,
-      "wifi.disable": true,
-      "wifi.roaming": true,
+      "wifi.disable": false,
+      "wifi.roaming": false,
       "agent.disable": true,
       "clients.block": true,
       "dns.configure": true,
       "network.write": true,
       "system.reboot": true,
       "telemetry.vpn": true,
-      "wifi.schedule": true,
-      "wifi.set_ssid": true,
+      "wifi.schedule": false,
+      "wifi.set_ssid": false,
       "agent.rollback": true,
       "clients.policy": true,
       "dhcp.configure": true,
       "dhcp.set_lease": true,
       "system.set_ntp": true,
-      "telemetry.wifi": true,
+      "telemetry.wifi": false,
       "agent.long_poll": true,
+      "clients.shaping": true,
       "network.restart": true,
       "vpn.policy.read": true,
       "maintenance.cron": true,
       "maintenance.logs": true,
       "telemetry.system": true,
       "vpn.openvpn.read": true,
-      "wifi.manage_ssid": true,
-      "wifi.set_channel": true,
-      "wifi.set_country": true,
+      "wifi.manage_ssid": false,
+      "wifi.set_channel": false,
+      "wifi.set_country": false,
       "agent.bash_script": true,
       "agent.ssh_session": true,
       "dhcp.delete_lease": true,
@@ -53,7 +55,7 @@
       "telemetry.clients": true,
       "telemetry.modules": true,
       "telemetry.network": true,
-      "wifi.set_password": true,
+      "wifi.set_password": false,
       "agent.dependencies": true,
       "agent.rotate_token": true,
       "agent.set_interval": true,
@@ -67,7 +69,7 @@
       "telemetry.perimeter": true,
       "maintenance.recovery": true,
       "vpn.policy.configure": true,
-      "wifi.radio.configure": true,
+      "wifi.radio.configure": false,
       "diagnostics.check_dns": true,
       "dns.encrypted.install": true,
       "firewall.port_forward": true,
@@ -76,7 +78,7 @@
       "network.wan.configure": true,
       "telemetry.maintenance": true,
       "vpn.openvpn.configure": true,
-      "diagnostics.check_wifi": true,
+      "diagnostics.check_wifi": false,
       "network.ddns.configure": false,
       "network.ipv6.configure": true,
       "network.vlan.configure": true,
@@ -183,18 +185,55 @@
           "command": "ethtool",
           "package": "ethtool",
           "available": true
+        },
+        {
+          "command": "tc",
+          "package": "tc-full",
+          "available": true
+        },
+        {
+          "command": "script",
+          "package": "script-utils",
+          "available": true
+        },
+        {
+          "command": "stty",
+          "package": "coreutils-stty",
+          "available": true
+        },
+        {
+          "command": "kernel module",
+          "package": "kmod-sched-core",
+          "available": true
+        },
+        {
+          "command": "kernel module",
+          "package": "kmod-sched-flower",
+          "available": true
+        },
+        {
+          "command": "kernel module",
+          "package": "kmod-sched-act-police",
+          "available": true
         }
       ],
-      "ca_bundle": true
+      "ca_bundle": true,
+      "traffic_control": {
+        "status": "ready"
+      }
     },
     "update_source": "https://sync.bghitech.ru/downloads/openwrt",
     "connection_type": "long_poll",
-    "available_version": "0.35.12",
-    "last_update_check": "2026-08-08T13:37:18Z",
+    "available_version": "0.48.0",
+    "last_update_check": "2026-08-15T20:08:20Z",
     "last_update_error": "downgrade blocked",
     "capability_details": {
       "qos.sqm": {
         "reason": "sqm-scripts package or SQM init service is unavailable",
+        "supported": false
+      },
+      "wifi.qr": {
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
         "supported": false
       },
       "wifi.mesh": {
@@ -202,16 +241,16 @@
         "supported": false
       },
       "wifi.read": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "wifi.guest": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "wifi.enable": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "agent.status": {
         "reason": "available",
@@ -230,12 +269,12 @@
         "supported": true
       },
       "wifi.disable": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "wifi.roaming": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "agent.disable": {
         "reason": "available",
@@ -262,12 +301,12 @@
         "supported": true
       },
       "wifi.schedule": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "wifi.set_ssid": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "agent.rollback": {
         "reason": "available",
@@ -290,10 +329,14 @@
         "supported": true
       },
       "telemetry.wifi": {
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
+      },
+      "agent.long_poll": {
         "reason": "available",
         "supported": true
       },
-      "agent.long_poll": {
+      "clients.shaping": {
         "reason": "available",
         "supported": true
       },
@@ -322,16 +365,16 @@
         "supported": true
       },
       "wifi.manage_ssid": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "wifi.set_channel": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "wifi.set_country": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "agent.bash_script": {
         "reason": "available",
@@ -366,8 +409,8 @@
         "supported": true
       },
       "wifi.set_password": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "agent.dependencies": {
         "reason": "available",
@@ -422,8 +465,8 @@
         "supported": true
       },
       "wifi.radio.configure": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "diagnostics.check_dns": {
         "reason": "available",
@@ -458,8 +501,8 @@
         "supported": true
       },
       "diagnostics.check_wifi": {
-        "reason": "available",
-        "supported": true
+        "reason": "wireless configuration, required radio features or wifi utility is unavailable",
+        "supported": false
       },
       "network.ddns.configure": {
         "reason": "network UCI configuration or init service is unavailable",
@@ -561,12 +604,12 @@
     "last_update_status": "skipped",
     "rollback_available": true,
     "auto_update_enabled": true,
-    "capabilities_version": 17,
-    "last_successful_update": "2026-08-07T21:03:27Z",
+    "capabilities_version": 19,
+    "last_successful_update": "2026-08-15T06:58:45Z",
     "telemetry_interval_seconds": 10
   },
   "error": null,
-  "elapsed_seconds": 8.516,
+  "elapsed_seconds": 2.36,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

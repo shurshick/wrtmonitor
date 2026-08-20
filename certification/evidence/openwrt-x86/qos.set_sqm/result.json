@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:51:16.548781+00:00",
+  "tested_at": "2026-08-15T20:17:13.970135+00:00",
   "command": "qos.set_sqm",
   "status": "not_applicable",
   "reason": "router reported capability qos.sqm=false"

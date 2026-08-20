@@ -1,15 +1,17 @@
 {
-  "tested_at": "2026-08-08T13:29:02.878843+00:00",
+  "tested_at": "2026-08-15T19:56:26.866546+00:00",
   "command": "dns.install_dot",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "mode": "dot",
     "message": "encrypted DNS package installed",
     "package": "stubby"
   },
   "error": null,
-  "elapsed_seconds": 25.281,
+  "elapsed_seconds": 27.344,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

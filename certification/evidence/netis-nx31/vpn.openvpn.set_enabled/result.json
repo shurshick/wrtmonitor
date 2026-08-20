@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:27:42.015415+00:00",
+  "tested_at": "2026-08-15T19:54:59.969008+00:00",
   "command": "vpn.openvpn.set_enabled",
   "payload": {
     "name": "certclient",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "522ee8eb-1c3d-4cc0-bf3b-7d6043b5940c",
+      "id": "189b516d-2141-4bfa-a96c-53a4800a81c9",
       "state": "confirmed",
       "configs": "openvpn",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 16.922,
+  "elapsed_seconds": 19.031,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

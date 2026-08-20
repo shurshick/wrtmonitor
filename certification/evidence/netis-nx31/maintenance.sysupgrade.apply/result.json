@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:33:53.129673+00:00",
+  "tested_at": "2026-08-15T20:00:53.907491+00:00",
   "command": "maintenance.sysupgrade.apply",
   "payload": {
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -7,6 +7,8 @@
   },
   "status": "failed",
   "result": {
+    "ok": false,
+    "code": "command_failed",
     "error": "validated firmware is not staged",
     "error_detail": {
       "code": "command_failed",
@@ -20,7 +22,7 @@
     "message": "validated firmware is not staged",
     "retryable": false
   },
-  "elapsed_seconds": 4.344,
+  "elapsed_seconds": 2.312,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

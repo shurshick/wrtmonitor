@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:16:39.271993+00:00",
+  "tested_at": "2026-08-15T19:43:11.554794+00:00",
   "command": "client.set_blocked",
   "payload": {
     "mac": "02:00:00:00:ce:01",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "8f1bff50-f02d-467d-8191-15bcd52eb1f9",
+      "id": "6209457a-286b-4f69-ba32-2dfe00a39ec1",
       "state": "confirmed",
       "configs": "firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 12.718,
+  "elapsed_seconds": 4.485,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

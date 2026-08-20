@@ -43,6 +43,11 @@ jobs:
       - run: ruff format --check backend
       - run: python scripts/validate_contracts.py
       - run: python scripts/validate_architecture.py
+      - name: Validate physical runtime certification evidence
+        run: >-
+          python scripts/runtime_validation_report.py
+          certification/netis-nx31.json
+          certification/openwrt-x86.json
       - run: python scripts/generate_command_matrix.py
       - run: python scripts/command_validation_report.py artifacts/command-validation.json --init --router ci-harness
       - run: pytest backend/tests openwrt-agent/tests --junitxml=pytest-results.xml

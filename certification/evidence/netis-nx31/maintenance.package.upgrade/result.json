@@ -1,18 +1,20 @@
 {
-  "tested_at": "2026-08-08T13:32:28.024210+00:00",
+  "tested_at": "2026-08-15T19:59:43.424185+00:00",
   "command": "maintenance.package.upgrade",
   "payload": {
     "package": "nano"
   },
   "status": "success",
   "result": {
-    "output": "OK: 36.3 MiB in 206 packages",
+    "ok": true,
+    "code": "ok",
+    "output": "OK: 37.3 MiB in 213 packages",
     "manager": "apk",
     "message": "package upgraded",
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 4.359,
+  "elapsed_seconds": 2.313,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

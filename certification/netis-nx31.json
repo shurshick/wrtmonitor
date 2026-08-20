@@ -1,5 +1,6 @@
 {
-  "generated_at": "2026-08-12T13:17:52.033759+00:00",
+  "generated_at": "2026-08-15T20:31:53.688245+00:00",
+  "release_version": "0.49.0",
   "router": "netis-nx31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
   "target": "netis-nx31",
   "contract_version": 1,
@@ -64,7 +65,7 @@
       "timeout": "pass",
       "redelivery": "pass",
       "post_condition": "pass",
-      "rollback": "configuration_backup",
+      "rollback": "not_required",
       "evidence": "certification/evidence/netis-nx31/agent.ssh_session"
     },
     "agent.update": {
@@ -742,6 +743,15 @@
       "rollback": "paired_command",
       "evidence": "certification/evidence/netis-nx31/wifi.delete_ssid"
     },
+    "wifi.get_qr": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "not_required",
+      "evidence": "certification/evidence/netis-nx31/wifi.get_qr"
+    },
     "wifi.set_channel": {
       "status": "pass",
       "idempotency": "pass",
@@ -843,5 +853,5 @@
     }
   },
   "agent_source": "worktree",
-  "agent_version": "0.44.0"
+  "agent_version": "0.49.0"
 }

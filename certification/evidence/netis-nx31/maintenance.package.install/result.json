@@ -1,18 +1,20 @@
 {
-  "tested_at": "2026-08-08T13:32:23.656517+00:00",
+  "tested_at": "2026-08-15T19:59:41.106547+00:00",
   "command": "maintenance.package.install",
   "payload": {
     "package": "nano"
   },
   "status": "success",
   "result": {
-    "output": "(1/1) Installing nano (9.2-r1)\n  Executing nano-9.2-r1.post-install\nOK: 36.3 MiB in 206 packages",
+    "ok": true,
+    "code": "ok",
+    "output": "(1/1) Installing nano (9.2-r1)\n  Executing nano-9.2-r1.post-install\nOK: 37.3 MiB in 213 packages",
     "manager": "apk",
     "message": "package operation completed",
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 14.906,
+  "elapsed_seconds": 16.86,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

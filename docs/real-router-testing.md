@@ -63,6 +63,16 @@ python scripts/command_validation_report.py certification/netis-nx31.json --requ
 python scripts/command_validation_report.py certification/openwrt-x86.json --require-complete
 ```
 
+После архитектурных изменений агента обязателен дополнительный runtime gate:
+
+```sh
+python scripts/runtime_validation_report.py \
+  certification/netis-nx31.json \
+  certification/openwrt-x86.json
+```
+
+Он не принимает старый `online` за доказательство восстановления. В evidence должны быть смена `boot_id`, новая telemetry, фактическая остановка/запуск daemon и полный браузерный lifecycle PTY.
+
 `not_applicable` допустим только для capability, которую роутер явно объявил неподдерживаемой. `pass` без ссылки на лог, JSON result или снимок UCI не принимается.
 
 Перед изменением SSID, отключением Wi-Fi или reboot убедитесь, что есть SSH-доступ по кабелю и сохранен backup: `sysupgrade -b /tmp/openwrt-backup.tar.gz`.

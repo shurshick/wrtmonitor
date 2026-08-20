@@ -1,41 +1,6 @@
 {
-  "tested_at": "2026-08-08T13:41:38.475239+00:00",
+  "tested_at": "2026-08-15T20:10:19.401535+00:00",
   "command": "wifi.set_channel",
-  "payload": {
-    "radio": "radio0",
-    "channel": "1"
-  },
-  "status": "success",
-  "result": {
-    "message": "configuration applied and verified",
-    "transaction": {
-      "id": "b53a0127-bd6a-4756-b419-8675cc82e19a",
-      "state": "confirmed",
-      "configs": "wireless",
-      "rollback": false
-    }
-  },
-  "error": null,
-  "elapsed_seconds": 14.844,
-  "idempotency_duplicate_returned_same_command": true,
-  "retry_count": 1,
-  "reliability": {
-    "subsystem": "wifi",
-    "idempotency": {
-      "strategy": "command_uuid_result_cache",
-      "semantic": false
-    },
-    "delivery": {
-      "timeout_seconds": 180,
-      "lease_seconds": 45,
-      "max_deliveries": 2
-    },
-    "post_condition": "read_after_write_config",
-    "verification": {
-      "required": true,
-      "mode": "read_after_write_config",
-      "fail_closed": true
-    },
-    "rollback": "configuration_backup"
-  }
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.set_channel=false"
 }

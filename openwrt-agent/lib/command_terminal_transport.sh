@@ -146,7 +146,7 @@ terminal_supervisor() {
     cat >"$env_file" <<'EOF'
 wrtmonitor_terminal_resize() {
     set -- $(cat "$WRTMONITOR_TERM_SIZE" 2>/dev/null || printf '24 80')
-    stty rows "${1:-24}" cols "${2:-80}" 2>/dev/null || true
+    stty rows "${1:-24}" cols "${2:-80}"
 }
 printf '%s\n' "$$" >"$WRTMONITOR_TERM_PID"
 trap wrtmonitor_terminal_resize WINCH

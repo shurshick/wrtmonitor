@@ -1,22 +1,25 @@
-# WrtMonitor v0.48.0 - Agent Boundaries
+# WrtMonitor v0.49.0 - Runtime Certification
 
-Тестовый технический релиз завершает разделение OpenWrt-агента. Серверные API, PostgreSQL-схема, Web UI, Android-сценарии и TrueNAS YAML не менялись.
+Тестовый стабилизационный релиз проверяет разделённый в `0.48.0` OpenWrt runtime на двух физических стендах. Новые пользовательские функции не добавлялись.
 
 ## Изменено
 
-- update runtime разделён на проверку версии, криптографию, хранилище поколений и validation;
-- сетевые команды разделены на core, topology, services и policy;
-- DHCP, клиенты, интерфейсы, topology и DNS получили отдельные telemetry-модули;
-- post-condition verifiers, transaction recovery и PTY transport больше не находятся в общих монолитах;
-- command runtime разделён на результат, DNS и Wi-Fi helpers;
-- результаты команд получили единый структурированный контракт.
+- hardware certification подтверждает новый `boot_id` и свежую telemetry после перезагрузки;
+- отключение агента считается проверенным только после остановки daemon и успешного возврата связи;
+- update и rollback фиксируют фактическую версию и состояние процесса;
+- Web SSH E2E проверяет ввод, resize PTY, повторное подключение с новым session ID и закрытие;
+- cache key Web SSH JavaScript теперь совпадает с версией сервера;
+- сетевой restart выполняется синхронным reload и не сообщает об успехе до результата;
+- PTY-зависимость `stty` устанавливается и проверяется вместе с агентом;
+- добавлен отдельный fail-closed runtime gate для аппаратных отчётов.
 
 ## Проверено
 
-- shell syntax и статические тесты установщика, обновления, telemetry, команд и терминала;
-- OpenWrt test harness для post-condition и структурированных ошибок;
-- архитектурные ограничения всех agent libraries;
-- backend API, Web UI и command lifecycle;
-- Android unit tests, lint, сборка APK и монотонный `versionCode`.
+- полный контракт из 94 команд на Netis NX31 и OpenWrt x86;
+- Netis NX31: 90 PASS и 4 честных `not_applicable`;
+- OpenWrt x86: 76 PASS и 18 `not_applicable` из-за отсутствующих модулей;
+- повторная доставка, timeout, post-condition и восстановление исходной конфигурации;
+- обновление агента с `0.48.0` на `0.49.0` через подписанный manifest;
+- backend, PostgreSQL, browser E2E, OpenWrt harness и Android-сборка.
 
-Сервер обновляется обычным redeploy образа `latest` после публикации. Агент получает `0.48.0` штатным автообновлением с проверкой подписанного manifest.
+Сервер обновляется redeploy образа `latest`. Агент получает `0.49.0` штатным автообновлением.

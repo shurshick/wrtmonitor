@@ -1,33 +1,30 @@
 {
-  "tested_at": "2026-08-08T13:11:28.671458+00:00",
-  "command": "agent.ssh_session",
-  "payload": {},
-  "status": "success",
-  "result": {
-    "status": "ssh_started",
-    "message": "Web SSH session started"
+  "tested_at": "2026-08-15T19:38:41.566142+00:00",
+  "server": "http://192.168.1.222:8088",
+  "device_id": "14dfa39a-69b9-44fb-9964-5aab9c6a80d1",
+  "session_id": "afbfba44-9a1a-416e-8616-48cd0552b89a",
+  "previous_session_id": "608da1a5-65a8-436e-8a8e-4d49624c7ebf",
+  "marker": "WRTMONITOR_PTY_E2E_7b340c6384dafb19",
+  "status": "passed",
+  "elapsed_seconds": 25.703,
+  "path": [
+    "Chromium",
+    "WebSocket",
+    "WrtMonitor",
+    "OpenWrt agent",
+    "PTY"
+  ],
+  "input_confirmed": true,
+  "resize_confirmed": true,
+  "expected_size": {
+    "rows": 26,
+    "columns": 113
   },
-  "error": null,
-  "elapsed_seconds": 12.578,
-  "idempotency_duplicate_returned_same_command": true,
-  "retry_count": 1,
-  "reliability": {
-    "subsystem": "agent",
-    "idempotency": {
-      "strategy": "command_uuid_result_cache",
-      "semantic": true
-    },
-    "delivery": {
-      "timeout_seconds": 180,
-      "lease_seconds": 45,
-      "max_deliveries": 2
-    },
-    "post_condition": "read_after_write_config",
-    "verification": {
-      "required": true,
-      "mode": "read_after_write_config",
-      "fail_closed": true
-    },
-    "rollback": "configuration_backup"
-  }
+  "actual_size": {
+    "rows": 26,
+    "columns": 113
+  },
+  "reconnect_confirmed": true,
+  "close_confirmed": true,
+  "output_confirmed": true
 }

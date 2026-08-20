@@ -1,9 +1,10 @@
 {
-  "tested_at": "2026-08-08T13:11:39.227693+00:00",
+  "tested_at": "2026-08-15T19:38:56.598085+00:00",
   "command": "wifi.status",
   "payload": {},
   "status": "success",
   "result": {
+    "state": "observed",
     "radios": [
       {
         "id": "radio0",
@@ -13,32 +14,42 @@
         "ssid": [
           "NetisNX31"
         ],
-        "htmode": "VHT160",
+        "htmode": "HE40",
         "survey": {
-          "rx_ms": 2352413,
+          "rx_ms": 718363,
           "state": "observed",
-          "tx_ms": 232759,
+          "tx_ms": 356828,
           "reason": "",
-          "busy_ms": 5309707,
-          "active_ms": 90966049,
+          "busy_ms": 9162897,
+          "active_ms": 84668747,
           "interface": "phy0-ap0",
-          "noise_dbm": -74,
+          "noise_dbm": -72,
           "frequency_mhz": 2412,
-          "utilization_percent": 5
+          "utilization_percent": 10
         },
         "channel": "1",
         "country": "RU",
+        "runtime": {
+          "up": true,
+          "state": "up",
+          "ifname": "phy0-ap0",
+          "reason": "",
+          "pending": false
+        },
         "disabled": false,
         "schedule": {
           "stop": "",
           "start": "",
           "enabled": false,
-          "weekdays": []
+          "weekdays": [],
+          "active_now": false,
+          "base_enabled": true,
+          "effective_enabled": true
         },
-        "encryption": "none",
+        "encryption": "sae-mixed",
         "interfaces": [
           {
-            "id": "default_radio0",
+            "id": "wifinet0",
             "mode": "ap",
             "ssid": "NetisNX31",
             "index": 0,
@@ -47,13 +58,14 @@
             "isolate": false,
             "mesh_id": "",
             "network": "lan",
-            "encryption": "none",
+            "encryption": "sae-mixed",
             "ieee80211k": false,
             "ieee80211r": false,
             "bss_transition": false,
             "mobility_domain": ""
           }
         ],
+        "configured_enabled": true,
         "supported_channels": [
           "auto",
           "1",
@@ -68,8 +80,7 @@
           "10",
           "11",
           "12",
-          "13",
-          "14"
+          "13"
         ]
       },
       {
@@ -82,30 +93,40 @@
         ],
         "htmode": "VHT160",
         "survey": {
-          "rx_ms": 1934739,
+          "rx_ms": 2186851,
           "state": "observed",
-          "tx_ms": 267591,
+          "tx_ms": 324007,
           "reason": "",
-          "busy_ms": 2221748,
-          "active_ms": 90967136,
+          "busy_ms": 2546501,
+          "active_ms": 84669902,
           "interface": "phy1-ap0",
-          "noise_dbm": -91,
+          "noise_dbm": -92,
           "frequency_mhz": 5180,
-          "utilization_percent": 2
+          "utilization_percent": 3
         },
         "channel": "36",
         "country": "RU",
+        "runtime": {
+          "up": true,
+          "state": "up",
+          "ifname": "phy1-ap0",
+          "reason": "",
+          "pending": false
+        },
         "disabled": false,
         "schedule": {
           "stop": "",
           "start": "",
           "enabled": false,
-          "weekdays": []
+          "weekdays": [],
+          "active_now": false,
+          "base_enabled": true,
+          "effective_enabled": true
         },
-        "encryption": "none",
+        "encryption": "sae-mixed",
         "interfaces": [
           {
-            "id": "default_radio1",
+            "id": "wifinet1",
             "mode": "ap",
             "ssid": "NetisNX31",
             "index": 1,
@@ -114,13 +135,14 @@
             "isolate": false,
             "mesh_id": "",
             "network": "lan",
-            "encryption": "none",
+            "encryption": "sae-mixed",
             "ieee80211k": false,
             "ieee80211r": false,
             "bss_transition": false,
             "mobility_domain": ""
           }
         ],
+        "configured_enabled": true,
         "supported_channels": [
           "auto",
           "36",
@@ -131,14 +153,6 @@
           "56",
           "60",
           "64",
-          "100",
-          "104",
-          "108",
-          "112",
-          "116",
-          "120",
-          "124",
-          "128",
           "132",
           "136",
           "140",
@@ -147,13 +161,11 @@
           "153",
           "157",
           "161",
-          "165",
-          "169",
-          "173",
-          "177"
+          "165"
         ]
       }
     ],
+    "reason": "",
     "stations": [
       {
         "band": "2g",
@@ -171,7 +183,7 @@
     "available": true
   },
   "error": null,
-  "elapsed_seconds": 10.532,
+  "elapsed_seconds": 14.969,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

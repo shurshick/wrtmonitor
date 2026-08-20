@@ -62,3 +62,10 @@ def test_release_tag_mismatch_is_rejected(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(metadata, "read_text", mismatched)
     with pytest.raises(ValueError, match="does not match"):
         metadata.validate()
+
+
+def test_web_ssh_cache_key_tracks_server_version():
+    template = (
+        ROOT / "backend" / "app" / "templates" / "partials" / "ssh.html"
+    ).read_text(encoding="utf-8")
+    assert "web-ssh.js?v={{ server_version }}" in template

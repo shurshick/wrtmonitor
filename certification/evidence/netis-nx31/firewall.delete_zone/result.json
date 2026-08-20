@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:23:57.881103+00:00",
+  "tested_at": "2026-08-15T19:50:55.555169+00:00",
   "command": "firewall.delete_zone",
   "payload": {
     "section": "wrtmonitor_cert_zone",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "4fe50d78-358c-440f-8271-f1024ecd9627",
+      "id": "d97ea9ac-7e3d-487b-89a8-980305a3d9ef",
       "state": "confirmed",
       "configs": "firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 19.11,
+  "elapsed_seconds": 21.407,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

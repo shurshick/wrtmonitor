@@ -1,41 +1,6 @@
 {
-  "tested_at": "2026-08-08T13:41:23.636057+00:00",
+  "tested_at": "2026-08-15T20:10:19.400554+00:00",
   "command": "wifi.set_password",
-  "payload": {
-    "iface": "default_radio0",
-    "password": "<redacted>"
-  },
-  "status": "success",
-  "result": {
-    "message": "configuration applied and verified",
-    "transaction": {
-      "id": "c73a9b98-c4cb-41fe-ae37-3f246a136097",
-      "state": "confirmed",
-      "configs": "wireless",
-      "rollback": false
-    }
-  },
-  "error": null,
-  "elapsed_seconds": 14.766,
-  "idempotency_duplicate_returned_same_command": true,
-  "retry_count": 1,
-  "reliability": {
-    "subsystem": "wifi",
-    "idempotency": {
-      "strategy": "command_uuid_result_cache",
-      "semantic": false
-    },
-    "delivery": {
-      "timeout_seconds": 180,
-      "lease_seconds": 45,
-      "max_deliveries": 2
-    },
-    "post_condition": "read_after_write_config",
-    "verification": {
-      "required": true,
-      "mode": "read_after_write_config",
-      "fail_closed": true
-    },
-    "rollback": "configuration_backup"
-  }
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.set_password=false"
 }

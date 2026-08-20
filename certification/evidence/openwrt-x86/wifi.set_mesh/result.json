@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:42:35.541063+00:00",
+  "tested_at": "2026-08-15T20:10:19.405085+00:00",
   "command": "wifi.set_mesh",
   "status": "not_applicable",
   "reason": "router reported capability wifi.mesh=false"

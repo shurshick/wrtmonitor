@@ -1,15 +1,17 @@
 {
-  "tested_at": "2026-08-08T13:51:57.537862+00:00",
+  "tested_at": "2026-08-15T20:17:55.497656+00:00",
   "command": "maintenance.packages.refresh",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "manager": "opkg",
     "message": "package lists refreshed",
     "upgradable": ""
   },
   "error": null,
-  "elapsed_seconds": 6.469,
+  "elapsed_seconds": 6.562,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

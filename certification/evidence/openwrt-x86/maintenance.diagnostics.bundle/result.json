@@ -1,15 +1,17 @@
 {
-  "tested_at": "2026-08-08T13:38:39.215312+00:00",
+  "tested_at": "2026-08-15T20:09:03.688899+00:00",
   "command": "maintenance.diagnostics.bundle",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "diagnostic bundle created",
     "filename": "wrtmonitor-diagnostics.tar.gz",
     "bundle_base64": "<redacted>"
   },
   "error": null,
-  "elapsed_seconds": 2.281,
+  "elapsed_seconds": 2.359,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

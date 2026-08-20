@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-12T13:18:30.381767+00:00",
+  "tested_at": "2026-08-15T20:10:19.397990+00:00",
   "command": "client.set_policy",
   "payload": {
     "mac": "02:00:00:00:ce:01",
@@ -44,14 +44,14 @@
       }
     },
     "transaction": {
-      "id": "1ddc3d95-1012-4388-a6d8-f9440d732f04",
+      "id": "54ac13f6-acf0-4398-942b-3a564ab05987",
       "state": "confirmed",
       "configs": "firewall wrtmonitor",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 4.422,
+  "elapsed_seconds": 4.484,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

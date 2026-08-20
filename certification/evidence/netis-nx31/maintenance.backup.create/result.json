@@ -1,15 +1,17 @@
 {
-  "tested_at": "2026-08-08T13:13:05.466991+00:00",
+  "tested_at": "2026-08-15T19:39:55.486815+00:00",
   "command": "maintenance.backup.create",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "configuration backup created",
     "filename": "wrtmonitor-openwrt-backup.tar.gz",
     "archive_base64": "<redacted>"
   },
   "error": null,
-  "elapsed_seconds": 14.688,
+  "elapsed_seconds": 17.031,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

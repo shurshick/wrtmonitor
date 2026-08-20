@@ -1,24 +1,25 @@
 {
-  "tested_at": "2026-08-08T13:18:44.029563+00:00",
+  "tested_at": "2026-08-15T19:45:17.455532+00:00",
   "command": "wifi.set_radio",
   "payload": {
     "radio": "radio0",
+    "enabled": true,
     "channel": "1",
     "country": "RU",
-    "htmode": "VHT160"
+    "htmode": "HE40"
   },
   "status": "success",
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "f7f760f9-2a92-4cdc-8709-e5c1c1fcc2b7",
+      "id": "c29a5f10-97c7-43db-9341-533f558b77a5",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 19.0,
+  "elapsed_seconds": 19.125,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

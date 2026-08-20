@@ -1,18 +1,20 @@
 {
-  "tested_at": "2026-08-08T13:51:59.997571+00:00",
+  "tested_at": "2026-08-15T20:17:57.898790+00:00",
   "command": "maintenance.package.install",
   "payload": {
     "package": "nano"
   },
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "output": "Installing nano (8.0-1) to root...\nDownloading https://downloads.openwrt.org/releases/22.03.5/packages/x86_64/packages/nano_8.0-1_x86_64.ipk\nConfiguring nano.",
     "manager": "opkg",
     "message": "package operation completed",
     "package": "nano"
   },
   "error": null,
-  "elapsed_seconds": 2.453,
+  "elapsed_seconds": 2.375,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

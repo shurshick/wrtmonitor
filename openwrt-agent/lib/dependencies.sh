@@ -17,6 +17,7 @@ nlbw|nlbwmon
 ethtool|ethtool
 tc|tc-full
 script|script-utils
+stty|coreutils-stty
 EOF
 }
 

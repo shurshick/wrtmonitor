@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:26:53.153733+00:00",
+  "tested_at": "2026-08-15T19:54:02.610807+00:00",
   "command": "vpn.wireguard.delete_peer",
   "payload": {
     "interface": "wgcert",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "b2f48465-dd10-4906-ad62-db1d787ee3d1",
+      "id": "0202d545-27fd-4987-a08f-7e4a564772e9",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 17.093,
+  "elapsed_seconds": 12.844,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

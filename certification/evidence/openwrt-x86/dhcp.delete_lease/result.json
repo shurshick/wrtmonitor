@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:40:11.635725+00:00",
+  "tested_at": "2026-08-15T20:10:12.516975+00:00",
   "command": "dhcp.delete_lease",
   "payload": {
     "mac": "02:00:00:00:ce:01"
@@ -8,14 +8,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "7a6e791e-97ac-4670-b6f0-8a279e8bcb9f",
+      "id": "b98b2220-c175-47b2-bc20-a2fc760288ee",
       "state": "confirmed",
       "configs": "dhcp",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 12.766,
+  "elapsed_seconds": 12.875,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

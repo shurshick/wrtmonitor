@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:13:39.365590+00:00",
+  "tested_at": "2026-08-15T19:40:19.511795+00:00",
   "command": "agent.set_auto_update",
   "payload": {
     "enabled": true
@@ -7,10 +7,11 @@
   "status": "success",
   "result": {
     "status": "running",
-    "version": "0.35.15",
+    "version": "0.49.0",
     "platform": "openwrt",
     "capabilities": {
       "qos.sqm": false,
+      "wifi.qr": true,
       "wifi.mesh": true,
       "wifi.read": true,
       "wifi.guest": true,
@@ -36,6 +37,7 @@
       "system.set_ntp": true,
       "telemetry.wifi": true,
       "agent.long_poll": true,
+      "clients.shaping": true,
       "network.restart": true,
       "vpn.policy.read": true,
       "maintenance.cron": true,
@@ -183,19 +185,56 @@
           "command": "ethtool",
           "package": "ethtool",
           "available": true
+        },
+        {
+          "command": "tc",
+          "package": "tc-full",
+          "available": true
+        },
+        {
+          "command": "script",
+          "package": "script-utils",
+          "available": true
+        },
+        {
+          "command": "stty",
+          "package": "coreutils-stty",
+          "available": true
+        },
+        {
+          "command": "kernel module",
+          "package": "kmod-sched-core",
+          "available": true
+        },
+        {
+          "command": "kernel module",
+          "package": "kmod-sched-flower",
+          "available": true
+        },
+        {
+          "command": "kernel module",
+          "package": "kmod-sched-act-police",
+          "available": true
         }
       ],
-      "ca_bundle": true
+      "ca_bundle": true,
+      "traffic_control": {
+        "status": "ready"
+      }
     },
     "update_source": "https://sync.bghitech.ru/downloads/openwrt",
     "connection_type": "long_poll",
-    "available_version": "0.35.12",
-    "last_update_check": "2026-08-08T13:10:50Z",
+    "available_version": "0.48.0",
+    "last_update_check": "2026-08-15T19:37:57Z",
     "last_update_error": "downgrade blocked",
     "capability_details": {
       "qos.sqm": {
         "reason": "sqm-scripts package or SQM init service is unavailable",
         "supported": false
+      },
+      "wifi.qr": {
+        "reason": "available",
+        "supported": true
       },
       "wifi.mesh": {
         "reason": "available",
@@ -294,6 +333,10 @@
         "supported": true
       },
       "agent.long_poll": {
+        "reason": "available",
+        "supported": true
+      },
+      "clients.shaping": {
         "reason": "available",
         "supported": true
       },
@@ -561,12 +604,12 @@
     "last_update_status": "skipped",
     "rollback_available": true,
     "auto_update_enabled": true,
-    "capabilities_version": 17,
-    "last_successful_update": "2026-08-07T21:09:26Z",
-    "telemetry_interval_seconds": 10
+    "capabilities_version": 19,
+    "last_successful_update": "2026-08-15T18:13:22Z",
+    "telemetry_interval_seconds": 5
   },
   "error": null,
-  "elapsed_seconds": 10.594,
+  "elapsed_seconds": 4.5,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

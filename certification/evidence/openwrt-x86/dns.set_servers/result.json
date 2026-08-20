@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:51:16.546296+00:00",
+  "tested_at": "2026-08-15T20:17:13.968155+00:00",
   "command": "dns.set_servers",
   "payload": {
     "servers": [
@@ -11,14 +11,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "284d3dde-8706-4d8d-93c7-0532c3a6216c",
+      "id": "d485a7fc-ada0-4347-9fbe-d73b871a9d78",
       "state": "confirmed",
       "configs": "dhcp",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 12.719,
+  "elapsed_seconds": 12.813,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

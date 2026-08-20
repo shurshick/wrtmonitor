@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:46:55.667929+00:00",
+  "tested_at": "2026-08-15T20:13:26.896984+00:00",
   "command": "network.delete_route",
   "payload": {
     "section": "wrtmonitor_cert_route",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "3ba59baf-ce96-4411-bc6d-728d8db7aa04",
+      "id": "a0b58f1e-ab21-46b8-8ac4-5e1117ace58d",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.859,
+  "elapsed_seconds": 12.906,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

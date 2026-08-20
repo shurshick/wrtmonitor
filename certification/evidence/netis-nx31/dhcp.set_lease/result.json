@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:16:09.672799+00:00",
+  "tested_at": "2026-08-15T19:42:47.810160+00:00",
   "command": "dhcp.set_lease",
   "payload": {
     "mac": "02:00:00:00:ce:01",
@@ -10,14 +10,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "5f6b4bd1-91c0-435f-a8b7-ceb9bb6f4113",
+      "id": "3f048b2a-a2fb-4c01-a3c2-3fe36b8fb48e",
       "state": "confirmed",
       "configs": "dhcp",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 16.922,
+  "elapsed_seconds": 19.282,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

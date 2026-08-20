@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:37:47.482239+00:00",
+  "tested_at": "2026-08-15T20:08:42.500254+00:00",
   "command": "network.interfaces",
   "payload": {},
   "status": "success",
@@ -185,7 +185,7 @@
     }
   },
   "error": null,
-  "elapsed_seconds": 2.266,
+  "elapsed_seconds": 2.359,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:47:19.863565+00:00",
+  "tested_at": "2026-08-15T20:13:49.731754+00:00",
   "command": "network.set_vlan",
   "payload": {
     "section": "wrtmonitor_cert_vlan",
@@ -13,14 +13,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "2b732d72-8fb1-4b25-b18a-2be51a9e80f4",
+      "id": "57c1688c-7f7e-4225-94ab-038bd815ae22",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.797,
+  "elapsed_seconds": 13.063,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

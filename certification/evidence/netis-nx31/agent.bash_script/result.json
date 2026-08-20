@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:11:16.083034+00:00",
+  "tested_at": "2026-08-15T19:38:15.036346+00:00",
   "command": "agent.bash_script",
   "payload": {
     "script": "printf 'wrtmonitor-certification\\n'; uci -q get system.@system[0].hostname >/dev/null"
@@ -10,7 +10,7 @@
     "stdout": "wrtmonitor-certification"
   },
   "error": null,
-  "elapsed_seconds": 8.453,
+  "elapsed_seconds": 2.391,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
@@ -24,12 +24,12 @@
       "lease_seconds": 45,
       "max_deliveries": 2
     },
-    "post_condition": "read_after_write_config",
+    "post_condition": "handler_result",
     "verification": {
       "required": true,
-      "mode": "read_after_write_config",
+      "mode": "handler_result",
       "fail_closed": true
     },
-    "rollback": "configuration_backup"
+    "rollback": "not_available"
   }
 }

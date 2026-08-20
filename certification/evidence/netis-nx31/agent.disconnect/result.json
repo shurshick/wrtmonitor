@@ -1,13 +1,15 @@
 {
-  "tested_at": "2026-08-08T13:36:01.954577+00:00",
+  "tested_at": "2026-08-15T20:02:48.994931+00:00",
   "command": "agent.disconnect",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "agent disabled"
   },
   "error": null,
-  "elapsed_seconds": 49.922,
+  "elapsed_seconds": 29.406,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
@@ -28,5 +30,10 @@
       "fail_closed": true
     },
     "rollback": "not_safe_after_dispatch"
+  },
+  "runtime_post_condition": {
+    "disabled_observed": true,
+    "daemon_stopped": true,
+    "recovered": true
   }
 }

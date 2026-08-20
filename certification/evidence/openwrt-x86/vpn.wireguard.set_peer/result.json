@@ -1,10 +1,10 @@
 {
-  "tested_at": "2026-08-08T13:48:04.231328+00:00",
+  "tested_at": "2026-08-15T20:14:24.236399+00:00",
   "command": "vpn.wireguard.set_peer",
   "payload": {
     "interface": "wgcert",
     "name": "certpeer",
-    "public_key": "9eJSAEPiUWIU4RLVBHjRPwqvMJbnb6KTdP5p71ci5ds=",
+    "public_key": "Q/IqgqrJtyc5xn58u9c69N/za8JlvsJmEkBxwAd69a4=",
     "preshared_key": "<redacted>",
     "allowed_ips": [
       "10.254.0.2/32"
@@ -17,14 +17,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "459aa386-6d8d-4237-b882-c0e4522d1190",
+      "id": "ac7de966-49e4-4484-ab73-bfcf4fe1db09",
       "state": "confirmed",
       "configs": "network",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 14.782,
+  "elapsed_seconds": 10.812,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

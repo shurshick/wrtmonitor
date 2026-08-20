@@ -1,9 +1,11 @@
 {
-  "tested_at": "2026-08-08T13:12:50.767696+00:00",
+  "tested_at": "2026-08-15T19:39:38.438765+00:00",
   "command": "maintenance.services.read",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "service list collected",
     "services": [
       {
@@ -184,7 +186,7 @@
     ]
   },
   "error": null,
-  "elapsed_seconds": 12.625,
+  "elapsed_seconds": 4.75,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

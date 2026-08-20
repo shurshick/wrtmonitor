@@ -1,13 +1,15 @@
 {
-  "tested_at": "2026-08-08T13:34:07.904436+00:00",
+  "tested_at": "2026-08-15T20:31:53.665887+00:00",
   "command": "network.restart",
   "payload": {},
   "status": "success",
   "result": {
-    "message": "network restart scheduled"
+    "ok": true,
+    "code": "ok",
+    "message": "network configuration reloaded"
   },
   "error": null,
-  "elapsed_seconds": 14.765,
+  "elapsed_seconds": 14.734,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
@@ -28,5 +30,9 @@
       "fail_closed": true
     },
     "rollback": "not_safe_after_dispatch"
+  },
+  "runtime_post_condition": {
+    "fresh_telemetry": true,
+    "ssh_reachable": true
   }
 }

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:37:23.875830+00:00",
+  "tested_at": "2026-08-15T20:08:26.285274+00:00",
   "command": "diagnostics.run",
   "payload": {
     "checks": [
@@ -112,14 +112,47 @@
             "command": "ethtool",
             "package": "ethtool",
             "available": true
+          },
+          {
+            "command": "tc",
+            "package": "tc-full",
+            "available": true
+          },
+          {
+            "command": "script",
+            "package": "script-utils",
+            "available": true
+          },
+          {
+            "command": "stty",
+            "package": "coreutils-stty",
+            "available": true
+          },
+          {
+            "command": "kernel module",
+            "package": "kmod-sched-core",
+            "available": true
+          },
+          {
+            "command": "kernel module",
+            "package": "kmod-sched-flower",
+            "available": true
+          },
+          {
+            "command": "kernel module",
+            "package": "kmod-sched-act-police",
+            "available": true
           }
         ],
-        "ca_bundle": true
+        "ca_bundle": true,
+        "traffic_control": {
+          "status": "ready"
+        }
       }
     }
   },
   "error": null,
-  "elapsed_seconds": 4.344,
+  "elapsed_seconds": 2.391,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

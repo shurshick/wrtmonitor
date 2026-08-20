@@ -1,22 +1,22 @@
 {
-  "tested_at": "2026-08-08T13:17:32.121926+00:00",
+  "tested_at": "2026-08-15T19:43:58.869612+00:00",
   "command": "wifi.set_ssid",
   "payload": {
-    "iface": "default_radio0",
+    "iface": "wifinet0",
     "ssid": "NetisNX31"
   },
   "status": "success",
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "1d7d56ef-8564-43cd-801e-9b0115867604",
+      "id": "db4fa848-184e-46c4-aa92-d0e6e9a49008",
       "state": "confirmed",
       "configs": "wireless",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 16.906,
+  "elapsed_seconds": 19.375,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

@@ -864,6 +864,7 @@ def test_required_dependency_manifest_covers_runtime_features():
         "base64|coreutils-base64",
         "openssl|openssl-util",
         "ethtool|ethtool",
+        "stty|coreutils-stty",
         "iwinfo|iwinfo",
         "ip|ip-full",
         "tc|tc-full",
@@ -1427,6 +1428,15 @@ def test_management_capabilities_cover_full_router_foundation():
     assert '"wifi.set_password":true' not in source
     assert "capability_supported()" in source
     assert "capability_unavailable_reason()" in source
+
+
+def test_network_restart_reports_only_after_safe_reload():
+    source = read_text(ROOT / "lib" / "command_network_core.sh")
+    block = source.split("network.restart)", 1)[1].split("network.set_wan)", 1)[0]
+
+    assert "/etc/init.d/network reload" in block
+    assert "/etc/init.d/network restart" not in block
+    assert "network restart scheduled" not in block
 
 
 def test_client_policy_uses_real_traffic_control_and_exact_verification():

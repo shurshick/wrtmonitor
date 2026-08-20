@@ -1,15 +1,17 @@
 {
-  "tested_at": "2026-08-08T13:33:12.544377+00:00",
+  "tested_at": "2026-08-15T20:00:27.786354+00:00",
   "command": "maintenance.cron.set",
   "payload": {
     "content": ""
   },
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "cron updated"
   },
   "error": null,
-  "elapsed_seconds": 14.812,
+  "elapsed_seconds": 14.781,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

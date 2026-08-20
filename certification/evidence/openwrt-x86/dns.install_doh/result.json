@@ -1,15 +1,17 @@
 {
-  "tested_at": "2026-08-08T13:50:40.937103+00:00",
+  "tested_at": "2026-08-15T20:16:37.847493+00:00",
   "command": "dns.install_doh",
   "payload": {},
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "mode": "doh",
     "message": "encrypted DNS package installed",
     "package": "https-dns-proxy"
   },
   "error": null,
-  "elapsed_seconds": 10.688,
+  "elapsed_seconds": 8.641,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

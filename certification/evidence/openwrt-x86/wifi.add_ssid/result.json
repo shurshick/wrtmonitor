@@ -1,46 +1,6 @@
 {
-  "tested_at": "2026-08-08T13:42:48.266668+00:00",
+  "tested_at": "2026-08-15T20:10:19.405085+00:00",
   "command": "wifi.add_ssid",
-  "payload": {
-    "radio": "radio0",
-    "ssid": "WrtMonitor-Cert",
-    "network": "lan",
-    "encryption": "sae",
-    "key": "<redacted>",
-    "hidden": true,
-    "isolate": true
-  },
-  "status": "success",
-  "result": {
-    "message": "configuration applied and verified",
-    "transaction": {
-      "id": "a2832f27-ccdf-4e55-961b-d8563cdb4967",
-      "state": "confirmed",
-      "configs": "wireless",
-      "rollback": false
-    }
-  },
-  "error": null,
-  "elapsed_seconds": 12.734,
-  "idempotency_duplicate_returned_same_command": true,
-  "retry_count": 1,
-  "reliability": {
-    "subsystem": "wifi",
-    "idempotency": {
-      "strategy": "command_uuid_result_cache",
-      "semantic": false
-    },
-    "delivery": {
-      "timeout_seconds": 180,
-      "lease_seconds": 45,
-      "max_deliveries": 2
-    },
-    "post_condition": "read_after_write_config",
-    "verification": {
-      "required": true,
-      "mode": "read_after_write_config",
-      "fail_closed": true
-    },
-    "rollback": "configuration_backup"
-  }
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.manage_ssid=false"
 }

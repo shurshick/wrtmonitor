@@ -1,16 +1,18 @@
 {
-  "tested_at": "2026-08-08T13:39:29.214385+00:00",
+  "tested_at": "2026-08-15T20:09:33.774638+00:00",
   "command": "system.restart_service",
   "payload": {
     "service": "dnsmasq"
   },
   "status": "success",
   "result": {
+    "ok": true,
+    "code": "ok",
     "message": "service restarted",
     "service": "dnsmasq"
   },
   "error": null,
-  "elapsed_seconds": 6.438,
+  "elapsed_seconds": 4.437,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

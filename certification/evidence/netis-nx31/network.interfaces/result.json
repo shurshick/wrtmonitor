@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:11:53.840077+00:00",
+  "tested_at": "2026-08-15T19:38:58.904578+00:00",
   "command": "network.interfaces",
   "payload": {},
   "status": "success",
@@ -168,15 +168,13 @@
       {
         "up": true,
         "dns": [
-          "fd90:c240:252c::1",
           "fe80::d69c:53ff:fe0b:55c7"
         ],
         "ipv4": [],
         "ipv6": [
-          "fd90:c240:252c::c73",
+          "fd90:c240:252c:0:de8e:8dff:fecd:fce8",
           "fd49:6951:a044:0:de8e:8dff:fecd:fce8",
-          "2a02:ad8:459a:a400:de8e:8dff:fecd:fce8",
-          "fd90:c240:252c:0:de8e:8dff:fecd:fce8"
+          "2a02:ad8:453a:9100:de8e:8dff:fecd:fce8"
         ],
         "proto": "dhcpv6",
         "device": "eth1",
@@ -203,7 +201,7 @@
     }
   },
   "error": null,
-  "elapsed_seconds": 14.609,
+  "elapsed_seconds": 2.281,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

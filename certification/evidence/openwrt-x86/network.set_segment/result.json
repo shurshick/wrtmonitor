@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:43:32.714574+00:00",
+  "tested_at": "2026-08-15T20:10:34.524326+00:00",
   "command": "network.set_segment",
   "payload": {
     "name": "wrtmonitor_cert",
@@ -15,14 +15,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "f6389adc-dd03-45ab-bac7-6d023e1e9653",
+      "id": "e67c803a-f8dd-461e-856a-0e0ee8c8cdb1",
       "state": "confirmed",
       "configs": "network dhcp firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 18.953,
+  "elapsed_seconds": 15.093,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

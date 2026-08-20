@@ -24,8 +24,12 @@ handle_network_core_command() {
             esac
             ;;
         network.restart)
-            result="$(command_success_result "network restart scheduled")"
-            (sleep 2; /etc/init.d/network restart) >/dev/null 2>&1 &
+            if /etc/init.d/network reload >/dev/null 2>&1; then
+                result="$(command_success_result "network configuration reloaded")"
+            else
+                status="failed"
+                result="$(command_failed_result "failed to reload network configuration")"
+            fi
             ;;
         network.set_wan)
             payload_file="/tmp/wrtmonitor-command-payload"

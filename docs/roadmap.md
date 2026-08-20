@@ -9,6 +9,16 @@
 - `hardware verified` - приложен полный отчёт физического OpenWrt;
 - `beta accepted` - функция выдержала публичное тестирование.
 
+## v0.49.0 - Runtime Certification
+
+- обновление агента с предыдущего релиза через подписанный manifest;
+- доказанная перезагрузка по смене `boot_id` и свежей telemetry;
+- проверка остановки и восстановления daemon;
+- Web SSH lifecycle: input, resize, reconnect и close;
+- повторный полный прогон 94 команд на Netis NX31 и OpenWrt x86.
+
+Статус: выпущен.
+
 ## v0.48.0 - Agent Boundaries
 
 - разделение обновления агента на version, crypto, storage и validation;

@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-08T13:19:17.865000+00:00",
+  "tested_at": "2026-08-15T19:45:55.769630+00:00",
   "command": "wifi.set_guest",
   "payload": {
     "radio": "radio0",
@@ -9,14 +9,14 @@
   "result": {
     "message": "configuration applied and verified",
     "transaction": {
-      "id": "4bdfb4aa-8baa-4988-8ae1-31dc6a48319b",
+      "id": "c31f2e12-6d5d-4478-abbc-0e8e8627cdd8",
       "state": "confirmed",
       "configs": "wireless network dhcp firewall",
       "rollback": false
     }
   },
   "error": null,
-  "elapsed_seconds": 16.953,
+  "elapsed_seconds": 19.093,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
