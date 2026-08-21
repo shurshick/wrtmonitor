@@ -79,6 +79,20 @@ def test_feedback_and_safe_diagnostic_report() -> None:
         },
     )
     assert feedback.status_code == 201
+    duplicate = client.post(
+        "/api/v1/operations/feedback",
+        headers=headers,
+        json={
+            "category": "bug",
+            "message": "Router overview did not refresh after reconnect.",
+            "device_id": device_id,
+            "source": "android",
+            "app_version": "0.51.0",
+        },
+    )
+    assert duplicate.status_code == 201
+    assert duplicate.json()["id"] == feedback.json()["id"]
+    assert duplicate.json()["duplicate"] is True
 
     factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
     now = datetime.now(UTC)
@@ -129,3 +143,26 @@ def test_feedback_and_safe_diagnostic_report() -> None:
     with zipfile.ZipFile(io.BytesIO(archive.content)) as content:
         assert "routers.json" in content.namelist()
         assert "BetaRouter" in content.read("routers.json").decode("utf-8")
+
+    for index in range(4):
+        accepted = client.post(
+            "/api/v1/operations/feedback",
+            headers=headers,
+            json={
+                "category": "usability",
+                "message": f"Distinct usability report number {index} for rate testing.",
+                "source": "android",
+            },
+        )
+        assert accepted.status_code == 201
+    limited = client.post(
+        "/api/v1/operations/feedback",
+        headers=headers,
+        json={
+            "category": "other",
+            "message": "This sixth report must be rejected by the feedback limiter.",
+            "source": "android",
+        },
+    )
+    assert limited.status_code == 429
+    assert limited.json()["detail"]["code"] == "feedback_rate_limited"

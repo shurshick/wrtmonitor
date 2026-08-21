@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Response
-from uuid import uuid4
 from ..config import APP_VERSION
 from ..models import FeedbackRecord
-from ..services.operations import build_server_diagnostic_archive
+from ..services.operations import build_server_diagnostic_archive, store_feedback
 from .route_shared import (
     AuditLog,
     BACKUP_DIRECTORY,
@@ -128,6 +127,7 @@ def render_account_page(
             "notifications": operational_notifications(db),
             "feedback_entries": feedback_entries,
             "feedback_sent": request.query_params.get("feedback") == "sent",
+            "feedback_limited": request.query_params.get("feedback") == "limited",
             "backups": backups,
             "pairing": pairing_response(latest_pairing) if latest_pairing else None,
             "pairing_qr_svg": pairing_qr_svg,
@@ -159,22 +159,31 @@ def web_create_feedback(
         raise HTTPException(
             status_code=422, detail="Сообщение должно содержать от 10 до 4000 символов"
         )
-    item = FeedbackRecord(
-        id=uuid4(),
-        user_id=user.id,
-        device_id=None,
-        source="web",
-        category=category,
-        message=clean_message,
-        app_version=APP_VERSION,
-        client_context={"screen": "account"},
-        status="new",
-        created_at=datetime.now(UTC),
-    )
-    db.add(item)
-    audit(
-        db, user.id, "feedback.create", "feedback", str(item.id), {"category": category}
-    )
+    try:
+        item, duplicate = store_feedback(
+            db,
+            user_id=user.id,
+            device_id=None,
+            source="web",
+            category=category,
+            message=clean_message,
+            app_version=APP_VERSION,
+            client_context={"screen": "account"},
+        )
+    except ValueError as exc:
+        if str(exc) == "feedback_rate_limited":
+            db.rollback()
+            return RedirectResponse("/account?feedback=limited", status_code=303)
+        raise
+    if not duplicate:
+        audit(
+            db,
+            user.id,
+            "feedback.create",
+            "feedback",
+            str(item.id),
+            {"category": category},
+        )
     db.commit()
     return RedirectResponse("/account?feedback=sent", status_code=303)
 
