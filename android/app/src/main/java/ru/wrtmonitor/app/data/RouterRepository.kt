@@ -73,6 +73,9 @@ class RouterRepository(
     suspend fun commands(deviceId: String): ApiResult<List<CommandDto>> =
         onIo { api.getCommands(deviceId) }
 
+    suspend fun diagnosticReport(deviceId: String): ApiResult<String> =
+        onIo { api.getDiagnosticReport(deviceId) }
+
     suspend fun createCommand(
         deviceId: String,
         type: String,

@@ -122,6 +122,12 @@
     <string name="update_install_hint">После загрузки Android предложит установить новую версию.</string>
     <string name="update_download_title">WrtMonitor %1$s</string>
     <string name="update_check_error">Не удалось проверить обновления. Проверьте подключение к интернету.</string>
+    <string name="feedback_title">Обратная связь</string>
+    <string name="feedback_summary">Сообщите об ошибке или неудобстве. Пароли и конфигурация роутера не прикладываются.</string>
+    <string name="feedback_message">Что произошло?</string>
+    <string name="send_feedback">Отправить</string>
+    <string name="feedback_sent">Сообщение отправлено. Спасибо.</string>
+    <string name="share_diagnostic_report">Поделиться отчётом</string>
     <string name="admin_label">Администратор</string>
     <string name="password_label">Пароль</string>
     <string name="disconnect_router_title">Отключить роутер?</string>

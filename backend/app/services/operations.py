@@ -16,6 +16,7 @@ from ..models import (
     Device,
     DeviceCommand,
     DeviceTelemetry,
+    DeviceTelemetryMetric,
     EventRecord,
     MobilePairingAttempt,
 )
@@ -23,6 +24,7 @@ from ..models import NetworkClient
 from .client_registry import effective_client_presence
 from .events import emit_event
 from .command_store import cleanup_device_command_history, expire_old_commands
+from .command_store import public_command_result
 from .telemetry_history import (
     cleanup_device_telemetry,
     cleanup_device_telemetry_metrics,
@@ -98,6 +100,79 @@ def operation_metrics(db: Session) -> dict[str, Any]:
             "items": freshness,
         },
         "realtime": broker.metrics(),
+    }
+
+
+def build_device_diagnostic_report(db: Session, device: Device) -> dict[str, Any]:
+    """Build a support report without credentials or raw router configuration."""
+    now = datetime.now(UTC)
+    telemetry = db.scalars(
+        select(DeviceTelemetry)
+        .where(DeviceTelemetry.device_id == device.id)
+        .order_by(DeviceTelemetry.created_at.desc())
+        .limit(1)
+    ).first()
+    metric = db.scalars(
+        select(DeviceTelemetryMetric)
+        .where(DeviceTelemetryMetric.device_id == device.id)
+        .order_by(DeviceTelemetryMetric.created_at.desc())
+        .limit(1)
+    ).first()
+    diagnostic = db.scalars(
+        select(DeviceCommand)
+        .where(
+            DeviceCommand.device_id == device.id,
+            DeviceCommand.command_type == "diagnostics.run",
+        )
+        .order_by(DeviceCommand.created_at.desc())
+        .limit(1)
+    ).first()
+    payload = telemetry.payload if telemetry else {}
+    system = payload.get("system") or {}
+    agent = payload.get("agent") or {}
+    freshness = _agent_freshness(device, telemetry, now)
+    return {
+        "schema": "wrtmonitor.support-report.v1",
+        "generated_at": now.isoformat(),
+        "server_version": APP_VERSION,
+        "device": {
+            "id": str(device.id),
+            "name": device.name,
+            "hostname": device.hostname,
+            "model": device.model,
+            "firmware": device.firmware,
+            "status": device.status,
+            "last_seen_at": device.last_seen_at.isoformat()
+            if device.last_seen_at
+            else None,
+        },
+        "agent": {
+            "version": agent.get("version"),
+            "status": agent.get("status"),
+            "telemetry_interval_seconds": agent.get("telemetry_interval_seconds"),
+            "capabilities_reported": len(agent.get("capabilities") or {}),
+            "freshness": freshness,
+        },
+        "system": {
+            "uptime_seconds": system.get("uptime"),
+            "load_1m": metric.load_1m if metric else None,
+            "memory_percent": metric.memory_percent if metric else None,
+            "temperature_celsius": metric.temperature_celsius if metric else None,
+            "storage_percent": metric.storage_percent if metric else None,
+            "client_count": metric.client_count if metric else None,
+        },
+        "latest_diagnostics": {
+            "command_id": str(diagnostic.id),
+            "status": diagnostic.status,
+            "created_at": diagnostic.created_at.isoformat(),
+            "completed_at": diagnostic.completed_at.isoformat()
+            if diagnostic.completed_at
+            else None,
+            "error": diagnostic.last_error,
+            "result": public_command_result(diagnostic.command_type, diagnostic.result),
+        }
+        if diagnostic
+        else None,
     }
 
 
@@ -280,5 +355,16 @@ def build_server_diagnostic_archive(db: Session, config: Settings) -> bytes:
         archive.writestr(
             "notifications.json",
             json.dumps(operational_notifications(db), ensure_ascii=False, indent=2),
+        )
+        devices = db.scalars(
+            select(Device).where(Device.archived_at.is_(None)).order_by(Device.name)
+        ).all()
+        archive.writestr(
+            "routers.json",
+            json.dumps(
+                [build_device_diagnostic_report(db, device) for device in devices],
+                ensure_ascii=False,
+                indent=2,
+            ),
         )
     return data.getvalue()

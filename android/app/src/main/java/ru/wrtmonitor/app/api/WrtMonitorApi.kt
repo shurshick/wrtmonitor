@@ -280,6 +280,8 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
 
 
     fun getEvents(deviceId: String? = null) = operationsApi.getEvents(deviceId)
+    fun submitFeedback(message: String, appVersion: String) = operationsApi.submitFeedback(message, appVersion)
+    fun getDiagnosticReport(deviceId: String) = operationsApi.getDiagnosticReport(deviceId)
     fun acknowledgeEvent(eventId: String) = operationsApi.acknowledgeEvent(eventId)
     fun snoozeEvent(eventId: String, minutes: Int = 60) = operationsApi.snoozeEvent(eventId, minutes)
     fun getNotificationRules() = operationsApi.getNotificationRules()
