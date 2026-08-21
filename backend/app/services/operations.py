@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 import io
 import json
 from typing import Any
+from uuid import UUID, uuid4
 import zipfile
 
 from sqlalchemy import delete, func, select
@@ -18,6 +19,7 @@ from ..models import (
     DeviceTelemetry,
     DeviceTelemetryMetric,
     EventRecord,
+    FeedbackRecord,
     MobilePairingAttempt,
 )
 from ..models import NetworkClient
@@ -34,6 +36,112 @@ from .realtime import broker
 
 
 TERMINAL_COMMAND_STATES = ("done", "success", "failed", "expired", "cancelled")
+FEEDBACK_DEDUPLICATION_SECONDS = 120
+FEEDBACK_RATE_LIMIT_WINDOW_MINUTES = 10
+FEEDBACK_RATE_LIMIT_COUNT = 5
+
+
+def _latest_telemetry_by_device(
+    db: Session, device_ids: list[UUID]
+) -> dict[UUID, DeviceTelemetry]:
+    if not device_ids:
+        return {}
+    items = db.scalars(
+        select(DeviceTelemetry)
+        .where(DeviceTelemetry.device_id.in_(device_ids))
+        .distinct(DeviceTelemetry.device_id)
+        .order_by(DeviceTelemetry.device_id, DeviceTelemetry.created_at.desc())
+    ).all()
+    return {item.device_id: item for item in items}
+
+
+def _latest_metrics_by_device(
+    db: Session, device_ids: list[UUID]
+) -> dict[UUID, DeviceTelemetryMetric]:
+    if not device_ids:
+        return {}
+    items = db.scalars(
+        select(DeviceTelemetryMetric)
+        .where(DeviceTelemetryMetric.device_id.in_(device_ids))
+        .distinct(DeviceTelemetryMetric.device_id)
+        .order_by(
+            DeviceTelemetryMetric.device_id,
+            DeviceTelemetryMetric.created_at.desc(),
+        )
+    ).all()
+    return {item.device_id: item for item in items}
+
+
+def _latest_diagnostics_by_device(
+    db: Session, device_ids: list[UUID]
+) -> dict[UUID, DeviceCommand]:
+    if not device_ids:
+        return {}
+    items = db.scalars(
+        select(DeviceCommand)
+        .where(
+            DeviceCommand.device_id.in_(device_ids),
+            DeviceCommand.command_type == "diagnostics.run",
+        )
+        .distinct(DeviceCommand.device_id)
+        .order_by(DeviceCommand.device_id, DeviceCommand.created_at.desc())
+    ).all()
+    return {item.device_id: item for item in items}
+
+
+def store_feedback(
+    db: Session,
+    *,
+    user_id: UUID,
+    device_id: UUID | None,
+    source: str,
+    category: str,
+    message: str,
+    app_version: str | None,
+    client_context: dict[str, str],
+) -> tuple[FeedbackRecord, bool]:
+    """Store one feedback item and absorb accidental repeat submissions."""
+    now = datetime.now(UTC)
+    clean_message = message.strip()
+    duplicate = db.scalars(
+        select(FeedbackRecord)
+        .where(
+            FeedbackRecord.user_id == user_id,
+            FeedbackRecord.source == source,
+            FeedbackRecord.category == category,
+            FeedbackRecord.message == clean_message,
+            FeedbackRecord.created_at
+            >= now - timedelta(seconds=FEEDBACK_DEDUPLICATION_SECONDS),
+        )
+        .order_by(FeedbackRecord.created_at.desc())
+        .limit(1)
+    ).first()
+    if duplicate:
+        return duplicate, True
+    recent_count = db.scalar(
+        select(func.count(FeedbackRecord.id)).where(
+            FeedbackRecord.user_id == user_id,
+            FeedbackRecord.created_at
+            >= now - timedelta(minutes=FEEDBACK_RATE_LIMIT_WINDOW_MINUTES),
+        )
+    )
+    if int(recent_count or 0) >= FEEDBACK_RATE_LIMIT_COUNT:
+        raise ValueError("feedback_rate_limited")
+    item = FeedbackRecord(
+        id=uuid4(),
+        user_id=user_id,
+        device_id=device_id,
+        source=source,
+        category=category,
+        message=clean_message,
+        app_version=app_version,
+        client_context=client_context,
+        status="new",
+        created_at=now,
+    )
+    db.add(item)
+    db.flush()
+    return item, False
 
 
 def _agent_freshness(
@@ -68,13 +176,12 @@ def operation_metrics(db: Session) -> dict[str, Any]:
         )
     )
     freshness: list[dict[str, Any]] = []
-    for device in db.scalars(select(Device).where(Device.archived_at.is_(None))).all():
-        telemetry = db.scalars(
-            select(DeviceTelemetry)
-            .where(DeviceTelemetry.device_id == device.id)
-            .order_by(DeviceTelemetry.created_at.desc())
-            .limit(1)
-        ).first()
+    devices = db.scalars(select(Device).where(Device.archived_at.is_(None))).all()
+    latest_telemetry = _latest_telemetry_by_device(
+        db, [device.id for device in devices]
+    )
+    for device in devices:
+        telemetry = latest_telemetry.get(device.id)
         state = _agent_freshness(device, telemetry, now)
         state.update(
             {"device_id": str(device.id), "name": device.name or device.hostname}
@@ -103,30 +210,13 @@ def operation_metrics(db: Session) -> dict[str, Any]:
     }
 
 
-def build_device_diagnostic_report(db: Session, device: Device) -> dict[str, Any]:
-    """Build a support report without credentials or raw router configuration."""
-    now = datetime.now(UTC)
-    telemetry = db.scalars(
-        select(DeviceTelemetry)
-        .where(DeviceTelemetry.device_id == device.id)
-        .order_by(DeviceTelemetry.created_at.desc())
-        .limit(1)
-    ).first()
-    metric = db.scalars(
-        select(DeviceTelemetryMetric)
-        .where(DeviceTelemetryMetric.device_id == device.id)
-        .order_by(DeviceTelemetryMetric.created_at.desc())
-        .limit(1)
-    ).first()
-    diagnostic = db.scalars(
-        select(DeviceCommand)
-        .where(
-            DeviceCommand.device_id == device.id,
-            DeviceCommand.command_type == "diagnostics.run",
-        )
-        .order_by(DeviceCommand.created_at.desc())
-        .limit(1)
-    ).first()
+def _render_device_diagnostic_report(
+    device: Device,
+    telemetry: DeviceTelemetry | None,
+    metric: DeviceTelemetryMetric | None,
+    diagnostic: DeviceCommand | None,
+    now: datetime,
+) -> dict[str, Any]:
     payload = telemetry.payload if telemetry else {}
     system = payload.get("system") or {}
     agent = payload.get("agent") or {}
@@ -174,6 +264,18 @@ def build_device_diagnostic_report(db: Session, device: Device) -> dict[str, Any
         if diagnostic
         else None,
     }
+
+
+def build_device_diagnostic_report(db: Session, device: Device) -> dict[str, Any]:
+    """Build a support report without credentials or raw router configuration."""
+    device_ids = [device.id]
+    return _render_device_diagnostic_report(
+        device,
+        _latest_telemetry_by_device(db, device_ids).get(device.id),
+        _latest_metrics_by_device(db, device_ids).get(device.id),
+        _latest_diagnostics_by_device(db, device_ids).get(device.id),
+        datetime.now(UTC),
+    )
 
 
 def operational_notifications(db: Session) -> list[dict[str, Any]]:
@@ -359,10 +461,24 @@ def build_server_diagnostic_archive(db: Session, config: Settings) -> bytes:
         devices = db.scalars(
             select(Device).where(Device.archived_at.is_(None)).order_by(Device.name)
         ).all()
+        device_ids = [device.id for device in devices]
+        latest_telemetry = _latest_telemetry_by_device(db, device_ids)
+        latest_metrics = _latest_metrics_by_device(db, device_ids)
+        latest_diagnostics = _latest_diagnostics_by_device(db, device_ids)
+        generated_at = datetime.now(UTC)
         archive.writestr(
             "routers.json",
             json.dumps(
-                [build_device_diagnostic_report(db, device) for device in devices],
+                [
+                    _render_device_diagnostic_report(
+                        device,
+                        latest_telemetry.get(device.id),
+                        latest_metrics.get(device.id),
+                        latest_diagnostics.get(device.id),
+                        generated_at,
+                    )
+                    for device in devices
+                ],
                 ensure_ascii=False,
                 indent=2,
             ),

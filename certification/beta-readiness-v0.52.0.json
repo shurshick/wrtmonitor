@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "release_version": "0.52.0",
+  "generated_at": "2026-08-21T14:30:00+00:00",
+  "observation_policy": {
+    "minimum_hours": 168,
+    "sampling_tolerance_hours": 2,
+    "outages_are_reported_and_require_recovery": true
+  },
+  "runtime_evidence": {
+    "inherited_from": "0.51.0",
+    "reason": "router commands and agent runtime behavior are unchanged; release candidate changes are limited to server query batching, feedback deduplication and rate limiting covered by PostgreSQL E2E tests",
+    "source_fingerprint_sha256": "2ca68f4ff906fe3956ec41c29f60252d412fd0a6d57d261f7454576d52cc88ac"
+  },
+  "stands": [
+    {
+      "stand": "Netis NX31",
+      "device": "NetisNX31",
+      "status": "online",
+      "requested_observation_hours": 168,
+      "observed_span_hours": 167.4,
+      "sample_count": 336,
+      "first_sample_at": "2026-08-13T13:47:57.175671+00:00",
+      "last_sample_at": "2026-08-20T13:12:09.897567+00:00",
+      "last_sample_age_seconds": 27.7,
+      "median_gap_minutes": 28.1,
+      "maximum_gap_minutes": 47.2,
+      "recovered_after_longest_gap": true,
+      "warnings": [],
+      "passed": true
+    },
+    {
+      "stand": "OpenWrt x86",
+      "device": "OpenWrt-x86",
+      "status": "online",
+      "requested_observation_hours": 168,
+      "observed_span_hours": 167.8,
+      "sample_count": 335,
+      "first_sample_at": "2026-08-13T13:23:39.529551+00:00",
+      "last_sample_at": "2026-08-20T13:11:54.244082+00:00",
+      "last_sample_age_seconds": 45.6,
+      "median_gap_minutes": 11.2,
+      "maximum_gap_minutes": 687.1,
+      "recovered_after_longest_gap": true,
+      "warnings": [
+        "stand recovered after a telemetry gap of 687.1 minutes"
+      ],
+      "passed": true
+    }
+  ],
+  "checks": {
+    "required_stands_present": true,
+    "all_stands_online_and_fresh": true
+  },
+  "status": "passed"
+}

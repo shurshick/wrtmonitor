@@ -21,10 +21,11 @@ from ..models import (
 from ..services.auth import current_user
 from ..config import APP_VERSION, load_settings
 from ..services.operations import (
-    build_server_diagnostic_archive,
     build_device_diagnostic_report,
+    build_server_diagnostic_archive,
     operation_metrics,
     operational_notifications,
+    store_feedback,
 )
 from ..services.events import (
     event_templates,
@@ -346,24 +347,33 @@ def create_feedback(
         for key, value in payload.client_context.items()
         if key in allowed_context
     }
-    item = FeedbackRecord(
-        id=uuid4(),
-        user_id=user.id,
-        device_id=payload.device_id,
-        source=payload.source,
-        category=payload.category,
-        message=payload.message.strip(),
-        app_version=payload.app_version,
-        client_context=context,
-        status="new",
-        created_at=datetime.now(UTC),
-    )
-    db.add(item)
+    try:
+        item, duplicate = store_feedback(
+            db,
+            user_id=user.id,
+            device_id=payload.device_id,
+            source=payload.source,
+            category=payload.category,
+            message=payload.message,
+            app_version=payload.app_version,
+            client_context=context,
+        )
+    except ValueError as exc:
+        if str(exc) == "feedback_rate_limited":
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "code": "feedback_rate_limited",
+                    "message": "Too many feedback messages. Try again later.",
+                },
+            ) from exc
+        raise
     db.commit()
     return {
         "id": str(item.id),
         "status": item.status,
         "created_at": item.created_at.isoformat(),
+        "duplicate": duplicate,
     }
 
 

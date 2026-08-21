@@ -14,7 +14,7 @@
 | WireGuard, OpenVPN и policy routing | да | да | профиль и runtime tunnel |
 | Пакеты, backup, sysupgrade, службы и cron | да | да | package/service/config state |
 | События, автоматизация и диагностика | да | да | command lifecycle |
-| Безопасный отчёт и обратная связь | да | да | фильтрация секретов и PostgreSQL E2E |
+| Безопасный отчёт и обратная связь | да | да | фильтрация секретов, защита от дублей и PostgreSQL E2E |
 | Web SSH с интерактивной PTY | да | нет | browser-server-agent E2E |
 | Произвольный административный shell script | да | нет | осознанное исключение Android |
 
