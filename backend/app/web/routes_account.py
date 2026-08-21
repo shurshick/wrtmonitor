@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Response
+from uuid import uuid4
 from ..config import APP_VERSION
+from ..models import FeedbackRecord
 from ..services.operations import build_server_diagnostic_archive
 from .route_shared import (
     AuditLog,
@@ -98,6 +100,12 @@ def render_account_page(
     audit_entries = db.scalars(
         select(AuditLog).order_by(AuditLog.created_at.desc()).limit(100)
     ).all()
+    feedback_entries = db.scalars(
+        select(FeedbackRecord)
+        .where(FeedbackRecord.user_id == user.id)
+        .order_by(FeedbackRecord.created_at.desc())
+        .limit(10)
+    ).all()
     backups = (
         sorted(BACKUP_DIRECTORY.glob("wrtmonitor-*.dump"), reverse=True)
         if BACKUP_DIRECTORY.is_dir()
@@ -118,6 +126,8 @@ def render_account_page(
             "sessions": sessions,
             "audit_entries": audit_entries,
             "notifications": operational_notifications(db),
+            "feedback_entries": feedback_entries,
+            "feedback_sent": request.query_params.get("feedback") == "sent",
             "backups": backups,
             "pairing": pairing_response(latest_pairing) if latest_pairing else None,
             "pairing_qr_svg": pairing_qr_svg,
@@ -127,6 +137,46 @@ def render_account_page(
     )
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@router.post("/account/feedback")
+def web_create_feedback(
+    category: str = Form(...),
+    message: str = Form(...),
+    csrf_token: str = Form(...),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user or user.disabled:
+        raise HTTPException(status_code=401, detail="Требуется вход")
+    clean_message = message.strip()
+    if category not in {"bug", "idea", "usability", "other"}:
+        raise HTTPException(status_code=422, detail="Неизвестная категория")
+    if len(clean_message) < 10 or len(clean_message) > 4000:
+        raise HTTPException(
+            status_code=422, detail="Сообщение должно содержать от 10 до 4000 символов"
+        )
+    item = FeedbackRecord(
+        id=uuid4(),
+        user_id=user.id,
+        device_id=None,
+        source="web",
+        category=category,
+        message=clean_message,
+        app_version=APP_VERSION,
+        client_context={"screen": "account"},
+        status="new",
+        created_at=datetime.now(UTC),
+    )
+    db.add(item)
+    audit(
+        db, user.id, "feedback.create", "feedback", str(item.id), {"category": category}
+    )
+    db.commit()
+    return RedirectResponse("/account?feedback=sent", status_code=303)
 
 
 @router.post("/account/mobile-pairing", response_class=HTMLResponse)
@@ -303,6 +353,7 @@ __all__ = [
     "account_page",
     "render_account_page",
     "web_create_mobile_pairing",
+    "web_create_feedback",
     "web_revoke_mobile_pairing",
     "web_create_database_backup",
     "web_download_database_backup",

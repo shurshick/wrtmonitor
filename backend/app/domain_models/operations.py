@@ -123,6 +123,27 @@ class AutomationRun(Base):
     )
 
 
+class FeedbackRecord(Base):
+    __tablename__ = "feedback_records"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    device_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("devices.id", ondelete="SET NULL")
+    )
+    source: Mapped[str] = mapped_column(String(24), nullable=False)
+    category: Mapped[str] = mapped_column(String(24), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    app_version: Mapped[str | None] = mapped_column(String(40))
+    client_context: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="new")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
 Index("ix_audit_log_created", AuditLog.created_at.desc())
 Index(
     "ix_event_records_device_occurred",
@@ -149,4 +170,10 @@ Index(
     "ix_automation_runs_rule_created",
     AutomationRun.rule_id,
     AutomationRun.created_at.desc(),
+)
+Index("ix_feedback_records_created", FeedbackRecord.created_at.desc())
+Index(
+    "ix_feedback_records_status_created",
+    FeedbackRecord.status,
+    FeedbackRecord.created_at.desc(),
 )

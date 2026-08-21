@@ -122,6 +122,12 @@
     <string name="update_install_hint">After the download, Android will prompt you to install the new version.</string>
     <string name="update_download_title">WrtMonitor %1$s</string>
     <string name="update_check_error">Could not check for updates. Check your Internet connection.</string>
+    <string name="feedback_title">Feedback</string>
+    <string name="feedback_summary">Report a bug or tell us what is inconvenient. Passwords and router configuration are not attached.</string>
+    <string name="feedback_message">What happened?</string>
+    <string name="send_feedback">Send</string>
+    <string name="feedback_sent">Feedback sent. Thank you.</string>
+    <string name="share_diagnostic_report">Share report</string>
     <string name="admin_label">Administrator</string>
     <string name="password_label">Password</string>
     <string name="disconnect_router_title">Disconnect router?</string>

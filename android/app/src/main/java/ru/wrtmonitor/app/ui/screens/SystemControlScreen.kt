@@ -1,5 +1,4 @@
 package ru.wrtmonitor.app.ui.screens
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -34,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.shape.CircleShape
@@ -72,7 +72,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
 @Composable
 fun SystemControlScreen(
     serverUrl: String,
@@ -82,6 +81,7 @@ fun SystemControlScreen(
     mode: SystemScreenMode = SystemScreenMode.System,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val repository = remember(serverUrl, accessToken) { RouterRepository(serverUrl, accessToken) }
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var managementOptions by remember { mutableStateOf<ManagementOptionsDto?>(null) }
@@ -496,6 +496,24 @@ fun SystemControlScreen(
                             )) {
                                 is ApiResult.Success -> { message = diagnosticsQueued; messageIsError = false; refresh() }
                                 is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                                    message = result.message
+                                    messageIsError = true
+                                }
+                            }
+                        }
+                    },
+                )
+                SecondaryActionButton(
+                    label = stringResource(R.string.share_diagnostic_report),
+                    onClick = {
+                        scope.launch {
+                            when (val result = repository.diagnosticReport(device.id)) {
+                                is ApiResult.Success -> shareDiagnosticReport(
+                                    context,
+                                    device.name,
+                                    result.data,
+                                )
+                                is ApiResult.Error -> {
                                     message = result.message
                                     messageIsError = true
                                 }

@@ -3,17 +3,26 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import AutomationRule, AutomationRun, EventRecord, NotificationRule, User
+from ..models import (
+    AutomationRule,
+    AutomationRun,
+    Device,
+    EventRecord,
+    FeedbackRecord,
+    NotificationRule,
+    User,
+)
 from ..services.auth import current_user
 from ..config import APP_VERSION, load_settings
 from ..services.operations import (
     build_server_diagnostic_archive,
+    build_device_diagnostic_report,
     operation_metrics,
     operational_notifications,
 )
@@ -53,6 +62,15 @@ class AutomationRulePayload(BaseModel):
     max_runs_per_hour: int = Field(default=6, ge=1, le=60)
     dry_run: bool = False
     allow_disruptive: bool = False
+
+
+class FeedbackPayload(BaseModel):
+    category: str = Field(pattern="^(bug|idea|usability|other)$")
+    message: str = Field(min_length=10, max_length=4000)
+    device_id: UUID | None = None
+    source: str = Field(default="api", pattern="^(web|android|api)$")
+    app_version: str | None = Field(default=None, max_length=40)
+    client_context: dict[str, str] = Field(default_factory=dict)
 
 
 def _notification_rule(item: NotificationRule) -> dict[str, Any]:
@@ -312,6 +330,85 @@ def automation_runs(
 @router.get("/metrics")
 def metrics(_: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
     return operation_metrics(db)
+
+
+@router.post("/feedback", status_code=201)
+def create_feedback(
+    payload: FeedbackPayload,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    if payload.device_id and not db.get(Device, payload.device_id):
+        raise HTTPException(status_code=404, detail="Device not found")
+    allowed_context = {"platform", "os_version", "locale", "screen"}
+    context = {
+        key: str(value)[:160]
+        for key, value in payload.client_context.items()
+        if key in allowed_context
+    }
+    item = FeedbackRecord(
+        id=uuid4(),
+        user_id=user.id,
+        device_id=payload.device_id,
+        source=payload.source,
+        category=payload.category,
+        message=payload.message.strip(),
+        app_version=payload.app_version,
+        client_context=context,
+        status="new",
+        created_at=datetime.now(UTC),
+    )
+    db.add(item)
+    db.commit()
+    return {
+        "id": str(item.id),
+        "status": item.status,
+        "created_at": item.created_at.isoformat(),
+    }
+
+
+@router.get("/feedback")
+def list_feedback(
+    limit: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    items = db.scalars(
+        select(FeedbackRecord)
+        .where(FeedbackRecord.user_id == user.id)
+        .order_by(FeedbackRecord.created_at.desc())
+        .limit(limit)
+    ).all()
+    return [
+        {
+            "id": str(item.id),
+            "device_id": str(item.device_id) if item.device_id else None,
+            "source": item.source,
+            "category": item.category,
+            "message": item.message,
+            "app_version": item.app_version,
+            "status": item.status,
+            "created_at": item.created_at.isoformat(),
+        }
+        for item in items
+    ]
+
+
+@router.get("/diagnostics/report/{device_id}")
+def diagnostic_report(
+    device_id: UUID,
+    _: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    device = db.get(Device, device_id)
+    if not device or device.archived_at:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return JSONResponse(
+        build_device_diagnostic_report(db, device),
+        headers={
+            "Content-Disposition": f'attachment; filename="wrtmonitor-{device_id}-report.json"'
+        },
+    )
 
 
 @router.get("/diagnostics/archive")

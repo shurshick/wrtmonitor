@@ -5,6 +5,27 @@ import org.json.JSONObject
 import ru.wrtmonitor.app.api.dto.*
 
 internal class OperationsApiClient(private val transport: ApiTransport) {
+    fun submitFeedback(
+        message: String,
+        appVersion: String,
+        category: String = "usability",
+    ): ApiResult<Unit> = runCatching {
+        val body = JSONObject()
+            .put("category", category)
+            .put("message", message)
+            .put("source", "android")
+            .put("app_version", appVersion)
+            .put("client_context", JSONObject().put("platform", "android").put("screen", "about"))
+        val (status, _) = transport.request("/api/v1/operations/feedback", "POST", body)
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun getDiagnosticReport(deviceId: String): ApiResult<String> = runCatching {
+        val (status, response) = transport.request("/api/v1/operations/diagnostics/report/$deviceId")
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+        JSONObject(response).toString(2)
+    }.fold({ ApiResult.Success(it) }, ::toApiError)
+
     fun getEvents(deviceId: String? = null): ApiResult<List<EventDto>> = runCatching {
         val query = deviceId?.let { "?device_id=$it&limit=100" } ?: "?limit=100"
         val (status, response) = transport.request("/api/v1/operations/events$query")

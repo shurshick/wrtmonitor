@@ -87,6 +87,9 @@ fun AppSettingsScreen(
     var showSessions by remember { mutableStateOf(false) }
     var updateState by remember { mutableStateOf<UpdateState?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
+    var feedbackText by remember { mutableStateOf("") }
+    var feedbackMessage by remember { mutableStateOf("") }
+    var sendingFeedback by remember { mutableStateOf(false) }
     var sessions by remember { mutableStateOf<List<WrtMonitorApi.UserSessionDto>>(emptyList()) }
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -119,6 +122,28 @@ fun AppSettingsScreen(
             },
             onDownloadUpdate = { version, url -> downloadAndInstallApk(context, version, url) },
             onOpenReleasePage = { openUrl(context, it) },
+            feedbackText = feedbackText,
+            feedbackMessage = feedbackMessage,
+            sendingFeedback = sendingFeedback,
+            onFeedbackTextChange = { feedbackText = it.take(4000) },
+            onSubmitFeedback = {
+                if (feedbackText.trim().length >= 10) {
+                    sendingFeedback = true
+                    feedbackMessage = ""
+                    scope.launch {
+                        feedbackMessage = when (val result = withContext(Dispatchers.IO) {
+                            api.submitFeedback(feedbackText.trim(), appVersionName(context))
+                        }) {
+                            is ApiResult.Success -> {
+                                feedbackText = ""
+                                context.getString(R.string.feedback_sent)
+                            }
+                            is ApiResult.Error -> result.message
+                        }
+                        sendingFeedback = false
+                    }
+                }
+            },
         )
         return
     }
@@ -239,6 +264,11 @@ private fun AboutScreen(
     onCheckUpdates: () -> Unit,
     onDownloadUpdate: (String, String) -> Unit,
     onOpenReleasePage: (String) -> Unit,
+    feedbackText: String,
+    feedbackMessage: String,
+    sendingFeedback: Boolean,
+    onFeedbackTextChange: (String) -> Unit,
+    onSubmitFeedback: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -325,6 +355,30 @@ private fun AboutScreen(
                 label = stringResource(R.string.check_updates),
                 onClick = onCheckUpdates,
                 enabled = !checkingUpdate,
+                modifier = Modifier.align(Alignment.End),
+            )
+        }
+        SectionCard(
+            title = stringResource(R.string.feedback_title),
+            subtitle = stringResource(R.string.feedback_summary),
+        ) {
+            OutlinedTextField(
+                value = feedbackText,
+                onValueChange = onFeedbackTextChange,
+                label = { Text(stringResource(R.string.feedback_message)) },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 7,
+            )
+            if (feedbackMessage.isNotBlank()) Text(
+                feedbackMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PrimaryActionButton(
+                label = stringResource(R.string.send_feedback),
+                onClick = onSubmitFeedback,
+                enabled = feedbackText.trim().length >= 10 && !sendingFeedback,
                 modifier = Modifier.align(Alignment.End),
             )
         }

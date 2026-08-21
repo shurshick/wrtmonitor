@@ -44,6 +44,7 @@ from ..models import AuditLog
 from ..services.firmware_catalog import firmware_catalog
 from ..services.hardware_catalog import hardware_report, hardware_summary
 from ..services.health_monitoring import build_health_snapshot
+from ..services.operations import build_device_diagnostic_report
 from ..services.policy_catalog import policy_catalog
 from .device_overview import daily_overview_context
 from .device_context import (
@@ -235,6 +236,25 @@ def download_device_hardware_report(
     )
 
 
+@router.get("/devices/{device_id}/diagnostic-report", response_class=JSONResponse)
+def download_device_diagnostic_report(
+    device_id: UUID,
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> JSONResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+    device = get_user_device_or_404(db, user, device_id)
+    return JSONResponse(
+        build_device_diagnostic_report(db, device),
+        headers={
+            "Content-Disposition": f'attachment; filename="wrtmonitor-{device_id}-report.json"'
+        },
+    )
+
+
 @router.get("/devices/{device_id}/live", response_class=JSONResponse)
 def device_live_data(
     device_id: UUID,
@@ -270,4 +290,5 @@ __all__ = [
     "device_page",
     "device_live_data",
     "download_device_hardware_report",
+    "download_device_diagnostic_report",
 ]

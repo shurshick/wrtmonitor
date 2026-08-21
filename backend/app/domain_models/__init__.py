@@ -22,6 +22,7 @@ from .operations import (
     AutomationRule,
     AutomationRun,
     EventRecord,
+    FeedbackRecord,
     NotificationRule,
 )
 from .telemetry import DeviceTelemetry, DeviceTelemetryMetric
@@ -42,6 +43,7 @@ __all__ = [
     "DeviceTelemetry",
     "DeviceTelemetryMetric",
     "EventRecord",
+    "FeedbackRecord",
     "HardwareProfile",
     "HardwareSensorSample",
     "MobilePairingAttempt",
