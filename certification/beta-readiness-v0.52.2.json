@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "release_version": "0.52.2",
+  "generated_at": "2026-08-23T13:20:00+00:00",
+  "observation_policy": {
+    "minimum_hours": 168,
+    "sampling_tolerance_hours": 2,
+    "outages_are_reported_and_require_recovery": true
+  },
+  "runtime_evidence": {
+    "inherited_from": "0.52.1",
+    "reason": "the patch only makes package operations refresh maintenance telemetry immediately and tightens the existing package upgrade post-condition; the APK 3 and opkg package paths remain unchanged",
+    "source_fingerprint_sha256": "1608bf668e6e430f1faac2e7dd50944c701102b13b32bf7ebc532c0419298429"
+  },
+  "stands": [
+    {
+      "stand": "Netis NX31",
+      "device": "NetisNX31",
+      "status": "online",
+      "requested_observation_hours": 168,
+      "observed_span_hours": 167.4,
+      "sample_count": 336,
+      "first_sample_at": "2026-08-13T13:47:57.175671+00:00",
+      "last_sample_at": "2026-08-20T13:12:09.897567+00:00",
+      "last_sample_age_seconds": 27.7,
+      "median_gap_minutes": 28.1,
+      "maximum_gap_minutes": 47.2,
+      "recovered_after_longest_gap": true,
+      "warnings": [],
+      "passed": true
+    },
+    {
+      "stand": "OpenWrt x86",
+      "device": "OpenWrt-x86",
+      "status": "online",
+      "requested_observation_hours": 168,
+      "observed_span_hours": 167.8,
+      "sample_count": 335,
+      "first_sample_at": "2026-08-13T13:23:39.529551+00:00",
+      "last_sample_at": "2026-08-20T13:11:54.244082+00:00",
+      "last_sample_age_seconds": 45.6,
+      "median_gap_minutes": 11.2,
+      "maximum_gap_minutes": 687.1,
+      "recovered_after_longest_gap": true,
+      "warnings": [
+        "stand recovered after a telemetry gap of 687.1 minutes"
+      ],
+      "passed": true
+    }
+  ],
+  "checks": {
+    "required_stands_present": true,
+    "all_stands_online_and_fresh": true
+  },
+  "status": "passed"
+}
