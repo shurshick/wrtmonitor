@@ -20,10 +20,32 @@ package_apply() {
     package="$2"
     case "$(package_manager_name)" in
         apk)
-            if [ "$action" = install ]; then apk add "$package"; else apk del "$package"; fi
+            case "$action" in
+                install) apk add "$package" ;;
+                remove) apk del "$package" ;;
+                upgrade) apk upgrade "$package" ;;
+                *) return 1 ;;
+            esac
             ;;
-        opkg) opkg "$action" "$package" ;;
+        opkg)
+            case "$action" in
+                install|remove|upgrade) opkg "$action" "$package" ;;
+                *) return 1 ;;
+            esac
+            ;;
     esac
+}
+
+package_installed_version() {
+    package="$1"
+    package_list_installed 2>/dev/null \
+        | awk -F'|' -v package="$package" '$1 == package {print $2; exit}'
+}
+
+package_upgrade_candidate() {
+    package="$1"
+    package_list_upgradeable 2>/dev/null \
+        | awk -F'|' -v package="$package" '$1 == package {print $3; exit}'
 }
 
 package_list_installed() {

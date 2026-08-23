@@ -12,11 +12,14 @@ handle_maintenance_command() {
         maintenance.package.install|maintenance.package.remove|maintenance.package.upgrade)
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; package="$(json_get_string "$payload_file" '@.package')"; rm -f "$payload_file"
             package_action=install; [ "$command_type" = maintenance.package.remove ] && package_action=remove
+            [ "$command_type" = maintenance.package.upgrade ] && package_action=upgrade
             case "$package_action:$package" in
                 remove:base-files|remove:busybox|remove:dnsmasq|remove:dropbear|remove:firewall4|remove:kernel|remove:libc|remove:netifd|remove:procd|remove:ubus|remove:uci|remove:wrtmonitor|remove:wrtmonitor-agent)
                     status=failed; result="$(command_failed_result "system package removal is not allowed")"
                     ;;
                 *)
+                    package_version_before="$(package_installed_version "$package" 2>/dev/null || true)"
+                    package_target_version="$(package_upgrade_candidate "$package" 2>/dev/null || true)"
                     if package_output="$(package_apply "$package_action" "$package" 2>&1)"; then
                         if [ "$package_action" = install ] && [ "$package" = nlbwmon ]; then
                             if ! ensure_nlbwmon_runtime >/dev/null 2>&1; then
@@ -27,9 +30,10 @@ handle_maintenance_command() {
                         if [ "$status" != failed ]; then
                             package_message="package operation completed"
                             [ "$command_type" = maintenance.package.upgrade ] && package_message="package upgraded"
+                            package_version_after="$(package_installed_version "$package" 2>/dev/null || true)"
                             remaining_upgrades="$(package_list_upgradeable 2>/dev/null || true)"
                             remaining_upgrade_count="$(printf '%s\n' "$remaining_upgrades" | awk 'NF {count++} END {print count + 0}')"
-                            result="$(command_success_result "$package_message" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"remaining_upgrades\":$remaining_upgrade_count,\"output\":\"$(json_escape "$package_output")\"")"
+                            result="$(command_success_result "$package_message" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"version_before\":\"$(json_escape "$package_version_before")\",\"target_version\":\"$(json_escape "$package_target_version")\",\"version_after\":\"$(json_escape "$package_version_after")\",\"remaining_upgrades\":$remaining_upgrade_count,\"output\":\"$(json_escape "$package_output")\"")"
                             TELEMETRY_REFRESH_REQUESTED=1
                         fi
                     else status=failed; result="$(command_failed_result "$package_output")"; fi
