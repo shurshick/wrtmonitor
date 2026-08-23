@@ -67,12 +67,25 @@ poll_commands() {
     rm -f /tmp/wrtmonitor-commands
 }
 
+flush_requested_telemetry() {
+    [ "${TELEMETRY_REFRESH_REQUESTED:-0}" = "1" ] || return 0
+    if telemetry; then
+        TELEMETRY_REFRESH_REQUESTED=0
+        now="$(date +%s 2>/dev/null || echo 0)"
+        next_telemetry_at=$((now + $(telemetry_interval_seconds)))
+    else
+        log_notice "requested telemetry refresh failed"
+        next_telemetry_at=0
+    fi
+}
+
 daemon() {
     agent_enabled || exit 0
     transaction_recover_pending
     restore_client_policy_runtime || log_notice "client traffic limits could not be restored"
     next_update_check=0
     next_telemetry_at=0
+    TELEMETRY_REFRESH_REQUESTED=0
     poll_backoff=5
     while true; do
         now="$(date +%s 2>/dev/null || echo 0)"
@@ -101,6 +114,7 @@ daemon() {
             if [ "$PENDING_AGENT_EXEC" = "1" ]; then
                 handoff_to_updated_agent
             fi
+            flush_requested_telemetry
         else
             log_notice "command long-poll failed; retrying in ${poll_backoff}s"
             now="$(date +%s 2>/dev/null || echo 0)"

@@ -6,6 +6,7 @@ handle_maintenance_command() {
             if [ -n "$package_manager_value" ] && package_refresh_indexes >/dev/null 2>&1; then
                 upgrades="$(package_list_upgradeable | head -n 50 | tr '\n' ';')"
                 result="$(command_success_result "package lists refreshed" "\"manager\":\"$package_manager_value\",\"upgradable\":\"$(json_escape "$upgrades")\"")"
+                TELEMETRY_REFRESH_REQUESTED=1
             else status=failed; result="$(command_failed_result "apk/opkg package index update failed")"; fi
             ;;
         maintenance.package.install|maintenance.package.remove|maintenance.package.upgrade)
@@ -26,7 +27,10 @@ handle_maintenance_command() {
                         if [ "$status" != failed ]; then
                             package_message="package operation completed"
                             [ "$command_type" = maintenance.package.upgrade ] && package_message="package upgraded"
-                            result="$(command_success_result "$package_message" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"output\":\"$(json_escape "$package_output")\"")"
+                            remaining_upgrades="$(package_list_upgradeable 2>/dev/null || true)"
+                            remaining_upgrade_count="$(printf '%s\n' "$remaining_upgrades" | awk 'NF {count++} END {print count + 0}')"
+                            result="$(command_success_result "$package_message" "\"package\":\"$(json_escape "$package")\",\"manager\":\"$(package_manager_name)\",\"remaining_upgrades\":$remaining_upgrade_count,\"output\":\"$(json_escape "$package_output")\"")"
+                            TELEMETRY_REFRESH_REQUESTED=1
                         fi
                     else status=failed; result="$(command_failed_result "$package_output")"; fi
                     ;;

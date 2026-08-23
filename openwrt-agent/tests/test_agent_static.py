@@ -540,9 +540,33 @@ def test_daemon_handoffs_after_command_driven_update():
 def test_daemon_long_poll_preserves_telemetry_deadline_and_backoff():
     source = read_text(LIB_DIR / "api.sh")
     assert "next_telemetry_at=$((now + $(telemetry_interval_seconds)))" in source
+    assert "flush_requested_telemetry" in source
+    assert "TELEMETRY_REFRESH_REQUESTED=0" in source
     assert '[ "$wait_seconds" -le 25 ] || wait_seconds=25' in source
     assert "poll_backoff=$((poll_backoff * 2))" in source
     assert "poll_commands 0" in source
+
+
+def test_requested_telemetry_refresh_is_flushed_immediately(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    marker = tmp_path / "telemetry-called"
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "api.sh").as_posix()}'
+        telemetry() {{ printf called >'{marker.as_posix()}'; }}
+        telemetry_interval_seconds() {{ printf 60; }}
+        date() {{ printf 100; }}
+        log_notice() {{ :; }}
+        TELEMETRY_REFRESH_REQUESTED=1
+        next_telemetry_at=0
+        flush_requested_telemetry
+        test "$TELEMETRY_REFRESH_REQUESTED" = 0
+        test "$next_telemetry_at" = 160
+    """
+    subprocess.run([shell, "-c", script], check=True, env=shell_env())
+    assert marker.read_text(encoding="utf-8") == "called"
 
 
 def test_legacy_six_hour_update_interval_is_migrated():
@@ -821,6 +845,52 @@ def test_apk_package_operations_use_native_commands(tmp_path: Path):
         "add curl",
         "del curl",
     ]
+
+
+def test_package_upgrade_postcondition_requires_candidate_to_disappear(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    command_dir = tmp_path / "bin"
+    command_dir.mkdir()
+    upgrade_state = tmp_path / "upgrade-available"
+    upgrade_state.write_text("1\n", encoding="utf-8")
+    apk = command_dir / "apk"
+    apk.write_text(
+        """#!/bin/sh
+case "$*" in
+  "list --installed --manifest") printf 'curl 8.0\\n' ;;
+  "query --upgradable --fields name,version *")
+    [ -f "$UPGRADE_STATE" ] && printf 'Name: curl\\nVersion: 8.1\\n\\n'
+    ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    apk.chmod(0o755)
+    env = shell_env()
+    env["PATH"] = command_dir.as_posix() + ":" + env["PATH"]
+    env["UPGRADE_STATE"] = upgrade_state.as_posix()
+    payload = tmp_path / "payload.json"
+    payload.write_text('{"package":"curl"}', encoding="utf-8")
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "package_manager.sh").as_posix()}'
+        . '{(LIB_DIR / "verification_runtime.sh").as_posix()}'
+        json_get_string() {{ printf curl; }}
+        if verify_package_postcondition maintenance.package.upgrade '{payload.as_posix()}'; then
+            exit 1
+        fi
+        rm -f '{upgrade_state.as_posix()}'
+        verify_package_postcondition maintenance.package.upgrade '{payload.as_posix()}'
+    """
+    subprocess.run([shell, "-c", script], check=True, env=env)
+
+
+def test_package_commands_request_immediate_telemetry_refresh():
+    source = read_text(LIB_DIR / "command_maintenance.sh")
+    assert source.count("TELEMETRY_REFRESH_REQUESTED=1") >= 2
+    assert '\\"remaining_upgrades\\":$remaining_upgrade_count' in source
 
 
 def test_config_transaction_restores_saved_uci_file(tmp_path: Path):
