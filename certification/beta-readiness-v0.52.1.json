@@ -10,7 +10,7 @@
   "runtime_evidence": {
     "inherited_from": "0.52.0",
     "reason": "the patch changes only APK 3 package-update discovery; maintenance.packages.refresh and resulting telemetry were physically verified on Netis NX31 and the opkg path was reverified on OpenWrt x86",
-    "source_fingerprint_sha256": "10b1162151f684f54cd5657458b55cb9034db5eb7178d19f34b63e1eff5bf908"
+    "source_fingerprint_sha256": "3a7e9e812409b840bda45d8e23db81abc54795c0b7c3db99a926c1ded45dc224"
   },
   "stands": [
     {
