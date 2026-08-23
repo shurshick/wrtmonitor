@@ -837,12 +837,14 @@ def test_apk_package_operations_use_native_commands(tmp_path: Path):
         . '{(LIB_DIR / "capabilities.sh").as_posix()}'
         package_refresh_indexes
         package_apply install curl
+        package_apply upgrade curl
         package_apply remove curl
     """
     subprocess.run([shell, "-c", script], check=True, env=env, cwd=tmp_path)
     assert apk_log.read_text(encoding="utf-8").splitlines() == [
         "update",
         "add curl",
+        "upgrade curl",
         "del curl",
     ]
 
@@ -885,6 +887,19 @@ esac
         verify_package_postcondition maintenance.package.upgrade '{payload.as_posix()}'
     """
     subprocess.run([shell, "-c", script], check=True, env=env)
+
+
+def test_package_upgrade_uses_upgrade_action_and_reports_versions():
+    source = read_text(LIB_DIR / "command_maintenance.sh")
+    assert '[ "$command_type" = maintenance.package.upgrade ] && package_action=upgrade' in source
+    assert 'package_version_before=' in source
+    assert 'package_target_version=' in source
+    assert 'package_version_after=' in source
+
+
+def test_package_postcondition_explains_remaining_candidate():
+    source = read_text(LIB_DIR / "verification_runtime.sh")
+    assert 'POSTCONDITION_ERROR_MESSAGE="package $package remains at $installed_version; expected $remaining_candidate"' in source
 
 
 def test_package_commands_request_immediate_telemetry_refresh():

@@ -11,8 +11,21 @@ verify_package_postcondition() {
     if [ "$command_type" = maintenance.package.remove ]; then
         [ "$installed" = 0 ]
     elif [ "$command_type" = maintenance.package.upgrade ]; then
-        [ "$installed" = 1 ] && ! package_list_upgradeable 2>/dev/null \
-            | awk -F'|' -v package="$package" '$1 == package {found=1} END {exit !found}'
+        if [ "$installed" != 1 ]; then
+            # Read by commands.sh after this library is sourced.
+            # shellcheck disable=SC2034
+            POSTCONDITION_ERROR_MESSAGE="package $package is not installed after upgrade"
+            return 1
+        fi
+        remaining_candidate="$(package_upgrade_candidate "$package" 2>/dev/null || true)"
+        if [ -n "$remaining_candidate" ]; then
+            installed_version="$(package_installed_version "$package" 2>/dev/null || true)"
+            # Read by commands.sh after this library is sourced.
+            # shellcheck disable=SC2034
+            POSTCONDITION_ERROR_MESSAGE="package $package remains at $installed_version; expected $remaining_candidate"
+            return 1
+        fi
+        return 0
     elif [ "$command_type" = dns.install_dot ] || [ "$command_type" = dns.install_doh ]; then
         [ "$installed" = 1 ] && dns_resolution_works
     else

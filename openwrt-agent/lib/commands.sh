@@ -5,6 +5,7 @@ execute_command() {
     [ -n "$command_payload" ] || command_payload="{}"
     status="done"
     result="{}"
+    POSTCONDITION_ERROR_MESSAGE=""
     disconnect_after=0
     transaction_active=0
     transaction_noop=0
@@ -44,7 +45,8 @@ execute_command() {
     fi
     if [ "$status" = "done" ] && ! verify_command_postcondition "$command_type" "$command_payload"; then
         status="failed"
-        result="$(command_failed_result "post-condition verification failed")"
+        postcondition_message="${POSTCONDITION_ERROR_MESSAGE:-post-condition verification failed}"
+        result="$(command_failed_result "$postcondition_message" "post_condition_failed")"
     fi
     if [ "$transaction_active" = "1" ]; then
         if [ "$status" = "done" ] && [ "$transaction_noop" != "1" ] && transaction_is_connectivity_sensitive "$command_type"; then

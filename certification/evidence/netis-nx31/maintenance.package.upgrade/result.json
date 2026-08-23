@@ -1,20 +1,24 @@
 {
-  "tested_at": "2026-08-15T19:59:43.424185+00:00",
+  "tested_at": "2026-08-23T16:27:27.021835+00:00",
   "command": "maintenance.package.upgrade",
   "payload": {
-    "package": "nano"
+    "package": "bash"
   },
   "status": "success",
   "result": {
     "ok": true,
     "code": "ok",
-    "output": "OK: 37.3 MiB in 213 packages",
+    "output": "(1/1) Upgrading bash (5.3-r2 -> 5.3-r4)\n  Executing bash-5.3-r4.post-upgrade\nOK: 37.1 MiB in 212 packages",
     "manager": "apk",
     "message": "package upgraded",
-    "package": "nano"
+    "package": "bash",
+    "version_after": "5.3-r4",
+    "target_version": "5.3-r4",
+    "version_before": "5.3-r2",
+    "remaining_upgrades": 53
   },
   "error": null,
-  "elapsed_seconds": 2.313,
+  "elapsed_seconds": 18.484,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {

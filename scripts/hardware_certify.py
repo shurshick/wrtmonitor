@@ -19,6 +19,8 @@ from urllib.parse import urlparse
 import paramiko
 import requests
 
+from runtime_validation_report import runtime_fingerprint
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "contracts" / "command-contract.json"
@@ -240,9 +242,6 @@ def load_report(
         report = json.loads(path.read_text(encoding="utf-8"))
         report["router"] = router_description
         report["generated_at"] = now_iso()
-        report["release_version"] = (
-            (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-        )
         return report
     return fresh_report(target, router_description)
 
@@ -626,7 +625,9 @@ def payloads(f: dict[str, Any], ssh: Ssh) -> dict[str, dict[str, Any]]:
         "router.reboot": {},
         "maintenance.packages.refresh": {},
         "maintenance.package.install": {"package": "nano"},
-        "maintenance.package.upgrade": {"package": "nano"},
+        "maintenance.package.upgrade": {
+            "package": os.environ.get("WRTMONITOR_PACKAGE_UPGRADE_TARGET", "nano")
+        },
         "maintenance.package.remove": {"package": "nano"},
         "maintenance.backup.create": {},
         "maintenance.backup.restore": {"archive_base64": backup_base64},
@@ -999,6 +1000,16 @@ def certify(
         )
         report = load_report(target, description, resume)
         report["agent_source"] = "worktree" if deploy_worktree else "installed"
+        if deploy_worktree:
+            report["runtime_fingerprint"] = runtime_fingerprint(ROOT)
+        if resume and selected:
+            report["targeted_validation"] = {
+                "release_version": (ROOT / "VERSION").read_text(
+                    encoding="utf-8"
+                ).strip(),
+                "tested_at": now_iso(),
+                "commands": sorted(selected),
+            }
         report["agent_version"] = ssh.run("wrtmonitor-agent version", check=False)
         target_slug = slug(target.name)
         print(f"PREP {target.name}: building command payloads", flush=True)

@@ -1,20 +1,24 @@
 {
-  "tested_at": "2026-08-15T20:18:00.306089+00:00",
+  "tested_at": "2026-08-23T16:31:15.590013+00:00",
   "command": "maintenance.package.upgrade",
   "payload": {
-    "package": "nano"
+    "package": "luci-lib-ip"
   },
   "status": "success",
   "result": {
     "ok": true,
     "code": "ok",
-    "output": "Package nano (8.0-1) installed in root is up to date.",
+    "output": "Upgrading luci-lib-ip on root from git-20.250.76529-62505bd to git-23.311.79310-704a335...\nDownloading http://downloads.openwrt.org/releases/22.03.5/packages/x86_64/luci/luci-lib-ip_git-23.311.79310-704a335_x86_64.ipk\nConfiguring luci-lib-ip.",
     "manager": "opkg",
     "message": "package upgraded",
-    "package": "nano"
+    "package": "luci-lib-ip",
+    "version_after": "git-23.311.79310-704a335",
+    "target_version": "git-23.311.79310-704a335",
+    "version_before": "git-20.250.76529-62505bd",
+    "remaining_upgrades": 23
   },
   "error": null,
-  "elapsed_seconds": 2.391,
+  "elapsed_seconds": 2.359,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
