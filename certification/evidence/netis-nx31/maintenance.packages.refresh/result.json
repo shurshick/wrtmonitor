@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-08-15T19:59:24.224257+00:00",
+  "tested_at": "2026-08-23T12:14:02.788585+00:00",
   "command": "maintenance.packages.refresh",
   "payload": {},
   "status": "success",
@@ -8,10 +8,10 @@
     "code": "ok",
     "manager": "apk",
     "message": "package lists refreshed",
-    "upgradable": ""
+    "upgradable": "bash|5.3-r2|5.3-r4;ca-bundle|20260223-r1|20260601-r1;cgi-io|2025.12.11~658b14bd-r1|2026.07.21~31cb3c89-r1;curl|8.19.0-r1|8.19.0-r2;dnsmasq|2.91-r3|2.93-r1;hostapd-common|2025.08.26~ca266cc2-r1|2025.08.26~ca266cc2-r2;jshn|2026.03.13~81563384-r2|2026.06.19~7dd12784-r1;libblobmsg-json20260213|2026.03.13~81563384-r2|2026.06.19~7dd12784-r1;libcurl4|8.19.0-r1|8.19.0-r2;libjson-script20260213|2026.03.13~81563384-r2|2026.06.19~7dd12784-r1;libmbedtls21|3.6.6-r2|3.6.7-r1;libnghttp2-14|1.66.0-r1|1.70.0-r1;libopenssl3|3.5.6-r1|3.5.7-r1;libubox20260213|2026.03.13~81563384-r2|2026.06.19~7dd12784-r1;libubus20251202|2025.12.02~3cc98db1-r1|2026.06.28~24864e78-r2;libuclient20201210|2026.02.20~7a0aa2e4-r1|2026.06.07~daad21fa-r1;luci|26.158.67103~e99e132|26.234.21967~42d72f7;luci-app-attendedsysupgrade|26.158.67103~e99e132|26.234.21967~42d72f7;luci-app-firewall|26.158.67103~e99e132|26.234.21967~42d72f7;luci-app-package-manager|26.158.67103~e99e132|26.234.21967~42d72f7;luci-base|26.158.67103~e99e132|26.234.21967~42d72f7;luci-i18n-attendedsysupgrade-ru|26.158.67103~e99e132|26.234.21967~42d72f7;luci-i18n-base-ru|26.158.67103~e99e132|26.234.21967~42d72f7;luci-i18n-firewall-ru|26.158.67103~e99e132|26.234.21967~42d72f7;luci-lib-uqr|26.158.67103~e99e132|26.234.21967~42d72f7;luci-light|26.158.67103~e99e132|26.234.21967~42d72f7;luci-mod-admin-full|26.158.67103~e99e132|26.234.21967~42d72f7;luci-mod-network|26.158.67103~e99e132|26.234.21967~42d72f7;luci-mod-status|26.158.67103~e99e132|26.234.21967~42d72f7;luci-mod-system|26.158.67103~e99e132|26.234.21967~42d72f7;luci-proto-ipv6|26.158.67103~e99e132|26.234.21967~42d72f7;luci-proto-ppp|26.158.67103~e99e132|26.234.21967~42d72f7;luci-theme-bootstrap|26.158.67103~e99e132|26.234.21967~42d72f7;netifd|2026.02.26~cbb83a18-r1|2026.02.26~cbb83a18-r2;nftables-json|1.1.6-r1|1.1.6-r2;odhcp6c|2026.01.25~ee2949e3-r1|2026.06.20~07d324ee-r3;odhcpd-ipv6only|2026.03.16~edf2e523-r1|2026.06.29~5d7be43f-r1;openvpn-openssl|2.7.4-r2|2.7.6-r1;pbr|1.2.2-r18|1.2.2-r20;ppp|2.5.2-r3|2.5.2-r4;ppp-mod-pppoe|2.5.2-r3|2.5.2-r4;rpcd|2025.12.03~ffb9961c-r1|2026.07.19~e37ed9d8-r1;rpcd-mod-file|2025.12.03~ffb9961c-r1|2026.07.19~e37ed9d8-r1;rpcd-mod-iwinfo|2025.12.03~ffb9961c-r1|2026.07.19~e37ed9d8-r1;rpcd-mod-rpcsys|2025.12.03~ffb9961c-r1|2026.07.19~e37ed9d8-r1;rpcd-mod-ucode|2025.12.03~ffb9961c-r1|2026.07.19~e37ed9d8-r1;ubus|2025.12.02~3cc98db1-r1|2026.06.28~24864e78-r2;ubusd|2025.12.02~3cc98db1-r1|2026.06.28~24864e78-r2;uclient-fetch|2026.02.20~7a0aa2e4-r1|2026.06.07~daad21fa-r1;uhttpd|2025.10.03~ebb92e6b-r1|2026.06.16~7b1bec45-r1;"
   },
   "error": null,
-  "elapsed_seconds": 12.922,
+  "elapsed_seconds": 29.828,
   "idempotency_duplicate_returned_same_command": true,
   "retry_count": 1,
   "reliability": {
