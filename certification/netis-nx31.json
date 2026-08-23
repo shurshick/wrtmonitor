@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-08-23T16:27:27.022809+00:00",
   "release_version": "0.49.0",
-  "runtime_fingerprint": "a7889b90207f2277e23b4e0333dd848c7c68db8545ca3a35870a2743aaeae0f6",
+  "runtime_fingerprint": "2cb0d39ddfc3ae902e3ee7655a6ed8c734cc012cffb29695db42527d4d9097ed",
   "router": "netis-nx31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
   "target": "netis-nx31",
   "contract_version": 1,

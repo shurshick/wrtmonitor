@@ -12,12 +12,16 @@ verify_package_postcondition() {
         [ "$installed" = 0 ]
     elif [ "$command_type" = maintenance.package.upgrade ]; then
         if [ "$installed" != 1 ]; then
+            # Read by commands.sh after this library is sourced.
+            # shellcheck disable=SC2034
             POSTCONDITION_ERROR_MESSAGE="package $package is not installed after upgrade"
             return 1
         fi
         remaining_candidate="$(package_upgrade_candidate "$package" 2>/dev/null || true)"
         if [ -n "$remaining_candidate" ]; then
             installed_version="$(package_installed_version "$package" 2>/dev/null || true)"
+            # Read by commands.sh after this library is sourced.
+            # shellcheck disable=SC2034
             POSTCONDITION_ERROR_MESSAGE="package $package remains at $installed_version; expected $remaining_candidate"
             return 1
         fi
