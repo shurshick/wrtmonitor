@@ -42,6 +42,7 @@ REQUIRED_LIBS = [
     "wifi_schedule.sh",
     "telemetry_wifi.sh",
     "telemetry.sh",
+    "package_manager.sh",
     "capabilities.sh",
     "diagnostics.sh",
     "transaction_spec.sh",
@@ -711,8 +712,8 @@ case "$*" in
   "list --installed --manifest")
     printf 'base-files 1.0\\ncurl 8.0\\n'
     ;;
-  "list --upgradeable --manifest")
-    printf 'curl 8.1\\n'
+  "query --upgradable --fields name,version *")
+    printf 'Name: curl\\nVersion: 8.1\\n\\n'
     ;;
 esac
 """,
@@ -724,6 +725,7 @@ esac
     script = f"""
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "package_manager.sh").as_posix()}'
         . '{(LIB_DIR / "capabilities.sh").as_posix()}'
         {source_libraries("telemetry")}
         maintenance_json
@@ -738,6 +740,51 @@ esac
     payload = json.loads(completed.stdout)
     assert payload["packages"]["manager"] == "apk"
     assert payload["packages"]["installed"] == 2
+    assert payload["packages"]["upgradable"] == 1
+    assert payload["packages"]["upgradable_items"] == [
+        {"name": "curl", "current_version": "8.0", "available_version": "8.1"}
+    ]
+
+
+def test_apk_maintenance_telemetry_supports_legacy_manifest_fallback(tmp_path: Path):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    command_dir = tmp_path / "bin"
+    command_dir.mkdir()
+    apk = command_dir / "apk"
+    apk.write_text(
+        """#!/bin/sh
+case "$*" in
+  "list --installed --manifest")
+    printf 'base-files 1.0\\ncurl 8.0\\n'
+    ;;
+  "list --upgradeable --manifest")
+    printf 'curl 8.1\\n'
+    ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    apk.chmod(0o755)
+    env = shell_env()
+    env["PATH"] = command_dir.as_posix() + ":" + env["PATH"]
+    script = f"""
+        set -eu
+        . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "package_manager.sh").as_posix()}'
+        . '{(LIB_DIR / "capabilities.sh").as_posix()}'
+        {source_libraries("telemetry")}
+        maintenance_json
+    """
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    payload = json.loads(completed.stdout)
     assert payload["packages"]["upgradable"] == 1
     assert payload["packages"]["upgradable_items"] == [
         {"name": "curl", "current_version": "8.0", "available_version": "8.1"}
@@ -762,6 +809,7 @@ def test_apk_package_operations_use_native_commands(tmp_path: Path):
     env["APK_LOG"] = "apk.log"
     script = f"""
         set -eu
+        . '{(LIB_DIR / "package_manager.sh").as_posix()}'
         . '{(LIB_DIR / "capabilities.sh").as_posix()}'
         package_refresh_indexes
         package_apply install curl

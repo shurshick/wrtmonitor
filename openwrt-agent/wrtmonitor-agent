@@ -9,7 +9,7 @@ AGENT_SCRIPT="/usr/bin/wrtmonitor-agent"
 # shellcheck disable=SC2034
 AGENT_NAME="wrtmonitor-agent"
 # shellcheck disable=SC2034
-AGENT_VERSION="0.52.0"
+AGENT_VERSION="0.52.1"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
@@ -64,6 +64,7 @@ load_lib() {
 }
 
 load_lib common.sh
+load_lib package_manager.sh
 load_lib dependencies.sh
 load_lib status.sh
 load_lib update_version.sh

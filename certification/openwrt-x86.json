@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-20T07:42:13.833854+00:00",
+  "generated_at": "2026-08-23T12:14:50.442302+00:00",
   "release_version": "0.49.0",
-  "runtime_fingerprint": "ed423a305538d9307d65556351709107ddd80802f3c7ac6f0a8d5ab0406af890",
+  "runtime_fingerprint": "6e05ec3efdc38f06a7a9c4a5f0ad3d92395dbb312cccbb29bc6e07e3ff45e6dd",
   "router": "openwrt-x86 / innotek GmbH VirtualBox / OpenWrt 22.03.5 r20134-5f15225c1e",
   "target": "openwrt-x86",
   "contract_version": 1,
@@ -854,5 +854,5 @@
     }
   },
   "agent_source": "worktree",
-  "agent_version": "0.49.0"
+  "agent_version": "0.52.1"
 }
