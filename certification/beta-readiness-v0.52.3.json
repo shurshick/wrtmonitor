@@ -10,7 +10,7 @@
   "runtime_evidence": {
     "inherited_from": "0.52.2",
     "reason": "the patch only corrects the package-manager action used for an explicitly requested package upgrade and improves its post-condition details; continuous telemetry, connectivity and persistence paths are unchanged",
-    "source_fingerprint_sha256": "2abf540828b524688abda7b4fac9614f71736248c5d4440633c9ee143cb91586"
+    "source_fingerprint_sha256": "de0652a9ff01b087cd510e404e27320507681886ff8e682c4f57f4db173a619e"
   },
   "stands": [
     {
