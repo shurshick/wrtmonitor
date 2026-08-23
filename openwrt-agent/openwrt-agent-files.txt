@@ -5,6 +5,7 @@ agent-version.txt
 openwrt-agent-files.txt
 SHA256SUMS.txt
 lib/common.sh
+lib/package_manager.sh
 lib/dependencies.sh
 lib/status.sh
 lib/update_version.sh

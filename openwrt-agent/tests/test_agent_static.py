@@ -42,6 +42,7 @@ REQUIRED_LIBS = [
     "wifi_schedule.sh",
     "telemetry_wifi.sh",
     "telemetry.sh",
+    "package_manager.sh",
     "capabilities.sh",
     "diagnostics.sh",
     "transaction_spec.sh",
@@ -724,6 +725,7 @@ esac
     script = f"""
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "package_manager.sh").as_posix()}'
         . '{(LIB_DIR / "capabilities.sh").as_posix()}'
         {source_libraries("telemetry")}
         maintenance_json
@@ -770,6 +772,7 @@ esac
     script = f"""
         set -eu
         . '{(LIB_DIR / "common.sh").as_posix()}'
+        . '{(LIB_DIR / "package_manager.sh").as_posix()}'
         . '{(LIB_DIR / "capabilities.sh").as_posix()}'
         {source_libraries("telemetry")}
         maintenance_json
@@ -806,6 +809,7 @@ def test_apk_package_operations_use_native_commands(tmp_path: Path):
     env["APK_LOG"] = "apk.log"
     script = f"""
         set -eu
+        . '{(LIB_DIR / "package_manager.sh").as_posix()}'
         . '{(LIB_DIR / "capabilities.sh").as_posix()}'
         package_refresh_indexes
         package_apply install curl

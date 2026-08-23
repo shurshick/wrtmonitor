@@ -15,7 +15,7 @@
 - проверка списка пакетов на физическом Netis NX31;
 - совместимость со старым APK manifest и opkg.
 
-Статус: готовится исправление Release Candidate.
+Статус: выпущен как исправление Release Candidate.
 
 ## v0.52.0 - Release Candidate
 
