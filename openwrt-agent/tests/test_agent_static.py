@@ -1590,8 +1590,14 @@ def test_wifi_access_profiles_use_real_traffic_control_and_exact_verification():
     verifier = library_sources("verification")
     telemetry = read_text(ROOT / "lib" / "telemetry_wifi.sh")
     capabilities = read_text(ROOT / "lib" / "capabilities.sh")
-    assert "tc filter replace" in profile
     assert "action police rate" in profile
+    assert "sha256sum" in profile
+    assert "| cksum" not in profile
+    assert "wifi_access_profile_direction_pref" in profile
+    assert "tc filter add" in profile
+    assert "tc filter replace" not in profile
+    assert 'wifi_access_profile_delete_filter "$ifname" ingress "$upload_pref"' in profile
+    assert 'wifi_access_profile_delete_filter "$ifname" egress "$download_pref"' in profile
     assert "wifi_access_profile_filter_matches" in profile
     assert "verify_wifi_access_profile_postcondition" in verifier
     assert "wifi_access_profile_json" in telemetry

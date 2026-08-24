@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "release_version": "0.53.0",
-  "generated_at": "2026-08-24T11:22:32.610391+00:00",
+  "generated_at": "2026-08-24T13:20:40.213942+00:00",
   "observation_policy": {
     "minimum_hours": 168,
     "sampling_tolerance_hours": 2,
@@ -9,8 +9,8 @@
   },
   "runtime_evidence": {
     "inherited_from": "0.52.4",
-    "reason": "Wi-Fi access profiles add scoped SSID policy, schedule, and rate-limit state while preserving the certified agent transport, command queue, authentication, PostgreSQL, and recovery paths.",
-    "source_fingerprint_sha256": "94b609184921aab505e0591652fb75be7558c231b21109bd9556b3fd640dfb41"
+    "reason": "Wi-Fi access profiles add scoped SSID policy, schedule, and exact portable rate-limit verification while preserving the certified transport, command queue, authentication, PostgreSQL, and recovery paths.",
+    "source_fingerprint_sha256": "51d36e5cadb43cded20019b526e2be38eb30805bbc852967010b233f60e42062"
   },
   "stands": [
     {
@@ -20,9 +20,9 @@
       "requested_observation_hours": 168,
       "observed_span_hours": 167.5,
       "sample_count": 333,
-      "first_sample_at": "2026-08-17T11:52:05.773908+00:00",
-      "last_sample_at": "2026-08-24T11:22:19.383368+00:00",
-      "last_sample_age_seconds": 12.2,
+      "first_sample_at": "2026-08-17T13:50:24.659439+00:00",
+      "last_sample_at": "2026-08-24T13:20:23.443418+00:00",
+      "last_sample_age_seconds": 15.9,
       "median_gap_minutes": 30.1,
       "maximum_gap_minutes": 33.8,
       "recovered_after_longest_gap": true,
@@ -36,11 +36,11 @@
       "requested_observation_hours": 168,
       "observed_span_hours": 167.48,
       "sample_count": 326,
-      "first_sample_at": "2026-08-17T11:52:55.271336+00:00",
-      "last_sample_at": "2026-08-24T11:21:56.814165+00:00",
-      "last_sample_age_seconds": 35.8,
+      "first_sample_at": "2026-08-17T13:51:04.751989+00:00",
+      "last_sample_at": "2026-08-24T13:19:38.503589+00:00",
+      "last_sample_age_seconds": 61.7,
       "median_gap_minutes": 31.1,
-      "maximum_gap_minutes": 40.8,
+      "maximum_gap_minutes": 33.2,
       "recovered_after_longest_gap": true,
       "warnings": [],
       "passed": true

@@ -1,0 +1,1625 @@
+iface=wifinet0
+first={"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}
+second={"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}
+cleanup=pass
++ CONFIG=wrtmonitor.main
++ . /usr/lib/wrtmonitor/common.sh
++ RUN_LOCK_DIR=/tmp/wrtmonitor-agent.lock
++ UPDATE_LOCK_FILE=/tmp/wrtmonitor-agent-update.lock
++ UPDATE_LOCK_STALE_SECONDS=1800
++ STATUS_DIR=/etc/wrtmonitor
++ BACKUP_DIR=/etc/wrtmonitor/backup
++ CONFIG_BACKUP_DIR=/etc/wrtmonitor/config-backups
++ CONFIG_TRANSACTION_DIR=/etc/wrtmonitor/config-transactions
++ COMMAND_RESULT_DIR=/etc/wrtmonitor/command-results
++ STATUS_FILE=/etc/wrtmonitor/update-status.env
++ STATE_FILE=/etc/wrtmonitor/agent-state.env
++ LIB_INSTALL_DIR=/usr/lib/wrtmonitor
++ AGENT_INSTALL_PATH=/usr/bin/wrtmonitor-agent
++ INIT_INSTALL_PATH=/etc/init.d/wrtmonitor
++ RELEASES_DIR=/usr/lib/wrtmonitor/releases
++ PENDING_AGENT_EXEC=0
++ . /usr/lib/wrtmonitor/command_result.sh
++ . /usr/lib/wrtmonitor/verification_modes.sh
++ . /usr/lib/wrtmonitor/wifi_access_profile.sh
++ . /usr/lib/wrtmonitor/command_wifi_access_profile.sh
++ uci+ sed -n 's/^wireless\.\([^.=]*\)\.mode='"'"'ap'"'"'$/\1/p'
+ show wireless
++ head -n 1
++ iface=wifinet0
++ '[' -n wifinet0 ]
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ section=wifi_access_wifinet0
++ uci -q delete wrtmonitor.wifi_access_wifinet0
++ true
++ uci commit wrtmonitor
++ payload='{"iface":"wifinet0","enabled":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"schedule":{"enabled":false,"weekdays":[],"start":"","stop":""},"qos":{"download_kbps":12800,"upload_kbps":6400}}'
++ run_profile
++ command_payload='{"iface":"wifinet0","enabled":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"schedule":{"enabled":false,"weekdays":[],"start":"","stop":""},"qos":{"download_kbps":12800,"upload_kbps":6400}}'
++ status=done
++ result='{}'
++ handle_wifi_access_profile_command
++ payload_file=/tmp/wrtmonitor-command-payload
++ printf '%s' '{"iface":"wifinet0","enabled":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"schedule":{"enabled":false,"weekdays":[],"start":"","stop":""},"qos":{"download_kbps":12800,"upload_kbps":6400}}'
++ json_get_string /tmp/wrtmonitor-command-payload @.iface
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.iface
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.iface
++ head -n 1
++ profile_iface=wifinet0
++ json_get_bool /tmp/wrtmonitor-command-payload @.enabled
++ json_get_string /tmp/wrtmonitor-command-payload @.enabled
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.enabled
++ head -n 1
++ profile_enabled=true
++ json_get_string /tmp/wrtmonitor-command-payload @.profile_id
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.profile_id
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.profile_id
++ head -n 1
++ profile_id=physical-v053
++ json_get_string /tmp/wrtmonitor-command-payload @.profile_name
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.profile_name
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.profile_name
++ head -n 1
++ profile_name='Physical certification'
++ json_get_bool /tmp/wrtmonitor-command-payload @.blocked
++ json_get_string /tmp/wrtmonitor-command-payload @.blocked
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.blocked
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.blocked
++ head -n 1
++ profile_blocked=false
++ json_get_bool /tmp/wrtmonitor-command-payload @.schedule.enabled
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.enabled
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.enabled
++ head -n 1
++ profile_schedule_enabled=false
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e '@.schedule.weekdays[*]'
++ tr '\n' ' '
++ sed 's/ $//'
++ profile_weekdays=
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.start
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.start
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.start
++ head -n 1
++ profile_start=
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.stop
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.stop
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.stop
++ head -n 1
++ profile_stop=
++ json_get_number /tmp/wrtmonitor-command-payload @.qos.download_kbps
++ json_get_string /tmp/wrtmonitor-command-payload @.qos.download_kbps
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.qos.download_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.qos.download_kbps
++ head -n 1
++ profile_download=12800
++ json_get_number /tmp/wrtmonitor-command-payload @.qos.upload_kbps
++ json_get_string /tmp/wrtmonitor-command-payload @.qos.upload_kbps
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.qos.upload_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.qos.upload_kbps
++ head -n 1
++ profile_upload=6400
++ rm -f /tmp/wrtmonitor-command-payload
++ '[' -n 12800 ]
++ '[' -n 6400 ]
++ uci -q get wireless.wifinet0
++ uci -q get wireless.wifinet0.mode
++ '[' ap '!=' ap ]
++ '[' true '!=' true ]
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ profile_section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0
++ profile_base_enabled=1
++ uci -q get wireless.wifinet0.disabled
++ echo 0
++ '[' 0 '=' 1 ]
++ uci set 'wrtmonitor.wifi_access_wifinet0=wifi_access_profile'
++ uci set 'wrtmonitor.wifi_access_wifinet0.iface=wifinet0'
++ uci set 'wrtmonitor.wifi_access_wifinet0.profile_id=physical-v053'
++ uci set 'wrtmonitor.wifi_access_wifinet0.profile_name=Physical certification'
++ uci set 'wrtmonitor.wifi_access_wifinet0.base_enabled=1'
++ '[' false '=' true ]
++ echo 0
++ uci set 'wrtmonitor.wifi_access_wifinet0.blocked=0'
++ '[' false '=' true ]
++ echo 0
++ uci set 'wrtmonitor.wifi_access_wifinet0.schedule_enabled=0'
++ uci set 'wrtmonitor.wifi_access_wifinet0.weekdays='
++ uci set 'wrtmonitor.wifi_access_wifinet0.start='
++ uci set 'wrtmonitor.wifi_access_wifinet0.stop='
++ uci set 'wrtmonitor.wifi_access_wifinet0.download_kbps=12800'
++ uci set 'wrtmonitor.wifi_access_wifinet0.upload_kbps=6400'
++ wifi_access_profile_pref wifi_access_wifinet0
++ printf '%s' wifi_access_wifinet0
++ sha256sum
++ cut '-d ' -f1
++ tr abcdef 123456
++ cut -c1-8
++ checksum=48352155
++ printf '%s' 46990
++ uci set 'wrtmonitor.wifi_access_wifinet0.shaping_pref=46990'
++ uci commit wrtmonitor
++ apply_wifi_access_profile wifi_access_wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.iface
++ iface=wifinet0
++ '[' -n wifinet0 ]
++ uci -q get wireless.wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.base_enabled
++ base_enabled=1
++ desired_disabled=1
++ '[' 1 '=' 1 ]
++ wifi_access_profile_active_now wifi_access_wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.blocked
++ blocked=0
++ '[' 0 '!=' 1 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.schedule_enabled
++ schedule_enabled=0
++ '[' 0 '=' 1 ]
++ return 0
++ desired_disabled=0
++ uci -q get wireless.wifinet0.disabled
++ echo 0
++ current_disabled=0
++ '[' 0 '!=' 0 ]
++ ifname=
++ '[' 0 '=' 0 ]
++ wait_count=0
++ '[' 0 -lt 8 ]
++ wifi_access_profile_runtime_ifname wifinet0
++ iface=wifinet0
++ uci -q get wireless.wifinet0.device
++ radio=radio0
++ '[' -n radio0 ]
++ runtime_file=/tmp/wrtmonitor-wifi-profile-runtime-28653
++ wifi status radio0
++ runtime_index=0
++ fallback_ifname=
++ '[' 0 -lt 32 ]
++ jsonfilter -i /tmp/wrtmonitor-wifi-profile-runtime-28653 -e '@.radio0.interfaces[0].section'
++ runtime_section=wifinet0
++ jsonfilter -i /tmp/wrtmonitor-wifi-profile-runtime-28653 -e '@.radio0.interfaces[0].ifname'
++ runtime_name=phy0-ap0
++ '[' -n wifinet0phy0-ap0 ]
++ '[' -n  ]
++ fallback_ifname=phy0-ap0
++ '[' wifinet0 '=' wifinet0 ]
++ rm -f /tmp/wrtmonitor-wifi-profile-runtime-28653
++ printf '%s' phy0-ap0
++ return 0
++ ifname=phy0-ap0
++ '[' -n phy0-ap0 ]
++ break
++ wifi_access_profile_apply_limits wifi_access_wifinet0 phy0-ap0
++ section=wifi_access_wifinet0
++ ifname=phy0-ap0
++ uci -q get wrtmonitor.wifi_access_wifinet0.download_kbps
++ download=12800
++ uci -q get wrtmonitor.wifi_access_wifinet0.upload_kbps
++ upload=6400
++ uci -q get wrtmonitor.wifi_access_wifinet0.shaping_pref
++ pref=46990
++ wifi_access_profile_direction_pref 46990 ingress
++ base_pref=46990
++ direction=ingress
++ '[' ingress '=' egress ]
++ printf '%s' 46990
++ upload_pref=46990
++ wifi_access_profile_direction_pref 46990 egress
++ base_pref=46990
++ direction=egress
++ '[' egress '=' egress ]
++ printf '%s' 46991
++ download_pref=46991
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ true
++ previous_ifname=
++ '[' -n  ]
++ '[' -n phy0-ap0 ]
++ command -v tc
++ ip link show dev phy0-ap0
++ '[' 12800 -le 0 ]
++ tc qdisc show dev phy0-ap0
++ grep -qw clsact
++ '[' 6400 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 ingress 46990 6400
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ expected_kbps=6400
++ tc -d filter show dev phy0-ap0 ingress
++ details=
++ printf '%s\n' 
++ awk -v 'expected_pref=46990' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=
++ return 1
++ wifi_access_profile_delete_filter phy0-ap0 ingress 46990
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ '[' -n phy0-ap0 ]
++ command -v tc
++ tc filter del dev phy0-ap0 ingress pref 46990
++ true
++ tc filter add dev phy0-ap0 ingress protocol all pref 46990 u32 match u32 0 0 action police rate 6400kbit burst 64k conform-exceed drop
++ '[' 12800 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 egress 46991 12800
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ expected_kbps=12800
++ tc -d filter show dev phy0-ap0 egress
++ details=
++ printf '%s\n' 
++ awk -v 'expected_pref=46991' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=
++ return 1
++ wifi_access_profile_delete_filter phy0-ap0 egress 46991
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ '[' -n phy0-ap0 ]
++ command -v tc
++ tc filter del dev phy0-ap0 egress pref 46991
++ true
++ tc filter add dev phy0-ap0 egress protocol all pref 46991 u32 match u32 0 0 action police rate 12800kbit burst 64k conform-exceed drop
++ '[' 0 '=' 0 ]
++ echo 1
++ effective_enabled=1
++ runtime_changed=0
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ true
++ '['  '!=' phy0-ap0 ]
++ uci set 'wrtmonitor.wifi_access_wifinet0.runtime_ifname=phy0-ap0'
++ runtime_changed=1
++ uci -q get wrtmonitor.wifi_access_wifinet0.effective_enabled
++ true
++ '['  '!=' 1 ]
++ uci set 'wrtmonitor.wifi_access_wifinet0.effective_enabled=1'
++ runtime_changed=1
++ '[' 1 '=' 0 ]
++ uci commit wrtmonitor
++ json_escape wifinet0
++ printf '%s' wifinet0
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ json_escape physical-v053
++ printf '%s' physical-v053
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ command_success_result 'Wi-Fi access profile applied' '"iface":"wifinet0","profile_id":"physical-v053"'
++ message='Wi-Fi access profile applied'
++ extra='"iface":"wifinet0","profile_id":"physical-v053"'
++ '[' -n '"iface":"wifinet0","profile_id":"physical-v053"' ]
++ json_escape 'Wi-Fi access profile applied'
++ + awkprintf 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }' '%s' 'Wi-Fi access profile applied'
+
++ printf '{"ok":true,"code":"ok","message":"%s",%s}' 'Wi-Fi access profile applied' '"iface":"wifinet0","profile_id":"physical-v053"'
++ result='{"ok":true,"code":"ok","message":"Wi-Fi access profile applied","iface":"wifinet0","profile_id":"physical-v053"}'
++ '[' 'done' '=' 'done' ]
++ printf '%s' '{"iface":"wifinet0","enabled":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"schedule":{"enabled":false,"weekdays":[],"start":"","stop":""},"qos":{"download_kbps":12800,"upload_kbps":6400}}'
++ verify_wifi_access_profile_postcondition /tmp/wrtmonitor-v053-profile.json
++ payload_file=/tmp/wrtmonitor-v053-profile.json
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.iface
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.iface
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.iface
++ head -n 1
++ iface=wifinet0
++ json_get_bool /tmp/wrtmonitor-v053-profile.json @.enabled
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.enabled
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.enabled
++ head -n 1
++ enabled=true
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ section=wifi_access_wifinet0
++ '[' true '!=' true ]
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.profile_id
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.profile_id
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.profile_id
++ head -n 1
++ expected_profile_id=physical-v053
++ json_get_number /tmp/wrtmonitor-v053-profile.json @.qos.download_kbps
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.qos.download_kbps
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.qos.download_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.qos.download_kbps
++ head -n 1
++ expected_download=12800
++ json_get_number /tmp/wrtmonitor-v053-profile.json @.qos.upload_kbps
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.qos.upload_kbps
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.qos.upload_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.qos.upload_kbps
++ head -n 1
++ expected_upload=6400
++ '[' -n 12800 ]
++ '[' -n 6400 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.iface wifinet0
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.iface
++ verify_uci_expected=wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.iface
++ verify_uci_actual=wifinet0
++ '[' wifinet0 '=' wifinet0 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.profile_id physical-v053
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.profile_id
++ verify_uci_expected=physical-v053
++ uci -q get wrtmonitor.wifi_access_wifinet0.profile_id
++ verify_uci_actual=physical-v053
++ '[' physical-v053 '=' physical-v053 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.download_kbps 12800
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.download_kbps
++ verify_uci_expected=12800
++ uci -q get wrtmonitor.wifi_access_wifinet0.download_kbps
++ verify_uci_actual=12800
++ '[' 12800 '=' 12800 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.upload_kbps 6400
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.upload_kbps
++ verify_uci_expected=6400
++ uci -q get wrtmonitor.wifi_access_wifinet0.upload_kbps
++ verify_uci_actual=6400
++ '[' 6400 '=' 6400 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.effective_enabled
++ effective_enabled=1
++ '[' 1 '=' 1 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ runtime_ifname=phy0-ap0
++ uci -q get wrtmonitor.wifi_access_wifinet0.shaping_pref
++ pref=46990
++ wifi_access_profile_direction_pref 46990 ingress
++ base_pref=46990
++ direction=ingress
++ '[' ingress '=' egress ]
++ printf '%s' 46990
++ upload_pref=46990
++ wifi_access_profile_direction_pref 46990 egress
++ base_pref=46990
++ direction=egress
++ '[' egress '=' egress ]
++ printf '%s' 46991
++ download_pref=46991
++ '[' 12800 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 egress 46991 12800
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ expected_kbps=12800
++ tc -d filter show dev phy0-ap0 egress
++ details='filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46991' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=12800Kbit
++ actual_kbps=12800
++ '[' 12800 -eq 12800 ]
++ '[' 6400 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 ingress 46990 6400
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ expected_kbps=6400
++ tc -d filter show dev phy0-ap0 ingress
++ details='filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46990' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=6400Kbit
++ actual_kbps=6400
++ '[' 6400 -eq 6400 ]
++ rm -f /tmp/wrtmonitor-v053-profile.json
++ wifi_access_profile_json wifinet0
++ iface=wifinet0
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.profile_id
++ profile_id=physical-v053
++ uci -q get wrtmonitor.wifi_access_wifinet0.profile_name
++ profile_name='Physical certification'
++ uci -q get wrtmonitor.wifi_access_wifinet0.blocked
++ blocked=0
++ uci -q get wrtmonitor.wifi_access_wifinet0.schedule_enabled
++ schedule_enabled=0
++ uci -q get wrtmonitor.wifi_access_wifinet0.weekdays
++ true
++ weekdays=
++ uci -q get wrtmonitor.wifi_access_wifinet0.start
++ true
++ start=
++ uci -q get wrtmonitor.wifi_access_wifinet0.stop
++ true
++ stop=
++ uci -q get wrtmonitor.wifi_access_wifinet0.download_kbps
++ download=12800
++ uci -q get wrtmonitor.wifi_access_wifinet0.upload_kbps
++ upload=6400
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ ifname=phy0-ap0
++ uci -q get wrtmonitor.wifi_access_wifinet0.shaping_pref
++ pref=46990
++ wifi_access_profile_direction_pref 46990 ingress
++ base_pref=46990
++ direction=ingress
++ '[' ingress '=' egress ]
++ printf '%s' 46990
++ upload_pref=46990
++ wifi_access_profile_direction_pref 46990 egress
++ base_pref=46990
++ direction=egress
++ '[' egress '=' egress ]
++ printf '%s' 46991
++ download_pref=46991
++ uci -q get wrtmonitor.wifi_access_wifinet0.effective_enabled
++ effective_enabled=1
++ active_now=false
++ wifi_access_profile_active_now wifi_access_wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.blocked
++ blocked=0
++ '[' 0 '!=' 1 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.schedule_enabled
++ schedule_enabled=0
++ '[' 0 '=' 1 ]
++ return 0
++ active_now=true
++ download_active=false
++ upload_active=false
++ '[' 12800 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 egress 46991 12800
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ expected_kbps=12800
++ tc -d filter show dev phy0-ap0 egress
++ details='filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46991' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=12800Kbit
++ actual_kbps=12800
++ '[' 12800 -eq 12800 ]
++ download_active=true
++ '[' 6400 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 ingress 46990 6400
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ expected_kbps=6400
++ tc -d filter show dev phy0-ap0 ingress
++ details='filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46990' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=6400Kbit
++ actual_kbps=6400
++ '[' 6400 -eq 6400 ]
++ upload_active=true
++ weekdays_json=
++ json_escape physical-v053
++ printf '%s' physical-v053
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ json_escape 'Physical certification'
++ + awkprintf 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }' '%s' 'Physical certification'
+
++ '[' 0 '=' 1 ]
++ printf false
++ '[' 1 '=' 1 ]
++ printf true
++ json_escape phy0-ap0
++ printf '%s' phy0-ap0
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ '[' 0 '=' 1 ]
++ printf false
++ json_escape 
++ printf '%s' 
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ json_escape 
++ + awkprintf '%s' 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }' 
+
++ printf '{"configured":true,"profile_id":"%s","profile_name":"%s","blocked":%s,"effective_enabled":%s,"qos":{"download_kbps":%s,"upload_kbps":%s,"download_active":%s,"upload_active":%s,"interface":"%s"},"schedule":{"enabled":%s,"weekdays":[%s],"start":"%s","stop":"%s","active_now":%s}}' physical-v053 'Physical certification' false true 12800 6400 true true phy0-ap0 false    true
++ first='{"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}'
++ run_profile
++ command_payload='{"iface":"wifinet0","enabled":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"schedule":{"enabled":false,"weekdays":[],"start":"","stop":""},"qos":{"download_kbps":12800,"upload_kbps":6400}}'
++ status=done
++ result='{}'
++ handle_wifi_access_profile_command
++ payload_file=/tmp/wrtmonitor-command-payload
++ printf '%s' '{"iface":"wifinet0","enabled":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"schedule":{"enabled":false,"weekdays":[],"start":"","stop":""},"qos":{"download_kbps":12800,"upload_kbps":6400}}'
++ json_get_string /tmp/wrtmonitor-command-payload @.iface
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.iface
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.iface
++ head -n 1
++ profile_iface=wifinet0
++ json_get_bool /tmp/wrtmonitor-command-payload @.enabled
++ json_get_string /tmp/wrtmonitor-command-payload @.enabled
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.enabled
++ head -n 1
++ profile_enabled=true
++ json_get_string /tmp/wrtmonitor-command-payload @.profile_id
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.profile_id
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.profile_id
++ head -n 1
++ profile_id=physical-v053
++ json_get_string /tmp/wrtmonitor-command-payload @.profile_name
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.profile_name
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.profile_name
++ head -n 1
++ profile_name='Physical certification'
++ json_get_bool /tmp/wrtmonitor-command-payload @.blocked
++ json_get_string /tmp/wrtmonitor-command-payload @.blocked
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.blocked
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.blocked
++ head -n 1
++ profile_blocked=false
++ json_get_bool /tmp/wrtmonitor-command-payload @.schedule.enabled
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.enabled
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.enabled
++ head -n 1
++ profile_schedule_enabled=false
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e '@.schedule.weekdays[*]'
++ tr '\n' ' '
++ sed 's/ $//'
++ profile_weekdays=
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.start
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.start
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.start
++ head -n 1
++ profile_start=
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.stop
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.stop
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.stop
++ head -n 1
++ profile_stop=
++ json_get_number /tmp/wrtmonitor-command-payload @.qos.download_kbps
++ json_get_string /tmp/wrtmonitor-command-payload @.qos.download_kbps
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.qos.download_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.qos.download_kbps
++ head -n 1
++ profile_download=12800
++ json_get_number /tmp/wrtmonitor-command-payload @.qos.upload_kbps
++ json_get_string /tmp/wrtmonitor-command-payload @.qos.upload_kbps
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.qos.upload_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.qos.upload_kbps
++ head -n 1
++ profile_upload=6400
++ rm -f /tmp/wrtmonitor-command-payload
++ '[' -n 12800 ]
++ '[' -n 6400 ]
++ uci -q get wireless.wifinet0
++ uci -q get wireless.wifinet0.mode
++ '[' ap '!=' ap ]
++ '[' true '!=' true ]
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ profile_section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.base_enabled
++ profile_base_enabled=1
++ uci set 'wrtmonitor.wifi_access_wifinet0=wifi_access_profile'
++ uci set 'wrtmonitor.wifi_access_wifinet0.iface=wifinet0'
++ uci set 'wrtmonitor.wifi_access_wifinet0.profile_id=physical-v053'
++ uci set 'wrtmonitor.wifi_access_wifinet0.profile_name=Physical certification'
++ uci set 'wrtmonitor.wifi_access_wifinet0.base_enabled=1'
++ '[' false '=' true ]
++ echo 0
++ uci set 'wrtmonitor.wifi_access_wifinet0.blocked=0'
++ '[' false '=' true ]
++ echo 0
++ uci set 'wrtmonitor.wifi_access_wifinet0.schedule_enabled=0'
++ uci set 'wrtmonitor.wifi_access_wifinet0.weekdays='
++ uci set 'wrtmonitor.wifi_access_wifinet0.start='
++ uci set 'wrtmonitor.wifi_access_wifinet0.stop='
++ uci set 'wrtmonitor.wifi_access_wifinet0.download_kbps=12800'
++ uci set 'wrtmonitor.wifi_access_wifinet0.upload_kbps=6400'
++ wifi_access_profile_pref wifi_access_wifinet0
++ printf '%s' wifi_access_wifinet0
++ sha256sum
++ cut '-d ' -f1
++ tr abcdef 123456
++ cut -c1-8
++ checksum=48352155
++ printf '%s' 46990
++ uci set 'wrtmonitor.wifi_access_wifinet0.shaping_pref=46990'
++ uci commit wrtmonitor
++ apply_wifi_access_profile wifi_access_wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.iface
++ iface=wifinet0
++ '[' -n wifinet0 ]
++ uci -q get wireless.wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.base_enabled
++ base_enabled=1
++ desired_disabled=1
++ '[' 1 '=' 1 ]
++ wifi_access_profile_active_now wifi_access_wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.blocked
++ blocked=0
++ '[' 0 '!=' 1 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.schedule_enabled
++ schedule_enabled=0
++ '[' 0 '=' 1 ]
++ return 0
++ desired_disabled=0
++ uci -q get wireless.wifinet0.disabled
++ echo 0
++ current_disabled=0
++ '[' 0 '!=' 0 ]
++ ifname=
++ '[' 0 '=' 0 ]
++ wait_count=0
++ '[' 0 -lt 8 ]
++ wifi_access_profile_runtime_ifname wifinet0
++ iface=wifinet0
++ uci -q get wireless.wifinet0.device
++ radio=radio0
++ '[' -n radio0 ]
++ runtime_file=/tmp/wrtmonitor-wifi-profile-runtime-28653
++ wifi status radio0
++ runtime_index=0
++ fallback_ifname=
++ '[' 0 -lt 32 ]
++ jsonfilter -i /tmp/wrtmonitor-wifi-profile-runtime-28653 -e '@.radio0.interfaces[0].section'
++ runtime_section=wifinet0
++ jsonfilter -i /tmp/wrtmonitor-wifi-profile-runtime-28653 -e '@.radio0.interfaces[0].ifname'
++ runtime_name=phy0-ap0
++ '[' -n wifinet0phy0-ap0 ]
++ '[' -n  ]
++ fallback_ifname=phy0-ap0
++ '[' wifinet0 '=' wifinet0 ]
++ rm -f /tmp/wrtmonitor-wifi-profile-runtime-28653
++ printf '%s' phy0-ap0
++ return 0
++ ifname=phy0-ap0
++ '[' -n phy0-ap0 ]
++ break
++ wifi_access_profile_apply_limits wifi_access_wifinet0 phy0-ap0
++ section=wifi_access_wifinet0
++ ifname=phy0-ap0
++ uci -q get wrtmonitor.wifi_access_wifinet0.download_kbps
++ download=12800
++ uci -q get wrtmonitor.wifi_access_wifinet0.upload_kbps
++ upload=6400
++ uci -q get wrtmonitor.wifi_access_wifinet0.shaping_pref
++ pref=46990
++ wifi_access_profile_direction_pref 46990 ingress
++ base_pref=46990
++ direction=ingress
++ '[' ingress '=' egress ]
++ printf '%s' 46990
++ upload_pref=46990
++ wifi_access_profile_direction_pref 46990 egress
++ base_pref=46990
++ direction=egress
++ '[' egress '=' egress ]
++ printf '%s' 46991
++ download_pref=46991
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ previous_ifname=phy0-ap0
++ '[' -n phy0-ap0 ]
++ '[' phy0-ap0 '!=' phy0-ap0 ]
++ '[' -n phy0-ap0 ]
++ command -v tc
++ ip link show dev phy0-ap0
++ '[' 12800 -le 0 ]
++ tc qdisc show dev phy0-ap0
++ grep -qw clsact
++ '[' 6400 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 ingress 46990 6400
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ expected_kbps=6400
++ tc -d filter show dev phy0-ap0 ingress
++ details='filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46990' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=6400Kbit
++ actual_kbps=6400
++ '[' 6400 -eq 6400 ]
++ '[' 12800 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 egress 46991 12800
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ expected_kbps=12800
++ tc -d filter show dev phy0-ap0 egress
++ details='filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ + awk -v 'expected_pref=46991' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
+printf '%s\n' 'filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ rate=12800Kbit
++ actual_kbps=12800
++ '[' 12800 -eq 12800 ]
++ '[' 0 '=' 0 ]
++ echo 1
++ effective_enabled=1
++ runtime_changed=0
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ '[' phy0-ap0 '!=' phy0-ap0 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.effective_enabled
++ '[' 1 '!=' 1 ]
++ '[' 0 '=' 0 ]
++ json_escape wifinet0
++ printf '%s' wifinet0
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ json_escape physical-v053
++ printf '%s' physical-v053
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ command_success_result 'Wi-Fi access profile applied' '"iface":"wifinet0","profile_id":"physical-v053"'
++ message='Wi-Fi access profile applied'
++ extra='"iface":"wifinet0","profile_id":"physical-v053"'
++ '[' -n '"iface":"wifinet0","profile_id":"physical-v053"' ]
++ json_escape 'Wi-Fi access profile applied'
++ printf '%s' 'Wi-Fi access profile applied'
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ printf '{"ok":true,"code":"ok","message":"%s",%s}' 'Wi-Fi access profile applied' '"iface":"wifinet0","profile_id":"physical-v053"'
++ result='{"ok":true,"code":"ok","message":"Wi-Fi access profile applied","iface":"wifinet0","profile_id":"physical-v053"}'
++ '[' 'done' '=' 'done' ]
++ printf '%s' '{"iface":"wifinet0","enabled":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"schedule":{"enabled":false,"weekdays":[],"start":"","stop":""},"qos":{"download_kbps":12800,"upload_kbps":6400}}'
++ verify_wifi_access_profile_postcondition /tmp/wrtmonitor-v053-profile.json
++ payload_file=/tmp/wrtmonitor-v053-profile.json
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.iface
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.iface
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.iface
++ head -n 1
++ iface=wifinet0
++ json_get_bool /tmp/wrtmonitor-v053-profile.json @.enabled
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.enabled
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.enabled
++ head -n 1
++ enabled=true
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ section=wifi_access_wifinet0
++ '[' true '!=' true ]
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.profile_id
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.profile_id
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.profile_id
++ head -n 1
++ expected_profile_id=physical-v053
++ json_get_number /tmp/wrtmonitor-v053-profile.json @.qos.download_kbps
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.qos.download_kbps
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.qos.download_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.qos.download_kbps
++ head -n 1
++ expected_download=12800
++ json_get_number /tmp/wrtmonitor-v053-profile.json @.qos.upload_kbps
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.qos.upload_kbps
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.qos.upload_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.qos.upload_kbps
++ head -n 1
++ expected_upload=6400
++ '[' -n 12800 ]
++ '[' -n 6400 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.iface wifinet0
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.iface
++ verify_uci_expected=wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.iface
++ verify_uci_actual=wifinet0
++ '[' wifinet0 '=' wifinet0 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.profile_id physical-v053
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.profile_id
++ verify_uci_expected=physical-v053
++ uci -q get wrtmonitor.wifi_access_wifinet0.profile_id
++ verify_uci_actual=physical-v053
++ '[' physical-v053 '=' physical-v053 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.download_kbps 12800
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.download_kbps
++ verify_uci_expected=12800
++ uci -q get wrtmonitor.wifi_access_wifinet0.download_kbps
++ verify_uci_actual=12800
++ '[' 12800 '=' 12800 ]
++ verify_uci_value wrtmonitor.wifi_access_wifinet0.upload_kbps 6400
++ verify_uci_key=wrtmonitor.wifi_access_wifinet0.upload_kbps
++ verify_uci_expected=6400
++ uci -q get wrtmonitor.wifi_access_wifinet0.upload_kbps
++ verify_uci_actual=6400
++ '[' 6400 '=' 6400 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.effective_enabled
++ effective_enabled=1
++ '[' 1 '=' 1 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ runtime_ifname=phy0-ap0
++ uci -q get wrtmonitor.wifi_access_wifinet0.shaping_pref
++ pref=46990
++ wifi_access_profile_direction_pref 46990 ingress
++ base_pref=46990
++ direction=ingress
++ '[' ingress '=' egress ]
++ printf '%s' 46990
++ upload_pref=46990
++ wifi_access_profile_direction_pref 46990 egress
++ base_pref=46990
++ direction=egress
++ '[' egress '=' egress ]
++ printf '%s' 46991
++ download_pref=46991
++ '[' 12800 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 egress 46991 12800
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ expected_kbps=12800
++ tc -d filter show dev phy0-ap0 egress
++ details='filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46991' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=12800Kbit
++ actual_kbps=12800
++ '[' 12800 -eq 12800 ]
++ '[' 6400 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 ingress 46990 6400
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ expected_kbps=6400
++ tc -d filter show dev phy0-ap0 ingress
++ details='filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46990' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=6400Kbit
++ actual_kbps=6400
++ '[' 6400 -eq 6400 ]
++ rm -f /tmp/wrtmonitor-v053-profile.json
++ wifi_access_profile_json wifinet0
++ iface=wifinet0
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.profile_id
++ profile_id=physical-v053
++ uci -q get wrtmonitor.wifi_access_wifinet0.profile_name
++ profile_name='Physical certification'
++ uci -q get wrtmonitor.wifi_access_wifinet0.blocked
++ blocked=0
++ uci -q get wrtmonitor.wifi_access_wifinet0.schedule_enabled
++ schedule_enabled=0
++ uci -q get wrtmonitor.wifi_access_wifinet0.weekdays
++ true
++ weekdays=
++ uci -q get wrtmonitor.wifi_access_wifinet0.start
++ true
++ start=
++ uci -q get wrtmonitor.wifi_access_wifinet0.stop
++ true
++ stop=
++ uci -q get wrtmonitor.wifi_access_wifinet0.download_kbps
++ download=12800
++ uci -q get wrtmonitor.wifi_access_wifinet0.upload_kbps
++ upload=6400
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ ifname=phy0-ap0
++ uci -q get wrtmonitor.wifi_access_wifinet0.shaping_pref
++ pref=46990
++ wifi_access_profile_direction_pref 46990 ingress
++ base_pref=46990
++ direction=ingress
++ '[' ingress '=' egress ]
++ printf '%s' 46990
++ upload_pref=46990
++ wifi_access_profile_direction_pref 46990 egress
++ base_pref=46990
++ direction=egress
++ '[' egress '=' egress ]
++ printf '%s' 46991
++ download_pref=46991
++ uci -q get wrtmonitor.wifi_access_wifinet0.effective_enabled
++ effective_enabled=1
++ active_now=false
++ wifi_access_profile_active_now wifi_access_wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.blocked
++ blocked=0
++ '[' 0 '!=' 1 ]
++ uci -q get wrtmonitor.wifi_access_wifinet0.schedule_enabled
++ schedule_enabled=0
++ '[' 0 '=' 1 ]
++ return 0
++ active_now=true
++ download_active=false
++ upload_active=false
++ '[' 12800 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 egress 46991 12800
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ expected_kbps=12800
++ tc -d filter show dev phy0-ap0 egress
++ details='filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46991 u32 chain 0 
+filter protocol all pref 46991 u32 chain 0 fh 801: ht divisor 1 
+filter protocol all pref 46991 u32 chain 0 fh 801::800 order 2048 key ht 801 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x2 rate 12800Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46991' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=12800Kbit
++ actual_kbps=12800
++ '[' 12800 -eq 12800 ]
++ download_active=true
++ '[' 6400 -gt 0 ]
++ wifi_access_profile_filter_matches phy0-ap0 ingress 46990 6400
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ expected_kbps=6400
++ tc -d filter show dev phy0-ap0 ingress
++ details='filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ printf '%s\n' 'filter protocol all pref 46990 u32 chain 0 
+filter protocol all pref 46990 u32 chain 0 fh 800: ht divisor 1 
+filter protocol all pref 46990 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid not_in_hw 
+  match 00000000/00000000 at 0
+	action order 1:  police 0x1 rate 6400Kbit burst 64Kb mtu 2Kb action drop overhead 0b linklayer ethernet 
+	ref 1 bind 1 '
++ awk -v 'expected_pref=46990' '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    '
++ rate=6400Kbit
++ actual_kbps=6400
++ '[' 6400 -eq 6400 ]
++ upload_active=true
++ weekdays_json=
++ json_escape physical-v053
++ + printfawk '%s' 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }' physical-v053
+
++ json_escape 'Physical certification'
++ + printfawk '%s' 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }' 'Physical certification'
+
++ '[' 0 '=' 1 ]
++ printf false
++ '[' 1 '=' 1 ]
++ printf true
++ json_escape phy0-ap0
++ printf '%s' phy0-ap0
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ '[' 0 '=' 1 ]
++ printf false
++ json_escape 
++ printf '%s' 
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ json_escape 
++ printf '%s' 
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ printf '{"configured":true,"profile_id":"%s","profile_name":"%s","blocked":%s,"effective_enabled":%s,"qos":{"download_kbps":%s,"upload_kbps":%s,"download_active":%s,"upload_active":%s,"interface":"%s"},"schedule":{"enabled":%s,"weekdays":[%s],"start":"%s","stop":"%s","active_now":%s}}' physical-v053 'Physical certification' false true 12800 6400 true true phy0-ap0 false    true
++ second='{"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}'
++ '[' '{"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}' '=' '{"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}' ]
++ command_payload='{"iface":"wifinet0","enabled":false}'
++ status=done
++ result='{}'
++ handle_wifi_access_profile_command
++ payload_file=/tmp/wrtmonitor-command-payload
++ printf '%s' '{"iface":"wifinet0","enabled":false}'
++ json_get_string /tmp/wrtmonitor-command-payload @.iface
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.iface
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.iface
++ head -n 1
++ profile_iface=wifinet0
++ json_get_bool /tmp/wrtmonitor-command-payload @.enabled
++ json_get_string /tmp/wrtmonitor-command-payload @.enabled
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.enabled
++ head -n 1
++ profile_enabled=false
++ json_get_string /tmp/wrtmonitor-command-payload @.profile_id
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.profile_id
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.profile_id
++ head -n 1
++ profile_id=
++ json_get_string /tmp/wrtmonitor-command-payload @.profile_name
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.profile_name
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.profile_name
++ head -n 1
++ profile_name=
++ json_get_bool /tmp/wrtmonitor-command-payload @.blocked
++ json_get_string /tmp/wrtmonitor-command-payload @.blocked
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.blocked
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.blocked
++ head -n 1
++ profile_blocked=
++ json_get_bool /tmp/wrtmonitor-command-payload @.schedule.enabled
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.enabled
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.enabled
++ head -n 1
++ profile_schedule_enabled=
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e '@.schedule.weekdays[*]'
++ tr '\n' ' '
++ sed 's/ $//'
++ profile_weekdays=
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.start
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.start
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.start
++ head -n 1
++ profile_start=
++ json_get_string /tmp/wrtmonitor-command-payload @.schedule.stop
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.schedule.stop
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.schedule.stop
++ head -n 1
++ profile_stop=
++ json_get_number /tmp/wrtmonitor-command-payload @.qos.download_kbps
++ json_get_string /tmp/wrtmonitor-command-payload @.qos.download_kbps
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.qos.download_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.qos.download_kbps
++ head -n 1
++ profile_download=
++ json_get_number /tmp/wrtmonitor-command-payload @.qos.upload_kbps
++ json_get_string /tmp/wrtmonitor-command-payload @.qos.upload_kbps
++ file=/tmp/wrtmonitor-command-payload
++ expr=@.qos.upload_kbps
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-command-payload -e @.qos.upload_kbps
++ head -n 1
++ profile_upload=
++ rm -f /tmp/wrtmonitor-command-payload
++ '[' -n  ]
++ profile_download=0
++ '[' -n  ]
++ profile_upload=0
++ uci -q get wireless.wifinet0
++ uci -q get wireless.wifinet0.mode
++ '[' ap '!=' ap ]
++ '[' false '!=' true ]
++ wifi_access_profile_clear wifinet0
++ iface=wifinet0
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ section=wifi_access_wifinet0
++ uci -q get wrtmonitor.wifi_access_wifinet0.runtime_ifname
++ previous_ifname=phy0-ap0
++ uci -q get wrtmonitor.wifi_access_wifinet0.shaping_pref
++ pref=46990
++ wifi_access_profile_direction_pref 46990 ingress
++ base_pref=46990
++ direction=ingress
++ '[' ingress '=' egress ]
++ printf '%s' 46990
++ upload_pref=46990
++ wifi_access_profile_direction_pref 46990 egress
++ base_pref=46990
++ direction=egress
++ '[' egress '=' egress ]
++ printf '%s' 46991
++ download_pref=46991
++ uci -q get wrtmonitor.wifi_access_wifinet0.base_enabled
++ base_enabled=1
++ wifi_access_profile_delete_filter phy0-ap0 ingress 46990
++ device=phy0-ap0
++ direction=ingress
++ pref=46990
++ '[' -n phy0-ap0 ]
++ command -v tc
++ tc filter del dev phy0-ap0 ingress pref 46990
++ wifi_access_profile_delete_filter phy0-ap0 egress 46991
++ device=phy0-ap0
++ direction=egress
++ pref=46991
++ '[' -n phy0-ap0 ]
++ command -v tc
++ tc filter del dev phy0-ap0 egress pref 46991
++ uci -q delete wrtmonitor.wifi_access_wifinet0
++ uci commit wrtmonitor
++ uci -q get wireless.wifinet0
++ '[' 1 '=' 1 ]
++ echo 0
++ desired_disabled=0
++ uci -q get wireless.wifinet0.disabled
++ echo 0
++ current_disabled=0
++ '[' 0 '!=' 0 ]
++ json_escape wifinet0
++ printf '%s' wifinet0
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ command_success_result 'Wi-Fi access profile removed' '"iface":"wifinet0"'
++ message='Wi-Fi access profile removed'
++ extra='"iface":"wifinet0"'
++ '[' -n '"iface":"wifinet0"' ]
++ json_escape 'Wi-Fi access profile removed'
++ printf '%s' 'Wi-Fi access profile removed'
++ awk 'BEGIN { ORS = "" } {
+        if (NR > 1) printf "\\n"
+        gsub(/\\/, "\\\\")
+        gsub(/"/, "\\\"")
+        gsub(/\r/, "\\r")
+        gsub(/\t/, "\\t")
+        printf "%s", $0
+    }'
++ printf '{"ok":true,"code":"ok","message":"%s",%s}' 'Wi-Fi access profile removed' '"iface":"wifinet0"'
++ result='{"ok":true,"code":"ok","message":"Wi-Fi access profile removed","iface":"wifinet0"}'
++ '[' 'done' '=' 'done' ]
++ printf '%s' '{"iface":"wifinet0","enabled":false}'
++ verify_wifi_access_profile_postcondition /tmp/wrtmonitor-v053-profile.json
++ payload_file=/tmp/wrtmonitor-v053-profile.json
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.iface
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.iface
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.iface
++ head -n 1
++ iface=wifinet0
++ json_get_bool /tmp/wrtmonitor-v053-profile.json @.enabled
++ json_get_string /tmp/wrtmonitor-v053-profile.json @.enabled
++ file=/tmp/wrtmonitor-v053-profile.json
++ expr=@.enabled
++ require_json_tool
++ command -v jsonfilter
++ return 0
++ jsonfilter -i /tmp/wrtmonitor-v053-profile.json -e @.enabled
++ head -n 1
++ enabled=false
++ wifi_access_profile_section wifinet0
++ printf '%s' wifinet0
++ sed 's/[^A-Za-z0-9_]/_/g'
++ cut -c1-48
++ printf 'wifi_access_%s' wifinet0
++ section=wifi_access_wifinet0
++ '[' false '!=' true ]
++ uci -q get wrtmonitor.wifi_access_wifinet0
++ return
++ rm -f /tmp/wrtmonitor-v053-profile.json
++ uci -q get wrtmonitor.wifi_access_wifinet0
++ printf 'iface=%s\nfirst=%s\nsecond=%s\ncleanup=pass\n' wifinet0 '{"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}' '{"configured":true,"profile_id":"physical-v053","profile_name":"Physical certification","blocked":false,"effective_enabled":true,"qos":{"download_kbps":12800,"upload_kbps":6400,"download_active":true,"upload_active":true,"interface":"phy0-ap0"},"schedule":{"enabled":false,"weekdays":[],"start":"","stop":"","active_now":true}}'

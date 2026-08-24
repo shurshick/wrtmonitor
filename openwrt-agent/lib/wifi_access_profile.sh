@@ -3,10 +3,19 @@ wifi_access_profile_section() {
 }
 
 wifi_access_profile_pref() {
-    checksum="$(printf '%s' "$1" | cksum | awk '{print $1}')"
-    printf '%s' $((30000 + checksum % 10000))
+    checksum="$(printf '%s' "$1" | sha256sum | cut -d' ' -f1 | tr 'abcdef' '123456' | cut -c1-8)"
+    printf '%s' $((40000 + checksum % 9999))
 }
 
+wifi_access_profile_direction_pref() {
+    base_pref="$1"
+    direction="$2"
+    if [ "$direction" = egress ]; then
+        printf '%s' $((base_pref + 1))
+    else
+        printf '%s' "$base_pref"
+    fi
+}
 wifi_access_profile_delete_filter() {
     device="$1"
     direction="$2"
@@ -22,8 +31,14 @@ wifi_access_profile_filter_matches() {
     pref="$3"
     expected_kbps="$4"
     case "$expected_kbps" in ""|*[!0-9]*) return 1 ;; esac
-    details="$(tc -d filter show dev "$device" "$direction" pref "$pref" 2>/dev/null)" || return 1
-    rate="$(printf '%s\n' "$details" | awk '/police/ { for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit } }')"
+    details="$(tc -d filter show dev "$device" "$direction" 2>/dev/null)" || return 1
+    rate="$(printf '%s\n' "$details" | awk -v expected_pref="$pref" '
+        $0 ~ ("pref " expected_pref " ") { selected = 1 }
+        $0 ~ /filter protocol .* pref [0-9]+ / && $0 !~ ("pref " expected_pref " ") { selected = 0 }
+        selected && /police/ {
+            for (i = 1; i <= NF; i++) if ($i == "rate") { print $(i + 1); exit }
+        }
+    ')"
     case "$rate" in
         *Kbit) actual_kbps="${rate%Kbit}" ;;
         *Mbit) actual_kbps=$(( ${rate%Mbit} * 1000 )) ;;
@@ -38,8 +53,8 @@ wifi_access_profile_filter_absent() {
     direction="$2"
     pref="$3"
     [ -n "$device" ] || return 0
-    ! tc filter show dev "$device" "$direction" pref "$pref" 2>/dev/null \
-        | grep -q .
+    ! tc filter show dev "$device" "$direction" 2>/dev/null \
+        | grep -Eq "(^|[[:space:]])pref[[:space:]]+$pref([[:space:]]|$)"
 }
 
 wifi_access_profile_runtime_ifname() {
@@ -96,37 +111,43 @@ wifi_access_profile_apply_limits() {
     download="$(uci -q get "wrtmonitor.$section.download_kbps" 2>/dev/null || echo 0)"
     upload="$(uci -q get "wrtmonitor.$section.upload_kbps" 2>/dev/null || echo 0)"
     pref="$(uci -q get "wrtmonitor.$section.shaping_pref" 2>/dev/null || wifi_access_profile_pref "$section")"
+    upload_pref="$(wifi_access_profile_direction_pref "$pref" ingress)"
+    download_pref="$(wifi_access_profile_direction_pref "$pref" egress)"
     previous_ifname="$(uci -q get "wrtmonitor.$section.runtime_ifname" 2>/dev/null || true)"
     if [ -n "$previous_ifname" ] && [ "$previous_ifname" != "$ifname" ]; then
-        wifi_access_profile_delete_filter "$previous_ifname" ingress "$pref"
-        wifi_access_profile_delete_filter "$previous_ifname" egress "$pref"
+        wifi_access_profile_delete_filter "$previous_ifname" ingress "$upload_pref"
+        wifi_access_profile_delete_filter "$previous_ifname" egress "$download_pref"
     fi
     [ -n "$ifname" ] || return 0
     command -v tc >/dev/null 2>&1 || return 2
     ip link show dev "$ifname" >/dev/null 2>&1 || return 3
     if [ "$download" -le 0 ] 2>/dev/null && [ "$upload" -le 0 ] 2>/dev/null; then
-        wifi_access_profile_delete_filter "$ifname" ingress "$pref"
-        wifi_access_profile_delete_filter "$ifname" egress "$pref"
+        wifi_access_profile_delete_filter "$ifname" ingress "$upload_pref"
+        wifi_access_profile_delete_filter "$ifname" egress "$download_pref"
         return 0
     fi
     tc qdisc show dev "$ifname" 2>/dev/null | grep -qw clsact \
         || tc qdisc add dev "$ifname" clsact >/dev/null 2>&1 \
         || return 4
     if [ "$upload" -gt 0 ]; then
-        wifi_access_profile_filter_matches "$ifname" ingress "$pref" "$upload" \
-            || tc filter replace dev "$ifname" ingress protocol all pref "$pref" \
+        if ! wifi_access_profile_filter_matches "$ifname" ingress "$upload_pref" "$upload"; then
+            wifi_access_profile_delete_filter "$ifname" ingress "$upload_pref"
+            tc filter add dev "$ifname" ingress protocol all pref "$upload_pref" \
                 u32 match u32 0 0 action police rate "${upload}kbit" burst 64k conform-exceed drop \
                 >/dev/null 2>&1 || return 5
+        fi
     else
-        wifi_access_profile_delete_filter "$ifname" ingress "$pref"
+        wifi_access_profile_delete_filter "$ifname" ingress "$upload_pref"
     fi
     if [ "$download" -gt 0 ]; then
-        wifi_access_profile_filter_matches "$ifname" egress "$pref" "$download" \
-            || tc filter replace dev "$ifname" egress protocol all pref "$pref" \
+        if ! wifi_access_profile_filter_matches "$ifname" egress "$download_pref" "$download"; then
+            wifi_access_profile_delete_filter "$ifname" egress "$download_pref"
+            tc filter add dev "$ifname" egress protocol all pref "$download_pref" \
                 u32 match u32 0 0 action police rate "${download}kbit" burst 64k conform-exceed drop \
                 >/dev/null 2>&1 || return 6
+        fi
     else
-        wifi_access_profile_delete_filter "$ifname" egress "$pref"
+        wifi_access_profile_delete_filter "$ifname" egress "$download_pref"
     fi
 }
 
@@ -183,9 +204,11 @@ wifi_access_profile_clear() {
     section="$(wifi_access_profile_section "$iface")"
     previous_ifname="$(uci -q get "wrtmonitor.$section.runtime_ifname" 2>/dev/null || true)"
     pref="$(uci -q get "wrtmonitor.$section.shaping_pref" 2>/dev/null || wifi_access_profile_pref "$section")"
+    upload_pref="$(wifi_access_profile_direction_pref "$pref" ingress)"
+    download_pref="$(wifi_access_profile_direction_pref "$pref" egress)"
     base_enabled="$(uci -q get "wrtmonitor.$section.base_enabled" 2>/dev/null || echo 1)"
-    wifi_access_profile_delete_filter "$previous_ifname" ingress "$pref"
-    wifi_access_profile_delete_filter "$previous_ifname" egress "$pref"
+    wifi_access_profile_delete_filter "$previous_ifname" ingress "$upload_pref"
+    wifi_access_profile_delete_filter "$previous_ifname" egress "$download_pref"
     uci -q delete "wrtmonitor.$section" || true
     uci commit wrtmonitor || return 1
     if uci -q get "wireless.$iface" >/dev/null 2>&1; then
@@ -222,15 +245,17 @@ verify_wifi_access_profile_postcondition() {
     [ "$effective_enabled" = 1 ] || return 0
     runtime_ifname="$(uci -q get "wrtmonitor.$section.runtime_ifname" 2>/dev/null || true)"
     pref="$(uci -q get "wrtmonitor.$section.shaping_pref" 2>/dev/null || wifi_access_profile_pref "$section")"
+    upload_pref="$(wifi_access_profile_direction_pref "$pref" ingress)"
+    download_pref="$(wifi_access_profile_direction_pref "$pref" egress)"
     if [ "$expected_download" -gt 0 ] 2>/dev/null; then
-        wifi_access_profile_filter_matches "$runtime_ifname" egress "$pref" "$expected_download" || return 1
+        wifi_access_profile_filter_matches "$runtime_ifname" egress "$download_pref" "$expected_download" || return 1
     else
-        wifi_access_profile_filter_absent "$runtime_ifname" egress "$pref" || return 1
+        wifi_access_profile_filter_absent "$runtime_ifname" egress "$download_pref" || return 1
     fi
     if [ "$expected_upload" -gt 0 ] 2>/dev/null; then
-        wifi_access_profile_filter_matches "$runtime_ifname" ingress "$pref" "$expected_upload"
+        wifi_access_profile_filter_matches "$runtime_ifname" ingress "$upload_pref" "$expected_upload"
     else
-        wifi_access_profile_filter_absent "$runtime_ifname" ingress "$pref"
+        wifi_access_profile_filter_absent "$runtime_ifname" ingress "$upload_pref"
     fi
 }
 
@@ -252,13 +277,15 @@ wifi_access_profile_json() {
     upload="$(uci -q get "wrtmonitor.$section.upload_kbps" 2>/dev/null || echo 0)"
     ifname="$(uci -q get "wrtmonitor.$section.runtime_ifname" 2>/dev/null || true)"
     pref="$(uci -q get "wrtmonitor.$section.shaping_pref" 2>/dev/null || wifi_access_profile_pref "$section")"
+    upload_pref="$(wifi_access_profile_direction_pref "$pref" ingress)"
+    download_pref="$(wifi_access_profile_direction_pref "$pref" egress)"
     effective_enabled="$(uci -q get "wrtmonitor.$section.effective_enabled" 2>/dev/null || echo 1)"
     active_now=false; wifi_access_profile_active_now "$section" && active_now=true
     download_active=false; upload_active=false
-    if [ "$download" -gt 0 ] 2>/dev/null && wifi_access_profile_filter_matches "$ifname" egress "$pref" "$download"; then
+    if [ "$download" -gt 0 ] 2>/dev/null && wifi_access_profile_filter_matches "$ifname" egress "$download_pref" "$download"; then
         download_active=true
     fi
-    if [ "$upload" -gt 0 ] 2>/dev/null && wifi_access_profile_filter_matches "$ifname" ingress "$pref" "$upload"; then
+    if [ "$upload" -gt 0 ] 2>/dev/null && wifi_access_profile_filter_matches "$ifname" ingress "$upload_pref" "$upload"; then
         upload_active=true
     fi
     weekdays_json=""

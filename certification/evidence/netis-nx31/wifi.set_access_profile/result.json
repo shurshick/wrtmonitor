@@ -1,0 +1,13 @@
+{
+  "tested_at": "2026-08-24T13:13:37.199334+00:00",
+  "status": "passed",
+  "target": "netis-nx31",
+  "command": "wifi.set_access_profile",
+  "transport": "direct SSH over temporary restricted lab access",
+  "elapsed_seconds": 1.062,
+  "idempotency": true,
+  "post_condition": true,
+  "rollback": true,
+  "redelivery": true,
+  "timeout": true
+}
