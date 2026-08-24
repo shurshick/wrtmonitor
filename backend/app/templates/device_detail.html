@@ -98,6 +98,7 @@
 {% if section == 'clients' %}<script src="/static/clients.js" defer></script>{% endif %}
 {% if section == 'management' %}<script src="/static/command-pagination.js" defer></script>{% endif %}
 {% if section == 'management' %}<script src="/static/package-search.js" defer></script>{% endif %}
+{% if section == 'management' %}<script src="/static/package-management.js" defer></script>{% endif %}
 {% if section == 'management' %}<script src="/static/firmware-catalog.js" defer></script>{% endif %}
 {% if section == 'internet' %}<script src="/static/network-settings.js" defer></script>{% endif %}
 <script>
@@ -121,6 +122,7 @@
     form.requestSubmit();
   });
   document.querySelectorAll('form[action*="/web-command"]').forEach((form) => {
+    if (form.matches('[data-async-command]')) return;
     const originalSubmit = form.onsubmit;
     form.onsubmit = null;
     form.addEventListener('submit', async (event) => {

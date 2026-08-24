@@ -1,21 +1,10 @@
 from __future__ import annotations
 
-import io
-import json
-
 from backend.app.services.commands import validate_command_payload
-from backend.app.services.firmware_catalog import _profiles, firmware_catalog
+from backend.app.services.firmware_catalog import firmware_catalog
 from backend.app.services.policy_catalog import policy_catalog
 from backend.app.services.telemetry import normalize_maintenance_summary
 from backend.app.services.wan_events import _mwan_state
-
-
-class _Response(io.BytesIO):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, traceback):
-        self.close()
 
 
 def test_sqm_profile_and_schedule_are_normalized():
@@ -107,9 +96,20 @@ def test_mwan_state_keeps_runtime_member_order_and_roles():
 
 
 def test_firmware_catalog_uses_reported_board_and_official_sysupgrade(monkeypatch):
+    overview = {
+        "branches": {
+            "24.10": {
+                "enabled": True,
+                "targets": {"mediatek/filogic": "aarch64_cortex-a53"},
+                "versions": ["24.10.2", "24.10.1", "24.10.0"],
+            }
+        }
+    }
     profiles = {
         "profiles": {
-            "vendor,router": {
+            "vendor_router": {
+                "supported_devices": ["vendor,router"],
+                "titles": [{"vendor": "Vendor", "model": "Router"}],
                 "images": [
                     {
                         "name": "openwrt-router-sysupgrade.bin",
@@ -121,20 +121,20 @@ def test_firmware_catalog_uses_reported_board_and_official_sysupgrade(monkeypatc
                         "sha256": "b" * 64,
                         "type": "factory",
                     },
-                ]
+                ],
             }
         }
     }
 
-    def fake_urlopen(request, timeout):
-        assert request.full_url.endswith(
-            "/releases/24.10.0/targets/mediatek/filogic/profiles.json"
-        )
-        assert timeout == 5
-        return _Response(json.dumps(profiles).encode())
-
-    _profiles.cache_clear()
-    monkeypatch.setattr("backend.app.services.firmware_catalog.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "backend.app.services.firmware_catalog._overview", lambda: overview
+    )
+    monkeypatch.setattr(
+        "backend.app.services.firmware_catalog._profiles",
+        lambda version, target: profiles
+        if (version, target) == ("24.10.2", "mediatek/filogic")
+        else {},
+    )
     catalog = firmware_catalog(
         {
             "board": {
@@ -148,10 +148,41 @@ def test_firmware_catalog_uses_reported_board_and_official_sysupgrade(monkeypatc
     )
 
     assert catalog["status"] == "observed"
+    assert catalog["installed_version"] == "24.10.0"
+    assert catalog["available_version"] == "24.10.2"
     assert [image["name"] for image in catalog["images"]] == [
         "openwrt-router-sysupgrade.bin"
     ]
     assert catalog["images"][0]["model"] == "vendor,router"
+    assert catalog["images"][0]["url"].startswith(
+        "https://downloads.openwrt.org/releases/24.10.2/"
+    )
+
+
+def test_firmware_catalog_reports_current_release_without_false_error(monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.services.firmware_catalog._overview",
+        lambda: {
+            "branches": {
+                "25.12": {
+                    "enabled": True,
+                    "targets": {"mediatek/filogic": "aarch64_cortex-a53"},
+                    "versions": ["25.12.5", "25.12.4"],
+                }
+            }
+        },
+    )
+    catalog = firmware_catalog(
+        {
+            "board": {
+                "board_name": "netis,nx31",
+                "release": {"version": "25.12.5", "target": "mediatek/filogic"},
+            }
+        }
+    )
+    assert catalog["status"] == "observed"
+    assert catalog["images"] == []
+    assert "already installed" in catalog["error"]
 
 
 def test_openwrt_module_command_is_allowlisted_and_normalized():

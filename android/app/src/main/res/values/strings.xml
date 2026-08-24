@@ -340,6 +340,7 @@
     <string name="event_severity_info">Information</string>
     <string name="wifi_password">Wi-Fi password</string>
     <string name="keep_current_password">Leave blank to keep the current password</string>
+    <string name="guest_password_required">Set a password of at least 8 characters for a new guest network</string>
     <string name="wifi_configured_state">Configured: %1$s</string>
     <string name="wifi_runtime_state">Runtime: %1$s</string>
     <string name="wifi_schedule_state">Schedule: %1$s</string>

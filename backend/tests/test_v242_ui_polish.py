@@ -59,3 +59,18 @@ def test_system_load_is_explained_relative_to_cpu_capacity() -> None:
     assert "очередь задач" in template
     assert "loadCapacityPercent" in android
     assert "load_capacity_value" in android
+
+
+def test_package_upgrade_is_confirmed_and_updates_only_its_card() -> None:
+    template = read("backend/app/templates/partials/router_maintenance.html")
+    page = read("backend/app/templates/device_detail.html")
+    script = read("backend/app/static/package-management.js")
+
+    assert "data-package-card" in template
+    assert "data-package-upgrade-form" in template
+    assert "data-async-command" in template
+    assert "package-management.js" in page
+    assert "window.confirm(`Обновить пакет ${packageName}?`)" in script
+    assert "currentCard.replaceWith(nextCard)" in script
+    assert "wrtmonitor:telemetry" in script
+    assert "window.location.assign" not in script
