@@ -9,6 +9,14 @@
 - `hardware verified` - приложен полный отчёт физического OpenWrt;
 - `beta accepted` - функция выдержала публичное тестирование.
 
+## v0.53.1 - Wi-Fi Security Fix
+
+- открытая гостевая сеть без обязательного пароля;
+- единый выбор защиты в Web UI и Android;
+- проверка запуска SSID и автоматический rollback при ошибке.
+
+Статус: code complete, проходит release verification.
+
 ## v0.53.0 - Wi-Fi Access Profiles
 
 - общие профили для основного и гостевого SSID;

@@ -42,6 +42,17 @@ def test_wifi_v060_command_contracts():
         },
     )
     assert added["isolate"] is True
+    opened = validate_command_payload(
+        "wifi.add_ssid",
+        {
+            "radio": "radio0",
+            "ssid": "Cafe",
+            "network": "guest",
+            "encryption": "none",
+        },
+    )
+    assert opened["key"] == ""
+    assert opened["encryption"] == "none"
     assert validate_command_payload(
         "wifi.set_schedule",
         {
@@ -121,6 +132,28 @@ def test_web_form_builds_wifi_schedule_array():
         "start": "09:00",
         "stop": "22:30",
     }
+
+
+def test_web_guest_form_supports_open_network_and_preserves_quick_toggle_security():
+    opened = build_command_payload_from_web_form(
+        "wifi.set_guest",
+        enabled="true",
+        radio="radio0",
+        ssid="Guest",
+        encryption="none",
+        wifi_password="",
+    )
+    assert opened["encryption"] == "none"
+    assert opened["key"] == ""
+
+    toggled = build_command_payload_from_web_form(
+        "wifi.set_guest",
+        enabled="false",
+        radio="radio0",
+        ssid="Guest",
+    )
+    assert "encryption" not in toggled
+    assert "key" not in toggled
 
 
 def test_wifi_station_telemetry_is_flattened():

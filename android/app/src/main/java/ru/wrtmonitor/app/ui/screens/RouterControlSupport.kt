@@ -87,7 +87,12 @@ internal val encryptedDnsProviderOptions = listOf(
     SelectOption("google", "Google"),
 )
 internal val wifiModeOptions = listOf("HE80", "HE40", "HE20", "VHT160", "VHT80", "VHT40", "VHT20", "HT40", "HT20").map { SelectOption(it, it) }
-internal val wifiEncryptionOptions = listOf("sae-mixed", "sae", "psk2", "none").map { SelectOption(it, it) }
+internal val wifiEncryptionOptions = listOf(
+    SelectOption("sae-mixed", "WPA2/WPA3"),
+    SelectOption("sae", "WPA3"),
+    SelectOption("psk2", "WPA2"),
+    SelectOption("none", "Без защиты"),
+)
 internal val processSignalOptions = listOf("TERM", "HUP", "INT", "KILL").map { SelectOption(it, it) }
 internal val firewallPolicyOptions = listOf("ACCEPT", "REJECT", "DROP").map { SelectOption(it, it) }
 internal val firewallProtocolOptions = listOf("tcpudp", "tcp", "udp", "icmp", "all").map { SelectOption(it, it.uppercase()) }
