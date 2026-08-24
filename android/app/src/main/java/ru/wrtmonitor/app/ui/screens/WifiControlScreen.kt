@@ -93,6 +93,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var guestSsid by remember { mutableStateOf("") }
     var guestPassword by remember { mutableStateOf("") }
     var guestEnabled by remember { mutableStateOf(true) }
+    var guestConfigured by remember { mutableStateOf(false) }
     var htmode by remember { mutableStateOf("") }
     var txpower by remember { mutableStateOf("") }
     var newSsid by remember { mutableStateOf("") }
@@ -232,6 +233,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
             ?: rawSchedule?.optString("stop").orEmpty().ifBlank { "00:00" }
         val observedNetworks = wifiExperience?.networks?.filter { it.radioId == selected.optString("id") }.orEmpty()
         val guestNetwork = observedNetworks.firstOrNull { it.role == "guest" }
+        guestConfigured = guestNetwork != null
         guestEnabled = guestNetwork?.enabled ?: false
         guestSsid = guestNetwork?.ssid.orEmpty()
         guestPassword = ""
@@ -568,17 +570,31 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         }
     }
     if (capabilities["wifi.guest"] == true) {
+        val guestPasswordValid = !guestEnabled ||
+            (guestConfigured && guestPassword.isBlank()) || guestPassword.length >= 8
         ExpandableSettingsCard(
             title = stringResource(R.string.guest_wifi),
             summary = guestSsid.ifBlank { stringResource(R.string.disabled_value) },
         ) {
             SwitchSettingRow(stringResource(R.string.wifi_state), checked = guestEnabled, onCheckedChange = { guestEnabled = it })
             OutlinedTextField(guestSsid, { guestSsid = it }, label = { Text("SSID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(guestPassword, { guestPassword = it }, label = { Text(stringResource(R.string.wifi_password)) }, placeholder = { Text(stringResource(R.string.keep_current_password)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+            OutlinedTextField(
+                guestPassword,
+                { guestPassword = it },
+                label = { Text(stringResource(R.string.wifi_password)) },
+                placeholder = { Text(stringResource(if (guestConfigured) R.string.keep_current_password else R.string.guest_password_required)) },
+                supportingText = {
+                    if (!guestPasswordValid) Text(stringResource(R.string.guest_password_required))
+                },
+                isError = !guestPasswordValid,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+            )
             PrimaryActionButton(
                 label = stringResource(R.string.apply_guest_wifi),
                 onClick = { pendingCommand = PendingSafeCommand("wifi.set_guest", JsonObject().put("enabled", guestEnabled).put("ssid", guestSsid).put("password", guestPassword).put("radio", radioId), wifiToggleQueued) },
-                enabled = !guestEnabled || guestSsid.isNotBlank(),
+                enabled = (!guestEnabled || guestSsid.isNotBlank()) && guestPasswordValid,
                 modifier = Modifier.align(Alignment.End),
             )
         }

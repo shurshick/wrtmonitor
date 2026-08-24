@@ -340,6 +340,7 @@
     <string name="event_severity_info">Информация</string>
     <string name="wifi_password">Пароль Wi-Fi</string>
     <string name="keep_current_password">Оставьте пустым, чтобы сохранить текущий пароль</string>
+    <string name="guest_password_required">Для новой гостевой сети задайте пароль не короче 8 символов</string>
     <string name="wifi_configured_state">Настройка: %1$s</string>
     <string name="wifi_runtime_state">Фактически: %1$s</string>
     <string name="wifi_schedule_state">Расписание: %1$s</string>
