@@ -82,6 +82,9 @@ def normalize_wifi_summary(payload: dict[str, Any]) -> dict[str, Any]:
                 "bss_transition": iface.get("bss_transition"),
                 "mobility_domain": iface.get("mobility_domain"),
                 "mesh_id": iface.get("mesh_id"),
+                "access_profile": iface.get("access_profile")
+                if isinstance(iface.get("access_profile"), dict)
+                else {"configured": False},
             }
             normalized_interfaces.append(normalized_iface)
             normalized_networks.append(

@@ -115,6 +115,13 @@ fun ClientsControlScreen(
     var filter by rememberSaveable(device.id) { mutableStateOf(ClientsFilter.All) }
     var profileName by remember(device.id) { mutableStateOf("") }
     var profileBlocked by remember(device.id) { mutableStateOf(false) }
+    var profileDownloadKbps by remember(device.id) { mutableStateOf("") }
+    var profileUploadKbps by remember(device.id) { mutableStateOf("") }
+    var profileScheduleEnabled by remember(device.id) { mutableStateOf(false) }
+    var profileScheduleDays by remember(device.id) { mutableStateOf(weekdayOptions.map { it.value }.toSet()) }
+    var profileScheduleStart by remember(device.id) { mutableStateOf("00:00") }
+    var profileScheduleStop by remember(device.id) { mutableStateOf("00:00") }
+    var editingProfileId by remember(device.id) { mutableStateOf<String?>(null) }
     var poolStart by remember(device.id) { mutableStateOf("") }
     var poolLimit by remember(device.id) { mutableStateOf("") }
     var leaseTime by remember(device.id) { mutableStateOf("") }
@@ -372,6 +379,19 @@ fun ClientsControlScreen(
             onProfileNameChange = { profileName = it },
             profileBlocked = profileBlocked,
             onProfileBlockedChange = { profileBlocked = it },
+            profileDownloadKbps = profileDownloadKbps,
+            onProfileDownloadKbpsChange = { profileDownloadKbps = it },
+            profileUploadKbps = profileUploadKbps,
+            onProfileUploadKbpsChange = { profileUploadKbps = it },
+            profileScheduleEnabled = profileScheduleEnabled,
+            onProfileScheduleEnabledChange = { profileScheduleEnabled = it },
+            profileScheduleDays = profileScheduleDays,
+            onProfileScheduleDaysChange = { profileScheduleDays = it },
+            profileScheduleStart = profileScheduleStart,
+            onProfileScheduleStartChange = { profileScheduleStart = it },
+            profileScheduleStop = profileScheduleStop,
+            onProfileScheduleStopChange = { profileScheduleStop = it },
+            editingProfileId = editingProfileId,
             poolStart = poolStart,
             onPoolStartChange = { poolStart = it.filter(Char::isDigit) },
             poolLimit = poolLimit,
@@ -389,12 +409,63 @@ fun ClientsControlScreen(
             ipv6Ndp = ipv6Ndp,
             onIpv6NdpChange = { ipv6Ndp = it },
             onBack = { view = ClientsView.List },
-            onCreateProfile = {
+            onEditProfile = { profile ->
+                val qos = profile.policy.optJsonObject("qos")
+                val schedule = profile.policy.optJsonObject("schedule")
+                editingProfileId = profile.id
+                profileName = profile.name
+                profileBlocked = profile.policy.optBoolean("blocked")
+                profileDownloadKbps = qos?.optInt("download_kbps")?.takeIf { it > 0 }?.toString().orEmpty()
+                profileUploadKbps = qos?.optInt("upload_kbps")?.takeIf { it > 0 }?.toString().orEmpty()
+                profileScheduleEnabled = schedule?.optBoolean("enabled") == true
+                profileScheduleDays = schedule?.optJsonArray("weekdays")?.let { days ->
+                    (0 until days.length()).map { days.optString(it) }.filter(String::isNotBlank).toSet()
+                }.orEmpty()
+                profileScheduleStart = schedule?.optString("start").orEmpty().ifBlank { "00:00" }
+                profileScheduleStop = schedule?.optString("stop").orEmpty().ifBlank { "00:00" }
+            },
+            onCancelProfileEdit = {
+                editingProfileId = null
+                profileName = ""
+                profileBlocked = false
+                profileDownloadKbps = ""
+                profileUploadKbps = ""
+                profileScheduleEnabled = false
+                profileScheduleDays = weekdayOptions.map { it.value }.toSet()
+                profileScheduleStart = "00:00"
+                profileScheduleStop = "00:00"
+            },
+            onSaveProfile = {
                 scope.launch {
-                    when (val result = repository.createClientProfile(device.id, profileName, profileBlocked)) {
+                    val currentProfileId = editingProfileId
+                    val result = if (currentProfileId == null) {
+                        repository.createClientProfile(
+                            device.id, profileName, profileBlocked,
+                            profileDownloadKbps.toIntOrNull() ?: 0,
+                            profileUploadKbps.toIntOrNull() ?: 0,
+                            profileScheduleEnabled, profileScheduleDays,
+                            profileScheduleStart, profileScheduleStop,
+                        )
+                    } else {
+                        repository.updateClientProfile(
+                            device.id, currentProfileId, profileName, profileBlocked,
+                            profileDownloadKbps.toIntOrNull() ?: 0,
+                            profileUploadKbps.toIntOrNull() ?: 0,
+                            profileScheduleEnabled, profileScheduleDays,
+                            profileScheduleStart, profileScheduleStop,
+                        )
+                    }
+                    when (result) {
                         is ApiResult.Success -> {
+                            editingProfileId = null
                             profileName = ""
                             profileBlocked = false
+                            profileDownloadKbps = ""
+                            profileUploadKbps = ""
+                            profileScheduleEnabled = false
+                            profileScheduleDays = weekdayOptions.map { it.value }.toSet()
+                            profileScheduleStart = "00:00"
+                            profileScheduleStop = "00:00"
                             refresh()
                         }
                         is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {

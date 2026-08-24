@@ -217,6 +217,60 @@ def _normalize_wifi_schedule_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_wifi_access_profile_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    iface = _wifi_selector(payload, "iface")
+    enabled = _boolean(payload, "enabled")
+    if not enabled:
+        return {"iface": iface, "enabled": False}
+
+    schedule_input = payload.get("schedule") or {}
+    if not isinstance(schedule_input, dict):
+        raise HTTPException(status_code=400, detail="Invalid access profile schedule")
+    schedule_enabled = bool(schedule_input.get("enabled", False))
+    weekdays = [str(day).lower() for day in schedule_input.get("weekdays") or []]
+    allowed = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+    if any(day not in allowed for day in weekdays):
+        raise HTTPException(status_code=400, detail="Invalid access profile weekday")
+    start = str(schedule_input.get("start") or "")
+    stop = str(schedule_input.get("stop") or "")
+    if schedule_enabled:
+        if not weekdays:
+            raise HTTPException(status_code=400, detail="Access days are required")
+        if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", start) or not re.fullmatch(
+            r"(?:[01]\d|2[0-3]):[0-5]\d", stop
+        ):
+            raise HTTPException(status_code=400, detail="Invalid access profile time")
+        if start == stop:
+            raise HTTPException(status_code=400, detail="Access times must differ")
+
+    qos_input = payload.get("qos") or {}
+    if not isinstance(qos_input, dict):
+        raise HTTPException(status_code=400, detail="Invalid access profile limits")
+    qos: dict[str, int] = {}
+    for key in ("download_kbps", "upload_kbps"):
+        try:
+            value = int(qos_input.get(key) or 0)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid {key}") from exc
+        if value < 0 or value > 10_000_000:
+            raise HTTPException(status_code=400, detail=f"Invalid {key}")
+        qos[key] = value
+    return {
+        "iface": iface,
+        "enabled": True,
+        "profile_id": _require_string(payload, "profile_id", max_length=64),
+        "profile_name": _require_string(payload, "profile_name", max_length=80),
+        "blocked": _boolean(payload, "blocked", default=False),
+        "schedule": {
+            "enabled": schedule_enabled,
+            "weekdays": weekdays,
+            "start": start,
+            "stop": stop,
+        },
+        "qos": qos,
+    }
+
+
 def _normalize_wifi_mesh_payload(payload: dict[str, Any]) -> dict[str, Any]:
     enabled = _boolean(payload, "enabled")
     result: dict[str, Any] = {
@@ -276,6 +330,7 @@ __all__ = [
     "_normalize_wifi_add_ssid_payload",
     "_normalize_wifi_update_ssid_payload",
     "_normalize_wifi_schedule_payload",
+    "_normalize_wifi_access_profile_payload",
     "_normalize_wifi_mesh_payload",
     "_normalize_guest_payload",
 ]

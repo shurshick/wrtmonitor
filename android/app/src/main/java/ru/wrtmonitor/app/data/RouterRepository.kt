@@ -108,7 +108,57 @@ class RouterRepository(
         deviceId: String,
         name: String,
         blocked: Boolean,
-    ): ApiResult<Unit> = onIo { api.createClientProfile(deviceId, name, blocked) }
+        downloadKbps: Int = 0,
+        uploadKbps: Int = 0,
+        scheduleEnabled: Boolean = false,
+        scheduleDays: Set<String> = emptySet(),
+        scheduleStart: String = "",
+        scheduleStop: String = "",
+    ): ApiResult<Unit> = onIo {
+        api.createClientProfile(
+            deviceId,
+            name,
+            blocked,
+            downloadKbps,
+            uploadKbps,
+            scheduleEnabled,
+            scheduleDays,
+            scheduleStart,
+            scheduleStop,
+        )
+    }
+
+    suspend fun setWifiAccessProfile(
+        deviceId: String,
+        iface: String,
+        profileId: String?,
+    ): ApiResult<Unit> = onIo { api.setWifiAccessProfile(deviceId, iface, profileId) }
+
+    suspend fun updateClientProfile(
+        deviceId: String,
+        profileId: String,
+        name: String,
+        blocked: Boolean,
+        downloadKbps: Int = 0,
+        uploadKbps: Int = 0,
+        scheduleEnabled: Boolean = false,
+        scheduleDays: Set<String> = emptySet(),
+        scheduleStart: String = "",
+        scheduleStop: String = "",
+    ): ApiResult<Unit> = onIo {
+        api.updateClientProfile(
+            deviceId,
+            profileId,
+            name,
+            blocked,
+            downloadKbps,
+            uploadKbps,
+            scheduleEnabled,
+            scheduleDays,
+            scheduleStart,
+            scheduleStop,
+        )
+    }
 
     suspend fun deleteClientProfile(deviceId: String, profileId: String): ApiResult<Unit> =
         onIo { api.deleteClientProfile(deviceId, profileId) }

@@ -13,6 +13,7 @@ from .requests import (
     SetupRequest,
     TelemetryRequest,
     WifiQrRequest,
+    WifiAccessProfileRequest,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "SetupRequest",
     "TelemetryRequest",
     "WifiQrRequest",
+    "WifiAccessProfileRequest",
 ]

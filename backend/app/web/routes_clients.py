@@ -1,5 +1,9 @@
 from fastapi import APIRouter
 from ..services.client_registry import infer_device_type, validate_device_type
+from ..services.wifi_access_profiles import (
+    assigned_wifi_interfaces,
+    wifi_access_profile_payload,
+)
 from .route_shared import (
     ClientProfile,
     ClientActivityEvent,
@@ -151,6 +155,12 @@ def web_create_client_profile(
     csrf_token: str = Form(...),
     name: str = Form(...),
     blocked: bool = Form(False),
+    schedule_enabled: bool = Form(False),
+    weekdays: list[str] = Form(default=[]),
+    start: str = Form(""),
+    stop: str = Form(""),
+    download_kbps: int = Form(0),
+    upload_kbps: int = Form(0),
     config: Settings = Depends(settings),
     db: Session = Depends(get_db),
     wrtmonitor_session: str | None = Cookie(default=None),
@@ -175,7 +185,21 @@ def web_create_client_profile(
         id=uuid4(),
         device_id=device_id,
         name=normalized_name,
-        policy=validate_client_policy({"blocked": blocked}),
+        policy=validate_client_policy(
+            {
+                "blocked": blocked,
+                "schedule": {
+                    "enabled": schedule_enabled,
+                    "weekdays": weekdays,
+                    "start": start,
+                    "stop": stop,
+                },
+                "qos": {
+                    "download_kbps": download_kbps,
+                    "upload_kbps": upload_kbps,
+                },
+            }
+        ),
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
@@ -187,6 +211,145 @@ def web_create_client_profile(
         "client_profile",
         str(profile.id),
         {"name": profile.name},
+    )
+    db.commit()
+    return RedirectResponse(f"/devices/{device_id}?section=clients", status_code=303)
+
+
+@router.post("/devices/{device_id}/wifi-access-profile")
+def web_set_wifi_access_profile(
+    device_id: UUID,
+    csrf_token: str = Form(...),
+    iface: str = Form(...),
+    profile_id: str = Form(""),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    get_user_device_or_404(db, user, device_id)
+    if not device_supports(db, device_id, "wifi.access_profile"):
+        raise HTTPException(status_code=409, detail="Обновите агент для профилей Wi-Fi")
+    selected_profile = None
+    if profile_id:
+        try:
+            selected_profile_id = UUID(profile_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Неверный профиль") from exc
+        selected_profile = db.get(ClientProfile, selected_profile_id)
+        if not selected_profile or selected_profile.device_id != device_id:
+            raise HTTPException(status_code=404, detail="Профиль не найден")
+    command_payload = wifi_access_profile_payload(iface, selected_profile)
+    normalized = validate_command_request(
+        command_type="wifi.set_access_profile",
+        payload=command_payload,
+        confirmed=True,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    command = create_device_command(
+        db,
+        device_id=device_id,
+        command_type="wifi.set_access_profile",
+        payload=normalized,
+        created_by=user.id,
+        source="web",
+    )
+    audit(
+        db,
+        user.id,
+        "wifi.access_profile.set",
+        "device",
+        str(device_id),
+        {"iface": iface, "command_id": str(command.id)},
+    )
+    db.commit()
+    return RedirectResponse(f"/devices/{device_id}?section=wifi", status_code=303)
+
+
+@router.post("/devices/{device_id}/client-profiles/{profile_id}")
+def web_update_client_profile(
+    device_id: UUID,
+    profile_id: UUID,
+    csrf_token: str = Form(...),
+    name: str = Form(...),
+    blocked: bool = Form(False),
+    schedule_enabled: bool = Form(False),
+    weekdays: list[str] = Form(default=[]),
+    start: str = Form(""),
+    stop: str = Form(""),
+    download_kbps: int = Form(0),
+    upload_kbps: int = Form(0),
+    config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
+    wrtmonitor_session: str | None = Cookie(default=None),
+) -> RedirectResponse:
+    user = web_user_from_session(wrtmonitor_session, config, db)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    require_web_csrf(wrtmonitor_session, csrf_token, config)
+    get_user_device_or_404(db, user, device_id)
+    profile = db.get(ClientProfile, profile_id)
+    if not profile or profile.device_id != device_id:
+        raise HTTPException(status_code=404, detail="Профиль не найден")
+    normalized_name = name.strip()
+    if not normalized_name:
+        raise HTTPException(status_code=422, detail="Введите название профиля")
+    duplicate = db.scalars(
+        select(ClientProfile).where(
+            ClientProfile.device_id == device_id,
+            ClientProfile.name == normalized_name,
+            ClientProfile.id != profile.id,
+        )
+    ).first()
+    if duplicate:
+        raise HTTPException(status_code=409, detail="Профиль уже существует")
+    assigned_interfaces = assigned_wifi_interfaces(db, device_id, profile.id)
+    profile.name = normalized_name
+    profile.policy = validate_client_policy(
+        {
+            "blocked": blocked,
+            "schedule": {
+                "enabled": schedule_enabled,
+                "weekdays": weekdays,
+                "start": start,
+                "stop": stop,
+            },
+            "qos": {
+                "download_kbps": download_kbps,
+                "upload_kbps": upload_kbps,
+            },
+        }
+    )
+    profile.updated_at = datetime.now(UTC)
+    command_ids: list[str] = []
+    for iface in assigned_interfaces:
+        normalized = validate_command_request(
+            command_type="wifi.set_access_profile",
+            payload=wifi_access_profile_payload(iface, profile),
+            confirmed=True,
+            device_supports=lambda capability: device_supports(
+                db, device_id, capability
+            ),
+        )
+        command = create_device_command(
+            db,
+            device_id=device_id,
+            command_type="wifi.set_access_profile",
+            payload=normalized,
+            created_by=user.id,
+            source="web",
+        )
+        command_ids.append(str(command.id))
+    audit(
+        db,
+        user.id,
+        "client_profile.update",
+        "client_profile",
+        str(profile.id),
+        {"name": profile.name, "reapply_command_ids": command_ids},
     )
     db.commit()
     return RedirectResponse(f"/devices/{device_id}?section=clients", status_code=303)
@@ -209,6 +372,25 @@ def web_delete_client_profile(
     profile = db.get(ClientProfile, profile_id)
     if not profile or profile.device_id != device_id:
         raise HTTPException(status_code=404, detail="Client profile not found")
+    command_ids: list[str] = []
+    for iface in assigned_wifi_interfaces(db, device_id, profile.id):
+        normalized = validate_command_request(
+            command_type="wifi.set_access_profile",
+            payload=wifi_access_profile_payload(iface, None),
+            confirmed=True,
+            device_supports=lambda capability: device_supports(
+                db, device_id, capability
+            ),
+        )
+        command = create_device_command(
+            db,
+            device_id=device_id,
+            command_type="wifi.set_access_profile",
+            payload=normalized,
+            created_by=user.id,
+            source="web",
+        )
+        command_ids.append(str(command.id))
     db.delete(profile)
     audit(
         db,
@@ -216,7 +398,7 @@ def web_delete_client_profile(
         "client_profile.delete",
         "client_profile",
         str(profile.id),
-        {"name": profile.name},
+        {"name": profile.name, "clear_command_ids": command_ids},
     )
     db.commit()
     return RedirectResponse(f"/devices/{device_id}?section=clients", status_code=303)
@@ -262,6 +444,8 @@ __all__ = [
     "router",
     "web_client_policy",
     "web_create_client_profile",
+    "web_update_client_profile",
+    "web_set_wifi_access_profile",
     "web_delete_client_profile",
     "web_delete_client",
 ]

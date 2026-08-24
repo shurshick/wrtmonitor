@@ -74,6 +74,12 @@ COMMANDS: dict[str, dict[str, Any]] = {
         "requires_confirmation": True,
         "secret_fields": [],
     },
+    "wifi.set_access_profile": {
+        "risk_level": "level_3_reversible_config",
+        "capability": "wifi.access_profile",
+        "requires_confirmation": True,
+        "secret_fields": [],
+    },
     "wifi.set_mesh": {
         "risk_level": "level_4_disruptive",
         "capability": "wifi.mesh",

@@ -752,4 +752,8 @@
     <string name="client_ready_mode">Ready mode</string>
     <string name="client_mode_custom">Custom settings</string>
     <string name="client_current_speed">Current speed</string>
+    <string name="wifi_access_profile">Access profile</string>
+    <string name="wifi_access_profile_hint">The schedule applies to this network; its speed limit is shared by all connected clients.</string>
+    <string name="wifi_access_profile_confirm">Apply this profile to the selected Wi-Fi network?</string>
+    <string name="wifi_access_profile_queued">Wi-Fi access profile queued</string>
 </resources>

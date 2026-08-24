@@ -50,6 +50,16 @@ data class WifiNetworkDto(
     val hidden: Boolean,
     val isolate: Boolean,
     val stationCount: Int,
+    val accessProfile: WifiAccessProfileDto,
+)
+
+data class WifiAccessProfileDto(
+    val configured: Boolean,
+    val profileId: String,
+    val profileName: String,
+    val effectiveEnabled: Boolean,
+    val downloadKbps: Int,
+    val uploadKbps: Int,
 )
 
 data class WifiStationDto(

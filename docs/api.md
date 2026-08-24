@@ -217,7 +217,9 @@ Content-Type: application/json
 
 ### Управляющие команды
 
-Расширенный Wi-Fi: `wifi.set_radio`, `wifi.add_ssid`, `wifi.update_ssid`, `wifi.delete_ssid`, `wifi.set_schedule`, `wifi.set_mesh`. Сервер валидирует radio/iface, состояние радиомодуля, режим защиты, длину ключа, channel/htmode/txpower, дни и время расписания до постановки команды в очередь.
+Расширенный Wi-Fi: `wifi.set_radio`, `wifi.add_ssid`, `wifi.update_ssid`, `wifi.delete_ssid`, `wifi.set_schedule`, `wifi.set_access_profile`, `wifi.set_mesh`. Сервер валидирует radio/iface, состояние радиомодуля, режим защиты, длину ключа, channel/htmode/txpower, дни, время расписания и лимиты скорости до постановки команды в очередь.
+
+`PUT /api/v1/devices/{device_id}/wifi-access-profile` принимает фактический `iface` и `profile_id` существующего профиля клиента либо `null` для снятия назначения. Сервер разворачивает сохранённую политику в подписанный снимок команды; Android и Web UI не могут подменить скорость или расписание вне профиля.
 
 `POST /api/v1/devices/{device_id}/wifi/qr` принимает `iface` и возвращает одноразовый Wi-Fi URI. Агент читает текущие SSID, режим защиты и ключ непосредственно из UCI OpenWrt. URI хранится только в памяти сервера до первого чтения, не попадает в PostgreSQL и журнал команд; ответ содержит `Cache-Control: no-store`. Пароль вручную вводить не требуется.
 

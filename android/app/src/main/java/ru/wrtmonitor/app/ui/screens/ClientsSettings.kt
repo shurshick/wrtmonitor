@@ -90,6 +90,19 @@ internal fun ClientsSettings(
     onProfileNameChange: (String) -> Unit,
     profileBlocked: Boolean,
     onProfileBlockedChange: (Boolean) -> Unit,
+    profileDownloadKbps: String,
+    onProfileDownloadKbpsChange: (String) -> Unit,
+    profileUploadKbps: String,
+    onProfileUploadKbpsChange: (String) -> Unit,
+    profileScheduleEnabled: Boolean,
+    onProfileScheduleEnabledChange: (Boolean) -> Unit,
+    profileScheduleDays: Set<String>,
+    onProfileScheduleDaysChange: (Set<String>) -> Unit,
+    profileScheduleStart: String,
+    onProfileScheduleStartChange: (String) -> Unit,
+    profileScheduleStop: String,
+    onProfileScheduleStopChange: (String) -> Unit,
+    editingProfileId: String?,
     poolStart: String,
     onPoolStartChange: (String) -> Unit,
     poolLimit: String,
@@ -107,7 +120,9 @@ internal fun ClientsSettings(
     ipv6Ndp: String,
     onIpv6NdpChange: (String) -> Unit,
     onBack: () -> Unit,
-    onCreateProfile: () -> Unit,
+    onEditProfile: (ClientProfileDto) -> Unit,
+    onCancelProfileEdit: () -> Unit,
+    onSaveProfile: () -> Unit,
     onDeleteProfile: (String) -> Unit,
     onSaveDhcp: () -> Unit,
     onSaveIpv6: () -> Unit,
@@ -124,21 +139,37 @@ internal fun ClientsSettings(
             subtitle = stringResource(R.string.profiles_count, profiles.size),
         ) {
             profiles.forEachIndexed { index, profile ->
+                val qos = profile.policy.optJsonObject("qos")
+                val schedule = profile.policy.optJsonObject("schedule")
+                val profileSummary = buildList {
+                    add(if (profile.policy.optBoolean("blocked")) stringResource(R.string.access_blocked) else stringResource(R.string.access_allowed))
+                    qos?.optInt("download_kbps")?.takeIf { it > 0 }?.let {
+                        add("${stringResource(R.string.download_limit)}: $it")
+                    }
+                    qos?.optInt("upload_kbps")?.takeIf { it > 0 }?.let {
+                        add("${stringResource(R.string.upload_limit)}: $it")
+                    }
+                    if (schedule?.optBoolean("enabled") == true) add(stringResource(R.string.access_schedule))
+                }.joinToString(" · ")
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(profile.name, fontWeight = FontWeight.Medium)
                         Text(
-                            if (profile.policy.optBoolean("blocked")) stringResource(R.string.access_blocked) else stringResource(R.string.access_allowed),
+                            profileSummary,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    TextButton(onClick = { onEditProfile(profile) }) { Text(stringResource(R.string.edit)) }
                     TextButton(onClick = { onDeleteProfile(profile.id) }) { Text(stringResource(R.string.delete)) }
                 }
                 if (index < profiles.lastIndex) HorizontalDivider()
             }
             if (profiles.isNotEmpty()) HorizontalDivider()
-            Text(stringResource(R.string.create_profile), style = MaterialTheme.typography.titleSmall)
+            Text(
+                if (editingProfileId == null) stringResource(R.string.create_profile) else stringResource(R.string.edit),
+                style = MaterialTheme.typography.titleSmall,
+            )
             OutlinedTextField(
                 profileName,
                 onProfileNameChange,
@@ -147,11 +178,64 @@ internal fun ClientsSettings(
                 singleLine = true,
             )
             SwitchSettingRow(stringResource(R.string.block_client), checked = profileBlocked, onCheckedChange = onProfileBlockedChange)
-            PrimaryActionButton(
-                label = stringResource(R.string.create_profile),
-                onClick = onCreateProfile,
-                enabled = profileName.isNotBlank(),
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    profileDownloadKbps,
+                    { onProfileDownloadKbpsChange(it.filter(Char::isDigit)) },
+                    label = { Text(stringResource(R.string.download_limit)) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    profileUploadKbps,
+                    { onProfileUploadKbpsChange(it.filter(Char::isDigit)) },
+                    label = { Text(stringResource(R.string.upload_limit)) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+            }
+            SwitchSettingRow(
+                stringResource(R.string.access_schedule),
+                checked = profileScheduleEnabled,
+                onCheckedChange = onProfileScheduleEnabledChange,
             )
+            if (profileScheduleEnabled) {
+                MultiOptionSelector(
+                    stringResource(R.string.schedule_weekdays),
+                    profileScheduleDays,
+                    weekdayOptions,
+                    onProfileScheduleDaysChange,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        profileScheduleStart,
+                        onProfileScheduleStartChange,
+                        label = { Text(stringResource(R.string.schedule_start)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        profileScheduleStop,
+                        onProfileScheduleStopChange,
+                        label = { Text(stringResource(R.string.schedule_stop)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                    )
+                }
+            }
+            PrimaryActionButton(
+                label = if (editingProfileId == null) stringResource(R.string.create_profile) else stringResource(R.string.save),
+                onClick = onSaveProfile,
+                enabled = profileName.isNotBlank() && (!profileScheduleEnabled || (
+                    profileScheduleDays.isNotEmpty() &&
+                        profileScheduleStart.isNotBlank() &&
+                        profileScheduleStop.isNotBlank() &&
+                        profileScheduleStart != profileScheduleStop
+                )),
+            )
+            if (editingProfileId != null) {
+                TextButton(onClick = onCancelProfileEdit) { Text(stringResource(R.string.cancel)) }
+            }
         }
     }
     if (canConfigureDhcp) {

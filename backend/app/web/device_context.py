@@ -219,6 +219,7 @@ def build_capability_context(agent: dict[str, Any]) -> dict[str, Any]:
         "wifi_mesh": has("wifi.mesh"),
         "wifi_stations": has("telemetry.wifi.stations"),
         "wifi_qr": has("wifi.qr"),
+        "wifi_access_profile": has("wifi.access_profile"),
         "client_traffic": has("telemetry.clients.traffic"),
         "system_timezone": has("system.set_timezone"),
         "system_ntp": has("system.set_ntp"),

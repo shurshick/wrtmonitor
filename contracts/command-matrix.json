@@ -1,5 +1,5 @@
 {
-  "command_count": 94,
+  "command_count": 95,
   "commands": [
     {
       "command": "agent.bash_script",
@@ -2273,6 +2273,36 @@
       "surface_equivalents": {
         "android": "wifiQr(",
         "web": "wifi-qr.svg"
+      }
+    },
+    {
+      "command": "wifi.set_access_profile",
+      "subsystem": "wifi",
+      "surfaces": {
+        "api": true,
+        "web": true,
+        "android": true,
+        "agent": true
+      },
+      "capability": "wifi.access_profile",
+      "risk": "level_3_reversible_config",
+      "confirmation": true,
+      "idempotency": {
+        "strategy": "command_uuid_result_cache",
+        "semantic": false
+      },
+      "timeout_seconds": 180,
+      "max_deliveries": 2,
+      "post_condition": "read_after_write_config",
+      "verification": {
+        "required": true,
+        "mode": "read_after_write_config",
+        "fail_closed": true
+      },
+      "rollback": "configuration_backup",
+      "surface_equivalents": {
+        "android": "setWifiAccessProfile(",
+        "web": "wifi-access-profile"
       }
     },
     {

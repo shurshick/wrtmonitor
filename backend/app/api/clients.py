@@ -13,7 +13,11 @@ from ..models import (
     NetworkClient,
     User,
 )
-from ..schemas import ClientProfileRequest, ClientUpdateRequest
+from ..schemas import (
+    ClientProfileRequest,
+    ClientUpdateRequest,
+    WifiAccessProfileRequest,
+)
 from ..services.audit import audit
 from ..services.auth import current_user
 from ..services.client_registry import (
@@ -30,6 +34,10 @@ from ..services.devices import (
     latest_device_telemetry,
 )
 from ..services.telemetry import normalize_wifi_summary
+from ..services.wifi_access_profiles import (
+    assigned_wifi_interfaces,
+    wifi_access_profile_payload,
+)
 
 
 router = APIRouter(prefix="/api/v1/devices")
@@ -470,6 +478,56 @@ def get_profile(db: Session, device_id: UUID, profile_id: UUID) -> ClientProfile
     return profile
 
 
+@router.put("/{device_id}/wifi-access-profile")
+def set_wifi_access_profile(
+    device_id: UUID,
+    payload: WifiAccessProfileRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    get_user_device_or_404(db, user, device_id)
+    if not device_supports(db, device_id, "wifi.access_profile"):
+        raise HTTPException(
+            status_code=409,
+            detail="Agent update or tc-full is required for Wi-Fi access profiles",
+        )
+    profile_name = ""
+    profile = None
+    if payload.profile_id is not None:
+        profile = get_profile(db, device_id, payload.profile_id)
+        profile_name = profile.name
+    command_payload = wifi_access_profile_payload(payload.iface, profile)
+    normalized = validate_command_request(
+        command_type="wifi.set_access_profile",
+        payload=command_payload,
+        confirmed=True,
+        device_supports=lambda capability: device_supports(db, device_id, capability),
+    )
+    command = create_device_command(
+        db,
+        device_id=device_id,
+        command_type="wifi.set_access_profile",
+        payload=normalized,
+        created_by=user.id,
+        source="api",
+    )
+    audit(
+        db,
+        user.id,
+        "wifi.access_profile.set",
+        "device",
+        str(device_id),
+        {
+            "iface": payload.iface,
+            "profile_id": str(payload.profile_id) if payload.profile_id else None,
+            "profile_name": profile_name,
+            "command_id": str(command.id),
+        },
+    )
+    db.commit()
+    return {"command_id": str(command.id), "status": command.status}
+
+
 @router.put("/{device_id}/client-profiles/{profile_id}")
 def update_profile(
     device_id: UUID,
@@ -480,6 +538,7 @@ def update_profile(
 ) -> dict:
     get_user_device_or_404(db, user, device_id)
     profile = get_profile(db, device_id, profile_id)
+    assigned_interfaces = assigned_wifi_interfaces(db, device_id, profile.id)
     normalized_name = payload.name.strip()
     duplicate = db.scalars(
         select(ClientProfile).where(
@@ -495,13 +554,32 @@ def update_profile(
     profile.name = normalized_name
     profile.policy = validate_client_policy(payload.policy)
     profile.updated_at = datetime.now(UTC)
+    command_ids: list[str] = []
+    for iface in assigned_interfaces:
+        normalized = validate_command_request(
+            command_type="wifi.set_access_profile",
+            payload=wifi_access_profile_payload(iface, profile),
+            confirmed=True,
+            device_supports=lambda capability: device_supports(
+                db, device_id, capability
+            ),
+        )
+        command = create_device_command(
+            db,
+            device_id=device_id,
+            command_type="wifi.set_access_profile",
+            payload=normalized,
+            created_by=user.id,
+            source="api",
+        )
+        command_ids.append(str(command.id))
     audit(
         db,
         user.id,
         "client_profile.update",
         "client_profile",
         str(profile.id),
-        {"name": profile.name},
+        {"name": profile.name, "reapply_command_ids": command_ids},
     )
     db.commit()
     return {"id": str(profile.id), "name": profile.name, "policy": profile.policy}
@@ -516,6 +594,25 @@ def delete_profile(
 ) -> dict[str, str]:
     get_user_device_or_404(db, user, device_id)
     profile = get_profile(db, device_id, profile_id)
+    command_ids: list[str] = []
+    for iface in assigned_wifi_interfaces(db, device_id, profile.id):
+        normalized = validate_command_request(
+            command_type="wifi.set_access_profile",
+            payload=wifi_access_profile_payload(iface, None),
+            confirmed=True,
+            device_supports=lambda capability: device_supports(
+                db, device_id, capability
+            ),
+        )
+        command = create_device_command(
+            db,
+            device_id=device_id,
+            command_type="wifi.set_access_profile",
+            payload=normalized,
+            created_by=user.id,
+            source="api",
+        )
+        command_ids.append(str(command.id))
     db.delete(profile)
     audit(
         db,
@@ -523,7 +620,7 @@ def delete_profile(
         "client_profile.delete",
         "client_profile",
         str(profile.id),
-        {"name": profile.name},
+        {"name": profile.name, "clear_command_ids": command_ids},
     )
     db.commit()
     return {"status": "deleted"}

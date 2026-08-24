@@ -83,6 +83,7 @@ daemon() {
     agent_enabled || exit 0
     transaction_recover_pending
     restore_client_policy_runtime || log_notice "client traffic limits could not be restored"
+    apply_wifi_access_profiles || log_notice "Wi-Fi access profiles could not be restored"
     next_update_check=0
     next_telemetry_at=0
     TELEMETRY_REFRESH_REQUESTED=0
@@ -98,6 +99,7 @@ daemon() {
         fi
         if [ "$now" -ge "$next_telemetry_at" ]; then
             apply_wifi_schedules || log_notice "wifi schedule check failed"
+            apply_wifi_access_profiles || log_notice "Wi-Fi access profile check failed"
             telemetry || log_notice "telemetry failed"
             now="$(date +%s 2>/dev/null || echo 0)"
             next_telemetry_at=$((now + $(telemetry_interval_seconds)))

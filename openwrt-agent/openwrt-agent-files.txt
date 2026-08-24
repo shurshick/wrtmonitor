@@ -24,6 +24,7 @@ lib/telemetry_topology.sh
 lib/telemetry_dns.sh
 lib/telemetry_network.sh
 lib/wifi_schedule.sh
+lib/wifi_access_profile.sh
 lib/telemetry_wifi.sh
 lib/telemetry.sh
 lib/capabilities.sh
@@ -42,6 +43,7 @@ lib/verification.sh
 lib/command_result.sh
 lib/command_dns_runtime.sh
 lib/command_wifi_runtime.sh
+lib/command_wifi_access_profile.sh
 lib/command_runtime.sh
 lib/command_wifi.sh
 lib/command_network_core.sh

@@ -223,15 +223,82 @@ class WrtMonitorApi(private val serverUrl: String, private val accessToken: Stri
         }
     }.fold({ ApiResult.Success(it) }, ::toApiError)
 
-    fun createClientProfile(deviceId: String, name: String, blocked: Boolean): ApiResult<Unit> = runCatching {
-        val policy = JSONObject()
-            .put("blocked", blocked)
-            .put("schedule", JSONObject().put("enabled", false).put("weekdays", JSONArray()).put("start", "").put("stop", ""))
-            .put("qos", JSONObject().put("priority", "normal").put("download_kbps", 0).put("upload_kbps", 0))
+    fun createClientProfile(
+        deviceId: String,
+        name: String,
+        blocked: Boolean,
+        downloadKbps: Int = 0,
+        uploadKbps: Int = 0,
+        scheduleEnabled: Boolean = false,
+        scheduleDays: Set<String> = emptySet(),
+        scheduleStart: String = "",
+        scheduleStop: String = "",
+    ): ApiResult<Unit> = runCatching {
         val (status, _) = request(
             "/api/v1/devices/$deviceId/client-profiles",
             "POST",
-            JSONObject().put("name", name).put("policy", policy),
+            clientProfileBody(name, blocked, downloadKbps, uploadKbps, scheduleEnabled, scheduleDays, scheduleStart, scheduleStop),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    fun updateClientProfile(
+        deviceId: String,
+        profileId: String,
+        name: String,
+        blocked: Boolean,
+        downloadKbps: Int = 0,
+        uploadKbps: Int = 0,
+        scheduleEnabled: Boolean = false,
+        scheduleDays: Set<String> = emptySet(),
+        scheduleStart: String = "",
+        scheduleStop: String = "",
+    ): ApiResult<Unit> = runCatching {
+        val (status, _) = request(
+            "/api/v1/devices/$deviceId/client-profiles/$profileId",
+            "PUT",
+            clientProfileBody(name, blocked, downloadKbps, uploadKbps, scheduleEnabled, scheduleDays, scheduleStart, scheduleStop),
+        )
+        if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
+    }.fold({ ApiResult.Success(Unit) }, ::toApiError)
+
+    private fun clientProfileBody(
+        name: String,
+        blocked: Boolean,
+        downloadKbps: Int,
+        uploadKbps: Int,
+        scheduleEnabled: Boolean,
+        scheduleDays: Set<String>,
+        scheduleStart: String,
+        scheduleStop: String,
+    ): JSONObject = JSONObject()
+        .put("name", name)
+        .put(
+            "policy",
+            JSONObject()
+                .put("blocked", blocked)
+                .put(
+                    "schedule",
+                    JSONObject()
+                        .put("enabled", scheduleEnabled)
+                        .put("weekdays", JSONArray(scheduleDays.sorted()))
+                        .put("start", scheduleStart)
+                        .put("stop", scheduleStop),
+                )
+                .put(
+                    "qos",
+                    JSONObject()
+                        .put("priority", "normal")
+                        .put("download_kbps", downloadKbps)
+                        .put("upload_kbps", uploadKbps),
+                ),
+        )
+
+    fun setWifiAccessProfile(deviceId: String, iface: String, profileId: String?): ApiResult<Unit> = runCatching {
+        val (status, _) = request(
+            "/api/v1/devices/$deviceId/wifi-access-profile",
+            "PUT",
+            JSONObject().put("iface", iface).put("profile_id", profileId ?: JSONObject.NULL),
         )
         if (status !in 200..299) throw ApiHttpException(status, "HTTP $status")
     }.fold({ ApiResult.Success(Unit) }, ::toApiError)

@@ -752,4 +752,8 @@
     <string name="client_ready_mode">Готовый режим</string>
     <string name="client_mode_custom">Свои настройки</string>
     <string name="client_current_speed">Текущая скорость</string>
+    <string name="wifi_access_profile">Профиль доступа</string>
+    <string name="wifi_access_profile_hint">Расписание действует на эту сеть, лимит скорости делится между всеми её клиентами.</string>
+    <string name="wifi_access_profile_confirm">Применить профиль к выбранной Wi-Fi-сети?</string>
+    <string name="wifi_access_profile_queued">Профиль Wi-Fi отправлен на роутер</string>
 </resources>
