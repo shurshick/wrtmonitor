@@ -73,6 +73,25 @@
     renderRadio();
   }
 
+  const bindSecurityForm = (securityForm) => {
+    const security = securityForm.querySelector('[data-wifi-security]');
+    const key = securityForm.querySelector('[data-wifi-key]');
+    const keyField = securityForm.querySelector('[data-wifi-key-field]');
+    if (!security || !key || !keyField) return;
+    const renderSecurity = () => {
+      const open = security.value === 'none';
+      const current = securityForm.dataset.currentEncryption || '';
+      const newNetwork = securityForm.dataset.newNetwork === 'true';
+      key.disabled = open;
+      key.required = !open && (newNetwork || current === 'none');
+      keyField.hidden = open;
+      if (open) key.value = '';
+    };
+    security.addEventListener('change', renderSecurity);
+    renderSecurity();
+  };
+  document.querySelectorAll('[data-wifi-security-form]').forEach(bindSecurityForm);
+
   const scheduleForm = document.querySelector('[data-wifi-schedule-form]');
   const scheduleRadio = scheduleForm?.querySelector('[data-wifi-schedule-radio]');
   if (scheduleForm && scheduleRadio) {
@@ -112,10 +131,12 @@
       assign('ssid', network?.ssid || '');
       assign('mesh_id', network?.mesh_id || '');
       assign('network', network?.network || 'lan');
-      assign('encryption', network?.encryption || 'sae');
+      assign('encryption', network?.encryption || (kind === 'guest' ? 'psk2' : 'sae'));
       if (kind === 'guest') {
+        networkForm.dataset.currentEncryption = network?.encryption || 'none';
         const ssid = networkForm.querySelector('[data-wifi-guest-field="ssid"]');
         if (ssid) ssid.required = networkForm.querySelector('[data-wifi-guest-field="enabled"]')?.value === 'true';
+        networkForm.querySelector('[data-wifi-security]')?.dispatchEvent(new Event('change'));
       }
     };
     radioSelect.addEventListener('change', render);

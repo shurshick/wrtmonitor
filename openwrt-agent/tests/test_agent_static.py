@@ -1672,6 +1672,18 @@ def test_disabling_absent_wifi_mesh_is_idempotent():
     assert "transaction_noop=1" in source
 
 
+def test_wifi_security_changes_validate_keys_and_runtime_state():
+    command = read_text(ROOT / "lib" / "command_wifi.sh")
+    runtime = read_text(ROOT / "lib" / "command_wifi_runtime.sh")
+    assert "wifi_security_key_valid" in command
+    assert "wifi_iface_runtime_active" in command
+    assert "Wi-Fi network did not start" in command
+    assert "guest_encryption" in command
+    assert "wireless.wrtmonitor_guest.encryption=psk2" not in command
+    assert "wifi_security_key_valid()" in runtime
+    assert "wifi_iface_runtime_active()" in runtime
+
+
 def test_network_topology_telemetry_reads_live_uci_sections():
     shell = shell_path()
     if not shell:

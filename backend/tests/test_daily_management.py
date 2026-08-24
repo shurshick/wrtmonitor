@@ -15,6 +15,25 @@ def test_existing_guest_network_can_be_toggled_without_resending_secret():
     }
 
 
+def test_open_guest_network_does_not_require_or_retain_a_password():
+    assert validate_command_payload(
+        "wifi.set_guest",
+        {
+            "enabled": True,
+            "radio": "radio0",
+            "ssid": "Guest",
+            "encryption": "none",
+            "key": "",
+        },
+    ) == {
+        "enabled": True,
+        "radio": "radio0",
+        "ssid": "Guest",
+        "encryption": "none",
+        "key": "",
+    }
+
+
 def test_technical_event_title_is_presented_in_plain_language():
     now = datetime.now(UTC)
     event = EventRecord(

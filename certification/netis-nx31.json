@@ -1,10 +1,18 @@
 {
-  "generated_at": "2026-08-24T13:07:25.218807+00:00",
+  "generated_at": "2026-08-24T18:24:37.378316+00:00",
   "release_version": "0.49.0",
-  "runtime_fingerprint": "6b48a3a562689a1a1cbd2c848bc584ef5fc89e714ec8cbbd7bd47a3757ad57b9",
+  "runtime_fingerprint": "f625f1d35b587d7103fbf0f3a7cb676fa55ad55350ae5cc1111228557c1969c8",
   "router": "netis-nx31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
   "target": "netis-nx31",
   "contract_version": 1,
+  "runtime_delta_evidence": {
+    "base_certification": "0.49.0",
+    "change": "Wi-Fi security validation and observed SSID startup verification",
+    "command_id": "14d28710-bb01-4a2a-92a9-1af5e8f99f14",
+    "modes": ["none", "psk2", "sae", "sae-mixed"],
+    "status": "pass",
+    "configuration_restored": true
+  },
   "commands": {
     "agent.bash_script": {
       "status": "pass",

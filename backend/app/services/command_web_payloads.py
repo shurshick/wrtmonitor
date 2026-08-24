@@ -450,9 +450,12 @@ def build_command_payload_from_web_form(
         payload = {
             "enabled": enabled.lower() == "true",
             "ssid": ssid,
-            "password": wifi_password,
             "radio": radio,
         }
+        if encryption:
+            payload["encryption"] = encryption
+        if wifi_password or encryption == "none":
+            payload["key"] = wifi_password
     elif command_type == "system.set_timezone":
         payload = {"zonename": zonename, "timezone": timezone}
     elif command_type == "system.set_ntp":

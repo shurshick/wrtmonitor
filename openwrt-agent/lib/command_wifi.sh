@@ -63,19 +63,24 @@ handle_wifi_command() {
         wifi.add_ssid)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
             radio="$(json_get_string "$payload_file" '@.radio')"; ssid="$(json_get_string "$payload_file" '@.ssid')"; network="$(json_get_string "$payload_file" '@.network')"; encryption="$(json_get_string "$payload_file" '@.encryption')"; wifi_key="$(json_get_string "$payload_file" '@.key')"; hidden="$(json_get_bool "$payload_file" '@.hidden')"; isolate="$(json_get_bool "$payload_file" '@.isolate')"; rm -f "$payload_file"
-            resolved_radio="$(resolve_wifi_radio "$radio" || true)"; new_iface="$(uci add wireless wifi-iface 2>/dev/null || true)"
-            if [ -z "$resolved_radio" ] || [ -z "$new_iface" ]; then status="failed"; result="$(command_failed_result "wifi radio is unavailable")"
-            elif uci set "wireless.$new_iface.device=$resolved_radio" && uci set "wireless.$new_iface.mode=ap" && uci set "wireless.$new_iface.network=$network" && uci set "wireless.$new_iface.ssid=$ssid" && uci set "wireless.$new_iface.encryption=$encryption" && uci set "wireless.$new_iface.hidden=$( [ "$hidden" = true ] && printf 1 || printf 0 )" && uci set "wireless.$new_iface.isolate=$( [ "$isolate" = true ] && printf 1 || printf 0 )" && { [ "$encryption" = none ] || uci set "wireless.$new_iface.key=$wifi_key"; } && uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi network added" "\"iface\":\"$(json_escape "$new_iface")\"")"; else status="failed"; result="$(command_failed_result "failed to add Wi-Fi network")"; fi
+            resolved_radio="$(resolve_wifi_radio "$radio" || true)"; new_iface=""
+            if [ -z "$resolved_radio" ]; then status="failed"; result="$(command_failed_result "wifi radio is unavailable")"
+            elif [ "$encryption" != none ] && { [ "${#wifi_key}" -lt 8 ] || [ "${#wifi_key}" -gt 63 ]; }; then status="failed"; result="$(command_failed_result "a password containing 8..63 characters is required for a secured Wi-Fi network")"
+            else
+                new_iface="$(uci add wireless wifi-iface 2>/dev/null || true)"
+                if [ -n "$new_iface" ] && uci set "wireless.$new_iface.device=$resolved_radio" && uci set "wireless.$new_iface.mode=ap" && uci set "wireless.$new_iface.network=$network" && uci set "wireless.$new_iface.ssid=$ssid" && uci set "wireless.$new_iface.encryption=$encryption" && uci set "wireless.$new_iface.hidden=$( [ "$hidden" = true ] && printf 1 || printf 0 )" && uci set "wireless.$new_iface.isolate=$( [ "$isolate" = true ] && printf 1 || printf 0 )" && { if [ "$encryption" = none ]; then uci -q delete "wireless.$new_iface.key" || true; else uci set "wireless.$new_iface.key=$wifi_key"; fi; } && uci commit wireless && wifi reload >/dev/null 2>&1 && wifi_iface_runtime_active "$new_iface"; then result="$(command_success_result "Wi-Fi network added" "\"iface\":\"$(json_escape "$new_iface")\"")"; else status="failed"; result="$(command_failed_result "Wi-Fi network did not start; the previous configuration was restored")"; fi
+            fi
             ;;
         wifi.update_ssid)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"
             iface="$(json_get_string "$payload_file" '@.iface')"; ssid="$(json_get_string "$payload_file" '@.ssid')"; network="$(json_get_string "$payload_file" '@.network')"; encryption="$(json_get_string "$payload_file" '@.encryption')"; wifi_key="$(json_get_string "$payload_file" '@.key')"; enabled="$(json_get_bool "$payload_file" '@.enabled')"; hidden="$(json_get_bool "$payload_file" '@.hidden')"; isolate="$(json_get_bool "$payload_file" '@.isolate')"; ieee80211r="$(json_get_bool "$payload_file" '@.ieee80211r')"; ieee80211k="$(json_get_bool "$payload_file" '@.ieee80211k')"; bss_transition="$(json_get_bool "$payload_file" '@.bss_transition')"; mobility_domain="$(json_get_string "$payload_file" '@.mobility_domain')"; rm -f "$payload_file"
             resolved_iface="$(resolve_wifi_iface "$iface" "" || true)"
             if [ -z "$resolved_iface" ]; then status="failed"; result="$(command_failed_result "wifi interface not found")"
+            elif ! wifi_security_key_valid "$resolved_iface" "$encryption" "$wifi_key"; then status="failed"; result="$(command_failed_result "set a password containing 8..63 characters when enabling Wi-Fi protection")"
             elif uci set "wireless.$resolved_iface.ssid=$ssid" && uci set "wireless.$resolved_iface.network=$network" && uci set "wireless.$resolved_iface.encryption=$encryption" && uci set "wireless.$resolved_iface.disabled=$( [ "$enabled" = true ] && printf 0 || printf 1 )" && uci set "wireless.$resolved_iface.hidden=$( [ "$hidden" = true ] && printf 1 || printf 0 )" && uci set "wireless.$resolved_iface.isolate=$( [ "$isolate" = true ] && printf 1 || printf 0 )" && uci set "wireless.$resolved_iface.ieee80211r=$( [ "$ieee80211r" = true ] && printf 1 || printf 0 )" && uci set "wireless.$resolved_iface.ieee80211k=$( [ "$ieee80211k" = true ] && printf 1 || printf 0 )" && uci set "wireless.$resolved_iface.bss_transition=$( [ "$bss_transition" = true ] && printf 1 || printf 0 )"; then
                 if [ "$encryption" = none ]; then uci -q delete "wireless.$resolved_iface.key" || true; elif [ -n "$wifi_key" ]; then uci set "wireless.$resolved_iface.key=$wifi_key"; fi
                 if [ "$ieee80211r" = true ]; then uci set "wireless.$resolved_iface.mobility_domain=$mobility_domain"; else uci -q delete "wireless.$resolved_iface.mobility_domain" || true; fi
-                if uci commit wireless && wifi reload >/dev/null 2>&1; then result="$(command_success_result "Wi-Fi network updated" "\"iface\":\"$(json_escape "$resolved_iface")\"")"; else status="failed"; result="$(command_failed_result "failed to reload Wi-Fi")"; fi
+                if uci commit wireless && wifi reload >/dev/null 2>&1 && { [ "$enabled" != true ] || wifi_iface_runtime_active "$resolved_iface"; }; then result="$(command_success_result "Wi-Fi network updated" "\"iface\":\"$(json_escape "$resolved_iface")\"")"; else status="failed"; result="$(command_failed_result "Wi-Fi network did not start with the selected protection; the previous configuration was restored")"; fi
             else status="failed"; result="$(command_failed_result "failed to update Wi-Fi network")"; fi
             ;;
         wifi.delete_ssid)
@@ -247,9 +252,11 @@ handle_wifi_command() {
             handle_wifi_access_profile_command
             ;;
         wifi.set_guest)
-            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
+            payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_encryption="$(json_get_string "$payload_file" '@.encryption')"; guest_password="$(json_get_string "$payload_file" '@.key')"; [ -n "$guest_password" ] || guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
             [ -n "$guest_radio" ] || guest_radio="$(resolve_wifi_radio "" || true)"; [ -n "$guest_radio" ] || guest_radio="radio0"
             [ -n "$guest_ssid" ] || guest_ssid="$(uci -q get wireless.wrtmonitor_guest.ssid 2>/dev/null || true)"
+            [ -n "$guest_encryption" ] || guest_encryption="$(uci -q get wireless.wrtmonitor_guest.encryption 2>/dev/null || true)"
+            [ -n "$guest_encryption" ] || guest_encryption=psk2
             [ -n "$guest_password" ] || guest_password="$(uci -q get wireless.wrtmonitor_guest.key 2>/dev/null || true)"
             guest_ip="$(uci -q get network.wrtmonitor_guest.ipaddr 2>/dev/null || true)"
             if [ -z "$guest_ip" ]; then
@@ -265,17 +272,21 @@ handle_wifi_command() {
                 done
             fi
             wireless_backup="$(backup_config wireless "$command_id" "$command_type" || true)"; network_backup="$(backup_config network "$command_id" "$command_type" || true)"; dhcp_backup="$(backup_config dhcp "$command_id" "$command_type" || true)"; firewall_backup="$(backup_config firewall "$command_id" "$command_type" || true)"
-            if [ "$guest_enabled" = "true" ] && { [ -z "$guest_ssid" ] || [ "${#guest_password}" -lt 8 ]; }; then status="failed"; result="$(command_failed_result "guest Wi-Fi must be configured before it can be enabled")"
+            if [ "$guest_enabled" = "true" ] && [ -z "$guest_ssid" ]; then status="failed"; result="$(command_failed_result "guest Wi-Fi name is required")"
+            elif [ "$guest_enabled" = "true" ] && [ "$guest_encryption" != none ] && { [ "${#guest_password}" -lt 8 ] || [ "${#guest_password}" -gt 63 ]; }; then status="failed"; result="$(command_failed_result "a password containing 8..63 characters is required for secured guest Wi-Fi")"
             elif [ -z "$guest_ip" ]; then status="failed"; result="$(command_failed_result "no unused guest subnet is available")"
             elif [ -z "$wireless_backup" ] || [ -z "$network_backup" ] || [ -z "$dhcp_backup" ] || [ -z "$firewall_backup" ]; then status="failed"; result="$(command_failed_result "failed to create guest network backups")"
             else
                 uci set network.wrtmonitor_guest=interface; uci set network.wrtmonitor_guest.proto=static; uci set "network.wrtmonitor_guest.ipaddr=$guest_ip"; uci set network.wrtmonitor_guest.netmask=255.255.255.0
                 uci set dhcp.wrtmonitor_guest=dhcp; uci set dhcp.wrtmonitor_guest.interface=wrtmonitor_guest; uci set dhcp.wrtmonitor_guest.start=100; uci set dhcp.wrtmonitor_guest.limit=150; uci set dhcp.wrtmonitor_guest.leasetime=12h
-                uci set firewall.wrtmonitor_guest=zone; uci set firewall.wrtmonitor_guest.name=wrtmonitor_guest; uci add_list firewall.wrtmonitor_guest.network=wrtmonitor_guest; uci set firewall.wrtmonitor_guest.input=REJECT; uci set firewall.wrtmonitor_guest.output=ACCEPT; uci set firewall.wrtmonitor_guest.forward=REJECT
+                uci set firewall.wrtmonitor_guest=zone; uci set firewall.wrtmonitor_guest.name=wrtmonitor_guest; uci -q delete firewall.wrtmonitor_guest.network || true; uci add_list firewall.wrtmonitor_guest.network=wrtmonitor_guest; uci set firewall.wrtmonitor_guest.input=REJECT; uci set firewall.wrtmonitor_guest.output=ACCEPT; uci set firewall.wrtmonitor_guest.forward=REJECT
                 uci set firewall.wrtmonitor_guest_forward=forwarding; uci set firewall.wrtmonitor_guest_forward.src=wrtmonitor_guest; uci set firewall.wrtmonitor_guest_forward.dest=wan
                 uci set wireless.wrtmonitor_guest=wifi-iface; uci set wireless.wrtmonitor_guest.device="$guest_radio"; uci set wireless.wrtmonitor_guest.network=wrtmonitor_guest; uci set wireless.wrtmonitor_guest.mode=ap; uci set wireless.wrtmonitor_guest.isolate=1
-                if [ "$guest_enabled" = "true" ]; then uci set wireless.wrtmonitor_guest.disabled=0; uci set wireless.wrtmonitor_guest.ssid="$guest_ssid"; uci set wireless.wrtmonitor_guest.encryption=psk2; uci set wireless.wrtmonitor_guest.key="$guest_password"; else uci set wireless.wrtmonitor_guest.disabled=1; fi
-                if uci commit network && uci commit dhcp && uci commit firewall && uci commit wireless; then result="$(command_success_result "guest Wi-Fi configuration saved" "\"gateway\":\"$(json_escape "$guest_ip")\"")"; (sleep 2; /etc/init.d/network restart; /etc/init.d/dnsmasq restart; /etc/init.d/firewall reload; wifi reload) >/dev/null 2>&1 & else status="failed"; result="$(command_failed_result "failed to configure guest Wi-Fi")"; fi
+                if [ "$guest_enabled" = "true" ]; then
+                    uci set wireless.wrtmonitor_guest.disabled=0; uci set wireless.wrtmonitor_guest.ssid="$guest_ssid"; uci set wireless.wrtmonitor_guest.encryption="$guest_encryption"
+                    if [ "$guest_encryption" = none ]; then uci -q delete wireless.wrtmonitor_guest.key || true; else uci set wireless.wrtmonitor_guest.key="$guest_password"; fi
+                else uci set wireless.wrtmonitor_guest.disabled=1; fi
+                if uci commit network && uci commit dhcp && uci commit firewall && uci commit wireless && /etc/init.d/network reload >/dev/null 2>&1 && /etc/init.d/dnsmasq restart >/dev/null 2>&1 && /etc/init.d/firewall reload >/dev/null 2>&1 && wifi reload >/dev/null 2>&1 && { [ "$guest_enabled" != true ] || wifi_iface_runtime_active wrtmonitor_guest; }; then result="$(command_success_result "guest Wi-Fi configuration saved" "\"gateway\":\"$(json_escape "$guest_ip")\",\"encryption\":\"$(json_escape "$guest_encryption")\"")"; else status="failed"; result="$(command_failed_result "guest Wi-Fi did not start; the previous configuration was restored")"; fi
             fi
             ;;
         *) return 1 ;;
