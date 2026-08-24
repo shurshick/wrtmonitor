@@ -243,6 +243,9 @@ handle_wifi_command() {
                 result="$(command_failed_result "failed to update Wi-Fi country")"
             fi
             ;;
+        wifi.set_access_profile)
+            handle_wifi_access_profile_command
+            ;;
         wifi.set_guest)
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
             [ -n "$guest_radio" ] || guest_radio="$(resolve_wifi_radio "" || true)"; [ -n "$guest_radio" ] || guest_radio="radio0"

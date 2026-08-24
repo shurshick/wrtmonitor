@@ -1,0 +1,6 @@
+{
+  "tested_at": "2026-08-24T13:14:07.565153+00:00",
+  "command": "wifi.set_access_profile",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.access_profile=false"
+}

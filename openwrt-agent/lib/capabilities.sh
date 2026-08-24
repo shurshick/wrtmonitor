@@ -1,4 +1,4 @@
-CAPABILITIES_VERSION="19"
+CAPABILITIES_VERSION="20"
 
 capability_path() {
     printf '%s%s' "${WRTMONITOR_SYSTEM_ROOT:-}" "$1"
@@ -9,7 +9,7 @@ capability_keys() {
         agent.status agent.update agent.set_interval agent.rotate_token agent.rollback agent.disable agent.dependencies agent.long_poll agent.ssh_session agent.bash_script config.transaction \
         telemetry.system telemetry.hardware telemetry.network telemetry.wifi telemetry.wifi.stations telemetry.clients telemetry.clients.traffic telemetry.services \
         wifi.read wifi.qr wifi.enable wifi.disable wifi.set_ssid wifi.set_password wifi.set_channel wifi.set_country wifi.guest \
-        wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.roaming wifi.mesh \
+        wifi.radio.configure wifi.manage_ssid wifi.schedule wifi.access_profile wifi.roaming wifi.mesh \
         network.read network.interface_restart network.restart network.write network.wan.configure network.lan.configure \
         network.ipv6.configure network.segments.configure network.vlan.configure network.multiwan.configure network.routes.configure network.ddns.configure \
         firewall.zones.configure firewall.rules.configure firewall.upnp.configure telemetry.perimeter \
@@ -120,6 +120,7 @@ capability_supported() {
         wifi.set_ssid|wifi.set_password) has_wifi_iface && has_commands wifi ;;
         wifi.guest) has_wifi_iface && has_network_write && has_dhcp_write && has_firewall_write && has_commands wifi ;;
         wifi.radio.configure|wifi.manage_ssid|wifi.schedule) has_wifi_radio && has_commands wifi uci ;;
+        wifi.access_profile) has_wifi_iface && has_commands wifi uci tc ip && traffic_control_healthy ;;
         wifi.roaming) has_wifi_roaming && has_commands wifi ;;
         wifi.mesh) has_wifi_mesh && has_commands wifi ;;
         network.interface_restart) has_network_runtime && has_commands ifup ifdown ;;

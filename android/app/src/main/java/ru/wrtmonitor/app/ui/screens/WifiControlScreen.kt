@@ -9,12 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,7 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -83,6 +79,8 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     val repository = remember(serverUrl, accessToken) { RouterRepository(serverUrl, accessToken) }
     var telemetry by remember { mutableStateOf<TelemetryDto?>(null) }
     var wifiExperience by remember { mutableStateOf<WifiExperienceDto?>(null) }
+    var accessProfiles by remember { mutableStateOf<List<ClientProfileDto>>(emptyList()) }
+    var accessProfileSelections by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var managementOptions by remember { mutableStateOf<ManagementOptionsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var ssid by remember { mutableStateOf("") }
@@ -110,6 +108,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     var message by remember { mutableStateOf("") }
     var messageIsError by remember { mutableStateOf(false) }
     var pendingCommand by remember { mutableStateOf<PendingSafeCommand?>(null) }
+    var pendingAccessProfile by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var selectedRadioId by rememberSaveable(device.id) { mutableStateOf("") }
     var selectedInterfaceId by rememberSaveable(device.id) { mutableStateOf("") }
     var interfaceEnabled by remember { mutableStateOf(true) }
@@ -149,6 +148,13 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                     messageIsError = true
                 }
             }
+            when (val result = repository.clientProfiles(device.id)) {
+                is ApiResult.Success -> accessProfiles = result.data
+                is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                    message = result.message
+                    messageIsError = true
+                }
+            }
             loading = false
         }
         Unit
@@ -179,6 +185,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
     val wifiToggleQueued = stringResource(R.string.wifi_toggle_queued)
     val wifiChannelQueued = stringResource(R.string.wifi_channel_queued)
     val wifiCountryQueued = stringResource(R.string.wifi_country_queued)
+    val wifiAccessProfileQueued = stringResource(R.string.wifi_access_profile_queued)
 
     val radios = wifi?.optJsonArray("radios") ?: JsonArray()
     val radio = findRadio(radios, selectedRadioId) ?: radios.optJsonObject(0)
@@ -194,6 +201,8 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         val id = item.optString("id")
         SelectOption(id, item.optString("ssid").ifBlank { id })
     }
+    val accessProfileOptions = listOf(SelectOption("", stringResource(R.string.no_profile))) +
+        accessProfiles.map { SelectOption(it.id, it.name) }
     val networkOptions = telemetry?.network?.optJsonArray("interfaces")?.let { array ->
         (0 until array.length()).mapNotNull(array::optJsonObject)
             .map { it.optString("interface") }.filter(String::isNotBlank).distinct()
@@ -256,6 +265,11 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         roamingK = selected.optBoolean("ieee80211k", false)
         roamingV = selected.optBoolean("bss_transition", false)
         mobilityDomain = selected.optString("mobility_domain")
+    }
+    LaunchedEffect(wifiExperience) {
+        accessProfileSelections = wifiExperience?.networks.orEmpty().associate { network ->
+            network.id to network.accessProfile.profileId
+        }
     }
     RouterPageHeader(
         title = stringResource(R.string.wifi),
@@ -361,22 +375,14 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         SectionCard(title = stringResource(R.string.wifi_networks), subtitle = stringResource(R.string.radio_count_value, interfaces.length())) {
             wifiExperience?.networks?.filter { it.radioId == radioId }?.forEachIndexed { index, networkItem ->
                 val networkId = networkItem.id
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(networkItem.ssid.ifBlank { networkId }, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            listOf(
-                                networkItem.band,
-                                networkItem.network,
-                                networkItem.encryption,
-                                stringResource(R.string.wifi_clients_count, networkItem.stationCount),
-                            ).filter(String::isNotBlank).joinToString(" · "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (capabilities["wifi.qr"] == true && networkItem.enabled) {
-                        TonalActionButton(stringResource(R.string.wifi_show_qr), {
+                val selectedProfile = accessProfileSelections[networkId].orEmpty()
+                WifiNetworkManagementRow(
+                    network = networkItem,
+                    canShowQr = capabilities["wifi.qr"] == true,
+                    canAssignProfile = capabilities["wifi.access_profile"] == true,
+                    selectedProfile = selectedProfile,
+                    profileOptions = accessProfileOptions,
+                    onShowQr = {
                             scope.launch {
                                 when (val result = repository.wifiQr(device.id, networkId)) {
                                     is ApiResult.Success -> wifiQr = result.data.ssid to createWifiQrBitmap(result.data.wifiUri)
@@ -385,13 +391,11 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
                                     }
                                 }
                             }
-                        })
-                    }
-                    SecondaryActionButton(
-                        label = stringResource(R.string.wifi_delete_network),
-                        onClick = { pendingCommand = PendingSafeCommand("wifi.delete_ssid", JsonObject().put("iface", networkId), wifiToggleQueued) },
-                    )
-                }
+                    },
+                    onDelete = { pendingCommand = PendingSafeCommand("wifi.delete_ssid", JsonObject().put("iface", networkId), wifiToggleQueued) },
+                    onProfileSelected = { value -> accessProfileSelections = accessProfileSelections + (networkId to value) },
+                    onApplyProfile = { pendingAccessProfile = networkId to selectedProfile.ifBlank { null } },
+                )
                 if (index < (wifiExperience?.networks?.count { it.radioId == radioId } ?: 0) - 1) HorizontalDivider()
             }
         }
@@ -612,17 +616,28 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         },
         onSessionExpired = onSessionExpired,
     ) }
-    wifiQr?.let { (networkName, bitmap) ->
-        AlertDialog(
-            onDismissRequest = { wifiQr = null },
-            title = { Text(networkName) },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(bitmap.asImageBitmap(), contentDescription = stringResource(R.string.wifi_show_qr), modifier = Modifier.fillMaxWidth())
-                    Text(stringResource(R.string.wifi_qr_private_hint), style = MaterialTheme.typography.bodySmall)
+    pendingAccessProfile?.let { (networkId, profileId) ->
+        WifiAccessProfileConfirmationDialog(
+            onDismiss = { pendingAccessProfile = null },
+            onConfirm = {
+                pendingAccessProfile = null
+                scope.launch {
+                    when (val result = repository.setWifiAccessProfile(device.id, networkId, profileId)) {
+                        is ApiResult.Success -> {
+                            message = wifiAccessProfileQueued
+                            messageIsError = false
+                            refresh()
+                        }
+                        is ApiResult.Error -> if (result.isUnauthorized()) onSessionExpired() else {
+                            message = result.message
+                            messageIsError = true
+                        }
+                    }
                 }
             },
-            confirmButton = { TextButton(onClick = { wifiQr = null }) { Text(stringResource(R.string.close)) } },
         )
+    }
+    wifiQr?.let { (networkName, bitmap) ->
+        WifiQrDialog(networkName, bitmap, onDismiss = { wifiQr = null })
     }
 }

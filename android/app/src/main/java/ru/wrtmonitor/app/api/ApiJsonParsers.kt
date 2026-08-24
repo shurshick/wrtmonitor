@@ -303,11 +303,21 @@ internal fun parseWifiExperience(json: JSONObject): WifiExperienceDto {
         },
         networks = (0 until networks.length()).map { index ->
             val item = networks.getJSONObject(index)
+            val accessProfile = item.optJSONObject("access_profile") ?: JSONObject()
+            val accessQos = accessProfile.optJSONObject("qos") ?: JSONObject()
             WifiNetworkDto(
                 id = item.optString("id"), radioId = item.optString("radio_id"), band = item.optString("band"),
                 ssid = item.optString("ssid"), enabled = item.optBoolean("enabled"), encryption = item.optString("encryption"),
                 network = item.optString("network"), role = item.optString("role"), hidden = item.optBoolean("hidden"),
                 isolate = item.optBoolean("isolate"), stationCount = item.optInt("station_count"),
+                accessProfile = WifiAccessProfileDto(
+                    configured = accessProfile.optBoolean("configured"),
+                    profileId = accessProfile.optString("profile_id"),
+                    profileName = accessProfile.optString("profile_name"),
+                    effectiveEnabled = accessProfile.optBoolean("effective_enabled", true),
+                    downloadKbps = accessQos.optInt("download_kbps"),
+                    uploadKbps = accessQos.optInt("upload_kbps"),
+                ),
             )
         },
         stations = (0 until stations.length()).map { index ->

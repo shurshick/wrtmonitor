@@ -1585,6 +1585,25 @@ def test_client_policy_uses_real_traffic_control_and_exact_verification():
     assert "resolve_dhcp_host_by_mac" in verifier
 
 
+def test_wifi_access_profiles_use_real_traffic_control_and_exact_verification():
+    profile = read_text(ROOT / "lib" / "wifi_access_profile.sh")
+    verifier = library_sources("verification")
+    telemetry = read_text(ROOT / "lib" / "telemetry_wifi.sh")
+    capabilities = read_text(ROOT / "lib" / "capabilities.sh")
+    assert "action police rate" in profile
+    assert "sha256sum" in profile
+    assert "| cksum" not in profile
+    assert "wifi_access_profile_direction_pref" in profile
+    assert "tc filter add" in profile
+    assert "tc filter replace" not in profile
+    assert 'wifi_access_profile_delete_filter "$ifname" ingress "$upload_pref"' in profile
+    assert 'wifi_access_profile_delete_filter "$ifname" egress "$download_pref"' in profile
+    assert "wifi_access_profile_filter_matches" in profile
+    assert "verify_wifi_access_profile_postcondition" in verifier
+    assert "wifi_access_profile_json" in telemetry
+    assert "wifi.access_profile)" in capabilities
+
+
 def test_management_commands_have_openwrt_handlers():
     source = "\n".join(
         (
@@ -1612,6 +1631,7 @@ def test_management_commands_have_openwrt_handlers():
         "wifi.update_ssid",
         "wifi.delete_ssid",
         "wifi.set_schedule",
+        "wifi.set_access_profile",
         "wifi.set_mesh",
         "system.set_timezone",
         "system.set_ntp",

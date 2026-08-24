@@ -9,7 +9,7 @@ AGENT_SCRIPT="/usr/bin/wrtmonitor-agent"
 # shellcheck disable=SC2034
 AGENT_NAME="wrtmonitor-agent"
 # shellcheck disable=SC2034
-AGENT_VERSION="0.52.4"
+AGENT_VERSION="0.53.0"
 # shellcheck disable=SC2034
 CONFIG="wrtmonitor.main"
 
@@ -83,6 +83,7 @@ load_lib telemetry_topology.sh
 load_lib telemetry_dns.sh
 load_lib telemetry_network.sh
 load_lib wifi_schedule.sh
+load_lib wifi_access_profile.sh
 load_lib telemetry_wifi.sh
 load_lib telemetry.sh
 load_lib capabilities.sh
@@ -99,6 +100,7 @@ load_lib verification.sh
 load_lib command_result.sh
 load_lib command_dns_runtime.sh
 load_lib command_wifi_runtime.sh
+load_lib command_wifi_access_profile.sh
 load_lib command_runtime.sh
 load_lib client_policy.sh
 load_lib command_wifi.sh

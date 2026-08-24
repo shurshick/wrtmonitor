@@ -93,7 +93,10 @@ transaction_restore() {
     if printf '%s' "$configs" | grep -qw stubby; then service_action stubby restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw https-dns-proxy; then service_action https-dns-proxy restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw firewall; then service_action firewall restart 20 >/dev/null 2>&1 || restore_status=1; fi
-    if printf '%s' "$configs" | grep -qw wrtmonitor; then restore_client_policy_runtime || restore_status=1; fi
+    if printf '%s' "$configs" | grep -qw wrtmonitor; then
+        restore_client_policy_runtime || restore_status=1
+        apply_wifi_access_profiles || restore_status=1
+    fi
     if printf '%s' "$configs" | grep -qw sqm; then service_action sqm restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw mwan3; then service_action mwan3 restart 20 >/dev/null 2>&1 || restore_status=1; fi
     if printf '%s' "$configs" | grep -qw ddns; then service_action ddns restart 20 >/dev/null 2>&1 || restore_status=1; fi

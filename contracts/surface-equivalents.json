@@ -38,5 +38,9 @@
   "wifi.get_qr": {
     "android": "wifiQr(",
     "web": "wifi-qr.svg"
+  },
+  "wifi.set_access_profile": {
+    "android": "setWifiAccessProfile(",
+    "web": "wifi-access-profile"
   }
 }

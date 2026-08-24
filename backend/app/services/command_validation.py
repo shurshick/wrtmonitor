@@ -15,6 +15,7 @@ from .command_common import (
 from .command_wifi import (
     _normalize_guest_payload,
     _normalize_wifi_add_ssid_payload,
+    _normalize_wifi_access_profile_payload,
     _normalize_wifi_channel_payload,
     _normalize_wifi_country_payload,
     _normalize_wifi_enabled_payload,
@@ -97,6 +98,8 @@ def validate_command_payload(
         return {"iface": _wifi_selector(normalized_payload, "iface")}
     if command_type == "wifi.set_schedule":
         return _normalize_wifi_schedule_payload(normalized_payload)
+    if command_type == "wifi.set_access_profile":
+        return _normalize_wifi_access_profile_payload(normalized_payload)
     if command_type == "wifi.set_mesh":
         return _normalize_wifi_mesh_payload(normalized_payload)
     if command_type == "network.interface_restart":

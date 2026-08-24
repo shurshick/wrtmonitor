@@ -68,6 +68,43 @@ def test_wifi_schedule_rejects_invalid_window():
         )
 
 
+def test_wifi_access_profile_contract_normalizes_limits_and_schedule():
+    payload = validate_command_payload(
+        "wifi.set_access_profile",
+        {
+            "iface": "guest",
+            "enabled": True,
+            "profile_id": "f3dcf7c2-5641-4f62-82d1-8a5af2c9cdb2",
+            "profile_name": "Guests",
+            "blocked": False,
+            "schedule": {
+                "enabled": True,
+                "weekdays": ["sat", "sun"],
+                "start": "09:00",
+                "stop": "23:00",
+            },
+            "qos": {"download_kbps": 20000, "upload_kbps": 5000},
+        },
+    )
+    assert payload["iface"] == "guest"
+    assert payload["schedule"]["weekdays"] == ["sat", "sun"]
+    assert payload["qos"] == {"download_kbps": 20000, "upload_kbps": 5000}
+
+
+def test_wifi_access_profile_rejects_invalid_limit():
+    with pytest.raises(HTTPException):
+        validate_command_payload(
+            "wifi.set_access_profile",
+            {
+                "iface": "guest",
+                "enabled": True,
+                "profile_id": "f3dcf7c2-5641-4f62-82d1-8a5af2c9cdb2",
+                "profile_name": "Guests",
+                "qos": {"download_kbps": -1},
+            },
+        )
+
+
 def test_web_form_builds_wifi_schedule_array():
     payload = build_command_payload_from_web_form(
         "wifi.set_schedule",
@@ -114,6 +151,44 @@ def test_wifi_station_telemetry_is_flattened():
     assert summary["stations"][0]["signal"] == -48
     assert summary["stations"][0]["ssid"] == "HomeNET"
     assert summary["stations"][0]["band"] == "5g"
+
+
+def test_wifi_access_profile_observed_state_is_preserved():
+    summary = normalize_wifi_summary(
+        {
+            "wifi": {
+                "available": True,
+                "radios": [
+                    {
+                        "id": "radio0",
+                        "interfaces": [
+                            {
+                                "id": "guest",
+                                "mode": "ap",
+                                "network": "guest",
+                                "ssid": "Guests",
+                                "access_profile": {
+                                    "configured": True,
+                                    "profile_id": "profile-1",
+                                    "profile_name": "Guests",
+                                    "effective_enabled": True,
+                                    "qos": {
+                                        "download_kbps": 20000,
+                                        "upload_kbps": 5000,
+                                        "download_active": True,
+                                        "upload_active": True,
+                                    },
+                                },
+                            }
+                        ],
+                    }
+                ],
+            }
+        }
+    )
+    observed = summary["networks"][0]["access_profile"]
+    assert observed["profile_id"] == "profile-1"
+    assert observed["qos"]["download_active"] is True
 
 
 def test_wifi_station_airtime_is_split_and_raw_object_is_not_exposed():

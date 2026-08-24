@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-23T16:27:27.022809+00:00",
+  "generated_at": "2026-08-24T13:07:25.218807+00:00",
   "release_version": "0.49.0",
-  "runtime_fingerprint": "2cb0d39ddfc3ae902e3ee7655a6ed8c734cc012cffb29695db42527d4d9097ed",
+  "runtime_fingerprint": "6b48a3a562689a1a1cbd2c848bc584ef5fc89e714ec8cbbd7bd47a3757ad57b9",
   "router": "netis-nx31 / netis NX31 / OpenWrt 25.12.4 r32933-4ccb782af7",
   "target": "netis-nx31",
   "contract_version": 1,
@@ -851,15 +851,24 @@
       "post_condition": "pass",
       "rollback": "paired_command",
       "evidence": "certification/evidence/netis-nx31/wifi.update_ssid"
+    },
+    "wifi.set_access_profile": {
+      "status": "pass",
+      "idempotency": "pass",
+      "timeout": "pass",
+      "redelivery": "pass",
+      "post_condition": "pass",
+      "rollback": "configuration_backup",
+      "evidence": "certification/evidence/netis-nx31/wifi.set_access_profile"
     }
   },
   "agent_source": "worktree",
-  "agent_version": "0.52.3",
+  "agent_version": "0.53.0",
   "targeted_validation": {
-    "release_version": "0.52.3",
-    "tested_at": "2026-08-23T16:27:27.022809+00:00",
+    "release_version": "0.53.0",
+    "tested_at": "2026-08-24T13:13:37.199334+00:00",
     "commands": [
-      "maintenance.package.upgrade"
+      "wifi.set_access_profile"
     ]
   }
 }

@@ -31,6 +31,9 @@ verify_command_postcondition() {
     esac
     verified=0
     case "$command_type" in
+        wifi.set_access_profile)
+            verify_wifi_access_profile_postcondition "$payload_file" || verified=1
+            ;;
         client.set_policy)
             verify_client_policy_postcondition "$payload_file" || verified=1
             ;;
