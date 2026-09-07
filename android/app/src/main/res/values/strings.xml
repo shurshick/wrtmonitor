@@ -756,4 +756,16 @@
     <string name="wifi_access_profile_hint">The schedule applies to this network; its speed limit is shared by all connected clients.</string>
     <string name="wifi_access_profile_confirm">Apply this profile to the selected Wi-Fi network?</string>
     <string name="wifi_access_profile_queued">Wi-Fi access profile queued</string>
+    <string name="router_unavailable">Router unavailable</string>
+    <string name="change_router">Change router</string>
+    <string name="navigation">Navigation</string>
+    <string name="status_online">Online</string>
+    <string name="status_offline">Offline</string>
+    <string name="status_warning">Warning</string>
+    <string name="status_critical">Critical</string>
+    <string name="status_updating">Updating</string>
+    <string name="status_rebooting">Rebooting</string>
+    <string name="status_connecting">Connecting</string>
+    <string name="status_unknown">Unknown</string>
+    <string name="status_disabled">Disabled</string>
 </resources>

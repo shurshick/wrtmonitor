@@ -76,6 +76,7 @@ fun AppSettingsScreen(
     accessToken: String,
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
     onSave: (String) -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -160,11 +161,9 @@ fun AppSettingsScreen(
         )
         return
     }
+    BackHandler(onBack = onBack)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        RouterPageHeader(
-            title = stringResource(R.string.settings),
-            subtitle = stringResource(R.string.settings_summary),
-        )
+        SettingsPageHeader(stringResource(R.string.settings), stringResource(R.string.settings_summary), onBack)
         SectionCard(stringResource(R.string.appearance), subtitle = stringResource(R.string.appearance_summary)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -254,6 +253,19 @@ private fun formatSessionTimestamp(value: String): String? = runCatching {
     Instant.parse(value).atZone(ZoneId.systemDefault())
         .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
 }.getOrNull()
+
+@Composable
+private fun SettingsPageHeader(title: String, subtitle: String, onBack: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_back))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
 @Composable
 private fun AboutScreen(

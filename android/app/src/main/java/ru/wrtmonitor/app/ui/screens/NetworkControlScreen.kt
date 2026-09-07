@@ -66,6 +66,7 @@ import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.ui.components.TonalActionButton
+import ru.wrtmonitor.app.ui.components.WrtLoadingState
 import ru.wrtmonitor.app.ui.components.SelectOption
 import java.time.Instant
 import java.time.ZoneId
@@ -305,7 +306,7 @@ fun NetworkControlScreen(
         onRefresh = refresh,
     )
     if (loading && telemetry == null) {
-        SectionCard(stringResource(R.string.loading_data)) { CircularProgressIndicator(Modifier.size(24.dp)) }
+        WrtLoadingState()
     } else if (telemetry?.isStale == true || telemetry?.dataState?.kind in setOf("stale", "error", "unsupported")) {
         MessageBanner(
             when (telemetry?.dataState?.kind) {

@@ -68,6 +68,12 @@ import ru.wrtmonitor.app.ui.components.RouterPageHeader
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.StatusPill
+import ru.wrtmonitor.app.ui.components.WrtEmptyState
+import ru.wrtmonitor.app.ui.components.WrtErrorState
+import ru.wrtmonitor.app.ui.components.WrtLoadingState
+import ru.wrtmonitor.app.ui.components.WrtStatusBadge
+import ru.wrtmonitor.app.ui.components.WrtRouterStatusPanel
+import ru.wrtmonitor.app.ui.theme.WrtStatus
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.ui.components.TonalActionButton
 import ru.wrtmonitor.app.viewmodel.DeviceDetailViewModel
@@ -115,11 +121,9 @@ fun DeviceDetailScreen(
             onRefresh = viewModel::refresh,
         )
         when {
-            state.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-            state.error != null && state.telemetry == null -> Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
-            state.telemetry == null -> Text(stringResource(R.string.no_data))
+            state.loading -> WrtLoadingState()
+            state.error != null && state.telemetry == null -> WrtErrorState(state.error.orEmpty(), viewModel::refresh)
+            state.telemetry == null -> WrtEmptyState()
             else -> RouterOverview(
                 device,
                 state.telemetry,
@@ -221,15 +225,13 @@ private fun RouterOverview(
     } else stringResource(R.string.no_data)
 
     val healthy = device.status == "online" && !telemetry.isStale
-    SectionCard(
+    WrtRouterStatusPanel(
         title = if (healthy) stringResource(R.string.router_healthy) else stringResource(R.string.router_attention),
-        subtitle = stringResource(R.string.last_contact_value, formatTimestamp(telemetry.createdAt) ?: stringResource(R.string.no_data)),
-    ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(device.model, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            StatusPill(if (healthy) stringResource(R.string.online) else stringResource(R.string.offline), healthy)
-        }
-    }
+        subtitle = device.model,
+        detail = stringResource(R.string.last_contact_value, formatTimestamp(telemetry.createdAt) ?: stringResource(R.string.no_data)),
+        statusText = if (healthy) stringResource(R.string.online) else stringResource(R.string.offline),
+        status = if (healthy) WrtStatus.Online else WrtStatus.Offline,
+    )
     telemetry.health?.let { health ->
         val labels = listOf(
             "wan" to stringResource(R.string.health_internet),
@@ -252,7 +254,16 @@ private fun RouterOverview(
                             Text(title, style = MaterialTheme.typography.labelLarge)
                             Text(item.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        StatusPill(item.label, item.state == "ok")
+                        WrtStatusBadge(
+                            item.label,
+                            when (item.state.lowercase()) {
+                                "ok", "online", "active" -> WrtStatus.Online
+                                "warning", "degraded", "stale" -> WrtStatus.Warning
+                                "critical", "failed", "error", "offline" -> WrtStatus.Critical
+                                "disabled", "unsupported" -> WrtStatus.Disabled
+                                else -> WrtStatus.Unknown
+                            },
+                        )
                     }
                 }
             }
@@ -372,7 +383,14 @@ private fun RouterOverview(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                StatusPill(severityLabel, event.severity != "critical")
+                WrtStatusBadge(
+                    severityLabel,
+                    when (event.severity) {
+                        "critical" -> WrtStatus.Critical
+                        "warning" -> WrtStatus.Warning
+                        else -> WrtStatus.Unknown
+                    },
+                )
             }
         }
     }

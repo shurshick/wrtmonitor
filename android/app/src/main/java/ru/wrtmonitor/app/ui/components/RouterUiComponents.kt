@@ -12,16 +12,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Router
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
@@ -47,8 +53,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ru.wrtmonitor.app.ui.theme.WrtSizes
+import ru.wrtmonitor.app.ui.theme.WrtSpacing
+import ru.wrtmonitor.app.ui.theme.WrtStatus
 
-private val CompactActionPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp)
+private val CompactActionPadding = PaddingValues(horizontal = WrtSpacing.md, vertical = WrtSpacing.xs)
 
 @Composable
 fun PrimaryActionButton(
@@ -60,7 +69,7 @@ fun PrimaryActionButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(34.dp),
+        modifier = modifier.heightIn(min = WrtSizes.touchTarget),
         enabled = enabled && !loading,
         contentPadding = CompactActionPadding,
         shape = MaterialTheme.shapes.small,
@@ -78,7 +87,7 @@ fun SecondaryActionButton(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.height(34.dp),
+        modifier = modifier.heightIn(min = WrtSizes.touchTarget),
         enabled = enabled,
         contentPadding = CompactActionPadding,
         shape = MaterialTheme.shapes.small,
@@ -96,7 +105,7 @@ fun TonalActionButton(
 ) {
     FilledTonalButton(
         onClick = onClick,
-        modifier = modifier.height(34.dp),
+        modifier = modifier.heightIn(min = WrtSizes.touchTarget),
         enabled = enabled,
         contentPadding = CompactActionPadding,
         shape = MaterialTheme.shapes.small,
@@ -114,7 +123,7 @@ fun DangerActionButton(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.height(34.dp),
+        modifier = modifier.heightIn(min = WrtSizes.touchTarget),
         enabled = enabled,
         contentPadding = CompactActionPadding,
         shape = MaterialTheme.shapes.small,
@@ -178,7 +187,26 @@ fun RouterPageHeader(
 
 @Composable
 fun StatusPill(text: String, good: Boolean, modifier: Modifier = Modifier) {
-    val color = if (good) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
+    WrtStatusBadge(text, if (good) WrtStatus.Online else WrtStatus.Warning, modifier)
+}
+
+@Composable
+fun WrtStatusBadge(text: String, status: WrtStatus, modifier: Modifier = Modifier) {
+    val color = when (status) {
+        WrtStatus.Online -> MaterialTheme.colorScheme.secondary
+        WrtStatus.Offline, WrtStatus.Critical -> MaterialTheme.colorScheme.error
+        WrtStatus.Warning -> MaterialTheme.colorScheme.tertiary
+        WrtStatus.Updating, WrtStatus.Rebooting, WrtStatus.Connecting -> MaterialTheme.colorScheme.primary
+        WrtStatus.Unknown, WrtStatus.Disabled -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val icon = when (status) {
+        WrtStatus.Online -> Icons.Default.CheckCircle
+        WrtStatus.Offline, WrtStatus.Critical -> Icons.Default.ErrorOutline
+        WrtStatus.Warning -> Icons.Default.WarningAmber
+        WrtStatus.Updating, WrtStatus.Rebooting, WrtStatus.Connecting -> Icons.Default.Sync
+        WrtStatus.Unknown -> Icons.Default.Circle
+        WrtStatus.Disabled -> Icons.Default.PowerSettingsNew
+    }
     Surface(
         modifier = modifier,
         shape = CircleShape,
@@ -190,10 +218,44 @@ fun StatusPill(text: String, good: Boolean, modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(7.dp)) {
-                Surface(Modifier.size(7.dp), shape = CircleShape, color = color) {}
-            }
+            Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
             Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun WrtRouterStatusPanel(
+    title: String,
+    subtitle: String,
+    detail: String,
+    statusText: String,
+    status: WrtStatus,
+) {
+    val healthy = status == WrtStatus.Online
+    val container = if (healthy) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+    val content = if (healthy) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = container,
+        contentColor = content,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            Modifier.padding(WrtSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(WrtSpacing.sm),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(WrtSpacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = content.copy(alpha = 0.12f), contentColor = content) {
+                    Icon(Icons.Default.Router, contentDescription = null, modifier = Modifier.padding(WrtSpacing.sm).size(WrtSizes.iconLarge))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(WrtSpacing.xxs)) {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    Text(subtitle, style = MaterialTheme.typography.bodyMedium)
+                    Text(detail, style = MaterialTheme.typography.labelSmall, color = content.copy(alpha = 0.78f))
+                }
+            }
+            WrtStatusBadge(statusText, status, Modifier.align(Alignment.End))
         }
     }
 }
@@ -205,14 +267,15 @@ fun SectionCard(
     subtitle: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium,
+        tonalElevation = 1.dp,
     ) {
         Column(
-            Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            Modifier.padding(WrtSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(WrtSpacing.sm),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -233,12 +296,13 @@ fun ExpandableSettingsCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
-    Card(
+    Surface(
         Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium,
+        tonalElevation = 1.dp,
     ) {
         Column {
             Row(
@@ -327,7 +391,7 @@ fun MessageBanner(message: String, error: Boolean = false) {
 fun MetricTile(label: String, value: String, modifier: Modifier = Modifier, accent: Color = MaterialTheme.colorScheme.primary) {
     Surface(
         modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

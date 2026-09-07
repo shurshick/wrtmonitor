@@ -8,14 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +64,7 @@ import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.ui.components.TonalActionButton
+import ru.wrtmonitor.app.ui.components.WrtLoadingState
 import ru.wrtmonitor.app.ui.components.SelectOption
 import java.time.Instant
 import java.time.ZoneId
@@ -335,7 +334,7 @@ fun WifiControlScreen(serverUrl: String, accessToken: String, device: DeviceDto,
         subtitle = stringResource(R.string.radio_count_value, radios.length()),
     ) {
         when {
-            loading && telemetry == null -> CircularProgressIndicator(Modifier.size(24.dp))
+            loading && telemetry == null -> WrtLoadingState()
             telemetry?.dataState?.kind == "unsupported" -> Text(stringResource(R.string.unsupported_data), color = MaterialTheme.colorScheme.onSurfaceVariant)
             telemetry?.dataState?.kind == "error" -> Text(telemetry?.dataState?.reason ?: stringResource(R.string.data_error), color = MaterialTheme.colorScheme.error)
             telemetry?.isStale == true -> Text(stringResource(R.string.stale_telemetry), color = MaterialTheme.colorScheme.tertiary)

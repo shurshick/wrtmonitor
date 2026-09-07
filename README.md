@@ -4,14 +4,16 @@
 
 ## Текущая версия
 
-Текущая тестовая версия: `0.53.1 Release Candidate`. Публичного стабильного релиза пока нет; тестовые базы можно пересоздавать между несовместимыми версиями.
+Текущая тестовая версия: `0.54.0 Android Expressive Redesign`. Публичного стабильного релиза пока нет; тестовые базы можно пересоздавать между несовместимыми версиями.
 
-Главное в `0.53.1`:
+Главное в `0.54.0`:
 
-- гостевую и дополнительную Wi-Fi-сеть можно создать открытой, без пароля;
-- Web UI и Android одинаково поддерживают WPA2, WPA3 и смешанный WPA2/WPA3;
-- при переходе с открытой сети на защищённую пароль обязателен;
-- если выбранная защита не запускается на роутере, агент откатывает конфигурацию и сообщает причину.
+- Android получил самостоятельную дизайн-систему WrtMonitor на Material 3;
+- главная, клиенты, Wi-Fi и системные разделы стали плотнее и понятнее;
+- статусы теперь обозначаются цветом, иконкой и текстом;
+- интерфейс корректно работает edge-to-edge, в светлой и тёмной теме;
+- на планшетах нижняя панель заменяется боковой навигацией;
+- API и безопасные команды управления не изменились.
 
 Полная история изменений: [CHANGELOG.md](CHANGELOG.md).
 Матрица доступных функций: [docs/supported-features.md](docs/supported-features.md).
@@ -28,6 +30,23 @@
 - release artifacts для сервера, агента и Android.
 
 ## Интерфейс
+
+### Android
+
+<table>
+  <tr>
+    <td><img src="docs/images/android/overview-dark.png" width="260" alt="Android: обзор роутера в тёмной теме"></td>
+    <td><img src="docs/images/android/clients-light.png" width="260" alt="Android: клиенты домашней сети"></td>
+    <td><img src="docs/images/android/wifi-light.png" width="260" alt="Android: состояние Wi-Fi"></td>
+  </tr>
+  <tr>
+    <td align="center">Обзор</td>
+    <td align="center">Клиенты</td>
+    <td align="center">Wi-Fi</td>
+  </tr>
+</table>
+
+[Широкий экран](docs/images/android/overview-tablet-light.png) · [Настройки](docs/images/android/settings-dark.png) · [О приложении](docs/images/android/about-dark.png)
 
 ### Обзор роутера
 

@@ -756,4 +756,16 @@
     <string name="wifi_access_profile_hint">Расписание действует на эту сеть, лимит скорости делится между всеми её клиентами.</string>
     <string name="wifi_access_profile_confirm">Применить профиль к выбранной Wi-Fi-сети?</string>
     <string name="wifi_access_profile_queued">Профиль Wi-Fi отправлен на роутер</string>
+    <string name="router_unavailable">Роутер недоступен</string>
+    <string name="change_router">Сменить роутер</string>
+    <string name="navigation">Навигация</string>
+    <string name="status_online">В сети</string>
+    <string name="status_offline">Не в сети</string>
+    <string name="status_warning">Внимание</string>
+    <string name="status_critical">Критично</string>
+    <string name="status_updating">Обновление</string>
+    <string name="status_rebooting">Перезагрузка</string>
+    <string name="status_connecting">Подключение</string>
+    <string name="status_unknown">Неизвестно</string>
+    <string name="status_disabled">Выключено</string>
 </resources>

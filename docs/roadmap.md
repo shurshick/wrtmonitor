@@ -9,6 +9,17 @@
 - `hardware verified` - приложен полный отчёт физического OpenWrt;
 - `beta accepted` - функция выдержала публичное тестирование.
 
+## v0.54.0 - Android Expressive Redesign
+
+- централизованная Material 3 дизайн-система WrtMonitor;
+- компактный dashboard и единая семантика состояний;
+- edge-to-edge и адаптивная навигация phone/tablet;
+- полные loading, empty, error, offline и unsupported-состояния;
+- accessibility, RU/EN и светлая/тёмная тема;
+- новые скриншоты реального Android-приложения.
+
+Статус: code complete, проверяется release pipeline.
+
 ## v0.53.1 - Wi-Fi Security Fix
 
 - открытая гостевая сеть без обязательного пароля;

@@ -39,8 +39,8 @@ def runtime_fingerprint(root: Path) -> str:
         content = path.read_bytes().replace(b"\r\n", b"\n")
         if path.name == "wrtmonitor-agent":
             content = re.sub(
-                rb'^VERSION="[^"]+"$',
-                b'VERSION="<release>"',
+                rb'^AGENT_VERSION="[^"]+"$',
+                b'AGENT_VERSION="<release>"',
                 content,
                 flags=re.MULTILINE,
             )

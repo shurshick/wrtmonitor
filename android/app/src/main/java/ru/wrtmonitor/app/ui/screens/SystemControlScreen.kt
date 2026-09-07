@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -15,7 +14,6 @@ import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +65,7 @@ import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.ui.components.StatusPill
 import ru.wrtmonitor.app.ui.components.SwitchSettingRow
 import ru.wrtmonitor.app.ui.components.TonalActionButton
+import ru.wrtmonitor.app.ui.components.WrtLoadingState
 import ru.wrtmonitor.app.ui.components.SelectOption
 import java.time.Instant
 import java.time.ZoneId
@@ -216,7 +215,7 @@ fun SystemControlScreen(
         onRefresh = refresh,
     )
     if (loading && telemetry == null) {
-        SectionCard(stringResource(R.string.loading_data)) { CircularProgressIndicator(Modifier.size(24.dp)) }
+        WrtLoadingState()
     } else if (telemetry?.isStale == true || telemetry?.dataState?.kind in setOf("stale", "error", "unsupported")) {
         MessageBanner(
             when (telemetry?.dataState?.kind) {
