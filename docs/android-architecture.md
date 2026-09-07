@@ -1,6 +1,8 @@
 # Архитектура Android
 
-`MainActivity` создаёт только root Compose. `WrtMonitorApp` содержит navigation shell. HTTP transport и JSON parsing находятся в `api/WrtMonitorApi`, результаты проходят через `ApiResult`, DTO лежат в `api/dto`.
+`MainActivity` включает edge-to-edge и создаёт только root Compose. `WrtMonitorApp` содержит адаптивный navigation shell: нижнюю навигацию на телефоне и Navigation Rail на экранах от 720 dp. HTTP transport и JSON parsing находятся в `api/WrtMonitorApi`, результаты проходят через `ApiResult`, DTO лежат в `api/dto`.
+
+Тема и визуальные токены находятся в `ui/theme`, общие компоненты и состояния - в `ui/components`. Экраны не определяют собственные палитры. Светлая и тёмная темы управляют также контрастом системных status/navigation bars.
 
 Session URL и token централизованы в `data/SessionStore`. Вынесенные domain helpers покрываются unit tests; UI компоненты постепенно выносятся в `ui/components`.
 

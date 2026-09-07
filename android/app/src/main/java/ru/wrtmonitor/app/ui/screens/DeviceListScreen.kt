@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -41,8 +39,12 @@ import ru.wrtmonitor.app.R
 import ru.wrtmonitor.app.api.dto.DeviceDto
 import ru.wrtmonitor.app.data.RouterRepository
 import ru.wrtmonitor.app.ui.components.RouterPageHeader
-import ru.wrtmonitor.app.ui.components.SecondaryActionButton
-import ru.wrtmonitor.app.ui.components.StatusPill
+import ru.wrtmonitor.app.ui.components.WrtEmptyState
+import ru.wrtmonitor.app.ui.components.WrtErrorState
+import ru.wrtmonitor.app.ui.components.WrtLoadingState
+import ru.wrtmonitor.app.ui.components.WrtStatusBadge
+import ru.wrtmonitor.app.ui.theme.WrtSpacing
+import ru.wrtmonitor.app.ui.theme.WrtStatus
 import ru.wrtmonitor.app.viewmodel.DevicesViewModel
 import ru.wrtmonitor.app.viewmodel.RouterViewModelFactory
 import java.time.OffsetDateTime
@@ -80,27 +82,14 @@ fun DeviceListScreen(
             refreshing = state.loading,
             onRefresh = viewModel::refresh,
         )
-        if (!state.actionError.isNullOrBlank()) {
-            Text(state.actionError.orEmpty(), color = MaterialTheme.colorScheme.error)
-        }
+        if (!state.actionError.isNullOrBlank()) WrtErrorState(state.actionError.orEmpty())
         when {
-            state.loading -> Box(
-                Modifier.fillMaxWidth().padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-            state.error != null -> Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.load_error))
-                    Text(state.error.orEmpty())
-                    SecondaryActionButton(stringResource(R.string.refresh), viewModel::refresh)
-                }
-            }
-            state.devices.isEmpty() -> Card(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.no_routers), Modifier.padding(16.dp))
-            }
+            state.loading -> WrtLoadingState(stringResource(R.string.loading_data))
+            state.error != null -> WrtErrorState(state.error.orEmpty(), viewModel::refresh)
+            state.devices.isEmpty() -> WrtEmptyState(stringResource(R.string.no_routers))
             else -> LazyColumn(
                 Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(WrtSpacing.xs),
             ) {
                 items(state.devices, key = { it.id }) { device ->
                     DeviceListCard(
@@ -181,7 +170,13 @@ private fun DeviceListCard(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val online = device.status == "online"
-    Card(onClick = { onOpenDevice(device) }, modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        onClick = { onOpenDevice(device) },
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium,
+        tonalElevation = 1.dp,
+    ) {
         Row(
             Modifier.padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -215,9 +210,9 @@ private fun DeviceListCard(
                 )
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                StatusPill(
+                WrtStatusBadge(
                     if (online) stringResource(R.string.online) else stringResource(R.string.offline),
-                    online,
+                    if (online) WrtStatus.Online else WrtStatus.Offline,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(20.dp))

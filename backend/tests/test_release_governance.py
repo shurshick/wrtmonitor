@@ -83,3 +83,17 @@ def test_beta_readiness_fingerprint_ignores_platform_line_endings(tmp_path: Path
     source.write_bytes(b"first\r\nsecond\r\n")
 
     assert runtime_fingerprint(tmp_path) == lf_fingerprint
+
+
+def test_beta_readiness_fingerprint_ignores_release_marker(tmp_path: Path):
+    from scripts.beta_readiness_report import runtime_fingerprint
+
+    agent = tmp_path / "openwrt-agent"
+    agent.mkdir(parents=True)
+    source = agent / "wrtmonitor-agent"
+    source.write_text('AGENT_VERSION="0.53.1"\necho ready\n', encoding="utf-8")
+    previous = runtime_fingerprint(tmp_path)
+
+    source.write_text('AGENT_VERSION="0.54.0"\necho ready\n', encoding="utf-8")
+
+    assert runtime_fingerprint(tmp_path) == previous

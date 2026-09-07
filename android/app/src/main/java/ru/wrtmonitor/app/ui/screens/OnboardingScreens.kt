@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.Image
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -34,6 +39,8 @@ import ru.wrtmonitor.app.ui.components.PrimaryActionButton
 import ru.wrtmonitor.app.ui.components.SecondaryActionButton
 import ru.wrtmonitor.app.ui.components.SectionCard
 import ru.wrtmonitor.app.pairing.MobilePairingSetup
+import ru.wrtmonitor.app.ui.theme.WrtSizes
+import ru.wrtmonitor.app.ui.theme.WrtSpacing
 
 @Composable
 fun ServerSetupScreen(
@@ -42,7 +49,10 @@ fun ServerSetupScreen(
     pairingError: String = "",
 ) {
     var serverUrl by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+    Column(
+        Modifier.fillMaxSize().safeDrawingPadding().windowInsetsPadding(WindowInsets.ime).padding(WrtSpacing.lg).widthIn(max = WrtSizes.readingMaxWidth),
+        verticalArrangement = Arrangement.Center,
+    ) {
         OnboardingHeader()
         SectionCard(
             title = stringResource(R.string.server_connection),
@@ -87,7 +97,10 @@ fun PairingConfirmationScreen(
         "pairing_server_changed" to stringResource(R.string.pairing_server_changed),
         "pairing_invalid" to stringResource(R.string.pairing_qr_invalid),
     )
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+    Column(
+        Modifier.fillMaxSize().safeDrawingPadding().windowInsetsPadding(WindowInsets.ime).padding(WrtSpacing.lg).widthIn(max = WrtSizes.readingMaxWidth),
+        verticalArrangement = Arrangement.Center,
+    ) {
         OnboardingHeader()
         SectionCard(
             title = stringResource(R.string.confirm_server_connection),
@@ -141,7 +154,10 @@ fun AdminLoginScreen(serverUrl: String, onLogin: (WrtMonitorApi.AuthTokens) -> U
     var username by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }; var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+    Column(
+        Modifier.fillMaxSize().safeDrawingPadding().windowInsetsPadding(WindowInsets.ime).padding(WrtSpacing.lg).widthIn(max = WrtSizes.readingMaxWidth),
+        verticalArrangement = Arrangement.Center,
+    ) {
         OnboardingHeader()
         SectionCard(stringResource(R.string.login), subtitle = serverUrl) {
             OutlinedTextField(username, { username = it }, label = { Text(stringResource(R.string.admin_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)

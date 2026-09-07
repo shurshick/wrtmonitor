@@ -4,17 +4,24 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Public
@@ -27,13 +34,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Shapes
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -45,8 +52,6 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -80,6 +85,9 @@ import ru.wrtmonitor.app.ui.screens.ServerSetupScreen
 import ru.wrtmonitor.app.ui.screens.SystemControlScreen
 import ru.wrtmonitor.app.ui.screens.SystemScreenMode
 import ru.wrtmonitor.app.ui.screens.WifiControlScreen
+import ru.wrtmonitor.app.ui.theme.WrtMonitorTheme
+import ru.wrtmonitor.app.ui.theme.WrtSizes
+import ru.wrtmonitor.app.ui.theme.WrtSpacing
 
 private enum class Tab {
     Routers,
@@ -95,36 +103,6 @@ private enum class Tab {
     Operations,
     Settings,
 }
-
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFF35B9D5),
-    secondary = Color(0xFF73D596),
-    tertiary = Color(0xFFF5BD4F),
-    background = Color(0xFF0B1018),
-    surface = Color(0xFF121B28),
-    surfaceVariant = Color(0xFF172234),
-    onPrimary = Color(0xFF041116),
-    onBackground = Color(0xFFE8EEF7),
-    onSurface = Color(0xFFE8EEF7),
-    outline = Color(0xFF36506D),
-    outlineVariant = Color(0xFF263A51),
-)
-
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF087F9D),
-    secondary = Color(0xFF278F59),
-    tertiary = Color(0xFFA76600),
-    background = Color(0xFFF3F6FA),
-    surface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFEEF4F8),
-    onPrimary = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF162235),
-    onSurface = Color(0xFF162235),
-    onSurfaceVariant = Color(0xFF5D6F84),
-    outline = Color(0xFF8DA4B8),
-    outlineVariant = Color(0xFFCBD6E2),
-    error = Color(0xFFC33B45),
-)
 
 private val deviceStateSaver = Saver<androidx.compose.runtime.MutableState<DeviceDto?>, List<String>>(
     save = { state ->
@@ -222,14 +200,7 @@ fun WrtMonitorApp() {
         }
     }
 
-    MaterialTheme(
-        colorScheme = if (isDarkTheme) DarkColors else LightColors,
-        shapes = Shapes(
-            small = RoundedCornerShape(4.dp),
-            medium = RoundedCornerShape(8.dp),
-            large = RoundedCornerShape(8.dp),
-        ),
-    ) {
+    WrtMonitorTheme(darkTheme = isDarkTheme) {
         when {
             qrScannerOpen -> {
                 QrScannerScreen(
@@ -244,11 +215,11 @@ fun WrtMonitorApp() {
                     },
                     onCancel = { qrScannerOpen = false },
                 )
-                return@MaterialTheme
+                return@WrtMonitorTheme
             }
 
             pendingPairing != null -> {
-                val setup = pendingPairing ?: return@MaterialTheme
+                val setup = pendingPairing ?: return@WrtMonitorTheme
                 PairingConfirmationScreen(
                     setup = setup,
                     onConnected = { result ->
@@ -270,7 +241,7 @@ fun WrtMonitorApp() {
                     },
                     onCancel = { pendingPairing = null },
                 )
-                return@MaterialTheme
+                return@WrtMonitorTheme
             }
 
             serverUrl.isBlank() -> {
@@ -291,7 +262,7 @@ fun WrtMonitorApp() {
                     },
                     pairingError = pairingError,
                 )
-                return@MaterialTheme
+                return@WrtMonitorTheme
             }
 
             accessToken.isBlank() -> {
@@ -312,7 +283,7 @@ fun WrtMonitorApp() {
                         accessToken = ""
                     }
                 )
-                return@MaterialTheme
+                return@WrtMonitorTheme
             }
         }
 
@@ -329,7 +300,10 @@ fun WrtMonitorApp() {
         }
         BackHandler(enabled = selectedDevice != null || tab == Tab.Settings, onBack = navigateBack)
 
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+        val useNavigationRail = maxWidth >= 720.dp
         Scaffold(
+            contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
                 TopAppBar(
                     title = {
@@ -344,27 +318,44 @@ fun WrtMonitorApp() {
                                     contentDescription = null,
                                     modifier = Modifier.size(26.dp),
                                 )
-                                Text(if (tab == Tab.Settings) stringResource(R.string.settings) else stringResource(R.string.app_name))
+                                Text(stringResource(R.string.app_name))
                             }
                         } else {
-                            Column {
-                                Text(
-                                    device.name.ifBlank { device.hostname },
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    device.model,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                            Surface(
+                                onClick = {
+                                    selectedDevice = null
+                                    tab = Tab.Routers
+                                },
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                shape = MaterialTheme.shapes.medium,
+                            ) {
+                                Row(
+                                    Modifier.padding(horizontal = WrtSpacing.sm, vertical = WrtSpacing.xs),
+                                    horizontalArrangement = Arrangement.spacedBy(WrtSpacing.xs),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(Modifier.weight(1f, fill = false)) {
+                                        Text(
+                                            device.name.ifBlank { device.hostname },
+                                            style = MaterialTheme.typography.titleSmall,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            device.model,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                    Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.change_router), Modifier.size(18.dp))
+                                }
                             }
                         }
                     },
                     navigationIcon = {
-                        if (selectedDevice != null || tab == Tab.Settings) {
+                        if (selectedDevice != null && tab != Tab.Settings) {
                             IconButton(onClick = navigateBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                             }
@@ -381,7 +372,7 @@ fun WrtMonitorApp() {
                 )
             },
             bottomBar = {
-                if (selectedDevice != null && tab != Tab.Settings) {
+                if (!useNavigationRail && selectedDevice != null && tab != Tab.Settings) {
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                         AppNavigationItem(Tab.Routers, tab, { tab = it }, Icons.Default.Home, R.string.nav_overview)
                         AppNavigationItem(Tab.Clients, tab, { tab = it }, Icons.Default.People, R.string.clients)
@@ -392,32 +383,40 @@ fun WrtMonitorApp() {
                 }
             },
         ) { padding ->
-            val device = selectedDevice
-            if (device == null && tab == Tab.Routers) {
-                DeviceListScreen(
-                    serverUrl = serverUrl,
-                    accessToken = accessToken,
-                    refreshNonce = deviceListRefreshNonce,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    onOpenDevice = {
-                        selectedDevice = it
-                        tab = Tab.Routers
-                    },
-                    onSessionExpired = expireSession,
-                )
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+            Row(Modifier.fillMaxSize().padding(padding)) {
+                if (useNavigationRail && selectedDevice != null && tab != Tab.Settings) {
+                    AppNavigationRail(tab = tab, onSelect = { tab = it })
+                }
+                Box(
+                    modifier = Modifier.fillMaxSize().weight(1f),
+                    contentAlignment = Alignment.TopCenter,
                 ) {
-                    key(accessToken) { when (tab) {
+                val device = selectedDevice
+                if (device == null && tab == Tab.Routers) {
+                    DeviceListScreen(
+                        serverUrl = serverUrl,
+                        accessToken = accessToken,
+                        refreshNonce = deviceListRefreshNonce,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .widthIn(max = WrtSizes.contentMaxWidth)
+                            .padding(WrtSpacing.md),
+                        onOpenDevice = {
+                            selectedDevice = it
+                            tab = Tab.Routers
+                        },
+                        onSessionExpired = expireSession,
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .widthIn(max = WrtSizes.contentMaxWidth)
+                            .padding(WrtSpacing.md)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(WrtSpacing.sm),
+                    ) {
+                        key(accessToken) { when (tab) {
                         Tab.Routers -> DeviceDetailScreen(
                             serverUrl,
                             accessToken,
@@ -455,6 +454,7 @@ fun WrtMonitorApp() {
                                 isDarkTheme = enabled
                                 sessionStore.darkTheme = enabled
                             },
+                            onBack = navigateBack,
                             onSave = { value ->
                                 val normalized = normalizePairingServerUrl(value)
                                 sessionStore.serverUrl = normalized
@@ -477,11 +477,47 @@ fun WrtMonitorApp() {
                                 }
                             },
                         )
-                    } }
+                        } }
+                    }
                 }
             }
         }
+        }
+        }
     }
+}
+
+@Composable
+private fun AppNavigationRail(tab: Tab, onSelect: (Tab) -> Unit) {
+    NavigationRail(
+        modifier = Modifier.widthIn(min = WrtSizes.navigationRailWidth),
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        RailItem(Tab.Routers, tab, onSelect, Icons.Default.Home, R.string.nav_overview)
+        RailItem(Tab.Clients, tab, onSelect, Icons.Default.People, R.string.clients)
+        RailItem(Tab.Wifi, tab, onSelect, Icons.Default.Wifi, R.string.wifi)
+        RailItem(Tab.Network, tab, onSelect, Icons.Default.Public, R.string.internet)
+        RailItem(Tab.More, tab, onSelect, Icons.Default.MoreHoriz, R.string.more)
+    }
+}
+
+@Composable
+private fun RailItem(
+    tab: Tab,
+    currentTab: Tab,
+    onSelect: (Tab) -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: Int,
+) {
+    val selected = tab == currentTab || (
+        tab == Tab.More && currentTab in setOf(Tab.Rules, Tab.Vpn, Tab.System, Tab.Hardware, Tab.Management, Tab.Operations)
+    )
+    NavigationRailItem(
+        selected = selected,
+        onClick = { onSelect(tab) },
+        icon = { Icon(icon, contentDescription = null) },
+        label = { NavLabel(label) },
+    )
 }
 
 @Composable
