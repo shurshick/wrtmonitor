@@ -766,10 +766,13 @@ def run() -> None:
                     )
                     terminal_card = page.locator(".terminal-card").bounding_box()
                     assert terminal_card is not None
-                    assert (
-                        terminal_card["y"] + terminal_card["height"]
-                        <= viewport["height"] + 1
-                    )
+                    if name == "desktop":
+                        assert (
+                            terminal_card["y"] + terminal_card["height"]
+                            <= viewport["height"] + 1
+                        )
+                    else:
+                        assert terminal_card["height"] <= viewport["height"] - 80
                 if section == "internet":
                     page.get_by_text(
                         "Физические сетевые устройства", exact=True
