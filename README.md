@@ -46,7 +46,7 @@
   </tr>
 </table>
 
-[Широкий экран](docs/images/android/overview-tablet-light.png) · [Настройки](docs/images/android/settings-dark.png) · [О приложении](docs/images/android/about-dark.png)
+[Широкий экран](docs/images/android/overview-tablet-light.png) · [Настройки](docs/images/android/settings-dark.png)
 
 ### Web Control Center
 
