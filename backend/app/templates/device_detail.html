@@ -1,9 +1,24 @@
 {% extends "base.html" %}
 {% block title %}WrtMonitor - {{ device.name or device.hostname or 'Роутер' }}{% endblock %}
+{% block body_class %}has-device-sidebar{% endblock %}
+{% block context_controls %}
+<div class="router-selector" data-router-selector data-current-device="{{ device.id }}">
+  <button class="router-selector__button" type="button" data-router-selector-toggle aria-expanded="false" aria-haspopup="dialog">
+    <span class="router-selector__copy"><small>Роутер</small><strong>{{ device.name or device.hostname or 'Роутер' }}</strong></span>
+    <span class="status-dot status-dot--{{ device.status|lower }}" aria-hidden="true"></span>
+    <svg class="ui-icon router-selector__chevron" aria-hidden="true"><use href="/static/icons.svg#chevron"></use></svg>
+  </button>
+  <div class="router-selector__popover" data-router-selector-popover role="dialog" aria-label="Выбор роутера" hidden>
+    <label class="router-selector__search"><span class="visually-hidden">Найти роутер</span><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#search"></use></svg><input type="search" placeholder="Найти роутер" data-router-search></label>
+    <div class="router-selector__list" data-router-list><span class="router-selector__loading">Загрузка роутеров…</span></div>
+    <a class="router-selector__all" href="/devices">Все роутеры</a>
+  </div>
+</div>
+{% endblock %}
 {% block page_class %}page--device{% endblock %}
 {% block content %}
 <div class="device-layout" data-device-events="/api/v1/devices/{{ device.id }}/events">
-  <aside class="device-sidebar">
+  <aside class="device-sidebar" id="device-sidebar" aria-label="Навигация по роутеру">
     <a class="device-sidebar__back" href="/devices">&larr; Все роутеры</a>
     <div class="device-sidebar__identity">
       <span class="device-sidebar__icon">R</span>
@@ -11,21 +26,22 @@
     </div>
     <nav class="device-nav" aria-label="Разделы роутера">
       <span class="device-nav__group">Состояние</span>
-      <a class="device-nav__item {{ 'is-active' if section == 'overview' else '' }}" href="/devices/{{ device.id }}?section=overview"><span>Обзор</span><small>Состояние сети</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'overview' else '' }}" href="/devices/{{ device.id }}?section=overview" title="Обзор"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#overview"></use></svg><span><b>Обзор</b><small>Состояние сети</small></span></a>
       <span class="device-nav__group">Подключения</span>
-      <a class="device-nav__item {{ 'is-active' if section == 'internet' else '' }}" href="/devices/{{ device.id }}?section=internet"><span>Интернет</span><small>WAN и интерфейсы</small></a>
-      <a class="device-nav__item {{ 'is-active' if section == 'vpn' else '' }}" href="/devices/{{ device.id }}?section=vpn"><span>VPN</span><small>Туннели и политики</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'internet' else '' }}" href="/devices/{{ device.id }}?section=internet" title="Интернет"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#internet"></use></svg><span><b>Интернет</b><small>WAN и интерфейсы</small></span></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'vpn' else '' }}" href="/devices/{{ device.id }}?section=vpn" title="VPN"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#vpn"></use></svg><span><b>VPN</b><small>Туннели и политики</small></span></a>
       <span class="device-nav__group">Мои сети</span>
-      <a class="device-nav__item {{ 'is-active' if section == 'clients' else '' }}" href="/devices/{{ device.id }}?section=clients"><span>Домашняя сеть</span><small>Клиенты и DHCP</small></a>
-      <a class="device-nav__item {{ 'is-active' if section == 'wifi' else '' }}" href="/devices/{{ device.id }}?section=wifi"><span>Wi-Fi</span><small>Сети и радиомодули</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'clients' else '' }}" href="/devices/{{ device.id }}?section=clients" title="Домашняя сеть"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#clients"></use></svg><span><b>Домашняя сеть</b><small>Клиенты и DHCP</small></span></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'wifi' else '' }}" href="/devices/{{ device.id }}?section=wifi" title="Wi-Fi"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#wifi"></use></svg><span><b>Wi-Fi</b><small>Сети и радиомодули</small></span></a>
       <span class="device-nav__group">Безопасность</span>
-      <a class="device-nav__item {{ 'is-active' if section == 'rules' else '' }}" href="/devices/{{ device.id }}?section=rules"><span>Сетевые правила</span><small>Firewall, NAT и маршруты</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'rules' else '' }}" href="/devices/{{ device.id }}?section=rules" title="Сетевые правила"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#firewall"></use></svg><span><b>Сетевые правила</b><small>Firewall, NAT и маршруты</small></span></a>
       <span class="device-nav__group">Управление</span>
-      <a class="device-nav__item {{ 'is-active' if section == 'system' else '' }}" href="/devices/{{ device.id }}?section=system"><span>Система</span><small>Ресурсы и службы</small></a>
-      <a class="device-nav__item {{ 'is-active' if section == 'hardware' else '' }}" href="/devices/{{ device.id }}?section=hardware"><span>Оборудование</span><small>CPU и датчики</small></a>
-      <a class="device-nav__item {{ 'is-active' if section == 'management' else '' }}" href="/devices/{{ device.id }}?section=management"><span>Обслуживание</span><small>Агент и диагностика</small></a>
-      <a class="device-nav__item {{ 'is-active' if section == 'terminal' else '' }}" href="/devices/{{ device.id }}?section=terminal"><span>Терминал</span><small>Web SSH</small></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'system' else '' }}" href="/devices/{{ device.id }}?section=system" title="Система"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#system"></use></svg><span><b>Система</b><small>Ресурсы и службы</small></span></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'hardware' else '' }}" href="/devices/{{ device.id }}?section=hardware" title="Оборудование"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#hardware"></use></svg><span><b>Оборудование</b><small>CPU и датчики</small></span></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'management' else '' }}" href="/devices/{{ device.id }}?section=management" title="Обслуживание"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#maintenance"></use></svg><span><b>Обслуживание</b><small>Агент и диагностика</small></span></a>
+      <a class="device-nav__item {{ 'is-active' if section == 'terminal' else '' }}" href="/devices/{{ device.id }}?section=terminal" title="Терминал"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#terminal"></use></svg><span><b>Терминал</b><small>Web SSH</small></span></a>
     </nav>
+    <button class="device-sidebar__collapse" type="button" data-nav-collapse aria-label="Свернуть боковую панель" title="Свернуть боковую панель"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#panel"></use></svg><span>Свернуть</span></button>
   </aside>
   <div class="device-content">
     <header class="device-header">
@@ -33,7 +49,7 @@
         <div class="device-header__title-row"><h1>{{ device.name or device.hostname or 'Роутер' }}</h1><span class="status status--{{ device.status|lower }}">{{ device.status|status_label }}</span></div>
         <p class="device-meta">{{ device.firmware or 'Прошивка не определена' }} · Последняя связь {{ latest }}</p>
       </div>
-      <a class="button button--secondary" href="/devices/{{ device.id }}?section={{ section }}{% if section == 'management' %}&command_page={{ command_pagination.page }}{% endif %}">Обновить</a>
+      <a class="button button--secondary device-refresh" href="/devices/{{ device.id }}?section={{ section }}{% if section == 'management' %}&command_page={{ command_pagination.page }}{% endif %}"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#refresh"></use></svg><span>Обновить</span></a>
     </header>
 
     {% if section == 'overview' %}
@@ -89,6 +105,11 @@
   <div id="config-preview-errors"></div>
   <dl class="config-preview__changes" id="config-preview-changes"></dl>
   <div class="config-preview__warnings" id="config-preview-warnings"></div>
+  <ol class="apply-progress" id="config-preview-progress" aria-live="polite" hidden>
+    <li class="is-complete">Проверка изменений</li>
+    <li class="is-active">Отправка команды на сервер</li>
+    <li>Проверка результата и связи</li>
+  </ol>
   <div class="form-actions"><button id="config-preview-apply" type="button">Применить</button><button class="button--secondary" id="config-preview-cancel" type="button">Отмена</button></div>
 </dialog>
 {% endblock %}
@@ -108,16 +129,19 @@
   const changes = document.getElementById('config-preview-changes');
   const warnings = document.getElementById('config-preview-warnings');
   const errors = document.getElementById('config-preview-errors');
+  const progress = document.getElementById('config-preview-progress');
   const apply = document.getElementById('config-preview-apply');
   let pendingForm = null;
-  const close = () => { pendingForm = null; dialog.close(); };
+  const close = () => { pendingForm = null; progress.hidden = true; apply.disabled = false; dialog.close(); };
   document.getElementById('config-preview-close').addEventListener('click', close);
   document.getElementById('config-preview-cancel').addEventListener('click', close);
   apply.addEventListener('click', () => {
     if (!pendingForm) return;
     const form = pendingForm;
     pendingForm = null;
-    dialog.close();
+    progress.hidden = false;
+    apply.disabled = true;
+    apply.textContent = 'Отправка…';
     form.dataset.previewConfirmed = 'true';
     form.requestSubmit();
   });
@@ -128,10 +152,17 @@
     form.addEventListener('submit', async (event) => {
       if (form.dataset.previewConfirmed === 'true') return;
       event.preventDefault();
-      const response = await fetch('/devices/{{ device.id }}/web-command-preview', {
-        method: 'POST', body: new FormData(form), credentials: 'same-origin'
-      });
-      const preview = await response.json();
+      let response;
+      let preview;
+      try {
+        response = await fetch('/devices/{{ device.id }}/web-command-preview', {
+          method: 'POST', body: new FormData(form), credentials: 'same-origin'
+        });
+        preview = await response.json();
+      } catch {
+        window.alert('Не удалось проверить изменения. Проверьте соединение и войдите заново, если сессия завершилась.');
+        return;
+      }
       if (!response.ok) {
         const detail = typeof preview.detail === 'string' ? preview.detail : JSON.stringify(preview.detail);
         window.alert(detail || 'Не удалось проверить конфигурацию');
@@ -144,6 +175,8 @@
         return;
       }
       pendingForm = form;
+      progress.hidden = true;
+      apply.textContent = 'Применить';
       changes.replaceChildren();
       (preview.changes || []).forEach((item) => {
         const dt = document.createElement('dt');

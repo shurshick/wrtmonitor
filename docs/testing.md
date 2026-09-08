@@ -10,7 +10,7 @@ PostgreSQL backup восстанавливается во временную Б�
 
 Перед переводом релиза в `latest` workflow проверяет `certification/beta-readiness-v<версия>.json`: два обязательных стенда, минимум семь суток наблюдения, свежую telemetry и возврат online после зафиксированных разрывов.
 
-Chromium smoke-test авторизуется в Web UI, открывает список устройств и все разделы роутера на desktop и mobile viewport. Проверяются HTTP-ошибки, `Internal Server Error`, горизонтальное переполнение и реальный обмен данными с локальным xterm через WebSocket-брокер; скриншоты сохраняются в CI-артефакте `web-responsive-smoke`.
+Chromium smoke-test авторизуется в Web UI и открывает все разделы роутера на 1440x900 и 390x844. Список роутеров и обзор дополнительно проверяются на 1920x1080, 1366x768, 1024x768 и 768x900. Проверяются HTTP-ошибки, `Internal Server Error`, горизонтальное переполнение, dark/light theme, drawer/sidebar, формы и обмен данными с локальным xterm через WebSocket-брокер и тестовый агент; скриншоты сохраняются в CI-артефакте `web-responsive-smoke`.
 
 ## Аппаратный E2E Web-терминала
 

@@ -7,7 +7,7 @@
 
   const render = () => {
     const isDark = root.dataset.theme !== "light";
-    icon.textContent = isDark ? "☀" : "☾";
+    icon.setAttribute("href", `/static/icons.svg#${isDark ? "sun" : "moon"}`);
     const label = isDark ? "Включить светлую тему" : "Включить тёмную тему";
     button.title = label;
     button.setAttribute("aria-label", label);

@@ -28,11 +28,11 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="command_type" value="router.reboot">
         <input type="hidden" name="confirmed" value="true">
-        <button class="icon-button router-card__reboot" type="submit" title="Перезагрузить роутер" aria-label="Перезагрузить роутер"><span aria-hidden="true">↻</span></button>
+        <button class="icon-button router-card__reboot" type="submit" title="Перезагрузить роутер" aria-label="Перезагрузить роутер"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#refresh"></use></svg></button>
       </form>
       <form method="post" action="/devices/{{ device.id }}/delete" onsubmit="return confirm('Удалить роутер безвозвратно? Будут удалены устройство, telemetry, команды и связанная история. Агент потеряет доступ к серверу.');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button class="icon-button icon-button--danger" type="submit" title="Удалить роутер и все его данные" aria-label="Удалить роутер">&#128465;</button>
+        <button class="icon-button icon-button--danger" type="submit" title="Удалить роутер и все его данные" aria-label="Удалить роутер"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#trash"></use></svg></button>
       </form>
     </div>
   </article>

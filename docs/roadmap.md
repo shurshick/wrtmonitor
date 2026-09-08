@@ -9,6 +9,16 @@
 - `hardware verified` - приложен полный отчёт физического OpenWrt;
 - `beta accepted` - функция выдержала публичное тестирование.
 
+## v0.55.0 - Web Control Center
+
+- централизованные design tokens и единая светлая/тёмная продуктовая тема;
+- desktop app shell со сворачиваемой боковой панелью и router selector;
+- адаптивные dashboard, таблицы, формы и dialogs для шести viewport;
+- доступный safe-write flow с review и видимой отправкой команды;
+- актуальные Web screenshots и visual regression в CI.
+
+Статус: реализовано; результаты CI и выпуска доступны в GitHub Actions.
+
 ## v0.54.0 - Android Expressive Redesign
 
 - централизованная Material 3 дизайн-система WrtMonitor;

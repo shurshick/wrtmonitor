@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 import base64
 import json
@@ -8,7 +9,7 @@ import threading
 from pathlib import Path
 
 import httpx
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Page, expect, sync_playwright
 
 
 BASE_URL = os.getenv("WRTMONITOR_BROWSER_BASE_URL", "http://127.0.0.1:8090")
@@ -629,7 +630,9 @@ def assert_page(page: Page, path: str, screenshot_name: str) -> None:
             "canvas => ({width: canvas.width, height: canvas.height})"
         )
         assert dimensions["width"] >= 240 and dimensions["height"] >= 150
-    page.screenshot(path=str(ARTIFACTS / screenshot_name), full_page=True)
+    page.screenshot(
+        path=str(ARTIFACTS / screenshot_name), full_page=True, animations="disabled"
+    )
 
 
 def run() -> None:
@@ -654,7 +657,9 @@ def run() -> None:
             page.locator("[data-theme-toggle]").click()
             assert page.locator("html").get_attribute("data-theme") == "light"
             page.screenshot(
-                path=str(ARTIFACTS / f"{name}-devices-light.png"), full_page=True
+                path=str(ARTIFACTS / f"{name}-devices-light.png"),
+                full_page=True,
+                animations="disabled",
             )
             assert_page(page, "/account", f"{name}-account.png")
             assert page.locator("html").get_attribute("data-theme") == "light"
@@ -701,6 +706,33 @@ def run() -> None:
                     f"{name}-{section}.png",
                 )
                 if section == "overview":
+                    selector = page.locator("[data-router-selector-toggle]")
+                    selector.click()
+                    page.locator(".router-selector__item").first.wait_for()
+                    page.locator("[data-router-search]").fill("no-such-router")
+                    assert page.locator(".router-selector__item:visible").count() == 0
+                    page.locator("[data-router-search]").fill("Browser")
+                    assert page.locator(".router-selector__item:visible").count() == 1
+                    page.keyboard.press("Escape")
+                    assert selector.get_attribute("aria-expanded") == "false"
+                    page.locator("[data-nav-toggle]").click()
+                    if name == "mobile":
+                        assert page.locator("body.app-nav-open").count() == 1
+                        page.keyboard.press("Escape")
+                        assert page.locator("#device-sidebar").evaluate(
+                            "nav => nav.inert"
+                        )
+                    else:
+                        assert page.locator("body.app-nav-collapsed").count() == 1
+                        page.locator("[data-nav-toggle]").click()
+                    page.locator("[data-theme-toggle]").click()
+                    assert page.locator("html").get_attribute("data-theme") == "light"
+                    page.screenshot(
+                        path=str(ARTIFACTS / f"{name}-overview-light.png"),
+                        animations="disabled",
+                    )
+                    page.locator("[data-theme-toggle]").click()
+                    assert "61.0 °C" in page.locator(".compact-facts").inner_text()
                     page.locator('[data-chart-range="24h"]').click()
                     page.locator(
                         '[data-live-monitor][data-loaded-range="24h"]'
@@ -861,9 +893,10 @@ def run() -> None:
                         == "server"
                     )
                     assert "fd42:1234::1/64" in ipv6_panel.inner_text()
+                    page.evaluate("window.scrollTo(0, 0)")
                     page.screenshot(
                         path=str(ARTIFACTS / f"{name}-clients-expanded.png"),
-                        full_page=True,
+                        full_page=False,
                     )
                 if section == "rules":
                     for panel_title in ("Межсетевой экран", "Зоны и транзит"):
@@ -957,7 +990,7 @@ def run() -> None:
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
-                    page.wait_for_url("**command_page=2**")
+                    expect(page).to_have_url(re.compile(r"[?&]command_page=2(?:&|$)"))
                     page.locator(
                         "[data-command-journal] .command-pagination nav span"
                     ).filter(has_text="2 /").wait_for()
@@ -1030,6 +1063,27 @@ def run() -> None:
                     path=str(ARTIFACTS / "desktop-terminal-connected.png"),
                     full_page=True,
                 )
+            browser.close()
+
+        for name, viewport in (
+            ("wide", {"width": 1920, "height": 1080}),
+            ("compact", {"width": 1366, "height": 768}),
+            ("tablet", {"width": 1024, "height": 768}),
+            ("narrow", {"width": 768, "height": 900}),
+        ):
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport=viewport)
+            page.goto(f"{BASE_URL}/login")
+            page.locator('input[name="username"]').fill(USERNAME)
+            page.locator('input[name="password"]').fill(PASSWORD)
+            page.locator('button[type="submit"]').click()
+            page.wait_for_url("**/devices")
+            assert_page(page, "/devices", f"{name}-devices.png")
+            assert_page(
+                page,
+                f"/devices/{device_id}?section=overview",
+                f"{name}-overview.png",
+            )
             browser.close()
 
 
