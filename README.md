@@ -4,16 +4,16 @@
 
 ## Текущая версия
 
-Текущая тестовая версия: `0.54.0 Android Expressive Redesign`. Публичного стабильного релиза пока нет; тестовые базы можно пересоздавать между несовместимыми версиями.
+Текущая тестовая версия: `0.55.0 Web Control Center`. Публичного стабильного релиза пока нет; тестовые базы можно пересоздавать между несовместимыми версиями.
 
-Главное в `0.54.0`:
+Главное в `0.55.0`:
 
-- Android получил самостоятельную дизайн-систему WrtMonitor на Material 3;
-- главная, клиенты, Wi-Fi и системные разделы стали плотнее и понятнее;
-- статусы теперь обозначаются цветом, иконкой и текстом;
-- интерфейс корректно работает edge-to-edge, в светлой и тёмной теме;
-- на планшетах нижняя панель заменяется боковой навигацией;
-- API и безопасные команды управления не изменились.
+- WebUI получил единую дизайн-систему WrtMonitor, связанную с Android по цветам, статусам, формам и терминологии;
+- постоянная desktop-навигация сворачивается, а на планшете и телефоне превращается в доступный drawer;
+- выбранный роутер и его состояние всегда видны в верхней панели;
+- dashboard, таблицы, формы и диалоги приведены к одной плотной композиции;
+- безопасные изменения показывают review и текущий этап применения;
+- API, telemetry и команды управления не менялись, фиктивные показатели не добавлялись.
 
 Полная история изменений: [CHANGELOG.md](CHANGELOG.md).
 Матрица доступных функций: [docs/supported-features.md](docs/supported-features.md).
@@ -48,17 +48,13 @@
 
 [Широкий экран](docs/images/android/overview-tablet-light.png) · [Настройки](docs/images/android/settings-dark.png) · [О приложении](docs/images/android/about-dark.png)
 
-### Обзор роутера
+### Web Control Center
 
 [![Обзор состояния роутера в WrtMonitor](docs/images/web-overview.png)](docs/images/web-overview.png)
 
-### Клиенты домашней сети
-
-[![Список клиентов домашней сети в WrtMonitor](docs/images/web-home-network.png)](docs/images/web-home-network.png)
-
-### Интернет и интерфейсы
-
-[![Состояние интернет-подключения и сетевых интерфейсов в WrtMonitor](docs/images/web-internet.png)](docs/images/web-internet.png)
+| Клиенты | Интернет и интерфейсы |
+|---|---|
+| [![Клиенты домашней сети](docs/images/web-home-network.png)](docs/images/web-home-network.png) | [![Интернет и интерфейсы](docs/images/web-internet.png)](docs/images/web-internet.png) |
 
 ### Web-терминал OpenWrt
 
@@ -140,6 +136,7 @@ OpenWrt-агент можно установить:
 - [Жизненный цикл команд](docs/command-lifecycle.md)
 - [Проверка на реальном роутере](docs/real-router-testing.md)
 - [Android](docs/android.md)
+- [Web Control Center](docs/web-redesign-0.55.0.md)
 - [Roadmap](docs/roadmap.md)
 - [Changelog](CHANGELOG.md)
 

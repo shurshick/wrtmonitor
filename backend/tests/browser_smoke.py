@@ -637,11 +637,7 @@ def run() -> None:
     device_id, device_token = prepare_router()
     with sync_playwright() as playwright:
         for name, viewport in (
-            ("wide", {"width": 1920, "height": 1080}),
             ("desktop", {"width": 1440, "height": 900}),
-            ("compact", {"width": 1366, "height": 768}),
-            ("tablet", {"width": 1024, "height": 768}),
-            ("narrow", {"width": 768, "height": 900}),
             ("mobile", {"width": 390, "height": 844}),
         ):
             browser = playwright.chromium.launch()
@@ -1034,6 +1030,27 @@ def run() -> None:
                     path=str(ARTIFACTS / "desktop-terminal-connected.png"),
                     full_page=True,
                 )
+            browser.close()
+
+        for name, viewport in (
+            ("wide", {"width": 1920, "height": 1080}),
+            ("compact", {"width": 1366, "height": 768}),
+            ("tablet", {"width": 1024, "height": 768}),
+            ("narrow", {"width": 768, "height": 900}),
+        ):
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport=viewport)
+            page.goto(f"{BASE_URL}/login")
+            page.locator('input[name="username"]').fill(USERNAME)
+            page.locator('input[name="password"]').fill(PASSWORD)
+            page.locator('button[type="submit"]').click()
+            page.wait_for_url("**/devices")
+            assert_page(page, "/devices", f"{name}-devices.png")
+            assert_page(
+                page,
+                f"/devices/{device_id}?section=overview",
+                f"{name}-overview.png",
+            )
             browser.close()
 
 
