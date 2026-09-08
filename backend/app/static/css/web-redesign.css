@@ -125,6 +125,7 @@ tbody tr:hover { background: var(--color-surface-container); }
 .settings-panel[open] > summary { background: var(--color-surface-container); }
 .settings-panel__body { background: var(--color-surface-low); }
 .managed-record, .managed-record-static, .package-row, .profile-row, .service-pill, .operation-row { background: var(--color-surface-container); }
+.package-list--updates, .package-list--installed { max-height: 360px; overflow-y: auto; overscroll-behavior: contain; }
 .empty-state { display: grid; justify-items: center; gap: var(--space-2); min-height: 150px; align-content: center; }
 .empty-state p { max-width: 520px; margin: 0; }
 
