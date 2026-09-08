@@ -107,7 +107,7 @@
   <div class="config-preview__warnings" id="config-preview-warnings"></div>
   <ol class="apply-progress" id="config-preview-progress" aria-live="polite" hidden>
     <li class="is-complete">Проверка изменений</li>
-    <li class="is-active">Применение и резервная точка на роутере</li>
+    <li class="is-active">Отправка команды на сервер</li>
     <li>Проверка результата и связи</li>
   </ol>
   <div class="form-actions"><button id="config-preview-apply" type="button">Применить</button><button class="button--secondary" id="config-preview-cancel" type="button">Отмена</button></div>
@@ -141,9 +141,9 @@
     pendingForm = null;
     progress.hidden = false;
     apply.disabled = true;
-    apply.textContent = 'Применение…';
+    apply.textContent = 'Отправка…';
     form.dataset.previewConfirmed = 'true';
-    window.setTimeout(() => form.requestSubmit(), 180);
+    form.requestSubmit();
   });
   document.querySelectorAll('form[action*="/web-command"]').forEach((form) => {
     if (form.matches('[data-async-command]')) return;
@@ -152,10 +152,17 @@
     form.addEventListener('submit', async (event) => {
       if (form.dataset.previewConfirmed === 'true') return;
       event.preventDefault();
-      const response = await fetch('/devices/{{ device.id }}/web-command-preview', {
-        method: 'POST', body: new FormData(form), credentials: 'same-origin'
-      });
-      const preview = await response.json();
+      let response;
+      let preview;
+      try {
+        response = await fetch('/devices/{{ device.id }}/web-command-preview', {
+          method: 'POST', body: new FormData(form), credentials: 'same-origin'
+        });
+        preview = await response.json();
+      } catch {
+        window.alert('Не удалось проверить изменения. Проверьте соединение и войдите заново, если сессия завершилась.');
+        return;
+      }
       if (!response.ok) {
         const detail = typeof preview.detail === 'string' ? preview.detail : JSON.stringify(preview.detail);
         window.alert(detail || 'Не удалось проверить конфигурацию');
