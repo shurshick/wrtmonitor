@@ -74,3 +74,10 @@ def test_browser_regression_covers_supported_shell_widths() -> None:
 
     for width in (1920, 1440, 1366, 1024, 768, 390):
         assert f'"width": {width}' in smoke
+
+
+def test_command_pagination_updates_url_before_fetch() -> None:
+    pagination = read("backend/app/static/command-pagination.js")
+
+    assert pagination.index("window.history.replaceState") < pagination.index("await fetch")
+    assert "window.location.reload()" in pagination
