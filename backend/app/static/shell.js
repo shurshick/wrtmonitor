@@ -12,18 +12,23 @@
   };
 
   const closeNav = () => {
+    const hadFocus = nav?.contains(document.activeElement);
     body.classList.remove("app-nav-open");
     if (navToggle) navToggle.setAttribute("aria-expanded", "false");
+    if (nav) nav.inert = compactQuery.matches;
     if (scrim) scrim.hidden = true;
+    if (hadFocus && compactQuery.matches) navToggle?.focus();
   };
 
   if (nav && navToggle) {
+    nav.inert = compactQuery.matches;
     const savedCollapsed = localStorage.getItem("wrtmonitor-sidebar") === "collapsed";
     body.classList.toggle("app-nav-collapsed", savedCollapsed && !compactQuery.matches);
     navToggle.addEventListener("click", () => {
       if (compactQuery.matches) {
         const open = !body.classList.contains("app-nav-open");
         body.classList.toggle("app-nav-open", open);
+        nav.inert = !open;
         navToggle.setAttribute("aria-expanded", String(open));
         if (scrim) scrim.hidden = !open;
         if (open) nav.querySelector("a")?.focus();
@@ -138,5 +143,10 @@
     if (event.key !== "Escape") return;
     closeNav();
     selector?.querySelector("[data-router-selector-popover]")?.setAttribute("hidden", "");
+    const selectorButton = selector?.querySelector("[data-router-selector-toggle]");
+    if (selectorButton?.getAttribute("aria-expanded") === "true") {
+      selectorButton.setAttribute("aria-expanded", "false");
+      selectorButton.focus();
+    }
   });
 })();

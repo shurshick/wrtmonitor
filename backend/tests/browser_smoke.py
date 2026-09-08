@@ -701,6 +701,30 @@ def run() -> None:
                     f"{name}-{section}.png",
                 )
                 if section == "overview":
+                    selector = page.locator("[data-router-selector-toggle]")
+                    selector.click()
+                    page.locator(".router-selector__item").first.wait_for()
+                    page.locator("[data-router-search]").fill("no-such-router")
+                    assert page.locator(".router-selector__item:visible").count() == 0
+                    page.locator("[data-router-search]").fill("Browser")
+                    assert page.locator(".router-selector__item:visible").count() == 1
+                    page.keyboard.press("Escape")
+                    assert selector.get_attribute("aria-expanded") == "false"
+                    page.locator("[data-nav-toggle]").click()
+                    if name == "mobile":
+                        assert page.locator("body.app-nav-open").count() == 1
+                        page.keyboard.press("Escape")
+                        assert page.locator("#device-sidebar").evaluate(
+                            "nav => nav.inert"
+                        )
+                    else:
+                        assert page.locator("body.app-nav-collapsed").count() == 1
+                        page.locator("[data-nav-toggle]").click()
+                    page.locator("[data-theme-toggle]").click()
+                    assert page.locator("html").get_attribute("data-theme") == "light"
+                    page.screenshot(path=str(ARTIFACTS / f"{name}-overview-light.png"))
+                    page.locator("[data-theme-toggle]").click()
+                    assert "61.0 °C" in page.locator(".compact-facts").inner_text()
                     page.locator('[data-chart-range="24h"]').click()
                     page.locator(
                         '[data-live-monitor][data-loaded-range="24h"]'
@@ -861,9 +885,10 @@ def run() -> None:
                         == "server"
                     )
                     assert "fd42:1234::1/64" in ipv6_panel.inner_text()
+                    page.evaluate("window.scrollTo(0, 0)")
                     page.screenshot(
                         path=str(ARTIFACTS / f"{name}-clients-expanded.png"),
-                        full_page=True,
+                        full_page=False,
                     )
                 if section == "rules":
                     for panel_title in ("Межсетевой экран", "Зоны и транзит"):
@@ -957,7 +982,9 @@ def run() -> None:
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
-                    page.wait_for_url("**command_page=2**")
+                    page.wait_for_function(
+                        "new URL(location.href).searchParams.get('command_page') === '2'"
+                    )
                     page.locator(
                         "[data-command-journal] .command-pagination nav span"
                     ).filter(has_text="2 /").wait_for()

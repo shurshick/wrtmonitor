@@ -37,7 +37,18 @@ WebUI построен на серверных Jinja-шаблонах FastAPI, �
 
 - 341 backend/OpenWrt tests: passed; 22 hardware-only tests: skipped локально.
 - Jinja parse, JavaScript syntax, XML icon sprite и release metadata: passed.
-- GitHub browser smoke проходит все разделы, dark/light theme, router selector, configuration review, package lists, Web SSH и отсутствие horizontal overflow на шести viewport.
+- GitHub browser smoke проверяет все разделы на desktop/mobile, dark/light theme, router selector, configuration review, package lists и Web SSH. Оболочка и обзор дополнительно проверяются на четырёх промежуточных размерах; всего шесть viewport.
 - Android, deployment acceptance, container build и security scans остаются обязательными release gates.
+
+## Актуальные экраны
+
+Кадры получены в Chromium из работающего WebUI с тестовыми данными CI. Терминал показывает проверочный обмен с тестовым агентом; это не новый аппаратный отчёт Netis NX31.
+
+- [Обзор роутера](images/web-overview.png)
+- [Мобильный WebUI](images/web-overview-mobile.png)
+- [Светлая тема и список роутеров](images/web-devices-light.png)
+- [Клиенты домашней сети](images/web-home-network.png)
+- [Интернет и интерфейсы](images/web-internet.png)
+- [Web SSH](images/web-terminal.png)
 
 Операции с реальным OpenWrt не менялись. Физически перепроверять 95 команд только из-за presentation-only релиза не требуется; действующее soak evidence Netis NX31 и OpenWrt x86 наследуется по неизменному runtime fingerprint.

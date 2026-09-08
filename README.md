@@ -50,7 +50,11 @@
 
 ### Web Control Center
 
+Актуальный WebUI на тестовом роутере браузерного прогона CI.
+
 [![Обзор состояния роутера в WrtMonitor](docs/images/web-overview.png)](docs/images/web-overview.png)
+
+[Мобильный WebUI](docs/images/web-overview-mobile.png) · [Светлая тема и список роутеров](docs/images/web-devices-light.png)
 
 | Клиенты | Интернет и интерфейсы |
 |---|---|

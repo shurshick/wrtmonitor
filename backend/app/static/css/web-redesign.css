@@ -48,7 +48,7 @@ body:not(.has-device-sidebar) .app-nav-toggle { display: none; }
 h1 { font-size: var(--text-2xl); font-weight: 720; }
 h2 { font-size: var(--text-lg); }
 .section-heading h2 { font-size: var(--text-xl); }
-.eyebrow { color: var(--color-primary); font-size: 10px; letter-spacing: .08em; }
+.eyebrow { color: var(--color-primary); font-size: 10px; letter-spacing: 0; }
 
 .device-layout { grid-template-columns: var(--shell-sidebar) minmax(0, 1fr); gap: var(--space-6); transition: grid-template-columns var(--duration-normal) var(--easing-standard); }
 .device-sidebar { top: calc(var(--shell-topbar) + var(--space-5)); max-height: calc(100vh - var(--shell-topbar) - 40px); padding: var(--space-3); border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-navigation); overflow-y: auto; scrollbar-width: thin; }
@@ -81,7 +81,10 @@ h2 { font-size: var(--text-lg); }
 .overview-hero { min-height: 112px; border-color: var(--color-divider); background: var(--color-surface-container); }
 .overview-hero__label { color: var(--color-primary); }
 .dashboard-grid { grid-template-columns: minmax(0, 8fr) minmax(300px, 4fr); gap: var(--space-4); }
-.dashboard-stack { gap: var(--space-4); }
+.dashboard-stack { grid-template-columns: 1fr; gap: var(--space-4); }
+.dashboard-card__header { flex-wrap: wrap; }
+.health-summary__item > strong, .health-summary__item > small { white-space: normal; overflow-wrap: anywhere; }
+.workspace-section { background: transparent; box-shadow: none; }
 .dashboard-card--traffic { min-height: 520px; }
 .dashboard-card--network, .dashboard-card--wifi, .dashboard-card--system { border-top-color: var(--color-divider); }
 .traffic-chart { border-color: var(--color-divider); background: var(--color-surface-low); }
@@ -112,7 +115,7 @@ fieldset { border-color: var(--color-divider); }
 
 .table-wrap, .client-list { border-color: var(--color-divider); background: var(--color-surface); }
 table { font-variant-numeric: tabular-nums; }
-th { position: sticky; z-index: 2; top: 0; height: 40px; border-color: var(--color-divider); background: var(--color-surface-container); color: var(--color-text-secondary); letter-spacing: .02em; }
+th { position: sticky; z-index: 2; top: 0; height: 40px; border-color: var(--color-divider); background: var(--color-surface-container); color: var(--color-text-secondary); letter-spacing: 0; }
 td { height: var(--table-row); border-color: color-mix(in srgb, var(--color-divider) 70%, transparent); }
 tbody tr:hover { background: var(--color-surface-container); }
 .client-list__header { position: sticky; z-index: 2; top: 0; background: var(--color-surface-container); }
