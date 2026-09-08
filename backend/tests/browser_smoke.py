@@ -754,6 +754,22 @@ def run() -> None:
                         path=str(ARTIFACTS / f"{name}-overview-24h-memory.png"),
                         full_page=True,
                     )
+                if section == "terminal":
+                    assert (
+                        page.locator(".device-content > .section-heading").count() == 0
+                    )
+                    assert (
+                        page.get_by_role(
+                            "heading", name="Терминал OpenWrt", exact=True
+                        ).count()
+                        == 1
+                    )
+                    terminal_card = page.locator(".terminal-card").bounding_box()
+                    assert terminal_card is not None
+                    assert (
+                        terminal_card["y"] + terminal_card["height"]
+                        <= viewport["height"] + 1
+                    )
                 if section == "internet":
                     page.get_by_text(
                         "Физические сетевые устройства", exact=True
