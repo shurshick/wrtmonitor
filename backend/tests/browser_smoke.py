@@ -998,6 +998,9 @@ def run() -> None:
                     )
                     installed.locator(":scope > summary").click()
                     package_search = installed.locator("[data-package-search]")
+                    expect(package_search).to_have_attribute(
+                        "data-package-search-ready", "true"
+                    )
                     package_search.fill("tcpdump")
                     assert installed.locator(
                         '[data-package-name="tcpdump-mini"]'

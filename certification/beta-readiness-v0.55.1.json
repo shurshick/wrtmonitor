@@ -9,7 +9,7 @@
   },
   "runtime_evidence": {
     "inherited_from": "0.55.0",
-    "reason": "This patch changes only Web terminal layout, browser regression coverage, command journal initialization signaling and documentation. Backend Python and OpenWrt runtime behavior are unchanged; the agent version marker is excluded from the behavioral fingerprint.",
+    "reason": "This patch changes only Web terminal layout, browser regression coverage, command journal and package search initialization signaling, and documentation. Backend Python and OpenWrt runtime behavior are unchanged; the agent version marker is excluded from the behavioral fingerprint.",
     "source_fingerprint_sha256": "e0721231f778e2b7aae775f4375ec6bd4abf7643ffda662038e8f6849b548884"
   },
   "stands": [

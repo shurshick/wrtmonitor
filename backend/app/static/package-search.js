@@ -1,4 +1,7 @@
 (() => {
+  document.querySelectorAll("[data-package-search]").forEach((input) => {
+    input.dataset.packageSearchReady = "true";
+  });
   document.addEventListener("input", (event) => {
     const input = event.target.closest("[data-package-search]");
     if (!input) return;

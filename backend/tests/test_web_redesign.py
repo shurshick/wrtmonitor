@@ -98,3 +98,9 @@ def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:
     assert "grid-template-rows: auto minmax(0, 1fr) auto" in styles
     assert "100dvh - var(--shell-topbar)" in styles
     assert ".terminal-surface { height: auto; min-height: 0; }" in styles
+
+
+def test_package_search_exposes_readiness_before_interaction() -> None:
+    package_search = read("backend/app/static/package-search.js")
+
+    assert 'input.dataset.packageSearchReady = "true"' in package_search
