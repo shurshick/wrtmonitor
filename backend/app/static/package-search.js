@@ -1,4 +1,5 @@
 (() => {
+  document.documentElement.dataset.packageSearchReady = "true";
   document.addEventListener("input", (event) => {
     const input = event.target.closest("[data-package-search]");
     if (!input) return;

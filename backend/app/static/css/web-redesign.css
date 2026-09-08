@@ -137,6 +137,14 @@ tbody tr:hover { background: var(--color-surface-container); }
 .filter-bar { padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-low); }
 .operations-panel { min-height: 0; }
 
+.terminal-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: min(760px, calc(100dvh - var(--shell-topbar) - 130px));
+  min-height: 520px;
+}
+.terminal-surface { height: auto; min-height: 0; }
+
 .config-preview { padding: var(--space-6); border-color: var(--color-divider); background: var(--color-surface); box-shadow: var(--elevation-2); }
 .config-preview::backdrop, .wifi-qr-dialog::backdrop { background: color-mix(in srgb, var(--color-background) 80%, transparent); backdrop-filter: blur(3px); }
 .apply-progress { display: grid; gap: 8px; margin: 16px 0; padding: 14px; border-radius: var(--radius-md); background: var(--color-surface-low); list-style: none; }
@@ -218,6 +226,7 @@ tbody tr:hover { background: var(--color-surface-container); }
   .chart-layout { grid-template-columns: 42px minmax(0, 1fr); }
   .form-actions, .button-row { align-items: stretch; }
   .form-actions > *, .button-row > * { flex: 1 1 auto; }
+  .terminal-card { height: max(500px, calc(100dvh - var(--shell-topbar) - 140px)); min-height: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

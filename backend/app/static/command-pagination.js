@@ -22,4 +22,5 @@
       journal.classList.remove('is-loading');
     }
   });
+  journal.dataset.paginationReady = 'true';
 })();

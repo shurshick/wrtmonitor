@@ -83,3 +83,26 @@ def test_command_pagination_updates_url_before_fetch() -> None:
         "await fetch"
     )
     assert "window.location.reload()" in pagination
+    assert "journal.dataset.paginationReady = 'true'" in pagination
+
+
+def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:
+    page = read("backend/app/templates/device_detail.html")
+    terminal = read("backend/app/templates/partials/ssh.html")
+    styles = read("backend/app/static/css/web-redesign.css")
+
+    terminal_section = page.split("{% elif section == 'terminal' %}", 1)[1]
+    terminal_section = terminal_section.split("{% endif %}", 1)[0]
+    assert "section-heading" not in terminal_section
+    assert terminal.count("Терминал OpenWrt") == 1
+    assert "grid-template-rows: auto minmax(0, 1fr) auto" in styles
+    assert "100dvh - var(--shell-topbar)" in styles
+    assert ".terminal-surface { height: auto; min-height: 0; }" in styles
+
+
+def test_package_search_exposes_readiness_before_interaction() -> None:
+    package_search = read("backend/app/static/package-search.js")
+
+    assert (
+        'document.documentElement.dataset.packageSearchReady = "true"' in package_search
+    )

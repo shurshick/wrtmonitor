@@ -754,6 +754,25 @@ def run() -> None:
                         path=str(ARTIFACTS / f"{name}-overview-24h-memory.png"),
                         full_page=True,
                     )
+                if section == "terminal":
+                    assert (
+                        page.locator(".device-content > .section-heading").count() == 0
+                    )
+                    assert (
+                        page.get_by_role(
+                            "heading", name="Терминал OpenWrt", exact=True
+                        ).count()
+                        == 1
+                    )
+                    terminal_card = page.locator(".terminal-card").bounding_box()
+                    assert terminal_card is not None
+                    if name == "desktop":
+                        assert (
+                            terminal_card["y"] + terminal_card["height"]
+                            <= viewport["height"] + 1
+                        )
+                    else:
+                        assert terminal_card["height"] <= viewport["height"] - 80
                 if section == "internet":
                     page.get_by_text(
                         "Физические сетевые устройства", exact=True
@@ -979,14 +998,18 @@ def run() -> None:
                     )
                     installed.locator(":scope > summary").click()
                     package_search = installed.locator("[data-package-search]")
+                    expect(page.locator("html")).to_have_attribute(
+                        "data-package-search-ready", "true"
+                    )
                     package_search.fill("tcpdump")
-                    assert installed.locator(
-                        '[data-package-name="tcpdump-mini"]'
-                    ).is_visible()
-                    assert installed.locator(
-                        '[data-package-name="busybox"]'
-                    ).is_hidden()
+                    expect(
+                        installed.locator('[data-package-name="tcpdump-mini"]')
+                    ).to_be_visible()
+                    expect(
+                        installed.locator('[data-package-name="busybox"]')
+                    ).to_be_hidden()
                     journal = page.locator("[data-command-journal]")
+                    expect(journal).to_have_attribute("data-pagination-ready", "true")
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
