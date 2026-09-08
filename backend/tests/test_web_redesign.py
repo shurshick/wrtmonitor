@@ -83,6 +83,7 @@ def test_command_pagination_updates_url_before_fetch() -> None:
         "await fetch"
     )
     assert "window.location.reload()" in pagination
+    assert "journal.dataset.paginationReady = 'true'" in pagination
 
 
 def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:

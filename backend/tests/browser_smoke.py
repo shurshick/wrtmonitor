@@ -1003,6 +1003,7 @@ def run() -> None:
                         '[data-package-name="busybox"]'
                     ).is_hidden()
                     journal = page.locator("[data-command-journal]")
+                    expect(journal).to_have_attribute("data-pagination-ready", "true")
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
