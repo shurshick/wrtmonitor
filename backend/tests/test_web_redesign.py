@@ -103,4 +103,6 @@ def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:
 def test_package_search_exposes_readiness_before_interaction() -> None:
     package_search = read("backend/app/static/package-search.js")
 
-    assert 'input.dataset.packageSearchReady = "true"' in package_search
+    assert (
+        'document.documentElement.dataset.packageSearchReady = "true"' in package_search
+    )

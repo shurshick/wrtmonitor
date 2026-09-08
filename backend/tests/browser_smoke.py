@@ -998,16 +998,16 @@ def run() -> None:
                     )
                     installed.locator(":scope > summary").click()
                     package_search = installed.locator("[data-package-search]")
-                    expect(package_search).to_have_attribute(
+                    expect(page.locator("html")).to_have_attribute(
                         "data-package-search-ready", "true"
                     )
                     package_search.fill("tcpdump")
-                    assert installed.locator(
-                        '[data-package-name="tcpdump-mini"]'
-                    ).is_visible()
-                    assert installed.locator(
-                        '[data-package-name="busybox"]'
-                    ).is_hidden()
+                    expect(
+                        installed.locator('[data-package-name="tcpdump-mini"]')
+                    ).to_be_visible()
+                    expect(
+                        installed.locator('[data-package-name="busybox"]')
+                    ).to_be_hidden()
                     journal = page.locator("[data-command-journal]")
                     expect(journal).to_have_attribute("data-pagination-ready", "true")
                     interval_input = page.locator('input[name="interval_seconds"]')
