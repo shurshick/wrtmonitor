@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 import base64
 import json
@@ -8,7 +9,7 @@ import threading
 from pathlib import Path
 
 import httpx
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Page, expect, sync_playwright
 
 
 BASE_URL = os.getenv("WRTMONITOR_BROWSER_BASE_URL", "http://127.0.0.1:8090")
@@ -982,9 +983,7 @@ def run() -> None:
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
                     page.locator('[data-command-page]:has-text("Дальше")').click()
-                    page.wait_for_function(
-                        "new URL(location.href).searchParams.get('command_page') === '2'"
-                    )
+                    expect(page).to_have_url(re.compile(r"[?&]command_page=2(?:&|$)"))
                     page.locator(
                         "[data-command-journal] .command-pagination nav span"
                     ).filter(has_text="2 /").wait_for()
