@@ -630,7 +630,9 @@ def assert_page(page: Page, path: str, screenshot_name: str) -> None:
             "canvas => ({width: canvas.width, height: canvas.height})"
         )
         assert dimensions["width"] >= 240 and dimensions["height"] >= 150
-    page.screenshot(path=str(ARTIFACTS / screenshot_name), full_page=True)
+    page.screenshot(
+        path=str(ARTIFACTS / screenshot_name), full_page=True, animations="disabled"
+    )
 
 
 def run() -> None:
@@ -655,7 +657,9 @@ def run() -> None:
             page.locator("[data-theme-toggle]").click()
             assert page.locator("html").get_attribute("data-theme") == "light"
             page.screenshot(
-                path=str(ARTIFACTS / f"{name}-devices-light.png"), full_page=True
+                path=str(ARTIFACTS / f"{name}-devices-light.png"),
+                full_page=True,
+                animations="disabled",
             )
             assert_page(page, "/account", f"{name}-account.png")
             assert page.locator("html").get_attribute("data-theme") == "light"
@@ -723,7 +727,10 @@ def run() -> None:
                         page.locator("[data-nav-toggle]").click()
                     page.locator("[data-theme-toggle]").click()
                     assert page.locator("html").get_attribute("data-theme") == "light"
-                    page.screenshot(path=str(ARTIFACTS / f"{name}-overview-light.png"))
+                    page.screenshot(
+                        path=str(ARTIFACTS / f"{name}-overview-light.png"),
+                        animations="disabled",
+                    )
                     page.locator("[data-theme-toggle]").click()
                     assert "61.0 °C" in page.locator(".compact-facts").inner_text()
                     page.locator('[data-chart-range="24h"]').click()

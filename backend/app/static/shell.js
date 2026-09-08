@@ -41,7 +41,10 @@
     });
     navCollapse?.addEventListener("click", () => navToggle.click());
     scrim?.addEventListener("click", closeNav);
-    compactQuery.addEventListener("change", closeNav);
+    compactQuery.addEventListener("change", () => {
+      closeNav();
+      body.classList.toggle("app-nav-collapsed", !compactQuery.matches && localStorage.getItem("wrtmonitor-sidebar") === "collapsed");
+    });
   } else if (navToggle) {
     navToggle.hidden = true;
   }
