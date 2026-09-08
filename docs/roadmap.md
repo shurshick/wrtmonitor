@@ -14,10 +14,10 @@
 - централизованные design tokens и единая светлая/тёмная продуктовая тема;
 - desktop app shell со сворачиваемой боковой панелью и router selector;
 - адаптивные dashboard, таблицы, формы и dialogs для шести viewport;
-- доступный safe-write flow с review и видимым этапом применения;
+- доступный safe-write flow с review и видимой отправкой команды;
 - актуальные Web screenshots и visual regression в CI.
 
-Статус: code complete, проходит release pipeline.
+Статус: реализовано; результаты CI и выпуска доступны в GitHub Actions.
 
 ## v0.54.0 - Android Expressive Redesign
 

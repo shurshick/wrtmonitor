@@ -6,7 +6,7 @@
 - Добавлена компактная top bar, глобальный выбор роутера с поиском и постоянная desktop-навигация, которая сворачивается и превращается в drawer на узких экранах.
 - Dashboard, clients, network, Wi-Fi, firewall, VPN, system, maintenance, packages, diagnostics и Web SSH получили единый плотный layout.
 - Таблицы, формы, статусы, filters, empty/error состояния и dialogs приведены к общим компонентным правилам без изменения API.
-- Safe Write показывает review, несохранённые изменения и текущий этап применения; успешный результат по-прежнему зависит от post-condition verifier.
+- Safe Write показывает review, несохранённые изменения и отправку команды; успешный результат по-прежнему зависит от post-condition verifier.
 - Добавлены skip navigation, keyboard/Escape handling, focus-visible, live announcements, reduced motion и локальный icon sprite без emoji/CDN.
 - Browser visual regression расширен до 1920, 1440, 1366, 1024, 768 и 390 px; README обновлён актуальными Web screenshots.
 - Исправлен старый синтаксический дефект Jinja-шаблона fleet. Android `versionCode` повышен до `120`.
