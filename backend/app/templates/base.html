@@ -5,25 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}WrtMonitor{% endblock %}</title>
   <script src="/static/theme-bootstrap.js"></script>
+  <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/css/components.css">
   <link rel="stylesheet" href="/static/css/responsive.css">
+  <link rel="stylesheet" href="/static/css/web-redesign.css">
   <script defer src="/static/theme.js"></script>
+  <script defer src="/static/shell.js"></script>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main-content">Перейти к содержимому</a>
   <header class="app-header">
     <div class="app-header__content">
-      <a class="brand" href="/"><span class="brand__mark">W</span><span>WrtMonitor</span></a>
+      <div class="app-header__leading">
+        <button class="icon-button app-nav-toggle" type="button" data-nav-toggle aria-controls="device-sidebar" aria-expanded="false" title="Открыть навигацию" aria-label="Открыть навигацию"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#menu"></use></svg></button>
+        <a class="brand" href="/devices"><span class="brand__mark">W</span><span>WrtMonitor</span></a>
+        {% block context_controls %}{% endblock %}
+      </div>
       <div class="app-header__actions">
-        <span class="app-header__meta">Управление OpenWrt</span>
-        <a class="header-link" href="/events">События</a>
+        <nav class="global-nav" aria-label="Основная навигация">
+          <a class="header-link" href="/devices"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#router"></use></svg><span>Роутеры</span></a>
+          <a class="header-link" href="/events"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#events"></use></svg><span>События</span></a>
+          <a class="header-link" href="/account"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#account"></use></svg><span>Сервер</span></a>
+        </nav>
         <button class="icon-button theme-toggle" type="button" data-theme-toggle title="Сменить тему" aria-label="Сменить тему">
-          <span aria-hidden="true" data-theme-icon>☀</span>
+          <svg class="ui-icon" aria-hidden="true"><use data-theme-icon href="/static/icons.svg#sun"></use></svg>
         </button>
       </div>
     </div>
   </header>
-  <main class="page {% block page_class %}{% endblock %}">{% block content %}{% endblock %}</main>
+  <main id="main-content" class="page {% block page_class %}{% endblock %}" tabindex="-1">{% block content %}{% endblock %}</main>
+  <div class="nav-scrim" data-nav-scrim hidden></div>
+  <div class="sr-announcer" data-app-announcer aria-live="polite" aria-atomic="true"></div>
   {% block scripts %}{% endblock %}
 </body>
 </html>

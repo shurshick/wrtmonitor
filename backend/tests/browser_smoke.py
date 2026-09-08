@@ -637,7 +637,11 @@ def run() -> None:
     device_id, device_token = prepare_router()
     with sync_playwright() as playwright:
         for name, viewport in (
+            ("wide", {"width": 1920, "height": 1080}),
             ("desktop", {"width": 1440, "height": 900}),
+            ("compact", {"width": 1366, "height": 768}),
+            ("tablet", {"width": 1024, "height": 768}),
+            ("narrow", {"width": 768, "height": 900}),
             ("mobile", {"width": 390, "height": 844}),
         ):
             browser = playwright.chromium.launch()
