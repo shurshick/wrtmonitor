@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "release_version": "0.55.1",
+  "generated_at": "2026-09-08T18:46:37+00:00",
+  "observation_policy": {
+    "minimum_hours": 168,
+    "sampling_tolerance_hours": 2,
+    "outages_are_reported_and_require_recovery": true
+  },
+  "runtime_evidence": {
+    "inherited_from": "0.55.0",
+    "reason": "This patch changes only Web terminal layout, browser regression coverage, command journal initialization signaling and documentation. Backend Python and OpenWrt runtime behavior are unchanged; the agent version marker is excluded from the behavioral fingerprint.",
+    "source_fingerprint_sha256": "e0721231f778e2b7aae775f4375ec6bd4abf7643ffda662038e8f6849b548884"
+  },
+  "stands": [
+    {
+      "stand": "Netis NX31",
+      "device": "NetisNX31",
+      "status": "online",
+      "requested_observation_hours": 168,
+      "observed_span_hours": 167.5,
+      "sample_count": 333,
+      "first_sample_at": "2026-08-17T13:50:24.659439+00:00",
+      "last_sample_at": "2026-08-24T13:20:23.443418+00:00",
+      "last_sample_age_seconds": 15.9,
+      "median_gap_minutes": 30.1,
+      "maximum_gap_minutes": 33.8,
+      "recovered_after_longest_gap": true,
+      "warnings": [],
+      "passed": true
+    },
+    {
+      "stand": "OpenWrt x86",
+      "device": "OpenWrt-x86",
+      "status": "online",
+      "requested_observation_hours": 168,
+      "observed_span_hours": 167.48,
+      "sample_count": 326,
+      "first_sample_at": "2026-08-17T13:51:04.751989+00:00",
+      "last_sample_at": "2026-08-24T13:19:38.503589+00:00",
+      "last_sample_age_seconds": 61.7,
+      "median_gap_minutes": 30.1,
+      "maximum_gap_minutes": 33.2,
+      "recovered_after_longest_gap": true,
+      "warnings": [],
+      "passed": true
+    }
+  ],
+  "checks": {
+    "required_stands_present": true,
+    "all_stands_online_and_fresh": true
+  },
+  "status": "passed"
+}
