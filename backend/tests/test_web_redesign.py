@@ -104,6 +104,7 @@ def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:
     assert "themeObserver.observe(document.documentElement" in terminal_script
     assert "minimumContrastRatio = 7" in terminal_script
     assert "color-scheme: dark" in components
+    assert ".terminal-surface .xterm-rows { color: #eef4f9; }" in components
 
 
 def test_package_search_exposes_readiness_before_interaction() -> None:

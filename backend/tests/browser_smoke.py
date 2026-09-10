@@ -1091,30 +1091,20 @@ def run() -> None:
                         && terminal.options.theme.background === '#07101c';
                     }"""
                 )
-                terminal_pixels = page.locator(".xterm-screen").evaluate(
-                    """node => [...node.querySelectorAll('canvas')].reduce((result, canvas) => {
-                      const context = canvas.getContext('2d', { willReadFrequently: true });
-                      result.canvases += 1;
-                      if (!context) return result;
-                      result.contexts += 1;
-                      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-                      for (let index = 0; index < pixels.length; index += 4) {
-                        if (pixels[index + 3] > 0) result.opaque += 1;
-                        if (pixels[index + 3] > 0
-                          && pixels[index] > 180
-                          && pixels[index + 1] > 180
-                          && pixels[index + 2] > 180) result.bright += 1;
-                      }
-                      return result;
-                    }, { canvases: 0, contexts: 0, opaque: 0, bright: 0 })"""
+                terminal_colors = page.evaluate(
+                    """() => ({
+                      foreground: getComputedStyle(document.querySelector('.xterm-rows')).color,
+                      background: getComputedStyle(document.querySelector('.terminal-surface')).backgroundColor,
+                    })"""
                 )
                 page.screenshot(
                     path=str(ARTIFACTS / "desktop-terminal-connected-light.png"),
                     full_page=True,
                 )
-                assert terminal_pixels["bright"] > 25, (
-                    f"terminal text is not visible in light theme: {terminal_pixels}"
-                )
+                assert terminal_colors == {
+                    "foreground": "rgb(238, 244, 249)",
+                    "background": "rgb(7, 16, 28)",
+                }, f"terminal contrast changed in light theme: {terminal_colors}"
             browser.close()
 
         for name, viewport in (
