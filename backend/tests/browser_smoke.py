@@ -1082,10 +1082,29 @@ def run() -> None:
                 worker.join(timeout=10)
                 assert not worker.is_alive(), "terminal agent fixture did not finish"
                 assert not errors, errors[0]
+                page.locator("[data-theme-toggle]").click()
+                assert page.locator("html").get_attribute("data-theme") == "light"
+                page.wait_for_function(
+                    """() => {
+                      const terminal = document.querySelector('[data-terminal-device]').wrtmonitorTerminal;
+                      return terminal?.options.theme.foreground === '#eef4f9'
+                        && terminal.options.theme.background === '#07101c';
+                    }"""
+                )
+                terminal_colors = page.evaluate(
+                    """() => ({
+                      foreground: getComputedStyle(document.querySelector('.xterm-rows')).color,
+                      background: getComputedStyle(document.querySelector('.terminal-surface')).backgroundColor,
+                    })"""
+                )
                 page.screenshot(
-                    path=str(ARTIFACTS / "desktop-terminal-connected.png"),
+                    path=str(ARTIFACTS / "desktop-terminal-connected-light.png"),
                     full_page=True,
                 )
+                assert terminal_colors == {
+                    "foreground": "rgb(238, 244, 249)",
+                    "background": "rgb(7, 16, 28)",
+                }, f"terminal contrast changed in light theme: {terminal_colors}"
             browser.close()
 
         for name, viewport in (
