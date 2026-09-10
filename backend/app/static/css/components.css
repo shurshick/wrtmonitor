@@ -505,6 +505,6 @@ html[data-theme="light"] .resource-gauge { background: conic-gradient(var(--gaug
 .terminal-status { color: var(--muted); font-size: .86rem; white-space: nowrap; }
 [data-terminal-state="connected"] .terminal-status { color: var(--success); }
 [data-terminal-state="failed"] .terminal-status { color: var(--danger); }
-.terminal-surface { min-height: 440px; height: min(62vh, 720px); padding: 14px; background: #07101c; }
+.terminal-surface { min-height: 440px; height: min(62vh, 720px); padding: 14px; background: #07101c; color-scheme: dark; }
 .terminal-surface .xterm, .terminal-surface .xterm-viewport { height: 100%; }
 .terminal-card__note { margin: 0; padding: 12px 24px; color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border); }

@@ -1,4 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const terminalTheme = Object.freeze({
+    background: '#07101c',
+    foreground: '#eef4f9',
+    cursor: '#62d4e6',
+    cursorAccent: '#07101c',
+    selectionBackground: '#24526b',
+    black: '#71869a',
+    red: '#ff858b',
+    green: '#62d991',
+    yellow: '#f1bd62',
+    blue: '#72aef8',
+    magenta: '#d6a8ff',
+    cyan: '#62d4e6',
+    white: '#eef4f9',
+    brightBlack: '#9babb9',
+    brightRed: '#ffb1b5',
+    brightGreen: '#91e8b4',
+    brightYellow: '#f8d79b',
+    brightBlue: '#a8cdff',
+    brightMagenta: '#e5c9ff',
+    brightCyan: '#a5edf6',
+    brightWhite: '#ffffff',
+  });
   const root = document.querySelector('[data-terminal-device]');
   const container = document.getElementById('terminal-container');
   const status = document.getElementById('terminal-status');
@@ -12,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let socket;
   let dataSubscription;
   let resizeSubscription;
+  let themeObserver;
   let reconnectAllowed = true;
 
   const setState = (value, label) => {
@@ -37,6 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (terminal && fitAddon) fitAddon.fit();
   };
 
+  const applyTerminalTheme = () => {
+    if (!terminal) return;
+    terminal.options.theme = { ...terminalTheme };
+    terminal.options.minimumContrastRatio = 7;
+    terminal.refresh(0, terminal.rows - 1);
+  };
+
   const ensureTerminal = () => {
     if (terminal) return true;
     if (typeof window.Terminal !== 'function' || !window.FitAddon?.FitAddon) {
@@ -49,17 +80,18 @@ document.addEventListener('DOMContentLoaded', () => {
       fontSize: 14,
       minimumContrastRatio: 7,
       scrollback: 5000,
-      theme: {
-        background: '#07101c',
-        foreground: '#d8e7f5',
-        cursor: '#35c4df',
-        selectionBackground: '#24526b',
-      },
+      theme: { ...terminalTheme },
     });
     fitAddon = new window.FitAddon.FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(container);
     root.wrtmonitorTerminal = terminal;
+    applyTerminalTheme();
+    themeObserver = new MutationObserver(applyTerminalTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
     fit();
     dataSubscription = terminal.onData((data) => send({ type: 'input', data }));
     resizeSubscription = terminal.onResize(({ cols, rows }) => {
@@ -128,5 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
     socket?.close(1000, 'page closed');
     dataSubscription?.dispose();
     resizeSubscription?.dispose();
+    themeObserver?.disconnect();
   });
 });

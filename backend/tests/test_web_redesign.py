@@ -89,6 +89,8 @@ def test_command_pagination_updates_url_before_fetch() -> None:
 def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:
     page = read("backend/app/templates/device_detail.html")
     terminal = read("backend/app/templates/partials/ssh.html")
+    terminal_script = read("backend/app/static/web-ssh.js")
+    components = read("backend/app/static/css/components.css")
     styles = read("backend/app/static/css/web-redesign.css")
 
     terminal_section = page.split("{% elif section == 'terminal' %}", 1)[1]
@@ -98,6 +100,10 @@ def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:
     assert "grid-template-rows: auto minmax(0, 1fr) auto" in styles
     assert "100dvh - var(--shell-topbar)" in styles
     assert ".terminal-surface { height: auto; min-height: 0; }" in styles
+    assert "terminal.options.theme = { ...terminalTheme }" in terminal_script
+    assert "themeObserver.observe(document.documentElement" in terminal_script
+    assert "minimumContrastRatio = 7" in terminal_script
+    assert "color-scheme: dark" in components
 
 
 def test_package_search_exposes_readiness_before_interaction() -> None:

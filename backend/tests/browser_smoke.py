@@ -1082,8 +1082,32 @@ def run() -> None:
                 worker.join(timeout=10)
                 assert not worker.is_alive(), "terminal agent fixture did not finish"
                 assert not errors, errors[0]
+                page.locator("[data-theme-toggle]").click()
+                assert page.locator("html").get_attribute("data-theme") == "light"
+                page.wait_for_function(
+                    """() => {
+                      const terminal = document.querySelector('[data-terminal-device]').wrtmonitorTerminal;
+                      return terminal?.options.theme.foreground === '#eef4f9'
+                        && terminal.options.theme.background === '#07101c';
+                    }"""
+                )
+                bright_pixels = page.locator(".xterm-screen").evaluate(
+                    """node => [...node.querySelectorAll('canvas')].reduce((total, canvas) => {
+                      const context = canvas.getContext('2d', { willReadFrequently: true });
+                      if (!context) return total;
+                      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+                      for (let index = 0; index < pixels.length; index += 4) {
+                        if (pixels[index + 3] > 0
+                          && pixels[index] > 180
+                          && pixels[index + 1] > 180
+                          && pixels[index + 2] > 180) total += 1;
+                      }
+                      return total;
+                    }, 0)"""
+                )
+                assert bright_pixels > 25, "terminal text is not visible in light theme"
                 page.screenshot(
-                    path=str(ARTIFACTS / "desktop-terminal-connected.png"),
+                    path=str(ARTIFACTS / "desktop-terminal-connected-light.png"),
                     full_page=True,
                 )
             browser.close()
