@@ -265,7 +265,7 @@ jobs:
           java-version: "17"
       - uses: android-actions/setup-android@v3
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: chmod +x ./gradlew
       - run: ./gradlew :android:app:assembleDebug
       - run: ./gradlew :android:app:testDebugUnitTest
@@ -287,7 +287,7 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: chmod +x ./gradlew
       - name: Enable KVM
         run: |
@@ -330,7 +330,7 @@ jobs:
           java-version: "17"
       - uses: android-actions/setup-android@v3
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: chmod +x ./gradlew
       - name: Restore Android release signing key
         env:
