@@ -88,6 +88,9 @@ def test_terminal_styles_with_real_csp_and_theme_switch():
             page.evaluate(
                 "theme => document.documentElement.dataset.theme = theme", theme
             )
+            page.wait_for_function(
+                "document.documentElement.scrollWidth <= innerWidth", timeout=3000
+            )
             playwright.expect(page.locator(".xterm-fg-1").first).to_contain_text(
                 "ANSI_RED"
             )
