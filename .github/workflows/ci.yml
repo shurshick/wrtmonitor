@@ -48,10 +48,10 @@ jobs:
           python scripts/runtime_validation_report.py
           certification/netis-nx31.json
           certification/openwrt-x86.json
-      - name: Validate beta-readiness soak evidence
+      - name: Validate release readiness or explicit owner exception
+        if: startsWith(github.ref, 'refs/tags/')
         run: >-
-          python scripts/beta_readiness_report.py validate
-          "certification/beta-readiness-v$(cat VERSION).json"
+          python scripts/verify_release_readiness.py
           --version "$(cat VERSION)"
       - run: python scripts/generate_command_matrix.py
       - run: python scripts/command_validation_report.py artifacts/command-validation.json --init --router ci-harness

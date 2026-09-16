@@ -69,7 +69,7 @@ def _optional_string(payload: dict[str, Any], key: str) -> str | None:
 
 
 def _safe_identifier(value: str, field: str, pattern: str) -> str:
-    if not re.fullmatch(pattern, value):
+    if len(value) > 255 or not re.fullmatch(pattern, value):
         raise HTTPException(
             status_code=400, detail=f"Field '{field}' has invalid format"
         )

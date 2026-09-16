@@ -124,9 +124,11 @@ def firmware_catalog(payload: dict[str, Any]) -> dict[str, Any]:
             return result
         result["available_version"] = available_version
         profiles = _profiles(available_version, target)
-    except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+    except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
         result["status"] = "error"
-        result["error"] = f"OpenWrt catalog is unavailable: {exc}"
+        result["error"] = (
+            "OpenWrt catalog is temporarily unavailable. Please try again later."
+        )
         return result
     profile = _resolve_profile(profiles, board_name)
     if not isinstance(profile, dict):

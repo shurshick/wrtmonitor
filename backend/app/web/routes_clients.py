@@ -1,7 +1,7 @@
 from fastapi import APIRouter
+from ..services.client_profile_commands import queue_profile_commands
 from ..services.client_registry import infer_device_type, validate_device_type
 from ..services.wifi_access_profiles import (
-    assigned_wifi_interfaces,
     wifi_access_profile_payload,
 )
 from .route_shared import (
@@ -306,7 +306,6 @@ def web_update_client_profile(
     ).first()
     if duplicate:
         raise HTTPException(status_code=409, detail="Профиль уже существует")
-    assigned_interfaces = assigned_wifi_interfaces(db, device_id, profile.id)
     profile.name = normalized_name
     profile.policy = validate_client_policy(
         {
@@ -324,25 +323,7 @@ def web_update_client_profile(
         }
     )
     profile.updated_at = datetime.now(UTC)
-    command_ids: list[str] = []
-    for iface in assigned_interfaces:
-        normalized = validate_command_request(
-            command_type="wifi.set_access_profile",
-            payload=wifi_access_profile_payload(iface, profile),
-            confirmed=True,
-            device_supports=lambda capability: device_supports(
-                db, device_id, capability
-            ),
-        )
-        command = create_device_command(
-            db,
-            device_id=device_id,
-            command_type="wifi.set_access_profile",
-            payload=normalized,
-            created_by=user.id,
-            source="web",
-        )
-        command_ids.append(str(command.id))
+    command_ids = queue_profile_commands(db, profile, created_by=user.id, source="web")
     audit(
         db,
         user.id,
@@ -372,25 +353,9 @@ def web_delete_client_profile(
     profile = db.get(ClientProfile, profile_id)
     if not profile or profile.device_id != device_id:
         raise HTTPException(status_code=404, detail="Client profile not found")
-    command_ids: list[str] = []
-    for iface in assigned_wifi_interfaces(db, device_id, profile.id):
-        normalized = validate_command_request(
-            command_type="wifi.set_access_profile",
-            payload=wifi_access_profile_payload(iface, None),
-            confirmed=True,
-            device_supports=lambda capability: device_supports(
-                db, device_id, capability
-            ),
-        )
-        command = create_device_command(
-            db,
-            device_id=device_id,
-            command_type="wifi.set_access_profile",
-            payload=normalized,
-            created_by=user.id,
-            source="web",
-        )
-        command_ids.append(str(command.id))
+    command_ids = queue_profile_commands(
+        db, profile, created_by=user.id, source="web", removing=True
+    )
     db.delete(profile)
     audit(
         db,

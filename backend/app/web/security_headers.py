@@ -1,3 +1,5 @@
+import re
+
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
@@ -16,4 +18,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         )
+        if (
+            re.fullmatch(r"/devices/[0-9a-fA-F-]{36}", request.url.path)
+            and request.query_params.get("section") == "terminal"
+            and response.headers.get("content-type", "").startswith("text/html")
+        ):
+            # xterm's DOM renderer generates style elements for cell geometry and ANSI.
+            # Scripts and style attributes retain the default self-only policy.
+            response.headers["Content-Security-Policy"] += (
+                "; style-src-elem 'self' 'unsafe-inline'"
+            )
         return response

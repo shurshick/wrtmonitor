@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const connect = () => {
+    if (socket && socket.readyState < WebSocket.CLOSING) return;
     if (!ensureTerminal()) return;
     reconnectAllowed = true;
     terminal.reset();
@@ -117,8 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setState('connecting', 'Подключение к агенту');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const query = new URLSearchParams({ columns: String(terminal.cols), rows: String(terminal.rows) });
-    socket = new WebSocket(`${protocol}//${window.location.host}/api/v1/devices/${deviceId}/terminal/ws?${query}`);
-    socket.addEventListener('message', (event) => {
+    const connection = new WebSocket(`${protocol}//${window.location.host}/api/v1/devices/${deviceId}/terminal/ws?${query}`);
+    socket = connection;
+    connection.addEventListener('message', (event) => {
+      if (socket !== connection) return;
       let message;
       try {
         message = JSON.parse(event.data);
@@ -145,11 +148,17 @@ document.addEventListener('DOMContentLoaded', () => {
         setState('failed', message.message || 'Ошибка терминала');
       }
     });
-    socket.addEventListener('close', (event) => {
+    connection.addEventListener('close', (event) => {
+      if (socket !== connection) return;
       socket = undefined;
+      if (['closed', 'failed', 'expired'].includes(root.dataset.terminalState)) return;
       setState(reconnectAllowed && event.code !== 1000 ? 'failed' : 'closed', reconnectAllowed && event.code !== 1000 ? 'Соединение с сервером потеряно' : 'Отключено');
     });
-    socket.addEventListener('error', () => setState('failed', 'WebSocket недоступен'));
+    connection.addEventListener('error', () => {
+      if (socket === connection && !['closed', 'failed', 'expired'].includes(root.dataset.terminalState)) {
+        setState('failed', 'WebSocket недоступен');
+      }
+    });
   };
 
   connectButton.addEventListener('click', connect);

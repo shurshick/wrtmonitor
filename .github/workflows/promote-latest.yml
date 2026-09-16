@@ -12,8 +12,13 @@ on:
         default: "0"
 
 permissions:
+  actions: read
   contents: write
   packages: write
+
+concurrency:
+  group: promote-latest
+  cancel-in-progress: false
 
 jobs:
   promote:
@@ -23,30 +28,27 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Verify beta-readiness evidence
+      - name: Verify exact release commit and successful checks
+        id: verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
+        run: >-
+          python scripts/verify_release_promotion.py
+          --repository "$REPOSITORY" --version "$VERSION"
+          --minimum-age-hours "$MINIMUM_AGE_HOURS"
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.verify.outputs.commit }}
+          path: release-source
+      - name: Verify readiness or explicit owner exception against release source
+        working-directory: release-source
         env:
           VERSION: ${{ inputs.version }}
         run: >-
-          python scripts/beta_readiness_report.py validate
-          "certification/beta-readiness-v${VERSION}.json"
-          --version "$VERSION"
-      - name: Verify canary age and successful release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ inputs.version }}
-          MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
-        run: |
-          test "$MINIMUM_AGE_HOURS" -ge 0
-          test "$MINIMUM_AGE_HOURS" -le 336
-          RELEASE_TAG="v${VERSION}"
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            RELEASE_TAG="$(gh release list --limit 100 --json tagName --jq ".[] | select(.tagName | startswith(\"v${VERSION}-\")) | .tagName" | head -n1)"
-          fi
-          test -n "$RELEASE_TAG"
-          PUBLISHED="$(gh release view "$RELEASE_TAG" --json publishedAt --jq .publishedAt)"
-          AGE="$(( $(date -u +%s) - $(date -u -d "$PUBLISHED" +%s) ))"
-          test "$AGE" -ge "$(( MINIMUM_AGE_HOURS * 3600 ))"
-          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          python ../scripts/verify_release_readiness.py --version "$VERSION"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -56,15 +58,23 @@ jobs:
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/wrtmonitor
           VERSION: ${{ inputs.version }}
+          RELEASE_COMMIT: ${{ steps.verify.outputs.commit }}
         run: |
+          SOURCE_DIGEST="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --raw | sha256sum | awk '{print $1}')"
+          SOURCE_IMAGE="$IMAGE@sha256:$SOURCE_DIGEST"
+          docker pull "$SOURCE_IMAGE"
+          IMAGE_COMMIT="$(docker image inspect "$SOURCE_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')"
+          IMAGE_VERSION="$(docker image inspect "$SOURCE_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')"
+          test "$IMAGE_COMMIT" = "$RELEASE_COMMIT"
+          test "$IMAGE_VERSION" = "$VERSION"
           docker buildx imagetools create \
             --tag "$IMAGE:latest" \
-            "$IMAGE:$VERSION"
-          SOURCE_DIGEST="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --raw | sha256sum | awk '{print $1}')"
+            "$SOURCE_IMAGE"
           LATEST_DIGEST="$(docker buildx imagetools inspect "$IMAGE:latest" --raw | sha256sum | awk '{print $1}')"
           test -n "$SOURCE_DIGEST"
           test "$SOURCE_DIGEST" = "$LATEST_DIGEST"
       - name: Mark GitHub release latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.verify.outputs.tag }}
         run: gh release edit "$RELEASE_TAG" --prerelease=false --latest

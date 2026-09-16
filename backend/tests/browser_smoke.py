@@ -1082,6 +1082,12 @@ def run() -> None:
                 worker.join(timeout=10)
                 assert not worker.is_alive(), "terminal agent fixture did not finish"
                 assert not errors, errors[0]
+                expect(page.locator("[data-terminal-device]")).to_have_attribute(
+                    "data-terminal-state", "closed"
+                )
+                expect(page.locator("#terminal-status")).to_have_text(
+                    "Сессия завершена"
+                )
                 page.locator("[data-theme-toggle]").click()
                 assert page.locator("html").get_attribute("data-theme") == "light"
                 page.wait_for_function(

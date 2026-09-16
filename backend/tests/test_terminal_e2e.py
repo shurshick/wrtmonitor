@@ -14,7 +14,8 @@ from backend.app.models import TerminalFrame, TerminalSession
 from backend.tests.test_api import clear_database, postgres_e2e_enabled
 
 
-def test_browser_server_agent_terminal_roundtrip():
+@pytest.mark.parametrize("closed_by_agent", [False, True])
+def test_browser_server_agent_terminal_roundtrip(closed_by_agent):
     if not postgres_e2e_enabled():
         pytest.skip("PostgreSQL E2E test requires WRTMONITOR_DATABASE_URL")
 
@@ -141,7 +142,21 @@ def test_browser_server_agent_terminal_roundtrip():
                 item for item in messages if item.get("type") == "output"
             )
             assert base64.b64decode(output_message["data"]) == output
-            websocket.send_json({"type": "close"})
+            if closed_by_agent:
+                client.post(
+                    f"/api/v1/agent/terminal/sessions/{session_id}/status",
+                    headers=agent_headers,
+                    json={"status": "closed"},
+                ).raise_for_status()
+                for _ in range(8):
+                    message = websocket.receive()
+                    if message["type"] == "websocket.close":
+                        assert message["code"] == 1000
+                        break
+                else:
+                    pytest.fail("Agent closure did not close the browser socket")
+            else:
+                websocket.send_json({"type": "close"})
 
         deadline = time.monotonic() + 2
         terminal_status = None
