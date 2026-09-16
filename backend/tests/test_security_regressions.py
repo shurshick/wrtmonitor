@@ -10,10 +10,13 @@ from backend.app.web import routes_account
 
 
 def test_identifier_is_bounded_before_regex():
-    with patch("backend.app.services.command_common.re.fullmatch") as match:
-        with pytest.raises(HTTPException):
-            _safe_identifier("1" * 256, "leasetime", r"[1-9][0-9]*[mh]")
-        match.assert_not_called()
+    with pytest.raises(HTTPException):
+        _safe_identifier("1" * 256, "leasetime", r"[1-9][0-9]*[mh]")
+
+
+def test_identifier_uses_only_declared_linear_rules():
+    with pytest.raises(RuntimeError, match="Unsupported"):
+        _safe_identifier("safe", "field", r".+")
 
 
 def test_wireguard_endpoint_is_bounded():
