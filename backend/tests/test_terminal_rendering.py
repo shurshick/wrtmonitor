@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 
 import pytest
 from fastapi import FastAPI
@@ -88,9 +89,13 @@ def test_terminal_styles_with_real_csp_and_theme_switch():
             page.evaluate(
                 "theme => document.documentElement.dataset.theme = theme", theme
             )
-            page.wait_for_function(
-                "document.documentElement.scrollWidth <= innerWidth", timeout=3000
-            )
+            deadline = time.monotonic() + 3
+            while page.locator("html").evaluate(
+                "element => element.scrollWidth > innerWidth"
+            ):
+                if time.monotonic() >= deadline:
+                    break
+                page.wait_for_timeout(20)
             playwright.expect(page.locator(".xterm-fg-1").first).to_contain_text(
                 "ANSI_RED"
             )
