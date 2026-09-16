@@ -230,14 +230,14 @@ async def browser_terminal_ws(
     except WebSocketDisconnect:
         pass
     finally:
+        # Persist first: Starlette may cancel this task while the socket context is
+        # unwinding, so no awaited cleanup may precede the state transition.
+        _close_browser_session(terminal.id, close_reason)
         if receive_task is not None:
             receive_task.cancel()
             await asyncio.gather(receive_task, return_exceptions=True)
         output_task.cancel()
         await asyncio.gather(output_task, return_exceptions=True)
-        # Persist closure synchronously: Starlette may cancel the websocket task as
-        # soon as the browser context exits, which must not leave a connected PTY.
-        _close_browser_session(terminal.id, close_reason)
 
 
 def _require_agent_terminal(
