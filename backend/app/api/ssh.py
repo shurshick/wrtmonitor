@@ -172,10 +172,21 @@ async def browser_terminal_ws(
         }
     )
     output_task = asyncio.create_task(_browser_terminal_output(websocket, terminal.id))
+    receive_task = None
     close_reason = "browser disconnected"
     try:
         while True:
-            message = await websocket.receive_json()
+            receive_task = asyncio.create_task(websocket.receive_json())
+            done, _ = await asyncio.wait(
+                {receive_task, output_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if output_task in done:
+                output_task.result()
+                close_reason = "terminal session ended"
+                await websocket.close(code=1000)
+                break
+            message = receive_task.result()
+            receive_task = None
             frame_type = str(message.get("type") or "")
             if frame_type == "input":
                 data = str(message.get("data") or "").encode("utf-8")
@@ -219,11 +230,14 @@ async def browser_terminal_ws(
     except WebSocketDisconnect:
         pass
     finally:
+        # Persist first: Starlette may cancel this task while the socket context is
+        # unwinding, so no awaited cleanup may precede the state transition.
+        _close_browser_session(terminal.id, close_reason)
+        if receive_task is not None:
+            receive_task.cancel()
+            await asyncio.gather(receive_task, return_exceptions=True)
         output_task.cancel()
         await asyncio.gather(output_task, return_exceptions=True)
-        # Persist closure synchronously: Starlette may cancel the websocket task as
-        # soon as the browser context exits, which must not leave a connected PTY.
-        _close_browser_session(terminal.id, close_reason)
 
 
 def _require_agent_terminal(

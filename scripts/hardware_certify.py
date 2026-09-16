@@ -62,7 +62,10 @@ class Ssh:
 
     def _connect(self) -> paramiko.SSHClient:
         self.client = paramiko.SSHClient()
-        self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.client.load_system_host_keys()
+        if known_hosts := os.environ.get("WRTMONITOR_SSH_KNOWN_HOSTS"):
+            self.client.load_host_keys(known_hosts)
+        self.client.set_missing_host_key_policy(paramiko.RejectPolicy())
         self.client.connect(
             self.target.host,
             username=self.target.ssh_user,

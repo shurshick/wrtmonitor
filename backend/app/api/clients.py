@@ -19,6 +19,7 @@ from ..schemas import (
     WifiAccessProfileRequest,
 )
 from ..services.audit import audit
+from ..services.client_profile_commands import queue_profile_commands
 from ..services.auth import current_user
 from ..services.client_registry import (
     client_response,
@@ -35,7 +36,6 @@ from ..services.devices import (
 )
 from ..services.telemetry import normalize_wifi_summary
 from ..services.wifi_access_profiles import (
-    assigned_wifi_interfaces,
     wifi_access_profile_payload,
 )
 
@@ -538,7 +538,6 @@ def update_profile(
 ) -> dict:
     get_user_device_or_404(db, user, device_id)
     profile = get_profile(db, device_id, profile_id)
-    assigned_interfaces = assigned_wifi_interfaces(db, device_id, profile.id)
     normalized_name = payload.name.strip()
     duplicate = db.scalars(
         select(ClientProfile).where(
@@ -554,25 +553,7 @@ def update_profile(
     profile.name = normalized_name
     profile.policy = validate_client_policy(payload.policy)
     profile.updated_at = datetime.now(UTC)
-    command_ids: list[str] = []
-    for iface in assigned_interfaces:
-        normalized = validate_command_request(
-            command_type="wifi.set_access_profile",
-            payload=wifi_access_profile_payload(iface, profile),
-            confirmed=True,
-            device_supports=lambda capability: device_supports(
-                db, device_id, capability
-            ),
-        )
-        command = create_device_command(
-            db,
-            device_id=device_id,
-            command_type="wifi.set_access_profile",
-            payload=normalized,
-            created_by=user.id,
-            source="api",
-        )
-        command_ids.append(str(command.id))
+    command_ids = queue_profile_commands(db, profile, created_by=user.id, source="api")
     audit(
         db,
         user.id,
@@ -594,25 +575,9 @@ def delete_profile(
 ) -> dict[str, str]:
     get_user_device_or_404(db, user, device_id)
     profile = get_profile(db, device_id, profile_id)
-    command_ids: list[str] = []
-    for iface in assigned_wifi_interfaces(db, device_id, profile.id):
-        normalized = validate_command_request(
-            command_type="wifi.set_access_profile",
-            payload=wifi_access_profile_payload(iface, None),
-            confirmed=True,
-            device_supports=lambda capability: device_supports(
-                db, device_id, capability
-            ),
-        )
-        command = create_device_command(
-            db,
-            device_id=device_id,
-            command_type="wifi.set_access_profile",
-            payload=normalized,
-            created_by=user.id,
-            source="api",
-        )
-        command_ids.append(str(command.id))
+    command_ids = queue_profile_commands(
+        db, profile, created_by=user.id, source="api", removing=True
+    )
     db.delete(profile)
     audit(
         db,

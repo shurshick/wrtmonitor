@@ -120,7 +120,11 @@ async def web_device_command_preview(
             command_type, payload, telemetry.payload if telemetry else {}
         )
     except (ValueError, HTTPException) as exc:
-        detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
+        detail = (
+            exc.detail
+            if isinstance(exc, HTTPException)
+            else "Некорректные параметры команды"
+        )
         return JSONResponse({"detail": detail}, status_code=400)
     return JSONResponse(preview)
 

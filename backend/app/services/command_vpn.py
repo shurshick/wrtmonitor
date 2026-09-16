@@ -60,8 +60,11 @@ def _normalize_wireguard_peer_payload(payload: dict[str, Any]) -> dict[str, Any]
             status_code=400, detail="Invalid WireGuard allowed IP"
         ) from exc
     endpoint = _optional_string(payload, "endpoint") or ""
-    if endpoint and not re.fullmatch(
-        r"(?:\[[0-9A-Fa-f:]+\]|[A-Za-z0-9_.-]+):[0-9]{1,5}", endpoint
+    if endpoint and (
+        len(endpoint) > 255
+        or not re.fullmatch(
+            r"(?:\[[0-9A-Fa-f:]+\]|[A-Za-z0-9_.-]+):[0-9]{1,5}", endpoint
+        )
     ):
         raise HTTPException(status_code=400, detail="Invalid WireGuard endpoint")
     if endpoint and int(endpoint.rsplit(":", 1)[1]) > 65535:
