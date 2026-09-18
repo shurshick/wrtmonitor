@@ -390,7 +390,7 @@ fun MessageBanner(message: String, error: Boolean = false) {
 @Composable
 fun MetricTile(label: String, value: String, modifier: Modifier = Modifier, accent: Color = MaterialTheme.colorScheme.primary) {
     Surface(
-        modifier,
+        modifier.height(104.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.medium,
     ) {

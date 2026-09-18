@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -277,13 +276,13 @@ private fun RouterOverview(
     SectionCard(title = stringResource(R.string.quick_actions), subtitle = stringResource(R.string.quick_actions_summary)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SecondaryActionButton(
-                if (wifiEnabled) stringResource(R.string.turn_off_wifi) else stringResource(R.string.turn_on_wifi),
+                if (wifiEnabled) stringResource(R.string.quick_wifi_off) else stringResource(R.string.quick_wifi_on),
                 { onQuickCommand("wifi.set_enabled", JsonObject().put("enabled", !wifiEnabled).put("radio", radioId), wifiQueuedMessage) },
                 Modifier.weight(1f),
                 enabled = !quickActionRunning && radioId.isNotBlank(),
             )
             SecondaryActionButton(
-                if (guestConfig == null) stringResource(R.string.configure_guest_wifi) else if (guestEnabled) stringResource(R.string.turn_off_guest_wifi) else stringResource(R.string.turn_on_guest_wifi),
+                if (guestConfig == null) stringResource(R.string.quick_guest_setup) else if (guestEnabled) stringResource(R.string.quick_guest_off) else stringResource(R.string.quick_guest_on),
                 {
                     if (guestConfig == null) onOpenWifi() else onQuickCommand(
                         "wifi.set_guest",
@@ -296,15 +295,28 @@ private fun RouterOverview(
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TonalActionButton(stringResource(R.string.block_client), onOpenClients, Modifier.weight(1f), !quickActionRunning)
+            TonalActionButton(stringResource(R.string.quick_block_client), onOpenClients, Modifier.weight(1f), !quickActionRunning)
             TonalActionButton(
-                stringResource(R.string.run_network_check),
+                stringResource(R.string.quick_diagnostics),
                 { onQuickCommand("diagnostics.run", JsonObject().put("checks", ru.wrtmonitor.app.api.dto.JsonArray(listOf("server", "dns", "route", "wifi", "dependencies"))), diagnosticsQueuedMessage) },
                 Modifier.weight(1f),
                 enabled = !quickActionRunning,
             )
         }
-        SecondaryActionButton(stringResource(R.string.reboot), { confirmReboot = true }, Modifier.align(Alignment.End), !quickActionRunning)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SecondaryActionButton(
+                stringResource(R.string.quick_system),
+                onOpenSystem,
+                Modifier.weight(1f),
+                !quickActionRunning,
+            )
+            SecondaryActionButton(
+                stringResource(R.string.quick_reboot),
+                { confirmReboot = true },
+                Modifier.weight(1f),
+                !quickActionRunning,
+            )
+        }
         quickActionMessage?.let { MessageBanner(it, error = quickActionError) }
     }
     if (confirmReboot) AlertDialog(
