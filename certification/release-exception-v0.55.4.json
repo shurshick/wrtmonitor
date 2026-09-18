@@ -1,0 +1,9 @@
+{
+  "release_version": "0.55.4",
+  "scope": "long_running_hardware_soak_only",
+  "approved_by": "project_owner",
+  "approved_on": "2026-09-18",
+  "approval": "Выпускай",
+  "reason": "Owner authorized release of this Android-only visual patch without a new long-running hardware soak. Backend and OpenWrt runtime behavior are unchanged. Automated CI and Security checks remain mandatory. This is not certification evidence.",
+  "source_fingerprint_sha256": "adb09e18f85f921961882653ebaff2da275706cd7a24abfa23ea6a162a5391e9"
+}
