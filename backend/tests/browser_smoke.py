@@ -993,9 +993,12 @@ def run() -> None:
                         page.get_by_text("Создать резервную копию", exact=True).count()
                         == 1
                     )
-                    installed = page.locator("details.inline-details").filter(
-                        has_text="Установленные пакеты"
+                    installed = (
+                        page.locator("details.inline-details > summary")
+                        .filter(has_text="Установленные пакеты")
+                        .locator("..")
                     )
+                    assert installed.count() == 1
                     installed.locator(":scope > summary").click()
                     package_search = installed.locator("[data-package-search]")
                     expect(page.locator("html")).to_have_attribute(
