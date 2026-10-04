@@ -635,6 +635,43 @@ def assert_page(page: Page, path: str, screenshot_name: str) -> None:
     )
 
 
+def assert_package_refresh_state(page: Page) -> None:
+    held = []
+
+    def hold_refresh(route):
+        if route.request.resource_type == "fetch":
+            held.append((route, route.fetch()))
+        else:
+            route.continue_()
+
+    current_url = page.url
+    page.route(current_url, hold_refresh)
+    try:
+        details = (
+            page.locator("details.inline-details > summary")
+            .filter(has_text="Установленные пакеты")
+            .locator("..")
+        )
+        details.locator(":scope > summary").click()
+        page.evaluate("window.dispatchEvent(new Event('wrtmonitor:telemetry'))")
+        deadline = time.monotonic() + 10
+        while not held and time.monotonic() < deadline:
+            page.wait_for_timeout(25)
+        assert held, "Package refresh did not start"
+        details.locator(":scope > summary").click()
+        details.locator("[data-package-search]").fill("tcpdump")
+        original = details.element_handle()
+        for route, response in held:
+            route.fulfill(response=response)
+        page.wait_for_function("node => !node.isConnected", arg=original)
+        expect(details).to_have_attribute("open", "")
+        expect(details.locator("[data-package-search]")).to_have_value("tcpdump")
+        expect(details.locator('[data-package-name="tcpdump-mini"]')).to_be_visible()
+        expect(details.locator('[data-package-name="busybox"]')).to_be_hidden()
+    finally:
+        page.unroute(current_url, hold_refresh)
+
+
 def assert_journal_race(page: Page, *, release_before_click: bool) -> None:
     held = []
 
@@ -1058,6 +1095,7 @@ def run() -> None:
                     expect(
                         installed.locator('[data-package-name="busybox"]')
                     ).to_be_hidden()
+                    assert_package_refresh_state(page)
                     journal = page.locator("[data-command-journal]")
                     expect(journal).to_have_attribute("data-pagination-ready", "true")
                     interval_input = page.locator('input[name="interval_seconds"]')
