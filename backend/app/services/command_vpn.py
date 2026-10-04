@@ -60,15 +60,25 @@ def _normalize_wireguard_peer_payload(payload: dict[str, Any]) -> dict[str, Any]
             status_code=400, detail="Invalid WireGuard allowed IP"
         ) from exc
     endpoint = _optional_string(payload, "endpoint") or ""
-    if endpoint and (
-        len(endpoint) > 255
-        or not re.fullmatch(
-            r"(?:\[[0-9A-Fa-f:]+\]|[A-Za-z0-9_.-]+):[0-9]{1,5}", endpoint
-        )
-    ):
-        raise HTTPException(status_code=400, detail="Invalid WireGuard endpoint")
-    if endpoint and int(endpoint.rsplit(":", 1)[1]) > 65535:
-        raise HTTPException(status_code=400, detail="Invalid WireGuard endpoint port")
+    if endpoint:
+        host, separator, port = endpoint.rpartition(":")
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-"
+        if host.startswith("[") and host.endswith("]"):
+            host = host[1:-1]
+            alphabet = "0123456789abcdefABCDEF:"
+        if (
+            len(endpoint) > 255
+            or not separator
+            or not host
+            or any(char not in alphabet for char in host)
+            or not 1 <= len(port) <= 5
+            or any(char not in "0123456789" for char in port)
+        ):
+            raise HTTPException(status_code=400, detail="Invalid WireGuard endpoint")
+        if int(port) > 65535:
+            raise HTTPException(
+                status_code=400, detail="Invalid WireGuard endpoint port"
+            )
     return {
         "interface": _safe_identifier(
             _require_string(payload, "interface", max_length=32),

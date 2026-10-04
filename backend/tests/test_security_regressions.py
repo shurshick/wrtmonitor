@@ -26,6 +26,16 @@ def test_wireguard_endpoint_is_bounded():
         )
 
 
+@pytest.mark.parametrize(
+    "endpoint", ["-" * 255, "host:１２３", "host:65536", "[::1:80", ":80"]
+)
+def test_wireguard_endpoint_rejects_malformed_values(endpoint):
+    with pytest.raises(HTTPException, match="endpoint"):
+        _normalize_wireguard_peer_payload(
+            {"allowed_ips": ["0.0.0.0/0"], "endpoint": endpoint}
+        )
+
+
 def test_catalog_does_not_expose_exception_details():
     with patch(
         "backend.app.services.firmware_catalog._overview",

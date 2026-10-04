@@ -635,6 +635,53 @@ def assert_page(page: Page, path: str, screenshot_name: str) -> None:
     )
 
 
+def assert_journal_race(page: Page, *, release_before_click: bool) -> None:
+    held = []
+
+    def hold_background(route):
+        if route.request.resource_type == "fetch":
+            held.append((route, route.fetch()))
+        else:
+            route.continue_()
+
+    current_url = page.url
+    page.route(current_url, hold_background)
+    try:
+        page.evaluate("window.dispatchEvent(new Event('wrtmonitor:journal-refresh'))")
+        deadline = time.monotonic() + 10
+        while not held and time.monotonic() < deadline:
+            page.wait_for_timeout(25)
+        assert held, "Background journal refresh did not start"
+        if release_before_click:
+            link = page.locator('[data-command-page]:has-text("Дальше")')
+            link.hover()
+            original_link = link.element_handle()
+            route, response = held.pop(0)
+            route.fulfill(response=response)
+            page.wait_for_timeout(100)
+            assert original_link.evaluate("node => node.isConnected"), (
+                "Refresh replaced the hovered navigation link"
+            )
+        page.locator('[data-command-page]:has-text("Дальше")').click()
+        expect(page).to_have_url(re.compile(r"[?&]command_page=2(?:&|$)"))
+        expect(
+            page.locator("[data-command-journal] .command-pagination nav span")
+        ).to_contain_text("2 /")
+        for route, response in held:
+            try:
+                route.fulfill(response=response)
+            except Exception:
+                # Superseded requests are aborted by the journal controller.
+                pass
+        page.wait_for_timeout(200)
+        expect(
+            page.locator("[data-command-journal] .command-pagination nav span")
+        ).to_contain_text("2 /")
+        assert page.locator('input[name="interval_seconds"]').input_value() == "17"
+    finally:
+        page.unroute(current_url, hold_background)
+
+
 def run() -> None:
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     device_id, device_token = prepare_router()
@@ -1015,7 +1062,15 @@ def run() -> None:
                     expect(journal).to_have_attribute("data-pagination-ready", "true")
                     interval_input = page.locator('input[name="interval_seconds"]')
                     interval_input.fill("17")
-                    page.locator('[data-command-page]:has-text("Дальше")').click()
+                    assert_journal_race(page, release_before_click=True)
+                    page.locator('[data-command-page]:has-text("Назад")').click()
+                    expect(page).to_have_url(re.compile(r"[?&]command_page=1(?:&|$)"))
+                    expect(
+                        page.locator(
+                            "[data-command-journal] .command-pagination nav span"
+                        )
+                    ).to_contain_text("1 /")
+                    assert_journal_race(page, release_before_click=False)
                     expect(page).to_have_url(re.compile(r"[?&]command_page=2(?:&|$)"))
                     page.locator(
                         "[data-command-journal] .command-pagination nav span"

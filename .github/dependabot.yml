@@ -5,18 +5,43 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Deferred until the coordinated post-1.0 runtime upgrade.
+      - dependency-name: uvicorn
+        versions: [">=0.36"]
+      - dependency-name: ruff
+        versions: [">=0.13"]
   - package-ecosystem: gradle
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: com.android.application
+        versions: [">=9"]
+      - dependency-name: androidx.activity:activity-compose
+        versions: [">=1.10"]
+      - dependency-name: org.jetbrains.kotlinx:kotlinx-coroutines-android
+        versions: [">=1.10"]
+      - dependency-name: com.squareup.okhttp3:okhttp
+        versions: [">=5"]
+      - dependency-name: com.squareup.okhttp3:okhttp-sse
+        versions: [">=5"]
+      - dependency-name: com.squareup.okhttp3:mockwebserver
+        versions: [">=5"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      workflow-actions:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: python
+        versions: [">=3.13"]

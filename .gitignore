@@ -2,6 +2,12 @@
 .venv/
 __pycache__/
 .pytest_cache/
+pytest-results*.xml
+.ci-*.md
+.ci-*.json
+.ci-*.py
+.ci-*.sql
+.ci-*.sh
 *.pyc
 .gradle/
 build/

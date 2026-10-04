@@ -76,16 +76,6 @@ def test_browser_regression_covers_supported_shell_widths() -> None:
         assert f'"width": {width}' in smoke
 
 
-def test_command_pagination_updates_url_before_fetch() -> None:
-    pagination = read("backend/app/static/command-pagination.js")
-
-    assert pagination.index("window.history.replaceState") < pagination.index(
-        "await fetch"
-    )
-    assert "window.location.reload()" in pagination
-    assert "journal.dataset.paginationReady = 'true'" in pagination
-
-
 def test_terminal_has_one_heading_and_viewport_bounded_workspace() -> None:
     page = read("backend/app/templates/device_detail.html")
     terminal = read("backend/app/templates/partials/ssh.html")
