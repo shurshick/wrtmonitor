@@ -4,19 +4,10 @@
 
   let journalTimer = 0;
   const refreshJournal = () => {
-    const journal = document.querySelector('[data-command-journal]');
-    if (!journal) return;
+    if (!document.querySelector('[data-command-journal]')) return;
     window.clearTimeout(journalTimer);
-    journalTimer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(window.location.href, { credentials: 'same-origin' });
-        if (!response.ok) return;
-        const documentCopy = new DOMParser().parseFromString(await response.text(), 'text/html');
-        const nextJournal = documentCopy.querySelector('[data-command-journal]');
-        if (nextJournal) journal.replaceChildren(...nextJournal.childNodes);
-      } catch (_) {
-        // Periodic and manual refresh remain available while SSE reconnects.
-      }
+    journalTimer = window.setTimeout(() => {
+      window.dispatchEvent(new Event('wrtmonitor:journal-refresh'));
     }, 120);
   };
 

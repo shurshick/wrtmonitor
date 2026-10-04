@@ -1,0 +1,9 @@
+{
+  "release_version": "0.55.5",
+  "scope": "long_running_hardware_soak_only",
+  "approved_by": "project_owner",
+  "approved_on": "2026-10-04",
+  "approval": "Выполняй: v0.55.5 Release Cleanup, with short practical smoke and without a new multi-day certification",
+  "reason": "Owner accepted the proposed cleanup release without a new multi-day hardware soak. Changes cover Web journal synchronization, linear endpoint validation, compatible dependencies and CI. Full CI, Security, Android emulator and deployment acceptance remain mandatory. The live Netis check covers installed v0.55.4; x86 is offline. Neither is presented as candidate hardware certification.",
+  "source_fingerprint_sha256": "8285013fc3a2538599cb1e6e88b7975f19668fd940b8923e2cc6c2653f6a892f"
+}

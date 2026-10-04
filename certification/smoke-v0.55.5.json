@@ -1,0 +1,35 @@
+{
+  "release_version": "0.55.5",
+  "checked_at": "2026-10-04T10:13:41Z",
+  "scope": "baseline_short_smoke_not_candidate_certification",
+  "server_health": "ok",
+  "stands": [
+    {
+      "name": "Netis NX31",
+      "installed_agent_version": "0.55.4",
+      "fresh_telemetry": true,
+      "browser_terminal": {
+        "status": "passed",
+        "input": true,
+        "output": true,
+        "resize": true,
+        "reconnect": true,
+        "close": true
+      },
+      "candidate_deployed": false
+    },
+    {
+      "name": "OpenWrt x86",
+      "installed_agent_version_last_observed": "0.53.1",
+      "last_telemetry": "2026-09-02T09:53:08Z",
+      "ssh_reachable": false,
+      "status": "offline",
+      "candidate_deployed": false
+    }
+  ],
+  "limits": [
+    "No new physical candidate update or reinstall was performed.",
+    "Current candidate install, upgrade and backup/restore are verified by isolated deployment acceptance CI.",
+    "Baseline raw terminal output is retained locally under artifacts/release-cleanup-0.55.5/terminal-netis."
+  ]
+}
