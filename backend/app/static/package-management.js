@@ -20,13 +20,15 @@
     const currentCard = document.querySelector('[data-package-card]');
     if (!currentCard) return;
     refreshInFlight = true;
-    const expanded = openSections();
     try {
       const response = await fetch(window.location.href, { credentials: 'same-origin' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const copy = new DOMParser().parseFromString(await response.text(), 'text/html');
       const nextCard = copy.querySelector('[data-package-card]');
       if (!nextCard) throw new Error('Package card is missing');
+      if (!currentCard.isConnected) return;
+      const expanded = openSections();
+      const searchValue = currentCard.querySelector('[data-package-search]')?.value || '';
       nextCard.querySelectorAll('details').forEach((details) => {
         const label = details.querySelector('summary')?.textContent?.trim() || '';
         if (expanded.some((value) => value && label.startsWith(value.replace(/\s*\(\d+\)$/, '')))) {
@@ -34,6 +36,11 @@
         }
       });
       currentCard.replaceWith(nextCard);
+      const search = nextCard.querySelector('[data-package-search]');
+      if (search) {
+        search.value = searchValue;
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     } catch (_) {
       showStatus('Не удалось обновить список пакетов. Обновите страницу вручную.', true);
     } finally {
