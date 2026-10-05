@@ -1781,6 +1781,70 @@ def test_wifi_security_changes_validate_keys_and_runtime_state():
     assert "wifi_iface_runtime_active()" in runtime
 
 
+@pytest.mark.parametrize("exists", [True, False])
+def test_guest_disable_does_not_create_a_network_and_updates_access_profile(tmp_path, exists):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    log = tmp_path / "uci-actions"
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "wifi_access_profile.sh").as_posix()}"
+        . "{(LIB_DIR / "command_wifi.sh").as_posix()}"
+        command_type=wifi.set_guest; command_payload='{{"enabled":false}}'; status=done
+        json_get_bool() {{ printf false; }}
+        json_get_string() {{ :; }}
+        resolve_wifi_radio() {{ printf radio0; }}
+        wifi() {{ :; }}
+        command_success_result() {{ printf '{{}}'; }}
+        command_failed_result() {{ printf '{{}}'; }}
+        uci() {{
+            [ "$1" != -q ] || shift
+            case "$1:$2" in
+                get:wireless.wrtmonitor_guest) return {0 if exists else 1} ;;
+                get:wrtmonitor.wifi_access_wrtmonitor_guest) return 0 ;;
+                get:*) return 1 ;;
+                *) printf '%s\\n' "$*" >>'{log.as_posix()}' ;;
+            esac
+        }}
+        handle_wifi_command
+        test "$status" = done
+    '''
+    subprocess.run([shell, "-c", script], check=True, env=shell_env(), timeout=10)
+    actions = log.read_text()
+    assert "network.wrtmonitor_guest" not in actions
+    assert "wireless.wrtmonitor_guest=wifi-iface" not in actions
+    if exists:
+        assert "wireless.wrtmonitor_guest.disabled=1" in actions
+        assert "wrtmonitor.wifi_access_wrtmonitor_guest.base_enabled=0" in actions
+    else:
+        assert "delete wrtmonitor.wifi_access_wrtmonitor_guest" in actions
+
+
+@pytest.mark.parametrize("base_enabled", [0, 1])
+def test_guest_verifier_rejects_profile_that_would_reenable_network(base_enabled):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    script = f'''
+        . "{(LIB_DIR / "verification.sh").as_posix()}"
+        postcondition_mode_for_command() {{ printf read_after_write_config; }}
+        json_get_bool() {{ printf false; }}
+        wifi_access_profile_section() {{ printf wifi_access_wrtmonitor_guest; }}
+        uci() {{ return 0; }}
+        verify_uci_value() {{
+            case "$1" in
+                wireless.wrtmonitor_guest.disabled) [ "$2" = 1 ] ;;
+                *.base_enabled) [ "$2" = '{base_enabled}' ] ;;
+                *) return 1 ;;
+            esac
+        }}
+        verify_command_postcondition wifi.set_guest '{{"enabled":false}}'
+    '''
+    result = subprocess.run([shell, "-c", script], env=shell_env(), timeout=10)
+    assert result.returncode == (0 if base_enabled == 0 else 1)
+
+
 def test_network_topology_telemetry_reads_live_uci_sections():
     shell = shell_path()
     if not shell:
