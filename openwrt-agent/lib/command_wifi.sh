@@ -255,16 +255,7 @@ handle_wifi_command() {
             payload_file="/tmp/wrtmonitor-command-payload"; printf '%s' "$command_payload" >"$payload_file"; guest_enabled="$(json_get_bool "$payload_file" '@.enabled')"; guest_ssid="$(json_get_string "$payload_file" '@.ssid')"; guest_encryption="$(json_get_string "$payload_file" '@.encryption')"; guest_password="$(json_get_string "$payload_file" '@.key')"; [ -n "$guest_password" ] || guest_password="$(json_get_string "$payload_file" '@.password')"; guest_radio="$(json_get_string "$payload_file" '@.radio')"; rm -f "$payload_file"
             [ -n "$guest_radio" ] || guest_radio="$(resolve_wifi_radio "" || true)"; [ -n "$guest_radio" ] || guest_radio="radio0"
             if [ "$guest_enabled" != true ]; then
-                if uci -q get wireless.wrtmonitor_guest >/dev/null 2>&1; then
-                    uci set wireless.wrtmonitor_guest.disabled=1 && wifi_access_profile_set_base_enabled wrtmonitor_guest false || status="failed"
-                else
-                    wifi_access_profile_clear wrtmonitor_guest || status="failed"
-                fi
-                if [ "$status" = "done" ] && uci commit wireless && wifi reload >/dev/null 2>&1; then
-                    result="$(command_success_result "guest Wi-Fi disabled")"
-                else
-                    status="failed"; result="$(command_failed_result "failed to disable guest Wi-Fi")"
-                fi
+                disable_guest_wifi
                 return 0
             fi
             [ -n "$guest_ssid" ] || guest_ssid="$(uci -q get wireless.wrtmonitor_guest.ssid 2>/dev/null || true)"

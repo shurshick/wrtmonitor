@@ -151,13 +151,6 @@ wifi_access_profile_apply_limits() {
     fi
 }
 
-wifi_access_profile_set_base_enabled() {
-    wrt_profile_ref="$(wifi_access_profile_section "$1")"
-    uci -q get "wrtmonitor.$wrt_profile_ref" >/dev/null 2>&1 || return 0
-    uci set "wrtmonitor.$wrt_profile_ref.base_enabled=$( [ "$2" = true ] && echo 1 || echo 0 )" \
-        && uci commit wrtmonitor
-}
-
 apply_wifi_access_profile() {
     section="$1"
     iface="$(uci -q get "wrtmonitor.$section.iface" 2>/dev/null || true)"

@@ -1790,6 +1790,7 @@ def test_guest_disable_does_not_create_a_network_and_updates_access_profile(tmp_
     script = f'''
         set -eu
         . "{(LIB_DIR / "wifi_access_profile.sh").as_posix()}"
+        . "{(LIB_DIR / "command_wifi_access_profile.sh").as_posix()}"
         . "{(LIB_DIR / "command_wifi.sh").as_posix()}"
         command_type=wifi.set_guest; command_payload='{{"enabled":false}}'; status=done
         json_get_bool() {{ printf false; }}
