@@ -1,0 +1,37 @@
+{
+  "tested_at": "2026-10-05T12:52:57.279752+00:00",
+  "command": "network.interfaces",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 2.031,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  },
+  "publication": {
+    "raw_evidence_sha256": "2c23bc746654f82e30c9c7b19c5c0d2d024d38dd5c54f3544e8736636f975e02",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

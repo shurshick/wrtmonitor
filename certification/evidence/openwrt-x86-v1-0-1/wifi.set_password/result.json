@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T12:54:30.998489+00:00",
+  "command": "wifi.set_password",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.set_password=false",
+  "publication": {
+    "raw_evidence_sha256": "a0f4ce17f9d8becd2b63ae747b7fc8f34f6f1a86e3693daff33fd5fbecee20de",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

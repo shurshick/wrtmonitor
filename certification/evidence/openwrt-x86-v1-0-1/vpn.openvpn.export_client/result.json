@@ -1,0 +1,41 @@
+{
+  "tested_at": "2026-10-05T12:59:34.434714+00:00",
+  "command": "vpn.openvpn.export_client",
+  "payload": {
+    "name": "<publication-redacted>"
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true,
+    "ok": true,
+    "code": "ok"
+  },
+  "error": null,
+  "elapsed_seconds": 2.047,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  },
+  "publication": {
+    "raw_evidence_sha256": "a467fc23a2ea31998f638f56976aba6cc01c25eb83f66a8176f7b34ecd6540ac",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

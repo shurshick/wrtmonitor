@@ -1,0 +1,37 @@
+{
+  "tested_at": "2026-10-05T12:53:47.658864+00:00",
+  "command": "wifi.status",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 14.141,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  },
+  "publication": {
+    "raw_evidence_sha256": "1a4c91419838c03f0fc7e6679e518299fcdb4c841347ae523ee416f37f9d873e",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

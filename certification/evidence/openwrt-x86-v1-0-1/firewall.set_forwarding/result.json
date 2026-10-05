@@ -1,0 +1,42 @@
+{
+  "tested_at": "2026-10-05T12:55:09.393854+00:00",
+  "command": "firewall.set_forwarding",
+  "payload": {
+    "section": "<publication-redacted>",
+    "src": "<publication-redacted>",
+    "dest": "<publication-redacted>",
+    "enabled": true
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 12.109,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "firewall",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "c68a2f34419d033cff37c5a96f91ebb5021ae0f99b6d2c3ca8db6374a72b5c98",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "tested_at": "2026-10-05T12:53:42.341016+00:00",
+  "command": "agent.rotate_token",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "private_output_removed": true,
+    "ok": true,
+    "code": "ok"
+  },
+  "error": null,
+  "elapsed_seconds": 8.078,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "agent",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "agent_state",
+    "verification": {
+      "required": true,
+      "mode": "agent_state",
+      "fail_closed": true
+    },
+    "rollback": "agent_previous_version_or_config"
+  },
+  "publication": {
+    "raw_evidence_sha256": "eb4f16d20de6aed85315b90e65f08a9aa02cb4b03303693fa52d0767483efcc0",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

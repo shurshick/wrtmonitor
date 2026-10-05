@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T12:54:31.001947+00:00",
+  "command": "wifi.set_guest",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.guest=false",
+  "publication": {
+    "raw_evidence_sha256": "f4c578ba3c099cd5988a8f1a2d0b66631d0d419b19263750307fdb4f29f665c0",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T12:54:30.998489+00:00",
+  "command": "wifi.set_channel",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.set_channel=false",
+  "publication": {
+    "raw_evidence_sha256": "3673d1659f57336bb5dc4cc50b1e8f9b3c08634277c44b391c2d0d6e542b3ee0",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

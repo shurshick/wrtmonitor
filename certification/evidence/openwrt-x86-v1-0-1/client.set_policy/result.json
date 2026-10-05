@@ -1,0 +1,43 @@
+{
+  "tested_at": "2026-10-05T12:54:30.995520+00:00",
+  "command": "client.set_policy",
+  "payload": {
+    "mac": "<publication-redacted>",
+    "blocked": false,
+    "schedule": "<publication-redacted>",
+    "qos": "<publication-redacted>",
+    "dns": "<publication-redacted>"
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 2.047,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "client",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "816de60f958c70907eed791096f7aee8ee7d5a22f840b7af537fbb3e9c1ea7c0",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

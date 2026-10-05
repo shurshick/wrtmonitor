@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T12:54:31.000443+00:00",
+  "command": "wifi.set_access_profile",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.access_profile=false",
+  "publication": {
+    "raw_evidence_sha256": "d67eca524b1e8f8368b84946a8ecfefa39f3c7a854eda2b85615cdee17ccb93f",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

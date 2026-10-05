@@ -1,0 +1,39 @@
+{
+  "tested_at": "2026-10-05T12:53:07.630065+00:00",
+  "command": "diagnostics.run",
+  "payload": {
+    "checks": "<publication-redacted>"
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 10.078,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "diagnostics",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 3
+    },
+    "post_condition": "result_payload",
+    "verification": {
+      "required": true,
+      "mode": "result_payload",
+      "fail_closed": true
+    },
+    "rollback": "not_required"
+  },
+  "publication": {
+    "raw_evidence_sha256": "6da972f6a8145c8cb8fad518226b7c8a80992f8ac36cc94a8c7c506e326df8ac",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

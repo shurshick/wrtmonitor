@@ -1,0 +1,46 @@
+{
+  "tested_at": "2026-10-05T12:58:41.920366+00:00",
+  "command": "vpn.wireguard.set_peer",
+  "payload": {
+    "interface": "<publication-redacted>",
+    "name": "<publication-redacted>",
+    "public_key": "<publication-redacted>",
+    "preshared_key": "<publication-redacted>",
+    "allowed_ips": "<publication-redacted>",
+    "endpoint": "<publication-redacted>",
+    "persistent_keepalive": 0,
+    "route_allowed_ips": false
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 10.375,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "db6898d4ee2d364b6df73d1da3c4002e2ed7e88429bc8a5aa31e22acbdd8a634",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

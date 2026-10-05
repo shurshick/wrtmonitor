@@ -16,4 +16,6 @@
 
 Проверки и фактические аппаратные результаты: [agent-update-status-1.0.1](docs/agent-update-status-1.0.1.md). Исторические отчёты 1.0.0 остаются отдельными и не выдаются за проверки нового backend.
 
+479 локальных backend/agent тестов, harness и desktop/mobile browser smoke прошли. Android unit/build и emulator UI проверяют новый статус обновлений. Новый аппаратный прогон 1.0.1: Netis NX31 - 91 pass / 4 not applicable; x86/VirtualBox - 76 pass / 19 not applicable. Оба стенда приняли подписанное обновление 1.0.0 → 1.0.1. Проверены PTY, reboot, восстановление связи и хеши 60 установленных файлов. Многодневный soak, ручная проверка нового APK на телефоне и реальная перепрошивка не заявляются.
+
 `RELEASE_INVENTORY.json` фиксирует commit и immutable digest контейнера. Release и agent manifests имеют Ed25519/RSA подписи. Перевод GitHub latest и GHCR latest выполняется только после проверки собранных файлов и CI.

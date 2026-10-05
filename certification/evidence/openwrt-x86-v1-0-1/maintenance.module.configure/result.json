@@ -1,0 +1,42 @@
+{
+  "tested_at": "2026-10-05T13:02:17.668009+00:00",
+  "command": "maintenance.module.configure",
+  "payload": {
+    "module": "<publication-redacted>",
+    "action": "<publication-redacted>"
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true,
+    "ok": true,
+    "code": "ok"
+  },
+  "error": null,
+  "elapsed_seconds": 6.062,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "module_state",
+    "verification": {
+      "required": true,
+      "mode": "module_state",
+      "fail_closed": true
+    },
+    "rollback": "package_manager_transaction"
+  },
+  "publication": {
+    "raw_evidence_sha256": "5480888850158902cc44d0b7d52eca8599efbc75c06ce8983e3959e7ea3238a9",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

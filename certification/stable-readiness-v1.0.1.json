@@ -1,0 +1,20 @@
+{
+  "release_version": "1.0.1",
+  "approved_by": "project_owner",
+  "decision": "release",
+  "approved_at": "2026-10-05",
+  "approval": "Исправляй и переопубликовывай релиз.",
+  "source_fingerprint_sha256": "e071a3e0fcf47a9614180c083b618f34817ae2252f97bef3ebdfa38c0c8d8e8e",
+  "runtime_source_commit": "0feb85bcc02eff377fb82a8a75106878c556fe48",
+  "hardware_reports": ["certification/netis-nx31-v1-0-1.json"],
+  "additional_virtual_machine_reports": ["certification/openwrt-x86-v1-0-1.json"],
+  "method_documentation": "docs/agent-update-status-1.0.1.md",
+  "limitations": [
+    "No multi-day soak was performed.",
+    "The x86 VM has no Wi-Fi PHY or temperature sensors.",
+    "New APK phone checks are not claimed; Android unit and emulator UI tests cover this fix.",
+    "Sysupgrade is checked for safe rejection, not actual flashing.",
+    "Matrix API deduplication is distinct from separate real redelivery/expiry fault injection.",
+    "Original production server/configuration and agent 1.0.0 are restored after isolated candidate tests; actual server upgrade remains an owner operation."
+  ]
+}
