@@ -1,3 +1,4 @@
+{% set update = agent.get('update_view') or {} %}
 <div class="maintenance-status">
   <div>
     <span class="maintenance-status__label">Состояние агента</span>
@@ -17,7 +18,7 @@
   </div>
 </div>
 
-{% if agent.get('version') and agent.get('version') != server_version %}
+{% if update.get('server_relation') == 'agent_older' %}
 <div class="maintenance-alert">
   <div><strong>Агент требует обновления</strong><span>Установлена {{ agent.get('version') }}, текущая версия комплекта {{ server_version }}. Новые команды управления скрыты до обновления capabilities.</span></div>
   {% if supports.agent_update %}
@@ -26,17 +27,23 @@
   </form>
   {% endif %}
 </div>
+{% elif update.get('server_relation') == 'agent_newer' %}
+<div class="maintenance-alert">
+  <div><strong>Сервер старее агента</strong><span>Агент {{ agent.get('version') }}, сервер {{ server_version }}. Откат агента не требуется.</span></div>
+</div>
 {% endif %}
 
 <div class="maintenance-grid">
   <section class="card maintenance-card">
     <div class="maintenance-card__heading"><div><span class="eyebrow">Версия</span><h2>Обновление агента</h2></div><span class="status status--{{ 'success' if agent.get('auto_update_enabled') else 'offline' }}">{{ 'автоматически' if agent.get('auto_update_enabled') else 'вручную' }}</span></div>
     <dl class="maintenance-list">
-      <dt>Доступно</dt><dd>{{ agent.get('available_version') or 'нет данных' }}</dd>
+      <dt>Доступное обновление</dt><dd>{{ update.get('available_version') or ('Нет' if update.get('state') in ['current', 'source_older'] else 'Не проверено') }}</dd>
+      <dt>Источник при проверке</dt><dd>{{ update.get('source_version') or 'нет данных' }}</dd>
       <dt>Последняя проверка</dt><dd>{{ agent.get('last_update_check')|timestamp if agent.get('last_update_check') else 'нет данных' }}</dd>
-      <dt>Результат</dt><dd>{{ agent.get('last_update_status') or 'нет данных' }}</dd>
-      {% if agent.get('last_update_error') %}<dt>Ошибка</dt><dd class="error">{{ agent.get('last_update_error') }}</dd>{% endif %}
+      <dt>Результат</dt><dd>{{ {'current': 'Агент актуален', 'available': 'Есть обновление', 'source_older': 'Источник старее агента', 'error': 'Проверка не удалась'}.get(update.get('state'), 'Нет данных') }}</dd>
+      {% if update.get('error') %}<dt>Ошибка</dt><dd class="error">{{ update.get('error') }}</dd>{% endif %}
     </dl>
+    {% if update.get('state') == 'source_older' %}<p class="notice">При последней проверке источник предлагал более старую версию. Откат не выполнялся.</p>{% endif %}
     <div class="maintenance-actions">
       {% if supports.agent_update %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="agent.update"><input type="hidden" name="confirmed" value="true"><button type="submit">Проверить и обновить</button></form>{% endif %}
       {% if supports.agent_update %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="agent.set_auto_update"><input type="hidden" name="enabled" value="{{ 'false' if agent.get('auto_update_enabled') else 'true' }}"><input type="hidden" name="confirmed" value="true"><button class="button--secondary" type="submit">{{ 'Выключить автообновление' if agent.get('auto_update_enabled') else 'Включить автообновление' }}</button></form>{% endif %}

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import httpx
 from playwright.sync_api import Page, expect, sync_playwright
+from browser_agent_updates import check_agent_updates
 
 
 BASE_URL = os.getenv("WRTMONITOR_BROWSER_BASE_URL", "http://127.0.0.1:8090")
@@ -1227,6 +1228,28 @@ def run() -> None:
                 page,
                 f"/devices/{device_id}?section=overview",
                 f"{name}-overview.png",
+            )
+            browser.close()
+
+        for name, viewport in (
+            ("desktop", {"width": 1440, "height": 900}),
+            ("mobile", {"width": 390, "height": 844}),
+        ):
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport=viewport)
+            page.goto(f"{BASE_URL}/login")
+            page.locator('input[name="username"]').fill(USERNAME)
+            page.locator('input[name="password"]').fill(PASSWORD)
+            page.locator('button[type="submit"]').click()
+            page.wait_for_url("**/devices")
+            check_agent_updates(
+                page,
+                BASE_URL,
+                device_id,
+                device_token,
+                ARTIFACTS / name,
+                USERNAME,
+                PASSWORD,
             )
             browser.close()
 

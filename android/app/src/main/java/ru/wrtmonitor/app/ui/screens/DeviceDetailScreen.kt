@@ -56,6 +56,7 @@ import ru.wrtmonitor.app.api.dto.EventDto
 import ru.wrtmonitor.app.api.dto.TelemetryDto
 import ru.wrtmonitor.app.api.dto.TelemetryHistoryPointDto
 import ru.wrtmonitor.app.data.RouterRepository
+import ru.wrtmonitor.app.domain.AgentUpdateState
 import ru.wrtmonitor.app.ui.components.InfoRow
 import ru.wrtmonitor.app.ui.components.DestinationRow
 import ru.wrtmonitor.app.ui.components.ActionRow
@@ -444,10 +445,21 @@ internal fun AgentSection(
                 agent?.status?.lowercase() in setOf("running", "online", "ok"),
             )
         }
-        InfoRow(stringResource(R.string.available_version), agent?.availableVersion, stringResource(R.string.no_data))
+        val update = agent?.updateView
+        val updateLabel = stringResource(when (update?.state) {
+            AgentUpdateState.Current -> R.string.agent_update_current
+            AgentUpdateState.Available -> R.string.agent_update_available
+            AgentUpdateState.SourceOlder -> R.string.agent_update_source_older
+            AgentUpdateState.Error -> R.string.agent_update_failed
+            else -> R.string.no_data
+        })
+        val noUpdate = if (update?.state in setOf(AgentUpdateState.Current, AgentUpdateState.SourceOlder)) stringResource(R.string.agent_update_none) else stringResource(R.string.no_data)
+        InfoRow(stringResource(R.string.agent_update_candidate), update?.availableVersion, noUpdate)
+        InfoRow(stringResource(R.string.agent_update_source), update?.sourceVersion, stringResource(R.string.no_data))
         InfoRow(stringResource(R.string.last_update_check), formatTimestamp(agent?.lastUpdateCheck), stringResource(R.string.no_data))
-        InfoRow(stringResource(R.string.update_status), agent?.lastUpdateStatus, stringResource(R.string.no_data))
-        agent?.lastUpdateError?.takeIf(String::isNotBlank)?.let { MessageBanner(it, error = true) }
+        InfoRow(stringResource(R.string.update_status), updateLabel, stringResource(R.string.no_data))
+        update?.error?.let { MessageBanner(it, error = true) }
+        if (update?.state == AgentUpdateState.SourceOlder) MessageBanner(stringResource(R.string.agent_update_source_older_notice))
         if (capabilities.isEmpty()) MessageBanner(stringResource(R.string.capabilities_missing_reinstall))
     }
     if (capabilities["agent.update"] == true || capabilities["agent.set_interval"] == true || capabilities["agent.rollback"] == true || capabilities["agent.rotate_token"] == true) {

@@ -160,6 +160,14 @@
     <string name="telemetry_interval">Интервал telemetry</string>
     <string name="telemetry_interval_label">Интервал telemetry, сек</string>
     <string name="available_version">Доступная версия</string>
+    <string name="agent_update_candidate">Доступное обновление</string>
+    <string name="agent_update_source">Источник при проверке</string>
+    <string name="agent_update_none">Нет</string>
+    <string name="agent_update_current">Агент актуален</string>
+    <string name="agent_update_available">Есть обновление</string>
+    <string name="agent_update_source_older">Источник старее агента</string>
+    <string name="agent_update_failed">Проверка не удалась</string>
+    <string name="agent_update_source_older_notice">При последней проверке источник предлагал более старую версию. Откат не выполнялся.</string>
     <string name="last_update_check">Последняя проверка</string>
     <string name="update_status">Статус обновления</string>
     <string name="last_successful_update">Последнее успешное обновление</string>
