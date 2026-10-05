@@ -11,6 +11,7 @@
 - Android принимал домены с префиксом fc/fd за private IPv6. Проверка теперь принимает только корректный IP literal, а не DNS-имя; IPv4 также проверяется целиком.
 - Compose больше не запускает PostgreSQL со скрытым fallback change-me: пароль обязателен.
 - Restore раньше проверял только gzip header и пути. Теперь сервер проверяет содержимое tar, запрещает symlink/hardlink/devices/traversal и ограничивает распакованный размер 16 MiB/4096 entries; агент дополнительно запрещает ссылки и special files. Regression tests проверяют повреждённый gzip и decompression bomb.
+- PostgreSQL backup теперь создаётся через уникальный temporary file с POSIX mode 0600 вместо предсказуемого `.tmp`; regression test проверяет права и защиту от подставленного symlink.
 - Добавлены полный history secret scan и подписанный inventory всех релизных файлов с image digest. Проверка изменения манифеста после подписи должна завершаться отказом.
 
 ## Проверенные границы

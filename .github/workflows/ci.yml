@@ -355,7 +355,7 @@ jobs:
       - name: Verify Android signature
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android/app/build/outputs/apk/release/app-release.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release.apk | head -n 1 > "$RUNNER_TEMP/apk-metadata.txt"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release.apk | sed -n '1p' > "$RUNNER_TEMP/apk-metadata.txt"
           grep -F "versionName='$RELEASE_VERSION'" "$RUNNER_TEMP/apk-metadata.txt"
           grep -F "versionCode='$(cat VERSION_CODE)'" "$RUNNER_TEMP/apk-metadata.txt"
       - run: tar -czf "wrtmonitor-openwrt-agent-v$RELEASE_VERSION.tar.gz" -C openwrt-agent .
