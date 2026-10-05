@@ -2,16 +2,16 @@
 
 Поддержка функции определяется capability и наблюдаемым состоянием, а не названием модели. Каталог SoC/датчиков помогает объяснять telemetry, но не является сертификатом поддержки.
 
-## Confirmed hardware: исторические hardware E2E
+## Confirmed hardware: полный E2E 1.0.0
 
 | Производитель / модель | Платформа | OpenWrt | Проверенная версия WrtMonitor | Дата отчёта | Ограничения |
 |---|---|---|---|---|---|
-| Netis NX31 | MediaTek MT7981B, Cortex-A53, aarch64, 2 ядра | 25.12.4 r32933-4ccb782af7 | 0.49.0 | 2026-08-24 | Wi-Fi зависит от установленного wpad, runtime PHY и доступных пакетов; нет гарантии всех сторонних модулей |
-| innotek GmbH VirtualBox / OpenWrt x86 | x86/64, виртуальная машина | 22.03.5 r20134-5f15225c1e | 0.49.0 | 2026-08-24 | Нет Wi-Fi PHY, отсутствуют доступные гостю температурные датчики; это не сертификация всех x86-плат |
+| Netis NX31 | MediaTek MT7981B, Cortex-A53, aarch64, 2 ядра | 25.12.4 r32933-4ccb782af7 | 1.0.0 | 2026-10-05 | 91 pass / 4 not applicable. Wi-Fi зависит от wpad/PHY; SQM, DDNS, UPnP и Multi-WAN неприменимы на этой конфигурации |
+| innotek GmbH VirtualBox / OpenWrt x86 | x86/64, виртуальная машина | 22.03.5 r20134-5f15225c1e | 1.0.0 | 2026-10-05 | 76 pass / 19 not applicable. Нет Wi-Fi PHY и температурных датчиков; это не сертификация всех x86-плат |
 
-Источники: [Netis](../certification/netis-nx31.json), [x86](../certification/openwrt-x86.json). Для каждой команды в этих отчётах записаны pass / unsupported, повторная доставка, timeout и post-condition. Группы: agent, diagnostics, network/DHCP/DNS, clients, firewall, VPN, system/maintenance; Wi-Fi проверялся только на Netis. Полная command-by-command область указана в JSON, а текущие требования capability - в [Supported Features](supported-features.md).
+Источники: [Netis 1.0.0](../certification/netis-nx31-v1-0-0.json), [x86 1.0.0](../certification/openwrt-x86-v1-0-0.json). Группы: agent, diagnostics, network/DHCP/DNS, clients, firewall, VPN, system/maintenance; Wi-Fi проверялся только на Netis. Для каждого стенда отдельно проверены реальная повторная доставка, expiry и установленные runtime-хеши. [Метод и границы](hardware-validation-1.0.md) объясняют, что означают поля основной матрицы; безопасный отказ sysupgrade не является проверкой перепрошивки.
 
-Не переносить эти результаты автоматически на новый backend или агент. Короткая проверка Netis 2026-10-04 на установленной 0.55.4 подтверждает связь и Web SSH, но не полный E2E 0.55.5 или кандидата 1.0. x86 тогда был offline. Перед 1.0 нужен полный hardware E2E точного кандидата минимум на одном физическом роутере.
+Исторические отчёты [Netis 0.49.0](../certification/netis-nx31.json) и [x86 0.49.0](../certification/openwrt-x86.json) сохранены без подмены версии или fingerprint.
 
 ## Expected compatible
 

@@ -1,0 +1,43 @@
+FIRST SESSION
+
+
+BusyBox v1.37.0 (2026-06-08 12:42:27 UTC) built-in shell (ash)
+
+~ # printf 'WRTMONITOR_PTY_E2E_cdf06eeaa8403796:%s\n' "$(uname -s)"
+WRTMONITOR_PTY_E2E_cdf06eeaa8403796:Linux
+~ # 
+~ # printf 'WRTMONITOR_PTY_RESIZE_fc7e30a719c73426:%s\n' "$(stty size)"
+WRTMONITOR_PTY_RESIZE_fc7e30a719c73426:19 136
+~ # 
+
+
+
+
+
+
+
+
+
+
+
+SECOND SESSION
+
+
+BusyBox v1.37.0 (2026-06-08 12:42:27 UTC) built-in shell (ash)
+
+~ # printf 'WRTMONITOR_PTY_RECONNECT_ae8d939d9e67358e:%s\n' "$(uname -s)"
+WRTMONITOR_PTY_RECONNECT_ae8d939d9e67358e:Linux
+~ # 
+
+
+
+
+
+
+
+
+
+
+
+
+

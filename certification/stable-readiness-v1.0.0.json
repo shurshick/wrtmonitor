@@ -1,0 +1,20 @@
+{
+  "release_version": "1.0.0",
+  "approved_by": "project_owner",
+  "decision": "release",
+  "approved_at": "2026-10-05",
+  "approval": "Выполняй аппаратный прогон, сливай PR и выпускай.",
+  "source_fingerprint_sha256": "66d7f115fcf669a1b0d0353e72746d89ae59b32c8ec58baf21e54ddf4da01167",
+  "runtime_source_commit": "02a839063de3c2f8d60e63ba0bda39305f256ab3",
+  "hardware_reports": ["certification/netis-nx31-v1-0-0.json"],
+  "additional_virtual_machine_reports": ["certification/openwrt-x86-v1-0-0.json"],
+  "android_owner_report": "certification/android-owner-validation-v1.0.0.json",
+  "method_documentation": "docs/hardware-validation-1.0.md",
+  "limitations": [
+    "No 7-14 day soak was performed.",
+    "The x86 VM has no Wi-Fi PHY or temperature sensors.",
+    "Phone checks were reported by the owner; installed APK version was not recorded.",
+    "Sysupgrade was checked for safe rejection, not actual flashing.",
+    "Command matrix API deduplication is distinct from separate real delivery/expiry fault injection."
+  ]
+}

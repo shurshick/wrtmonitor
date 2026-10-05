@@ -1,0 +1,42 @@
+{
+  "tested_at": "2026-10-05T11:41:13.990818+00:00",
+  "command": "maintenance.sysupgrade.apply",
+  "payload": {
+    "sha256": "<publication-redacted>",
+    "preserve_config": true
+  },
+  "status": "failed",
+  "result": {
+    "private_output_removed": true,
+    "ok": false,
+    "code": "command_failed"
+  },
+  "error": "<publication-redacted>",
+  "elapsed_seconds": 2.047,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "service_or_connectivity_state",
+    "verification": {
+      "required": true,
+      "mode": "service_or_connectivity_state",
+      "fail_closed": true
+    },
+    "rollback": "not_safe_after_dispatch"
+  },
+  "publication": {
+    "raw_evidence_sha256": "adb7ffd4eebe9e3e7f03a7c2dd38113ce2b49d743bd62da130e20cc0d6e09160",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

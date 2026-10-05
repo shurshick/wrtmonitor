@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T11:33:16.830940+00:00",
+  "command": "wifi.delete_ssid",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.manage_ssid=false",
+  "publication": {
+    "raw_evidence_sha256": "3ef56b7b38b95fb6dee8dbf73a9cb7bab52694af268dd410ef21ae0356e59bbe",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

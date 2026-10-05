@@ -1,10 +1,10 @@
 # Подготовка публичного релиза
 
-05.10.2026. Основа: v0.55.5. По поручению владельца подготовлены VERSION/RELEASE_TAG кандидата 1.0.0 и Android versionCode 126. Git tag не создан, latest не менялся, v1.0.0 не опубликован.
+05.10.2026. Основа: v0.55.5. VERSION/RELEASE_TAG: 1.0.0/v1.0.0, Android versionCode 126. Runtime-код аппаратного прогона: `02a839063de3c2f8d60e63ba0bda39305f256ab3`. Последующие изменения evidence/документации/подписей не меняют runtime fingerprint.
 
-## Заключение: NOT READY
+## Заключение: готов к публичному выпуску
 
-Не рекомендую помечать текущую ветку stable: нет полного аппаратного отчёта именно изменённого кандидата и ручного прогона Android на телефоне. Лицензия Apache-2.0 выбрана владельцем и оформлена; юридический блокер устранён.
+Владелец поручил аппаратный прогон, merge PR и выпуск. Новый полный E2E выполнен именно на 1.0.0: физический Netis и OpenWrt x86/VirtualBox. Лицензия Apache-2.0 оформлена. Решение с source fingerprint: [stable readiness](../certification/stable-readiness-v1.0.0.json). Публикация и перевод latest разрешаются только после успешных проверок окончательного коммита и собранных релизных файлов.
 
 ## Выполнено
 
@@ -17,20 +17,23 @@
 
 ## Проверки
 
-Локальный PostgreSQL + backend/agent на кандидате 1.0.0: 453 tests passed; OpenWrt harness PASS, responsive browser smoke PASS. Android debug build, unit tests, lint и APK signature/version metadata прошли до повышения версии; новый APK 1.0.0 ещё должен пройти CI. Финальный CI фиксируется в [PR #53](https://github.com/shurshick/wrtmonitor/pull/53), не подменяется результатами прошлых релизов. Одна известная Starlette/httpx deprecation warning, обновление dependencies вынесено в issue #38.
+Локальный PostgreSQL + backend/agent: **468 tests passed**, OpenWrt harness PASS, responsive browser smoke PASS. CI точного runtime commit: [push](https://github.com/shurshick/wrtmonitor/actions/runs/37285088002), [PR](https://github.com/shurshick/wrtmonitor/actions/runs/37285095206), [Security](https://github.com/shurshick/wrtmonitor/actions/runs/37285095019) - success. Проверены Ruff, ShellCheck, contracts/architecture, migrations/restore, Android debug/unit/lint/emulator, signed agent metadata, Docker smoke и PR deployment acceptance: clean install/upgrade с immutable 0.55.5. Изолированный PostgreSQL backup/restore drill также прошёл локально.
 
-Новая ветка должна пройти CI: Ruff, ShellCheck, contracts, migrations/restore, Android unit/build/lint/emulator, signed agent metadata и Docker clean install/upgrade с 0.55.5; Security: Gitleaks, CodeQL, dependency review. До завершения этих runs их статус не считается passed. Production inventory на реальных release keys/digest будет проверен только при отдельном теге.
+Окончательные CI/main/tag runs доступны в [PR #53](https://github.com/shurshick/wrtmonitor/pull/53) и [GitHub Actions](https://github.com/shurshick/wrtmonitor/actions). Release workflow отдельно собирает production-signed APK, проверяет versionName/versionCode и подпись. После публикации проверяются обе подписи release manifest и агента, все checksum, APK signer относительно 0.55.5, inventory commit, registry digest и OCI labels. Promotion переносит один immutable digest одновременно в GHCR latest и GitHub latest.
+
+Одна известная Starlette/httpx deprecation warning; согласованное обновление dependencies вынесено в issue #38. Открытых CodeQL/Dependabot alerts на 05.10.2026 не обнаружено. Это не независимый пентест.
 
 ## Железо и ограничения
 
-- Netis NX31: исторический полный E2E 0.49.0 от 24.08.2026 (91 pass / 4 not applicable); отдельный короткий PTY-тест 0.55.4 не заменяет полный прогон нового кандидата.
-- OpenWrt x86/VirtualBox: исторический полный E2E 0.49.0 (76 pass / 19 not applicable), без Wi-Fi/температур. Владелец запустил VM; SSH отвечает, но ключ отличается от сохранённого. У Netis также нет совпадения с доверенным ключом. Запрошена сверка через консоли стендов; пароли не отправляются до подтверждения.
-- Новый backend/agent этой ветки не установлен на аппаратный стенд: новый полный E2E не выполнен. Нельзя писать, что 1.0 сертифицирован.
-- Android emulator не заменяет ручную установку APK и сон/возобновление/смену сети на телефоне.
+- [Netis NX31 1.0.0](../certification/netis-nx31-v1-0-0.json): 91 pass / 4 not applicable. Исправлена обнаруженная на реальном BusyBox ошибка проверки поднятого Wi-Fi SSID; гостевой профиль и rollback согласованы.
+- [OpenWrt x86/VirtualBox 1.0.0](../certification/openwrt-x86-v1-0-0.json): 76 pass / 19 not applicable. Нет Wi-Fi PHY/температурных датчиков. Исправлен ложный отказ короткой PTY-сессии.
+- На обоих стендах отдельная реальная повторная доставка/expiry и восстановление связи; хеши 60 установленных runtime-файлов совпадают с исходниками. Прежние отчёты 0.49.0 не изменены. [Метод проверки](hardware-validation-1.0.md).
+- Владельцем подтверждены login, resume после сна, потеря сети и повторный вход Android. [Сообщение владельца](../certification/android-owner-validation-v1.0.0.json) не содержит версии APK: не объявляем финальный release APK вручную проверенным на телефоне. QR/все экраны/forced token expiry отдельно не подтверждены на телефоне.
+- Многодневного soak, реальной перепрошивки и проверки внешнего VPN-трафика не было. Матрица проверяет API-дедупликацию всей области; fault injection проверяет реальную повторную доставку и expiry отдельно, не для каждой из 95 команд.
 - Backup и terminal output приватны. Для issue используется ограниченный support report, не raw архив конфигурации.
 
 ## Решение владельца
 
-Утвердить конкретный кандидат и окно полного физического прогона с резервной копией/доступом для восстановления; проверить Android на телефоне; после зелёного CI и доказательств отдельно одобрить stable. Только затем синхронно менять VERSION/RELEASE_TAG/VERSION_CODE и публиковать v1.0.0, проверять подписи/версии/образ и переводить latest.
+Владелец выбрал Apache-2.0, предоставил recovery-доступ и доверенные SSH-ключи, запустил оба стенда и поручил выпуск после аппаратного прогона. Основные сценарии телефона подтверждены им отдельно. Gate 1.x принимает новый полный физический E2E с точным fingerprint; VM указан дополнительно, а не вместо физического стенда. Публичные evidence обезличены, оригиналы сохранены приватно.
 
-[#51 — лицензия](https://github.com/shurshick/wrtmonitor/issues/51): решение владельца выполнено в PR #53. [#52 — кандидат/physical E2E](https://github.com/shurshick/wrtmonitor/issues/52) остаётся 1.0-blocker. [#38 — coordinated dependency upgrade](https://github.com/shurshick/wrtmonitor/issues/38) классифицирован post-1.0; открытых CodeQL/Dependabot security alerts на момент аудита нет.
+[#51 — лицензия](https://github.com/shurshick/wrtmonitor/issues/51) и [#52 — кандидат/physical E2E](https://github.com/shurshick/wrtmonitor/issues/52) закрываются PR #53 с новыми доказательствами и явно ограниченным owner phone report. [#38 — coordinated dependency upgrade](https://github.com/shurshick/wrtmonitor/issues/38) остаётся post-1.0, не скрыт из roadmap.

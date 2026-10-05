@@ -1,0 +1,18 @@
+{
+  "reported_at": "2026-10-05",
+  "reported_by": "project_owner",
+  "method": "manual_phone_validation",
+  "owner_response": "Проверял, всё работает",
+  "scenarios": {
+    "login": "owner_reported_pass",
+    "resume_after_sleep": "owner_reported_pass",
+    "network_loss": "owner_reported_pass",
+    "relogin": "owner_reported_pass"
+  },
+  "installed_apk_version": null,
+  "limitations": [
+    "Owner did not record the installed APK version.",
+    "This does not claim installation of the final signed v1.0.0 release APK.",
+    "QR pairing, every screen and forced token expiry were not separately confirmed on the phone."
+  ]
+}

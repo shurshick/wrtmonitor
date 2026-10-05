@@ -1,0 +1,40 @@
+{
+  "tested_at": "2026-10-05T11:32:04.768243+00:00",
+  "command": "agent.set_interval",
+  "payload": {
+    "interval_seconds": 60
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true,
+    "status": "running"
+  },
+  "error": null,
+  "elapsed_seconds": 2.046,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "agent",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "agent_state",
+    "verification": {
+      "required": true,
+      "mode": "agent_state",
+      "fail_closed": true
+    },
+    "rollback": "agent_previous_version_or_config"
+  },
+  "publication": {
+    "raw_evidence_sha256": "cd76eded645b9b9c829afd77659aebc7090594ea1e3c8adcdfd927dbef2da7ad",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

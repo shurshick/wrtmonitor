@@ -1,53 +1,53 @@
 # Переход к v1.0.0
 
-Текущая опубликованная версия 0.55.5 остаётся тестовой. Эта подготовка не выпускает 1.0, не меняет latest и не означает stable.
+Checklist публичного выпуска 1.0.0. Фактические результаты и ограничения фиксируются в [отчёте](public-release-readiness.md); проверка артефактов выполняется после сборки тега, перед переводом latest.
 
 ## Обязательные решения
 
 - [x] Владелец выбрал Apache License 2.0; корневой LICENSE и README согласованы. [Решение](license-decision.md).
-- [ ] Зафиксированы версия, commit и runtime fingerprint кандидата, состав APK/образа/агента.
-- [ ] Минимум один **полный E2E кандидата на физическом OpenWrt-роутере**, включая повторную доставку, timeout, post-condition и восстановление связи.
-- [ ] Отчёт содержит exact server/agent version, hardware_kind=physical_router и проверяемые evidence. Старые отчёты и VM не заменяют этот минимум.
-- [ ] Владелец отдельно одобрил public stable и известные ограничения.
+- [x] Зафиксированы версия 1.0.0, Android versionCode 126 и runtime исходники `02a8390`; состав APK/образа/агента проверяется inventory при сборке.
+- [x] Полный E2E кандидата на физическом Netis; отдельные real delivery/expiry проверки на обоих стендах. [Метод](hardware-validation-1.0.md) не приписывает forced faults каждой команде.
+- [x] Отчёт содержит exact server/agent version, hardware_kind=physical_router и проверяемые evidence. Старые отчёты и VM не заменяют этот минимум.
+- [x] Владелец поручил аппаратный прогон, merge PR и выпуск; границы проверки явно опубликованы.
 
 Для 1.x `scripts/verify_release_readiness.py` требует LICENSE, `certification/stable-readiness-v1.0.0.json` с решением владельца и полные физические отчёты именно кандидата. Исключения тестовых 0.x не применяются. Это минимальный stable gate по данной задаче, а не утверждение о завершённом 7–14-дневном soak.
 
 ## Backend и развёртывание
 
-- [ ] Unit/PostgreSQL/API tests, Ruff, contracts/architecture зелёные на commit кандидата.
-- [ ] Alembic: чистая установка и обновление с immutable 0.55.5, данные владельца/роутеров сохранены.
-- [ ] `/setup`, owner login, `/ready`, QR pairing, первая telemetry и безопасная команда проверены.
-- [ ] PostgreSQL backup создан, проверен и восстановлен в отдельной БД; инструкция [здесь](server-operations.md).
-- [ ] Docker/TrueNAS compose воспроизводимы без dev defaults; HTTPS proxy передаёт WebSocket/SSE.
+- [x] 468 локальных PostgreSQL/backend/agent тестов; CI Ruff, contracts/architecture.
+- [x] CI deployment acceptance: чистая установка и обновление с immutable 0.55.5, сохранность владельца/роутера.
+- [x] Setup/login/ready/pairing/telemetry/commands покрыты интеграционными и браузерными тестами; физический агент подключён к изолированному серверу.
+- [x] PostgreSQL backup создан, проверен и восстановлен в отдельной БД; инструкция [здесь](server-operations.md).
+- [x] Docker smoke и TrueNAS compose validation в CI. Внешний production reverse proxy владельца не развёртывался заново.
 
 ## Агент
 
-- [ ] ShellCheck, sh -n, unit/simulation и OpenWrt harness.
-- [ ] Физические installation/registration/telemetry, signed upgrade, rollback и command lifecycle.
-- [ ] Неподдерживаемые функции не показываются как доступные; timeout и неизвестный verifier не дают ложный success.
-- [ ] DNS/TLS/auth/offline ошибки имеют код и действие; публичный архив не содержит raw config/log/process arguments.
+- [x] ShellCheck, sh -n, unit/simulation и OpenWrt harness.
+- [x] Физические registration/telemetry, установка точного runtime, signed update, rollback и command lifecycle. Это не свежая установка OpenWrt.
+- [x] Неподдерживаемые функции не показываются как доступные; timeout и неизвестный verifier не дают ложный success.
+- [x] DNS/TLS/auth/offline ошибки имеют код и действие; публичный архив не содержит raw config/log/process arguments.
 
 ## Web
 
-- [ ] Login, роутеры, dashboard, clients, WAN/LAN, Wi-Fi, firewall, VPN, system, events/logs.
-- [ ] Terminal: ввод/вывод/resize, разрыв, повторное подключение, закрытие и expiry.
-- [ ] Desktop/mobile, светлая/тёмная тема, подтверждения опасных действий.
+- [x] Браузерный smoke: login, роутеры и основные разделы на desktop/mobile.
+- [x] Аппаратный Web SSH: ввод/вывод/resize, повторное подключение и закрытие; TTL/expiry покрыты backend regression, не длительным ожиданием физической сессии.
+- [x] Desktop/mobile, светлая/тёмная тема, подтверждения опасных действий в browser regression.
 
 ## Android
 
-- [ ] Unit, build, lint, emulator UI tests; APK signature/versionCode/versionName проверены.
-- [ ] На реальном телефоне: установка APK, login, QR pairing, refresh, все основные экраны, безопасная команда.
-- [ ] Подтверждение опасной операции, offline/online, background/resume, истечение токена, logout/login.
-- [ ] Доступ по внешнему HTTP запрещён; private LAN HTTP остаётся осознанным тестовым исключением.
+- [x] Unit, debug build, lint, emulator UI tests на 1.0.0 прошли CI; подпись и метаданные release APK проверяются при сборке тега.
+- [x] Владелец подтвердил на телефоне login, resume после сна, потерю сети и повторный вход.
+- [ ] Версия APK на телефоне, QR pairing, все экраны и принудительное истечение токена не записаны отдельно; не объявлены проверенными вручную. Сценарии сессий покрыты автоматическими тестами.
+- [x] Доступ по внешнему HTTP запрещён; private LAN HTTP остаётся осознанным тестовым исключением.
 
 ## Безопасность и публикация
 
-- [ ] History/current-tree secret scan, CodeQL, dependency audit/review без новых high/critical.
-- [ ] CSRF, owner/device authorization, WS Origin/session binding, token rotation, upload/archive tests.
-- [ ] Имя Git tag и версии server/APK/agent/TrueNAS совпадают, VERSION_CODE монотонный.
+- [x] History secret scan, CodeQL, dependency audit/review прошли на runtime commit; новый metadata commit повторно проверяется CI.
+- [x] CSRF, owner/device authorization, WS Origin/session binding, token rotation, upload/archive tests.
+- [x] VERSION/RELEASE_TAG/agent согласованы, VERSION_CODE 126 больше 125; tag/APK сверяются при публикации.
 - [ ] Immutable image digest записан в RELEASE_INVENTORY.json, все файлы покрыты RELEASE_SHA256SUMS.txt и Ed25519/RSA подписями.
-- [ ] Release notes содержат фактические изменения, ограничения и инструкции обновления.
-- [ ] Тег публикуется сначала как prerelease; stable/latest переводятся только после отдельного решения владельца и проверки файлов.
+- [x] Release notes содержат фактические изменения, ограничения и инструкции обновления.
+- [x] Workflow публикует тег сначала как prerelease; stable/latest переводятся после решения владельца, exact-candidate E2E, зелёного CI и проверки файлов.
 
 Зелёный CI проверяет код и воспроизводимость, но не заменяет аппаратный прогон, телефон и юридическое решение. [Текущий отчёт](public-release-readiness.md).
 
@@ -67,4 +67,4 @@ openssl dgst -sha256 -verify /trusted/wrtmonitor/openwrt-agent/update-rsa-public
 sha256sum --check RELEASE_SHA256SUMS.txt
 ```
 
-Затем сравнить registry digest и OCI version/revision labels с inventory; версия приложения внутри запущенного образа также должна совпадать. Подпись APK и agent manifest проверяются отдельно. Эти файлы будут созданы новым workflow при отдельном теге; существующий 0.55.5 задним числом ими не объявляется покрытым.
+Затем сравнить registry digest и OCI version/revision labels с inventory; версия приложения внутри запущенного образа также должна совпадать. Подпись APK и agent manifest проверяются отдельно. Эти файлы создаёт workflow тега 1.0.0; существующий 0.55.5 задним числом ими не объявляется покрытым.

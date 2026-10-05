@@ -1,13 +1,13 @@
 # Первый запуск
 
-Текущая опубликованная версия - тестовая 0.55.5. 1.0.0 ещё не выпущена. Нужны Linux/NAS с Docker Compose v2, доступ к root shell OpenWrt и исходящий доступ роутера к серверу. Android 8.0+ устанавливается из подписанного APK GitHub Release.
+Публичная версия - 1.0.0. Нужны Linux/NAS с Docker Compose v2, доступ к root shell OpenWrt и исходящий доступ роутера к серверу. Android 8.0+ устанавливается из подписанного APK GitHub Release.
 
 ## 1. Сервер и PostgreSQL
 
 ```sh
 git clone https://github.com/shurshick/wrtmonitor.git
 cd wrtmonitor
-git checkout v0.55.5
+git checkout v1.0.0
 cp .env.example .env
 openssl rand -hex 24
 openssl rand -hex 32
@@ -25,7 +25,7 @@ docker compose ps
 curl -fsS https://monitor.example.org/ready
 ```
 
-Корневой Compose собирает код выбранного тега; это не `latest` из registry. Для TrueNAS используйте YAML из соответствующего [релиза](https://github.com/shurshick/wrtmonitor/releases/tag/v0.55.5) и [инструкцию deployment](server-deployment.md). После изменения YAML секреты PostgreSQL и URL подключения также должны совпадать.
+Корневой Compose собирает код выбранного тега; это не `latest` из registry. Для TrueNAS используйте YAML из соответствующего [релиза](https://github.com/shurshick/wrtmonitor/releases/tag/v1.0.0) и [инструкцию deployment](server-deployment.md). После изменения YAML секреты PostgreSQL и URL подключения также должны совпадать.
 
 `/ready` должен вернуть HTTP 200. Если нет: `docker compose logs --tail=100 wrtmonitor postgres`, проверьте пароли, PostgreSQL и reverse proxy. Не публикуйте логи без проверки личных данных.
 

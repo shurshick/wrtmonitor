@@ -1,0 +1,35 @@
+{
+  "tested_at": "2026-10-05T11:31:41.051262+00:00",
+  "server": "<publication-redacted>",
+  "device_id": "<publication-redacted>",
+  "session_id": "926231ed-529d-41e2-b33d-082ca213f681",
+  "previous_session_id": "9126fc10-4f5a-41e2-bd31-c32e0fad8420",
+  "marker": "WRTMONITOR_PTY_E2E_61828f934e7f8909",
+  "status": "passed",
+  "elapsed_seconds": 5.453,
+  "path": [
+    "Chromium",
+    "WebSocket",
+    "WrtMonitor",
+    "OpenWrt agent",
+    "PTY"
+  ],
+  "input_confirmed": true,
+  "resize_confirmed": true,
+  "expected_size": {
+    "rows": 19,
+    "columns": 136
+  },
+  "actual_size": {
+    "rows": 19,
+    "columns": 136
+  },
+  "reconnect_confirmed": true,
+  "close_confirmed": true,
+  "output_confirmed": true,
+  "publication": {
+    "raw_evidence_sha256": "8a49834185ae9d963c2d73ab85f601fdab5b6534e9052410d38cbfdbadeb2a23",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

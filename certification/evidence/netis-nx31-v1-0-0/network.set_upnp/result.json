@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T11:48:11.978881+00:00",
+  "command": "network.set_upnp",
+  "status": "not_applicable",
+  "reason": "router reported capability firewall.upnp.configure=false",
+  "publication": {
+    "raw_evidence_sha256": "f3aaf12afd0b392d071542de2a37710ca944ee2d464b069fbc0b28248eb25622",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

@@ -22,7 +22,7 @@
 | CSRF/cookies | Web POST CSRF, HttpOnly/Secure/SameSite, тесты Web security | HTTPS proxy обязан сохранять канонический host |
 | Refresh/pairing | hash-only storage, rotation/revocation, одноразовый QR, rate limit | QR и refresh token нельзя публиковать |
 | Device/commands | device token + owner device lookup, allowlist/typed command schemas, validation/post-condition | owner shell/cron намеренно способны выполнять произвольный код |
-| Web SSH | cookie owner, same Origin, session/device binding, TTL и ограничения frames; PTY E2E mock | новый физический прогон кандидата ещё нужен |
+| Web SSH | cookie owner, same Origin, session/device binding, TTL и ограничения frames; browser-to-router PTY E2E на Netis и x86 | не независимый пентест; ручной вывод терминала приватен |
 | Upload/download | authenticated artifact endpoints, bounded backup upload, проверка archive members | backup специально содержит приватную конфигурацию |
 | Shell/UCI | quoted arguments, параметры по схемам, команды не формируются из shell=True; harness и ShellCheck | это аудит существующих границ, не доказательство отсутствия любых injection |
 | Android | EncryptedSharedPreferences без plaintext fallback; URL validator перед login/pairing/settings | usesCleartextTraffic=true нужен для private LAN; ОС не ограничивает его до LAN, это делает приложение |
@@ -35,6 +35,6 @@ Gitleaks v8.30.1, официальная сборка с проверенным 
 
 Модель/firmware в публичном отчёте нужны для совместимости и не считаются секретом автоматически. Перед публикацией всё равно просмотрите файл. Backup, UCI, terminal transcript, raw telemetry и локальные credentials не являются публичным support report.
 
-## Остаётся
+## Результаты аппаратной проверки и публикация
 
-Свежий полный физический E2E кандидата, ручные сценарии Android и проверка production release artifacts при отдельном выпуске. Лицензия Apache-2.0 выбрана владельцем и оформлена. Не выдаём старую сертификацию за новую. [Checklist](release-checklist-1.0.md).
+Новый полный E2E 1.0.0 и отдельные delivery/expiry проверки выполнены на физическом Netis и x86 VM. Runtime-хеши установленных файлов сверены с кандидатом. Владельцем сообщена проверка основных сценариев Android на телефоне; версия APK не записана. Production release signatures, APK signer, inventory и registry digest проверяются после сборки тега до продвижения latest. Apache-2.0 выбрана владельцем. [Метод и ограничения](hardware-validation-1.0.md), [Checklist](release-checklist-1.0.md).
