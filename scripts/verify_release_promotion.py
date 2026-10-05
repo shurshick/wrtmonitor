@@ -56,6 +56,7 @@ def verify(repository: str, version: str, minimum_age_hours: int) -> dict[str, s
     }
     if int(version.split(".")[0]) >= 1:
         expected_assets.update({
+            "LICENSE",
             "RELEASE_INVENTORY.json", "RELEASE_SHA256SUMS.txt",
             "RELEASE_SHA256SUMS.sig", "RELEASE_SHA256SUMS.rsa.sig",
         })

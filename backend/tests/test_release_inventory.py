@@ -12,6 +12,7 @@ def release_tree(tmp_path):
     (tmp_path / "openwrt-agent").mkdir()
     (tmp_path / "VERSION").write_text("1.0.0\n")
     (tmp_path / "RELEASE_TAG").write_text("v1.0.0\n")
+    (tmp_path / "LICENSE").write_text("Apache License, Version 2.0\n")
     for name in (
         "agent-version.txt",
         "SHA256SUMS.txt",
@@ -31,7 +32,7 @@ def release_tree(tmp_path):
 def test_inventory_covers_every_asset_and_container_digest(release_tree):
     build_inventory(release_tree, release_tree, "1.0.0", "a" * 40, "sha256:" + "b" * 64)
     manifest = (release_tree / "RELEASE_SHA256SUMS.txt").read_text().splitlines()
-    assert len(manifest) == 8
+    assert len(manifest) == 9
     for line in manifest:
         digest, name = line.split("  ")
         path = release_tree / name

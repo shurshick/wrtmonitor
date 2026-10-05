@@ -4,7 +4,7 @@
 
 ## Обязательные решения
 
-- [ ] Владелец выбрал лицензию; корневой LICENSE и README согласованы. [Открытый вопрос](license-decision.md).
+- [x] Владелец выбрал Apache License 2.0; корневой LICENSE и README согласованы. [Решение](license-decision.md).
 - [ ] Зафиксированы версия, commit и runtime fingerprint кандидата, состав APK/образа/агента.
 - [ ] Минимум один **полный E2E кандидата на физическом OpenWrt-роутере**, включая повторную доставку, timeout, post-condition и восстановление связи.
 - [ ] Отчёт содержит exact server/agent version, hardware_kind=physical_router и проверяемые evidence. Старые отчёты и VM не заменяют этот минимум.
@@ -53,7 +53,7 @@
 
 ## Проверка файлов при выпуске
 
-RELEASE_SHA256SUMS покрывает APK, agent tar.gz, TrueNAS YAML, agent manifest/signatures/version и RELEASE_INVENTORY.json. Сам манифест имеет отдельные Ed25519/RSA подписи; inventory содержит immutable registry digest и исходный commit. SHA256SUMS.txt отдельно описывает файлы внутри agent archive, а не APK/контейнер.
+RELEASE_SHA256SUMS покрывает APK, agent tar.gz, TrueNAS YAML, agent manifest/signatures/version, LICENSE и RELEASE_INVENTORY.json. Сам манифест имеет отдельные Ed25519/RSA подписи; inventory содержит immutable registry digest и исходный commit. SHA256SUMS.txt отдельно описывает файлы внутри agent archive, а не APK/контейнер.
 
 Публичные ключи берутся из заранее доверенного checkout, не из того же непроверенного download. В каталоге загруженных release assets:
 

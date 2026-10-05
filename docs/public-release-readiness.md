@@ -4,11 +4,11 @@
 
 ## Заключение: NOT READY
 
-Не рекомендую помечать текущую ветку stable: нет решения о лицензии и полного аппаратного отчёта именно изменённого кандидата. Это конкретные незакрытые требования, не предложение ещё одного формального релиза.
+Не рекомендую помечать текущую ветку stable: нет полного аппаратного отчёта именно изменённого кандидата и ручного прогона Android на телефоне. Лицензия Apache-2.0 выбрана владельцем и оформлена; юридический блокер устранён.
 
 ## Выполнено
 
-1. Проверены упоминания лицензии: лицензия проекта не определена; подготовлено [решение владельца](license-decision.md), без произвольного LICENSE.
+1. После явного решения владельца оформлена Apache License 2.0: корневой LICENSE, README, копии для агента/Android и release inventory. [Решение владельца](license-decision.md).
 2. README объясняет продукт, single-owner и целевой сценарий 1–20 устройств, не enterprise/multitenant; это позиционирование, не performance certification.
 3. Добавлены [сравнение](comparison.md), [Quick Start](quick-start.md), [hardware matrix](hardware-compatibility.md), [troubleshooting](troubleshooting.md), [stable checklist](release-checklist-1.0.md).
 4. Исправлены публичные отчёты/архивы, проверка backup tar и decompression limits, JWT обязательные claims, Android URL validation, bounded agent connection errors и обязательный DB password. [Security review](security-review-1.0.md).
@@ -31,6 +31,6 @@
 
 ## Решение владельца
 
-Выбрать лицензию; утвердить конкретный кандидат и окно полного физического прогона с резервной копией/доступом для восстановления; проверить Android на телефоне; после зелёного CI и доказательств отдельно одобрить stable. Только затем синхронно менять VERSION/RELEASE_TAG/VERSION_CODE и публиковать v1.0.0, проверять подписи/версии/образ и переводить latest.
+Утвердить конкретный кандидат и окно полного физического прогона с резервной копией/доступом для восстановления; проверить Android на телефоне; после зелёного CI и доказательств отдельно одобрить stable. Только затем синхронно менять VERSION/RELEASE_TAG/VERSION_CODE и публиковать v1.0.0, проверять подписи/версии/образ и переводить latest.
 
-Открытые issues: [#51 — лицензия](https://github.com/shurshick/wrtmonitor/issues/51) и [#52 — кандидат/physical E2E](https://github.com/shurshick/wrtmonitor/issues/52) имеют метку 1.0-blocker. [#38 — coordinated dependency upgrade](https://github.com/shurshick/wrtmonitor/issues/38) классифицирован post-1.0; открытых CodeQL/Dependabot security alerts на момент аудита нет. Issues не закрыты без выполнения.
+[#51 — лицензия](https://github.com/shurshick/wrtmonitor/issues/51): решение владельца выполнено в PR #53. [#52 — кандидат/physical E2E](https://github.com/shurshick/wrtmonitor/issues/52) остаётся 1.0-blocker. [#38 — coordinated dependency upgrade](https://github.com/shurshick/wrtmonitor/issues/38) классифицирован post-1.0; открытых CodeQL/Dependabot security alerts на момент аудита нет.

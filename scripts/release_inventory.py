@@ -39,6 +39,7 @@ def build_inventory(
             "SHA256SUMS.rsa.sig",
         )
     ]
+    files.append(root / "LICENSE")
     for path in files:
         if not path.is_file() or not path.stat().st_size:
             raise ValueError(f"Missing or empty release asset: {path.name}")

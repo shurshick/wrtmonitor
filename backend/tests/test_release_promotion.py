@@ -20,6 +20,7 @@ def responses(monkeypatch):
         "RELEASE_SHA256SUMS.txt",
         "RELEASE_SHA256SUMS.sig",
         "RELEASE_SHA256SUMS.rsa.sig",
+        "LICENSE",
     ]
     release = {
         "tag_name": "v1.0.0",

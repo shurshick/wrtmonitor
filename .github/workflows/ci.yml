@@ -398,6 +398,7 @@ jobs:
             RELEASE_SHA256SUMS.txt
             RELEASE_SHA256SUMS.sig
             RELEASE_SHA256SUMS.rsa.sig
+            LICENSE
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -415,6 +416,7 @@ jobs:
             "RELEASE_SHA256SUMS.txt" \
             "RELEASE_SHA256SUMS.sig" \
             "RELEASE_SHA256SUMS.rsa.sig" \
+            "LICENSE" \
             --title "$RELEASE_TAG" \
             --notes-file RELEASE_NOTES.md \
             --prerelease
