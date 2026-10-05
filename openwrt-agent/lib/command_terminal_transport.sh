@@ -176,13 +176,14 @@ EOF
     ready=0
     attempts=0
     while [ "$attempts" -lt 12 ]; do
-        if ! kill -0 "$pid_pty" 2>/dev/null; then
-            printf '%s\n' 'failed: PTY process exited during startup' >"$launch_file"
-            break
-        fi
+        # A short, authenticated session may finish before this supervisor wakes.
         if [ -e "$work_dir/up.ready" ] && [ -e "$work_dir/down.ready" ]; then
             ready=1
             printf '%s\n' ready >"$launch_file"
+            break
+        fi
+        if ! kill -0 "$pid_pty" 2>/dev/null; then
+            printf '%s\n' 'failed: PTY process exited during startup' >"$launch_file"
             break
         fi
         attempts=$((attempts + 1))
