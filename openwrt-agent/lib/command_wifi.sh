@@ -260,7 +260,7 @@ handle_wifi_command() {
                 else
                     wifi_access_profile_clear wrtmonitor_guest || status="failed"
                 fi
-                if [ "$status" = done ] && uci commit wireless && wifi reload >/dev/null 2>&1; then
+                if [ "$status" = "done" ] && uci commit wireless && wifi reload >/dev/null 2>&1; then
                     result="$(command_success_result "guest Wi-Fi disabled")"
                 else
                     status="failed"; result="$(command_failed_result "failed to disable guest Wi-Fi")"

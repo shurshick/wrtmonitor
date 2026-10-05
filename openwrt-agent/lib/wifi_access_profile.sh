@@ -152,7 +152,6 @@ wifi_access_profile_apply_limits() {
 }
 
 wifi_access_profile_set_base_enabled() {
-    local wrt_profile_ref
     wrt_profile_ref="$(wifi_access_profile_section "$1")"
     uci -q get "wrtmonitor.$wrt_profile_ref" >/dev/null 2>&1 || return 0
     uci set "wrtmonitor.$wrt_profile_ref.base_enabled=$( [ "$2" = true ] && echo 1 || echo 0 )" \
