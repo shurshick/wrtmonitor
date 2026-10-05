@@ -192,6 +192,10 @@ jobs:
             -e WRTMONITOR_JWT_SECRET=ci-test-secret-value-with-more-than-32-characters \
             "$IMAGE_NAME:$RELEASE_VERSION" \
             python -c "from pathlib import Path; from backend.app.main import app; from backend.app.config import APP_VERSION; expected = Path('/app/VERSION').read_text().strip(); assert APP_VERSION == expected == '$RELEASE_VERSION'; assert app.version == expected; print(expected)"
+      - name: Verify container license distribution
+        run: >-
+          docker run --rm "$IMAGE_NAME:$RELEASE_VERSION"
+          python -c "from pathlib import Path; text = Path('/app/LICENSE').read_bytes(); assert text == Path('/app/openwrt-agent/LICENSE').read_bytes(); assert b'Version 2.0, January 2004' in text"
       - uses: docker/setup-buildx-action@v4
         if: github.event_name == 'push'
       - uses: docker/login-action@v4
