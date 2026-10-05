@@ -17,7 +17,7 @@
 
 ## Проверки
 
-Локальный PostgreSQL + backend/agent: 450 tests passed; OpenWrt harness PASS, responsive browser smoke PASS. Android debug build, unit tests, lint и APK signature/version metadata прошли локально. Финальный CI фиксируется в PR, не подменяется результатами прошлых релизов. Одна известная Starlette/httpx deprecation warning, обновление dependencies вынесено в issue #38.
+Локальный PostgreSQL + backend/agent: 452 tests passed; OpenWrt harness PASS, responsive browser smoke PASS. Android debug build, unit tests, lint и APK signature/version metadata прошли локально. Финальный CI фиксируется в [PR #53](https://github.com/shurshick/wrtmonitor/pull/53), не подменяется результатами прошлых релизов. Одна известная Starlette/httpx deprecation warning, обновление dependencies вынесено в issue #38.
 
 Новая ветка должна пройти CI: Ruff, ShellCheck, contracts, migrations/restore, Android unit/build/lint/emulator, signed agent metadata и Docker clean install/upgrade с 0.55.5; Security: Gitleaks, CodeQL, dependency review. До завершения этих runs их статус не считается passed. Production inventory на реальных release keys/digest будет проверен только при отдельном теге.
 

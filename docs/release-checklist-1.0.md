@@ -50,3 +50,21 @@
 - [ ] Тег публикуется сначала как prerelease; stable/latest переводятся только после отдельного решения владельца и проверки файлов.
 
 Зелёный CI проверяет код и воспроизводимость, но не заменяет аппаратный прогон, телефон и юридическое решение. [Текущий отчёт](public-release-readiness.md).
+
+## Проверка файлов при выпуске
+
+RELEASE_SHA256SUMS покрывает APK, agent tar.gz, TrueNAS YAML, agent manifest/signatures/version и RELEASE_INVENTORY.json. Сам манифест имеет отдельные Ed25519/RSA подписи; inventory содержит immutable registry digest и исходный commit. SHA256SUMS.txt отдельно описывает файлы внутри agent archive, а не APK/контейнер.
+
+Публичные ключи берутся из заранее доверенного checkout, не из того же непроверенного download. В каталоге загруженных release assets:
+
+```sh
+base64 -d RELEASE_SHA256SUMS.sig > /tmp/release-ed.sig
+openssl pkeyutl -verify -pubin -inkey /trusted/wrtmonitor/openwrt-agent/update-ed25519-public-key.pem \
+  -rawin -in RELEASE_SHA256SUMS.txt -sigfile /tmp/release-ed.sig
+base64 -d RELEASE_SHA256SUMS.rsa.sig > /tmp/release-rsa.sig
+openssl dgst -sha256 -verify /trusted/wrtmonitor/openwrt-agent/update-rsa-public-key.pem \
+  -signature /tmp/release-rsa.sig RELEASE_SHA256SUMS.txt
+sha256sum --check RELEASE_SHA256SUMS.txt
+```
+
+Затем сравнить registry digest и OCI version/revision labels с inventory; версия приложения внутри запущенного образа также должна совпадать. Подпись APK и agent manifest проверяются отдельно. Эти файлы будут созданы новым workflow при отдельном теге; существующий 0.55.5 задним числом ими не объявляется покрытым.
