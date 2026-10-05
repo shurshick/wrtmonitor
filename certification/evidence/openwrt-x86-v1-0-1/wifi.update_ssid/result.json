@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T12:54:31.071549+00:00",
+  "command": "wifi.update_ssid",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.manage_ssid=false",
+  "publication": {
+    "raw_evidence_sha256": "2c921e3bf5aa1b46c8c7c9222fb8b0d058b73c7b11a0581a89d19cb15e44194b",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

@@ -1,5 +1,7 @@
 package ru.wrtmonitor.app.api.dto
 
+import ru.wrtmonitor.app.domain.AgentUpdateView
+
 data class DeviceDto(
     val id: String,
     val name: String,
@@ -207,6 +209,7 @@ data class AgentStatusDto(
     val updateSource: String?,
     val capabilities: Map<String, Boolean>,
     val capabilityReasons: Map<String, String>,
+    val updateView: AgentUpdateView,
 )
 
 data class CommandDto(

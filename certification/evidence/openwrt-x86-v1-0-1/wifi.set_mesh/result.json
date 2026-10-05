@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T12:54:31.002930+00:00",
+  "command": "wifi.set_mesh",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.mesh=false",
+  "publication": {
+    "raw_evidence_sha256": "d794a87bfaadc68f7afba54bd780feeb8c0aa2d88b542c906a85335c1bf20549",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

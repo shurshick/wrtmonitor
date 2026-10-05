@@ -1,0 +1,248 @@
+{
+  "tested_at": "2026-10-05T13:04:32.445796+00:00",
+  "runtime_fingerprint": "86cebf25be0606a6de9208bad791fb52d5414ad3a04aa5c7404d54a3da72cc82",
+  "files": [
+    {
+      "path": "wrtmonitor-agent",
+      "sha256": "b4e1258c5ef97872c354a4e32a73e7f3927a8ec7b0dadba273e255774835e5e0"
+    },
+    {
+      "path": "wrtmonitor.init",
+      "sha256": "201dec3d69f6b6d9a0dfbd9fdd83e9ba826c0a7a4758372a4f6a7c2b2f7a358a"
+    },
+    {
+      "path": "agent-version.txt",
+      "sha256": "44e161e4495cac2cf7858043e9e6418e9579f0ddcfae826f9a372622968ce066"
+    },
+    {
+      "path": "lib/api.sh",
+      "sha256": "bdb74dff1e9ef3559761da0f8dda181495a5757921778e5c51de7979886ce85f"
+    },
+    {
+      "path": "lib/capabilities.sh",
+      "sha256": "63aa716dbb6e7fce804e80316f6016d5957504abc3c96e00351d2179d72dfcf0"
+    },
+    {
+      "path": "lib/client_policy.sh",
+      "sha256": "25e3eeddec925cf7eee246d4ea9b04de53e277222d1460c50290c2d53644426b"
+    },
+    {
+      "path": "lib/command_agent.sh",
+      "sha256": "20404bc38d5800eba578ba31df6fa0c7d98c566dd7ac9efad00e33be7a3d49a8"
+    },
+    {
+      "path": "lib/command_dns_runtime.sh",
+      "sha256": "02ca13c6c3227edd4ccf46fdea8fbcfae6f137e3bee2eb268769270a14818545"
+    },
+    {
+      "path": "lib/command_firewall.sh",
+      "sha256": "86d314cfa8cb37bc7a2208f50544d36b2571c68d6f9882b0a4cfd53773d7ec1d"
+    },
+    {
+      "path": "lib/command_maintenance.sh",
+      "sha256": "fbe1ee18fa39d4fa10b5d97390b59e986ad9ceba77a827a9148a6773d71eedf6"
+    },
+    {
+      "path": "lib/command_modules.sh",
+      "sha256": "13c9b0c49a52649dba91952acebe8f9d9b42d14c694d97ff30c3a59215a20d3e"
+    },
+    {
+      "path": "lib/command_network.sh",
+      "sha256": "9dbfd565254d6c96f4032b0beb60ace9d551dfda8a728944a91b78051a8e5071"
+    },
+    {
+      "path": "lib/command_network_core.sh",
+      "sha256": "2f2cc033efac6a9cef3be08f998f4de5841b31ed516ccfaa0af019ee8b0d0058"
+    },
+    {
+      "path": "lib/command_network_policy.sh",
+      "sha256": "b125b4b2411b990ac5bdd94b5fc5049e90f32de44a2d09cd1be5006d43e1e062"
+    },
+    {
+      "path": "lib/command_network_services.sh",
+      "sha256": "17f4fe340312fb0306c1244e0f6672cfeadf91ebda6d4c0da2936938930c406a"
+    },
+    {
+      "path": "lib/command_network_topology.sh",
+      "sha256": "c1729c56b31039fef8e563d4e3f64d34809d488bc09617586a6647daa5b0294d"
+    },
+    {
+      "path": "lib/command_result.sh",
+      "sha256": "cc0376c718db58c32fab88cfb070f8066efbaa0552e908fd199964c4e8b96fe4"
+    },
+    {
+      "path": "lib/command_runtime.sh",
+      "sha256": "d4ce1b8413dc8f9ef0c26c2b51c459d42d1c7dcd30800689341c0c541338cc73"
+    },
+    {
+      "path": "lib/command_ssh.sh",
+      "sha256": "d27094686febd2b63f63936d92e229f426244f15de49c9ac37ad57b18c636c39"
+    },
+    {
+      "path": "lib/command_system.sh",
+      "sha256": "460349fdc03d1b84f0eeead3fd56ed7422fbe773de82c5a7140e8b686924492a"
+    },
+    {
+      "path": "lib/command_terminal_session.sh",
+      "sha256": "56f8751ca7ea8352d9631f253692c9f7bdc4a73a42cedfa952ad39f97ecf27d5"
+    },
+    {
+      "path": "lib/command_terminal_transport.sh",
+      "sha256": "980f7c6d93bf95572b64260bc2990baf0193a338a27427e3d186db27bf369170"
+    },
+    {
+      "path": "lib/command_vpn.sh",
+      "sha256": "b17086f994c5b47160efacb3adf29663de0550438216de0b2ccbaf00f04aca6f"
+    },
+    {
+      "path": "lib/command_wifi.sh",
+      "sha256": "8bb8eefc73e759279907b80ce4cff072c6ac3b6f01cfc5677cc08f4d211adf26"
+    },
+    {
+      "path": "lib/command_wifi_access_profile.sh",
+      "sha256": "2909e4a8894f03949b232b5119cc759a383dc24ab1f128cc44e5e6bb5bca0920"
+    },
+    {
+      "path": "lib/command_wifi_runtime.sh",
+      "sha256": "2eb2ac817b38eef95c93a1844cba770582f9fbffea6dd3f194c4973e358dd0cd"
+    },
+    {
+      "path": "lib/commands.sh",
+      "sha256": "f762ee7532e0a64100092e46d23e85302e0f7f6175c21fe294f82c5c1bd140fe"
+    },
+    {
+      "path": "lib/common.sh",
+      "sha256": "d901d7f50eca08cbf50b19ea788880b27ecbf8513d19f291802745126f757ee0"
+    },
+    {
+      "path": "lib/dependencies.sh",
+      "sha256": "3cf2a44a4c295c104c30ce632c82b562ef04d83246226fa002b98de723b9dae8"
+    },
+    {
+      "path": "lib/diagnostics.sh",
+      "sha256": "98de68d8522d27a6d1ca8283ad78fff02322b68dad8a301faaabd51fe69ceb32"
+    },
+    {
+      "path": "lib/idempotency.sh",
+      "sha256": "7faa553ac613f323e16a54f8c10d8e274d6b3dbfa88ff12792363ab1e6f9264d"
+    },
+    {
+      "path": "lib/package_manager.sh",
+      "sha256": "dfee922d98cebc36755654bf8a62f592baa89e0c87ad1918a0b99eab459058eb"
+    },
+    {
+      "path": "lib/status.sh",
+      "sha256": "a4dd05cb8f4e72e78e4aad304a9ea5e583f346d747221a04cb9556683166b1d3"
+    },
+    {
+      "path": "lib/telemetry.sh",
+      "sha256": "a173f7275e108667e907096031cd9e36d3f2334737ef20f7442b3f6049aa7ea7"
+    },
+    {
+      "path": "lib/telemetry_clients.sh",
+      "sha256": "de368c151dc588828d676017c8ae81961d48df9c7aa3ee45446a7d365bab1fd6"
+    },
+    {
+      "path": "lib/telemetry_dhcp.sh",
+      "sha256": "a7b19c9bb07429595169945f509e36108c46989cac8f8c87204044534ae33fbb"
+    },
+    {
+      "path": "lib/telemetry_dns.sh",
+      "sha256": "08a859a311e5a7425e8219c3dc37bd128aacf4f0860b213297dedcd078f2ba0f"
+    },
+    {
+      "path": "lib/telemetry_interfaces.sh",
+      "sha256": "5464fe13ea3a29b907734818128b7d82962080b73d4365c86e9895c6ffa4a374"
+    },
+    {
+      "path": "lib/telemetry_maintenance.sh",
+      "sha256": "1ae214e3d6a842e7f1ed632efe5176aef328f00b0dc5f8fc5c1bd3643cfb0f83"
+    },
+    {
+      "path": "lib/telemetry_modules.sh",
+      "sha256": "e731e005763b6f85639b39c6d459e334cfa54f97553273a7b76e0a41c61ec693"
+    },
+    {
+      "path": "lib/telemetry_network.sh",
+      "sha256": "e15032d9d783554b8405cb4ef791bb0d79a14f7c8a44e64edbfceec98bfcccdd"
+    },
+    {
+      "path": "lib/telemetry_system.sh",
+      "sha256": "498aece4ba635c7524c068f3253c2618bbfa222f1287083de9c08c2b44ce4d4f"
+    },
+    {
+      "path": "lib/telemetry_topology.sh",
+      "sha256": "e41ad5046b7ec6ddd678a8a843984c87c6cf4c6aa5aab2a99805d71400eec22f"
+    },
+    {
+      "path": "lib/telemetry_vpn.sh",
+      "sha256": "4f86d53028948eaf8dd81e71f8cf5f7c2da0d755965add1ae2059fb87c3137c5"
+    },
+    {
+      "path": "lib/telemetry_wifi.sh",
+      "sha256": "725e2f77137a85846e18616b270fc02ad4ad9e3035bfebf04257ec32be1092a8"
+    },
+    {
+      "path": "lib/transaction_recovery.sh",
+      "sha256": "ff03747a29b54ce4ea204d5d71b39e2be4aef392506812a345457c0dcd41cf4d"
+    },
+    {
+      "path": "lib/transaction_spec.sh",
+      "sha256": "13ddd81688858a6fd49bb8f8fa630cf47972154501b330af5efd00be79c473ea"
+    },
+    {
+      "path": "lib/transaction_state.sh",
+      "sha256": "abc6f8253ee70a1f51c7f81a612b956757fecc2e8f0bd599c08c689649161a08"
+    },
+    {
+      "path": "lib/transactions.sh",
+      "sha256": "80f8d317c0037b4703bef37094b4e5ad991828f129b1481f3efa426db9dcf8fa"
+    },
+    {
+      "path": "lib/update.sh",
+      "sha256": "306e02fb44b445de81fb1bb0eecdc72c52a4a684055324d55bda38dc31a7e958"
+    },
+    {
+      "path": "lib/update_crypto.sh",
+      "sha256": "bff024755a392b9e7b6eb6e9a4fd3dc86f3a71b61347d156a1b7807053c3002d"
+    },
+    {
+      "path": "lib/update_storage.sh",
+      "sha256": "57e57384da252a906110056871e8b8fe2354fdeb940e3a73294eb2c7127bf46f"
+    },
+    {
+      "path": "lib/update_validation.sh",
+      "sha256": "5da8bf75439f119630f27045f1d6a2a41443f58d34fa30f103309a232518785e"
+    },
+    {
+      "path": "lib/update_version.sh",
+      "sha256": "ca9ed27c452e539fbc0f391da86437867dc1c314edd875338bd57f5ab6ef83db"
+    },
+    {
+      "path": "lib/verification.sh",
+      "sha256": "fc5b1ef0e9f64fe77959e0a3aae305e5e18f9d365397944fff3f804b0ec0af20"
+    },
+    {
+      "path": "lib/verification_client.sh",
+      "sha256": "2e93b91da48aca2a68d38f751a194d2556546d3ad3023d9403ebf1b0ac4370d5"
+    },
+    {
+      "path": "lib/verification_modes.sh",
+      "sha256": "3ef07b96b5d69e54072b26c328340255b83cd8414dc78c925fa71023ec950724"
+    },
+    {
+      "path": "lib/verification_runtime.sh",
+      "sha256": "881e13eaf3454f19529d19e65b6af921481d6cb36bbe24d2c9b1c713a0e052d7"
+    },
+    {
+      "path": "lib/wifi_access_profile.sh",
+      "sha256": "5eaecff0e05dbe99ac733412108710bd63645b463125b15dccabb2ebddc77e40"
+    },
+    {
+      "path": "lib/wifi_schedule.sh",
+      "sha256": "e5d2f40b9dba4e8b19f6b325205ebf8c6f821e4f8f6c910040cfa0771433c638"
+    }
+  ],
+  "version": "1.0.1",
+  "status": "pass"
+}

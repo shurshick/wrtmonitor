@@ -1222,7 +1222,8 @@ def certify(
                     "uci commit network; /etc/init.d/network reload; "
                     "/etc/init.d/wrtmonitor restart"
                 )
-                bridge_deadline = time.monotonic() + 45
+                # The 60s telemetry interval can exceed the old 45s deadline.
+                bridge_deadline = time.monotonic() + 120
                 while time.monotonic() < bridge_deadline:
                     latest = api.get(
                         f"/api/v1/devices/{target.device_id}/telemetry/latest"
@@ -1238,6 +1239,10 @@ def certify(
                     ):
                         break
                     time.sleep(3)
+                else:
+                    raise RuntimeError(
+                        "Test bridge was not observed in telemetry before VLAN preflight"
+                    )
             key = f"hardware-{target_slug}-{command}-{secrets.token_hex(6)}"
             previous_last_seen = device_last_seen(api, target)
             previous_boot_id = (

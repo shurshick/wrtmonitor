@@ -1,0 +1,44 @@
+{
+  "tested_at": "2026-10-05T13:13:25.369671+00:00",
+  "command": "agent.disconnect",
+  "payload": {},
+  "status": "success",
+  "result": {
+    "private_output_removed": true,
+    "ok": true,
+    "code": "ok"
+  },
+  "error": null,
+  "elapsed_seconds": 2.047,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "agent",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "service_or_connectivity_state",
+    "verification": {
+      "required": true,
+      "mode": "service_or_connectivity_state",
+      "fail_closed": true
+    },
+    "rollback": "not_safe_after_dispatch"
+  },
+  "runtime_post_condition": {
+    "disabled_observed": true,
+    "daemon_stopped": true,
+    "recovered": true
+  },
+  "publication": {
+    "raw_evidence_sha256": "f842a1149e1f3f0f89227610dc4d82df2e5cdded324e0666ca2828bc8776dc02",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "tested_at": "2026-10-05T13:02:27.920537+00:00",
+  "command": "maintenance.sysupgrade.check",
+  "payload": {
+    "url": "<publication-redacted>",
+    "sha256": "<publication-redacted>",
+    "expected_model": "<publication-redacted>",
+    "preserve_config": true
+  },
+  "status": "failed",
+  "result": {
+    "private_output_removed": true,
+    "ok": false,
+    "code": "command_failed"
+  },
+  "error": "<publication-redacted>",
+  "elapsed_seconds": 2.031,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "maintenance",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": true
+    },
+    "delivery": {
+      "timeout_seconds": 900,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "handler_result",
+    "verification": {
+      "required": true,
+      "mode": "handler_result",
+      "fail_closed": true
+    },
+    "rollback": "not_available"
+  },
+  "publication": {
+    "raw_evidence_sha256": "668e2b63b6a808f10c24d2c815ce5bd6dfeda93ec64bbdab4fc6c3d7108ca7cb",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

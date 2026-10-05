@@ -160,6 +160,14 @@
     <string name="telemetry_interval">Telemetry interval</string>
     <string name="telemetry_interval_label">Telemetry interval, sec</string>
     <string name="available_version">Available version</string>
+    <string name="agent_update_candidate">Available update</string>
+    <string name="agent_update_source">Source at last check</string>
+    <string name="agent_update_none">None</string>
+    <string name="agent_update_current">Agent is up to date</string>
+    <string name="agent_update_available">Update available</string>
+    <string name="agent_update_source_older">Source is older than the agent</string>
+    <string name="agent_update_failed">Check failed</string>
+    <string name="agent_update_source_older_notice">At the last check the source offered an older version. No downgrade was performed.</string>
     <string name="last_update_check">Last check</string>
     <string name="update_status">Update status</string>
     <string name="last_successful_update">Last successful update</string>

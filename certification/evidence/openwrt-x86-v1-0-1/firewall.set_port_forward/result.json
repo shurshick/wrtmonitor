@@ -1,0 +1,44 @@
+{
+  "tested_at": "2026-10-05T12:55:45.706124+00:00",
+  "command": "firewall.set_port_forward",
+  "payload": {
+    "section": "<publication-redacted>",
+    "name": "<publication-redacted>",
+    "protocol": "<publication-redacted>",
+    "external_port": 65530,
+    "internal_ip": "<publication-redacted>",
+    "internal_port": 65530
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 12.109,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "firewall",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "7f64e4ed86658f28faf47b3ddbec72f205ff666b48c11aeeb328360729fc6f30",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

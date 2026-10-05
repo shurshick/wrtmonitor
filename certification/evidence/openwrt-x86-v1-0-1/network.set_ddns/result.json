@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T13:01:26.400747+00:00",
+  "command": "network.set_ddns",
+  "status": "not_applicable",
+  "reason": "router reported capability network.ddns.configure=false",
+  "publication": {
+    "raw_evidence_sha256": "d8a3aef8fefb61415c9aa0ff3ea3a16857a0df60f8e8d477d1ceba9067c96e2d",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

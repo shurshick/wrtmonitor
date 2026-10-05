@@ -13,6 +13,7 @@ from ..models import (
     User,
 )
 from .auth import ensure_single_owner_access
+from .agent_versions import with_agent_update_view
 
 
 def get_device_or_404(db: Session, device_id: UUID) -> Device:
@@ -71,7 +72,7 @@ def latest_device_telemetry(db: Session, device_id: UUID) -> DeviceTelemetry | N
 def get_latest_agent_status(db: Session, device_id: UUID) -> dict:
     telemetry = latest_device_telemetry(db, device_id)
     payload = telemetry.payload if telemetry else {}
-    return dict((payload.get("agent") or {}))
+    return with_agent_update_view(dict((payload.get("agent") or {})))
 
 
 def get_latest_agent_capabilities(db: Session, device_id: UUID) -> dict[str, bool]:

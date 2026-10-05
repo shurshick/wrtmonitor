@@ -4,6 +4,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 import ru.wrtmonitor.app.api.dto.*
+import ru.wrtmonitor.app.domain.AgentUpdateState
+import ru.wrtmonitor.app.domain.AgentUpdateView
+import ru.wrtmonitor.app.domain.legacyAgentUpdateView
 
 internal fun parseNetworkClient(item: JSONObject) = NetworkClientDto(
     id = item.optString("id"),
@@ -113,7 +116,22 @@ internal fun parseAgentStatus(json: JSONObject): AgentStatusDto = AgentStatusDto
     updateSource = json.optString("update_source").takeIf { it.isNotBlank() },
     capabilities = json.optJSONObject("capabilities").toBooleanMap(),
     capabilityReasons = json.optJSONObject("capability_details").toCapabilityReasons(),
+    updateView = parseAgentUpdateView(json),
 )
+
+private fun parseAgentUpdateView(json: JSONObject): AgentUpdateView {
+    fun JSONObject.optionalValue(key: String) = optString(key).takeIf { it.isNotBlank() && it != "null" }
+    val view = json.optJSONObject("update_view") ?: return legacyAgentUpdateView(
+        json.optionalValue("version"), json.optionalValue("available_version"),
+        json.optionalValue("last_update_status"), json.optionalValue("last_update_error"),
+    )
+    val state = AgentUpdateState.fromWire(view.optString("state"))
+    return AgentUpdateView(
+        state, view.optionalValue("source_version"),
+        view.optionalValue("available_version").takeIf { state == AgentUpdateState.Available },
+        view.optionalValue("error").takeIf { state == AgentUpdateState.Error },
+    )
+}
 
 internal fun parseHealth(json: JSONObject): HealthDto {
     val items = json.optJSONObject("items") ?: JSONObject()

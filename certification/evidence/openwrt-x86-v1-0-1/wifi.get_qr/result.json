@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T12:52:54.165344+00:00",
+  "command": "wifi.get_qr",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.qr=false",
+  "publication": {
+    "raw_evidence_sha256": "64b35658954212d58cd0101dc1df97ec835f5b7ef7cfffc53ce67051cda17dde",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

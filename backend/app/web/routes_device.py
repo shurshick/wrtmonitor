@@ -46,6 +46,7 @@ from ..services.hardware_catalog import hardware_report, hardware_summary
 from ..services.health_monitoring import build_health_snapshot
 from ..services.operations import build_device_diagnostic_report
 from ..services.policy_catalog import policy_catalog
+from ..services.agent_versions import with_agent_update_view
 from .device_overview import daily_overview_context
 from .device_context import (
     build_capability_context,
@@ -94,7 +95,7 @@ def device_page(
     processes = system.get("processes") or {}
     board = payload.get("board") or {}
     wifi = normalize_wifi_summary(payload)
-    agent = dict(payload.get("agent") or {})
+    agent = with_agent_update_view(dict(payload.get("agent") or {}))
     network = normalize_network_summary(payload)
     vpn = normalize_vpn_summary(payload)
     telemetry_clients = normalize_clients_summary(payload)

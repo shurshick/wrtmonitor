@@ -1,0 +1,20 @@
+{
+  "tested_at": "2026-10-05T13:04:36.178564+00:00",
+  "release_version": "1.0.1",
+  "installed_version": "1.0.1",
+  "last_update_check": "2026-10-05T13:04:00Z",
+  "update_view": {
+    "state": "current",
+    "source_version": "1.0.1",
+    "available_version": null,
+    "error": null,
+    "server_relation": "equal"
+  },
+  "status": "pass",
+  "signed_upgrade": {
+    "from_version": "1.0.0",
+    "to_version": "1.0.1",
+    "output": ""
+  },
+  "browser_current_no_false_error": true
+}
