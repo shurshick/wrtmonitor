@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.0 (candidate, not published)
+
+- Apache License 2.0 covers the server, Android app and OpenWrt agent; third-party licenses remain separate.
+- Public diagnostic reports use explicit allowlists instead of exporting raw configuration, logs and process arguments.
+- Hardened JWT validation, backup archive handling, temporary backup files and Android server URL validation.
+- Release assets have a signed checksum inventory containing the source commit and immutable container digest.
+- Added first-run instructions, a hardware compatibility matrix and a public release checklist.
+- Android `versionCode`: `126`. Publication requires new physical E2E evidence for this candidate; historical reports do not certify it.
+
 ## v0.55.5
 
 - PyJWT обновлён до 2.15.1 для устранения предупреждений безопасности JWT.

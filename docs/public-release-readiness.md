@@ -1,6 +1,6 @@
 # Подготовка публичного релиза
 
-05.10.2026. Основа: v0.55.5. Версии/tag/latest не менялись, v1.0.0 не опубликован.
+05.10.2026. Основа: v0.55.5. По поручению владельца подготовлены VERSION/RELEASE_TAG кандидата 1.0.0 и Android versionCode 126. Git tag не создан, latest не менялся, v1.0.0 не опубликован.
 
 ## Заключение: NOT READY
 
@@ -17,14 +17,14 @@
 
 ## Проверки
 
-Локальный PostgreSQL + backend/agent: 452 tests passed; OpenWrt harness PASS, responsive browser smoke PASS. Android debug build, unit tests, lint и APK signature/version metadata прошли локально. Финальный CI фиксируется в [PR #53](https://github.com/shurshick/wrtmonitor/pull/53), не подменяется результатами прошлых релизов. Одна известная Starlette/httpx deprecation warning, обновление dependencies вынесено в issue #38.
+Локальный PostgreSQL + backend/agent на кандидате 1.0.0: 453 tests passed; OpenWrt harness PASS, responsive browser smoke PASS. Android debug build, unit tests, lint и APK signature/version metadata прошли до повышения версии; новый APK 1.0.0 ещё должен пройти CI. Финальный CI фиксируется в [PR #53](https://github.com/shurshick/wrtmonitor/pull/53), не подменяется результатами прошлых релизов. Одна известная Starlette/httpx deprecation warning, обновление dependencies вынесено в issue #38.
 
 Новая ветка должна пройти CI: Ruff, ShellCheck, contracts, migrations/restore, Android unit/build/lint/emulator, signed agent metadata и Docker clean install/upgrade с 0.55.5; Security: Gitleaks, CodeQL, dependency review. До завершения этих runs их статус не считается passed. Production inventory на реальных release keys/digest будет проверен только при отдельном теге.
 
 ## Железо и ограничения
 
 - Netis NX31: исторический полный E2E 0.49.0 от 24.08.2026 (91 pass / 4 not applicable); отдельный короткий PTY-тест 0.55.4 не заменяет полный прогон нового кандидата.
-- OpenWrt x86/VirtualBox: исторический полный E2E 0.49.0 (76 pass / 19 not applicable), без Wi-Fi/температур; на этапе проверки текущий SSH недоступен.
+- OpenWrt x86/VirtualBox: исторический полный E2E 0.49.0 (76 pass / 19 not applicable), без Wi-Fi/температур. Владелец запустил VM; SSH отвечает, но ключ отличается от сохранённого. У Netis также нет совпадения с доверенным ключом. Запрошена сверка через консоли стендов; пароли не отправляются до подтверждения.
 - Новый backend/agent этой ветки не установлен на аппаратный стенд: новый полный E2E не выполнен. Нельзя писать, что 1.0 сертифицирован.
 - Android emulator не заменяет ручную установку APK и сон/возобновление/смену сети на телефоне.
 - Backup и terminal output приватны. Для issue используется ограниченный support report, не raw архив конфигурации.
