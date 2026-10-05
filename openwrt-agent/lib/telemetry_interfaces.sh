@@ -14,7 +14,7 @@ network_devices_json() {
         [ "$speed" = "-1" ] && speed=""
         if [ -z "$speed" ] && command -v ethtool >/dev/null 2>&1; then
             speed="$(ethtool "$name" 2>/dev/null | sed -n 's/^[[:space:]]*Speed:[[:space:]]*\([0-9][0-9]*\)Mb\/s.*/\1/p' | head -n 1)"
-            duplex="$(ethtool "$name" 2>/dev/null | sed -n 's/^[[:space:]]*Duplex:[[:space:]]*//p' | tr '[:upper:]' '[:lower:]' | head -n 1)"
+            duplex="$(ethtool "$name" 2>/dev/null | sed -n 's/^[[:space:]]*Duplex:[[:space:]]*//p' | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | head -n 1)"
         fi
         rx_bytes="$(read_value statistics/rx_bytes)"; tx_bytes="$(read_value statistics/tx_bytes)"
         rx_packets="$(read_value statistics/rx_packets)"; tx_packets="$(read_value statistics/tx_packets)"

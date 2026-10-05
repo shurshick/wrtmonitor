@@ -1,8 +1,8 @@
 resolve_dhcp_host_by_mac() {
-    requested_mac="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+    requested_mac="$(printf '%s' "$1" | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
     host_index=0
     while uci -q get "dhcp.@host[$host_index]" >/dev/null 2>&1; do
-        current_mac="$(uci -q get "dhcp.@host[$host_index].mac" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+        current_mac="$(uci -q get "dhcp.@host[$host_index].mac" 2>/dev/null | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' || true)"
         if [ "$current_mac" = "$requested_mac" ]; then
             printf '@host[%s]' "$host_index"
             return 0
