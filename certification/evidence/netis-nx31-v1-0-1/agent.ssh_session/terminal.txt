@@ -28,16 +28,3 @@ BusyBox v1.37.0 (2026-06-08 12:42:27 UTC) built-in shell (ash)
 ~ # printf 'WRTMONITOR_PTY_RECONNECT_87410f3036bf1067:%s\n' "$(uname -s)"
 WRTMONITOR_PTY_RECONNECT_87410f3036bf1067:Linux
 ~ #
-
-
-
-
-
-
-
-
-
-
-
-
-
