@@ -1,4 +1,6 @@
 import base64
+import io
+import tarfile
 
 import pytest
 from fastapi import HTTPException
@@ -61,7 +63,12 @@ def test_maintenance_rejects_unsafe_payloads(command_type, payload):
 
 
 def test_backup_validation_and_artifact_redaction():
-    archive = base64.b64encode(b"\x1f\x8bfixture").decode()
+    data = io.BytesIO()
+    with tarfile.open(fileobj=data, mode="w:gz") as tar:
+        member = tarfile.TarInfo("etc/config/network")
+        member.size = 6
+        tar.addfile(member, io.BytesIO(b"config"))
+    archive = base64.b64encode(data.getvalue()).decode()
     assert (
         validate_command_payload(
             "maintenance.backup.restore", {"archive_base64": archive}
@@ -72,6 +79,44 @@ def test_backup_validation_and_artifact_redaction():
         "maintenance.backup.create", {"archive_base64": archive, "filename": "x.tgz"}
     )
     assert public["archive_base64"] == "download available"
+
+
+@pytest.mark.parametrize(
+    "name,kind",
+    [
+        ("etc/config/link", tarfile.SYMTYPE),
+        ("etc/config/link", tarfile.LNKTYPE),
+        ("etc/config/device", tarfile.CHRTYPE),
+        ("etc/../../tmp/escape", tarfile.REGTYPE),
+        ("/etc/config/network", tarfile.REGTYPE),
+        ("tmp/file", tarfile.REGTYPE),
+    ],
+)
+def test_restore_rejects_unsafe_archive_members(name, kind):
+    data = io.BytesIO()
+    with tarfile.open(fileobj=data, mode="w:gz") as tar:
+        member = tarfile.TarInfo(name)
+        member.type = kind
+        member.linkname = "/tmp/escape"
+        tar.addfile(member)
+    with pytest.raises(HTTPException):
+        validate_command_payload(
+            "maintenance.backup.restore",
+            {"archive_base64": base64.b64encode(data.getvalue()).decode()},
+        )
+
+
+def test_restore_rejects_fake_gzip_and_decompression_bomb(monkeypatch):
+    import gzip
+    from backend.app.services import backup_archive
+
+    monkeypatch.setattr(backup_archive, "MAX_UNPACKED_BYTES", 1024)
+    for content in (b"\x1f\x8bfixture", gzip.compress(b"x" * 1025)):
+        with pytest.raises(HTTPException):
+            validate_command_payload(
+                "maintenance.backup.restore",
+                {"archive_base64": base64.b64encode(content).decode()},
+            )
 
 
 def test_web_form_and_maintenance_telemetry_summary():

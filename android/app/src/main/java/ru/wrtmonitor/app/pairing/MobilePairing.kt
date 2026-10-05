@@ -2,6 +2,8 @@ package ru.wrtmonitor.app.pairing
 
 import org.json.JSONObject
 import java.net.URI
+import java.net.Inet6Address
+import java.net.InetAddress
 
 const val MOBILE_PAIRING_TYPE = "wrtmonitor-mobile-setup"
 const val MOBILE_PAIRING_VERSION = 1
@@ -51,9 +53,18 @@ fun normalizePairingServerUrl(value: String): String {
 }
 
 private fun isLocalHost(host: String): Boolean {
-    if (host == "localhost" || host == "::1" || host.startsWith("fe80:") ||
-        host.startsWith("fc") || host.startsWith("fd")) return true
-    val octets = host.split('.').mapNotNull(String::toIntOrNull)
+    if (host == "localhost") return true
+    val literal = host.removePrefix("[").removeSuffix("]")
+    if (literal.contains(':')) {
+        if (!literal.matches(Regex("[0-9a-f:.]+"))) return false
+        val address = runCatching { InetAddress.getByName(literal) }.getOrNull()
+        if (address !is Inet6Address) return false
+        val first = address.address[0].toInt() and 0xff
+        return address.isLoopbackAddress || address.isLinkLocalAddress ||
+            (first and 0xfe) == 0xfc
+    }
+    if (!literal.matches(Regex("[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+"))) return false
+    val octets = literal.split('.').mapNotNull(String::toIntOrNull)
     if (octets.size != 4 || octets.any { it !in 0..255 }) return false
     return octets[0] == 10 || octets[0] == 127 ||
         (octets[0] == 169 && octets[1] == 254) ||

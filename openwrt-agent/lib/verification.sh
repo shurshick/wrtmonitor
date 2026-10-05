@@ -31,6 +31,20 @@ verify_command_postcondition() {
     esac
     verified=0
     case "$command_type" in
+        wifi.set_guest)
+            enabled="$(json_get_bool "$payload_file" '@.enabled')"
+            if [ "$enabled" = true ]; then
+                verify_uci_value wireless.wrtmonitor_guest.disabled 0 || verified=1
+            elif uci -q get wireless.wrtmonitor_guest >/dev/null 2>&1; then
+                verify_uci_value wireless.wrtmonitor_guest.disabled 1 || verified=1
+            fi
+            profile_ref="$(wifi_access_profile_section wrtmonitor_guest)"
+            if uci -q get "wrtmonitor.$profile_ref" >/dev/null 2>&1; then
+                expected=0
+                [ "$enabled" != true ] || expected=1
+                verify_uci_value "wrtmonitor.$profile_ref.base_enabled" "$expected" || verified=1
+            fi
+            ;;
         wifi.set_access_profile)
             verify_wifi_access_profile_postcondition "$payload_file" || verified=1
             ;;

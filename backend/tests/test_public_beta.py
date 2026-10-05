@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import zipfile
 from datetime import UTC, datetime
@@ -133,7 +134,8 @@ def test_feedback_and_safe_diagnostic_report() -> None:
     )
     assert report.status_code == 200
     assert report.json()["schema"] == "wrtmonitor.support-report.v1"
-    assert report.json()["device"]["name"] == "BetaRouter"
+    assert "name" not in report.json()["device"]
+    assert "hostname" not in report.json()["device"]
     serialized = report.text.lower()
     assert "device_token" not in serialized
     assert "password" not in serialized
@@ -142,7 +144,16 @@ def test_feedback_and_safe_diagnostic_report() -> None:
     assert archive.status_code == 200
     with zipfile.ZipFile(io.BytesIO(archive.content)) as content:
         assert "routers.json" in content.namelist()
-        assert "BetaRouter" in content.read("routers.json").decode("utf-8")
+        routers = json.loads(content.read("routers.json"))
+        assert len(routers) == 1
+        assert routers[0]["device"]["model"] == "Test"
+        assert "BetaRouter" not in content.read("routers.json").decode("utf-8")
+        exported = "\n".join(
+            content.read(name).decode("utf-8") for name in content.namelist()
+        )
+        assert "BetaRouter" not in exported
+        assert "public_server_url" not in exported
+        assert "device_id" not in exported
 
     for index in range(4):
         accepted = client.post(

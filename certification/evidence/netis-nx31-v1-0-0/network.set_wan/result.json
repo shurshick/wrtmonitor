@@ -1,0 +1,40 @@
+{
+  "tested_at": "2026-10-05T11:48:36.845471+00:00",
+  "command": "network.set_wan",
+  "payload": {
+    "interface": "<publication-redacted>",
+    "protocol": "<publication-redacted>"
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 10.719,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "a20d2b6a40871edaf47be3045fdad0e98dbc4c5b63412236e03bbb3a432e83a5",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

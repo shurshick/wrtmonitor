@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T11:33:16.827458+00:00",
+  "command": "wifi.set_schedule",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.schedule=false",
+  "publication": {
+    "raw_evidence_sha256": "5ae7a96c6fb60b359f41efa127f58f3711698cf595e6adffc6f451cbb3a19b30",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

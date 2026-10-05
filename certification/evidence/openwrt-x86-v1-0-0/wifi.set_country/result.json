@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T11:33:16.826482+00:00",
+  "command": "wifi.set_country",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.set_country=false",
+  "publication": {
+    "raw_evidence_sha256": "e1ba16a37cf0b6e28e7b8d89cde7280415e0360e23d73f0b9fb8d338cb24b6ed",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

@@ -1,4 +1,24 @@
 # shellcheck disable=SC2034,SC2154
+wifi_access_profile_set_base_enabled() {
+    wrt_profile_ref="$(wifi_access_profile_section "$1")"
+    uci -q get "wrtmonitor.$wrt_profile_ref" >/dev/null 2>&1 || return 0
+    uci set "wrtmonitor.$wrt_profile_ref.base_enabled=$( [ "$2" = true ] && echo 1 || echo 0 )" \
+        && uci commit wrtmonitor
+}
+
+disable_guest_wifi() {
+    if uci -q get wireless.wrtmonitor_guest >/dev/null 2>&1; then
+        uci set wireless.wrtmonitor_guest.disabled=1 && wifi_access_profile_set_base_enabled wrtmonitor_guest false || status="failed"
+    else
+        wifi_access_profile_clear wrtmonitor_guest || status="failed"
+    fi
+    if [ "$status" = "done" ] && uci commit wireless && wifi reload >/dev/null 2>&1; then
+        result="$(command_success_result "guest Wi-Fi disabled")"
+    else
+        status="failed"; result="$(command_failed_result "failed to disable guest Wi-Fi")"
+    fi
+}
+
 handle_wifi_access_profile_command() {
     payload_file="/tmp/wrtmonitor-command-payload"
     printf '%s' "$command_payload" >"$payload_file"

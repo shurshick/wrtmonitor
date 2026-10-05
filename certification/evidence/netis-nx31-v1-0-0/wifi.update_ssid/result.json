@@ -1,0 +1,49 @@
+{
+  "tested_at": "2026-10-05T11:39:02.589789+00:00",
+  "command": "wifi.update_ssid",
+  "payload": {
+    "iface": "<publication-redacted>",
+    "ssid": "<publication-redacted>",
+    "network": "<publication-redacted>",
+    "encryption": "<publication-redacted>",
+    "key": "<publication-redacted>",
+    "enabled": false,
+    "hidden": true,
+    "isolate": true,
+    "ieee80211r": false,
+    "ieee80211k": false,
+    "bss_transition": false
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 22.516,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "wifi",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "f0b7d4ac16d81d518c913a979eb85789e2d776017f8825dac1ecbf0e59552600",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

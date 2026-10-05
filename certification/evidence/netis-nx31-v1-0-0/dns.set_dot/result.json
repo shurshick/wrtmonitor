@@ -1,0 +1,40 @@
+{
+  "tested_at": "2026-10-05T11:47:06.385847+00:00",
+  "command": "dns.set_dot",
+  "payload": {
+    "provider": "<publication-redacted>",
+    "enabled": false
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 18.203,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "dns",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 180,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "19918dac91750cf47b33cebc456e086e55bf85a046344fa51b69186f7a9e4910",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

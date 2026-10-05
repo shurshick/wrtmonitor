@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T11:40:10.967304+00:00",
+  "command": "network.set_multiwan",
+  "status": "not_applicable",
+  "reason": "router reported capability network.multiwan.configure=false",
+  "publication": {
+    "raw_evidence_sha256": "ae25280a405f3bc98bb2f2e3b1d240967f57c20ce4b9ebc0cc376ba22cb0731e",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

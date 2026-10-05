@@ -25,6 +25,7 @@ RUN pip install --no-cache-dir -r /app/backend/requirements-runtime.txt
 COPY backend /app/backend
 COPY openwrt-agent /app/openwrt-agent
 COPY VERSION /app/VERSION
+COPY LICENSE /app/LICENSE
 
 RUN groupadd --gid 10001 wrtmonitor \
     && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin wrtmonitor \

@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-wrtmonitor}
       POSTGRES_USER: ${POSTGRES_USER:-wrtmonitor}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-db-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

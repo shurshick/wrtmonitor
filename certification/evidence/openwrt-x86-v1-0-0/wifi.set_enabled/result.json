@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T11:33:16.824495+00:00",
+  "command": "wifi.set_enabled",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.enable=false",
+  "publication": {
+    "raw_evidence_sha256": "644e62c9623198bd68b512fb767df48e53b5116f0c6bbed8fac3d827696637e5",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

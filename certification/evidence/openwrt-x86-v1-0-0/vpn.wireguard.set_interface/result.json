@@ -1,0 +1,45 @@
+{
+  "tested_at": "2026-10-05T11:37:15.969064+00:00",
+  "command": "vpn.wireguard.set_interface",
+  "payload": {
+    "name": "<publication-redacted>",
+    "enabled": false,
+    "mode": "<publication-redacted>",
+    "addresses": "<publication-redacted>",
+    "listen_port": 51829,
+    "private_key": "<publication-redacted>",
+    "mtu": 1420
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 12.156,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "vpn",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "7c09c372355985c4e7c6f4b1267e86f343ea23139c4adb3adc113478bc23fb28",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

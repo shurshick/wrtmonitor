@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -47,8 +48,12 @@ def _run(command: list[str], env: dict[str, str]) -> subprocess.CompletedProcess
 
 def create_backup(database_url: str, output: Path) -> Path:
     output = output.resolve()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".tmp")
+    output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
+    )
+    os.close(descriptor)
+    temporary = Path(temporary_name)
     args, env = _connection(database_url)
     try:
         _run(

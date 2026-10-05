@@ -1,0 +1,42 @@
+{
+  "tested_at": "2026-10-05T11:43:49.589934+00:00",
+  "command": "network.set_vlan",
+  "payload": {
+    "section": "<publication-redacted>",
+    "device": "<publication-redacted>",
+    "vlan_id": 4093,
+    "ports": "<publication-redacted>"
+  },
+  "status": "success",
+  "result": {
+    "private_output_removed": true
+  },
+  "error": null,
+  "elapsed_seconds": 12.109,
+  "idempotency_duplicate_returned_same_command": true,
+  "retry_count": 1,
+  "reliability": {
+    "subsystem": "network",
+    "idempotency": {
+      "strategy": "command_uuid_result_cache",
+      "semantic": false
+    },
+    "delivery": {
+      "timeout_seconds": 300,
+      "lease_seconds": 45,
+      "max_deliveries": 2
+    },
+    "post_condition": "read_after_write_config",
+    "verification": {
+      "required": true,
+      "mode": "read_after_write_config",
+      "fail_closed": true
+    },
+    "rollback": "configuration_backup"
+  },
+  "publication": {
+    "raw_evidence_sha256": "6a91616eb081d93b501c2d56b64055ba4291767d7ec600ba7cfc68ef4af47472",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

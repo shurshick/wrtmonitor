@@ -52,6 +52,7 @@ class Target:
     host: str
     device_id: str
     ssh_user: str = "root"
+    hardware_kind: str = "unknown"
 
 
 class Ssh:
@@ -62,9 +63,10 @@ class Ssh:
 
     def _connect(self) -> paramiko.SSHClient:
         self.client = paramiko.SSHClient()
-        self.client.load_system_host_keys()
         if known_hosts := os.environ.get("WRTMONITOR_SSH_KNOWN_HOSTS"):
             self.client.load_host_keys(known_hosts)
+        else:
+            self.client.load_system_host_keys()
         self.client.set_missing_host_key_policy(paramiko.RejectPolicy())
         self.client.connect(
             self.target.host,
@@ -1005,13 +1007,17 @@ def certify(
         )
         report = load_report(target, description, resume)
         report["agent_source"] = "worktree" if deploy_worktree else "installed"
+        report["hardware_kind"] = target.hardware_kind
+        report["server_version"] = api.get(
+            f"/api/v1/operations/diagnostics/report/{target.device_id}"
+        ).get("server_version")
         if deploy_worktree:
             report["runtime_fingerprint"] = runtime_fingerprint(ROOT)
         if resume and selected:
             report["targeted_validation"] = {
-                "release_version": (ROOT / "VERSION").read_text(
-                    encoding="utf-8"
-                ).strip(),
+                "release_version": (ROOT / "VERSION")
+                .read_text(encoding="utf-8")
+                .strip(),
                 "tested_at": now_iso(),
                 "commands": sorted(selected),
             }
@@ -1437,6 +1443,11 @@ def main() -> int:
     parser.add_argument("--host", required=True)
     parser.add_argument("--device-id", required=True)
     parser.add_argument(
+        "--hardware-kind",
+        choices=["physical_router", "virtual_machine", "unknown"],
+        default="unknown",
+    )
+    parser.add_argument(
         "--commands",
         help="comma-separated command names; default is the complete contract",
     )
@@ -1453,7 +1464,7 @@ def main() -> int:
     args = parser.parse_args()
     selected = set(filter(None, (args.commands or "").split(","))) or None
     path = certify(
-        Target(args.name, args.host, args.device_id),
+        Target(args.name, args.host, args.device_id, hardware_kind=args.hardware_kind),
         selected,
         args.resume,
         args.deploy_worktree,

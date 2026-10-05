@@ -82,9 +82,11 @@ wifi_iface_runtime_active() {
     [ -n "$radio" ] || return 1
     attempt=0
     while [ "$attempt" -lt 10 ]; do
-        runtime="$(wifi status "$radio" 2>/dev/null | tr -d '[:space:]' || true)"
-        if printf '%s' "$runtime" | grep -Fq '"up":true' \
-            && printf '%s' "$runtime" | grep -Fq "\"section\":\"$iface\""; then
+        runtime="$(wifi status "$radio" 2>/dev/null || true)"
+        runtime_up="$(printf '%s' "$runtime" | jsonfilter -e "@.$radio.up" 2>/dev/null || true)"
+        runtime_sections="$(printf '%s' "$runtime" | jsonfilter -e "@.$radio.interfaces[*].section" 2>/dev/null || true)"
+        if [ "$runtime_up" = true ] \
+            && printf '%s\n' "$runtime_sections" | grep -Fxq "$iface"; then
             return 0
         fi
         sleep 1

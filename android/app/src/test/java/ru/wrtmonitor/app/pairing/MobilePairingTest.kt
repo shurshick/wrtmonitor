@@ -33,6 +33,18 @@ class MobilePairingTest {
     }
 
     @Test
+    fun rejectsDomainsDisguisedAsPrivateAddresses() {
+        listOf("fcloud.example.test", "fdomain.example.test", "192.168.extra.1.1", "[2001:db8::1]").forEach { host ->
+            assertThrows(MobilePairingPayloadException::class.java) {
+                normalizePairingServerUrl("http://$host")
+            }
+        }
+        listOf("[::1]", "[fd12::1]", "[fc00::1]", "[fe80::1]", "192.168.1.1").forEach { host ->
+            assertEquals("http://$host", normalizePairingServerUrl("http://$host"))
+        }
+    }
+
+    @Test
     fun rejectsForeignOrMalformedPayloads() {
         listOf(
             "not-json",

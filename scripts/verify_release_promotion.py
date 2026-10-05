@@ -54,6 +54,12 @@ def verify(repository: str, version: str, minimum_age_hours: int) -> dict[str, s
         for item in release.get("assets", [])
         if item.get("state") == "uploaded" and item.get("size", 0) > 0
     }
+    if int(version.split(".")[0]) >= 1:
+        expected_assets.update({
+            "LICENSE",
+            "RELEASE_INVENTORY.json", "RELEASE_SHA256SUMS.txt",
+            "RELEASE_SHA256SUMS.sig", "RELEASE_SHA256SUMS.rsa.sig",
+        })
     if expected_assets - uploaded:
         raise ValueError(
             f"Missing release assets: {sorted(expected_assets - uploaded)}"

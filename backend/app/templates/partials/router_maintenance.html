@@ -68,7 +68,7 @@
 
   <section class="card maintenance-card">
     <div class="maintenance-card__heading"><div><span class="eyebrow">Восстановление</span><h2>Диагностический архив</h2></div></div>
-    <p class="muted">Содержит сведения о системе, сети, пакетах и последние строки журнала. Секреты конфигурации не включаются.</p>
+    <p class="muted">Содержит модель, версии, пакеты, доступные функции и результаты проверок связи. Конфигурация, адреса, журналы и аргументы процессов не включаются.</p>
     {% if supports.maintenance_bundle %}<form method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="maintenance.diagnostics.bundle"><input type="hidden" name="confirmed" value="true"><button type="submit">Собрать архив</button></form>{% endif %}
     {% if supports.maintenance_recovery %}<form class="compact-form compact-form--separated" method="post" action="/devices/{{ device.id }}/web-command?section={{ section }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="command_type" value="{{ 'maintenance.recovery.disable' if maintenance.recovery_mode else 'maintenance.recovery.enable' }}"><input type="hidden" name="confirmed" value="true"><button class="button--secondary" type="submit">{{ 'Выключить recovery mode' if maintenance.recovery_mode else 'Включить recovery mode' }}</button></form>{% endif %}
   </section>

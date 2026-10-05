@@ -1,0 +1,11 @@
+{
+  "tested_at": "2026-10-05T11:33:16.827458+00:00",
+  "command": "wifi.set_radio",
+  "status": "not_applicable",
+  "reason": "router reported capability wifi.radio.configure=false",
+  "publication": {
+    "raw_evidence_sha256": "3cd12d2bb86cae25e49c7932b9fbcfc0faa147b3ce62e3b688414ae489a9629b",
+    "private_data_removed": true,
+    "policy": "No raw logs, process arguments, network addresses, SSID, payload secrets or backup data. Status, timings and runtime post-conditions preserved."
+  }
+}

@@ -43,11 +43,12 @@ jobs:
       - run: ruff format --check backend
       - run: python scripts/validate_contracts.py
       - run: python scripts/validate_architecture.py
-      - name: Validate physical runtime certification evidence
+      - name: Validate historical physical E2E evidence (not candidate certification)
         run: >-
           python scripts/runtime_validation_report.py
           certification/netis-nx31.json
           certification/openwrt-x86.json
+          --expected-version 0.49.0
       - name: Validate release readiness or explicit owner exception
         if: startsWith(github.ref, 'refs/tags/')
         run: >-
@@ -191,6 +192,10 @@ jobs:
             -e WRTMONITOR_JWT_SECRET=ci-test-secret-value-with-more-than-32-characters \
             "$IMAGE_NAME:$RELEASE_VERSION" \
             python -c "from pathlib import Path; from backend.app.main import app; from backend.app.config import APP_VERSION; expected = Path('/app/VERSION').read_text().strip(); assert APP_VERSION == expected == '$RELEASE_VERSION'; assert app.version == expected; print(expected)"
+      - name: Verify container license distribution
+        run: >-
+          docker run --rm "$IMAGE_NAME:$RELEASE_VERSION"
+          python -c "from pathlib import Path; text = Path('/app/LICENSE').read_bytes(); assert text == Path('/app/openwrt-agent/LICENSE').read_bytes(); assert b'Version 2.0, January 2004' in text"
       - uses: docker/setup-buildx-action@v4
         if: github.event_name == 'push'
       - uses: docker/login-action@v4
@@ -354,10 +359,34 @@ jobs:
       - name: Verify Android signature
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android/app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release.apk | sed -n '1p' > "$RUNNER_TEMP/apk-metadata.txt"
+          grep -F "versionName='$RELEASE_VERSION'" "$RUNNER_TEMP/apk-metadata.txt"
+          grep -F "versionCode='$(cat VERSION_CODE)'" "$RUNNER_TEMP/apk-metadata.txt"
       - run: tar -czf "wrtmonitor-openwrt-agent-v$RELEASE_VERSION.tar.gz" -C openwrt-agent .
       - run: cp android/app/build/outputs/apk/release/app-release.apk "wrtmonitor-android-v$RELEASE_VERSION.apk"
       - run: cp deploy/truenas/wrtmonitor-truenas.yaml "wrtmonitor-truenas-v$RELEASE_VERSION.yaml"
       - run: cd openwrt-agent && sha256sum --check SHA256SUMS.txt
+      - name: Build and sign complete release inventory
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          OPENWRT_UPDATE_SIGNING_KEY_BASE64: ${{ secrets.OPENWRT_UPDATE_SIGNING_KEY_BASE64 }}
+          OPENWRT_UPDATE_RSA_SIGNING_KEY_BASE64: ${{ secrets.OPENWRT_UPDATE_RSA_SIGNING_KEY_BASE64 }}
+          IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wrtmonitor
+        run: |
+          IMAGE_DIGEST="sha256:$(docker buildx imagetools inspect "$IMAGE_NAME:$RELEASE_VERSION" --raw | sha256sum | awk '{print $1}')"
+          python scripts/release_inventory.py --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" --image-digest "$IMAGE_DIGEST"
+          test -n "$OPENWRT_UPDATE_SIGNING_KEY_BASE64"
+          test -n "$OPENWRT_UPDATE_RSA_SIGNING_KEY_BASE64"
+          umask 077
+          trap 'rm -f "$RUNNER_TEMP/inventory-ed.pem" "$RUNNER_TEMP/inventory-rsa.pem"' EXIT
+          printf '%s' "$OPENWRT_UPDATE_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/inventory-ed.pem"
+          printf '%s' "$OPENWRT_UPDATE_RSA_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/inventory-rsa.pem"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/inventory-ed.pem" -rawin -in RELEASE_SHA256SUMS.txt -out "$RUNNER_TEMP/inventory.sig"
+          openssl pkeyutl -verify -pubin -inkey openwrt-agent/update-ed25519-public-key.pem -rawin -in RELEASE_SHA256SUMS.txt -sigfile "$RUNNER_TEMP/inventory.sig"
+          base64 < "$RUNNER_TEMP/inventory.sig" > RELEASE_SHA256SUMS.sig
+          openssl dgst -sha256 -sign "$RUNNER_TEMP/inventory-rsa.pem" -out "$RUNNER_TEMP/inventory-rsa.sig" RELEASE_SHA256SUMS.txt
+          openssl dgst -sha256 -verify openwrt-agent/update-rsa-public-key.pem -signature "$RUNNER_TEMP/inventory-rsa.sig" RELEASE_SHA256SUMS.txt
+          base64 < "$RUNNER_TEMP/inventory-rsa.sig" > RELEASE_SHA256SUMS.rsa.sig
       - uses: actions/upload-artifact@v7
         with:
           name: wrtmonitor-release-artifacts
@@ -369,6 +398,11 @@ jobs:
             openwrt-agent/SHA256SUMS.sig
             openwrt-agent/SHA256SUMS.rsa.sig
             openwrt-agent/agent-version.txt
+            RELEASE_INVENTORY.json
+            RELEASE_SHA256SUMS.txt
+            RELEASE_SHA256SUMS.sig
+            RELEASE_SHA256SUMS.rsa.sig
+            LICENSE
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -382,6 +416,11 @@ jobs:
             "openwrt-agent/SHA256SUMS.sig" \
             "openwrt-agent/SHA256SUMS.rsa.sig" \
             "openwrt-agent/agent-version.txt" \
+            "RELEASE_INVENTORY.json" \
+            "RELEASE_SHA256SUMS.txt" \
+            "RELEASE_SHA256SUMS.sig" \
+            "RELEASE_SHA256SUMS.rsa.sig" \
+            "LICENSE" \
             --title "$RELEASE_TAG" \
             --notes-file RELEASE_NOTES.md \
             --prerelease

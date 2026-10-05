@@ -137,13 +137,51 @@ def test_agent_entrypoint_exists_and_is_thin():
 def test_agent_loads_split_libraries_in_dependency_order():
     source = read_text(AGENT)
     ordered_groups = (
-        ("update_version.sh", "update_crypto.sh", "update_storage.sh", "update_validation.sh", "update.sh"),
-        ("telemetry_dhcp.sh", "telemetry_clients.sh", "telemetry_interfaces.sh", "telemetry_topology.sh", "telemetry_dns.sh", "telemetry_network.sh"),
-        ("transaction_spec.sh", "transaction_state.sh", "transaction_recovery.sh", "transactions.sh"),
-        ("verification_modes.sh", "verification_runtime.sh", "verification_client.sh", "verification.sh"),
-        ("command_result.sh", "command_dns_runtime.sh", "command_wifi_runtime.sh", "command_runtime.sh"),
-        ("command_network_core.sh", "command_network_topology.sh", "command_network_services.sh", "command_network_policy.sh", "command_network.sh"),
-        ("command_terminal_transport.sh", "command_terminal_session.sh", "command_ssh.sh"),
+        (
+            "update_version.sh",
+            "update_crypto.sh",
+            "update_storage.sh",
+            "update_validation.sh",
+            "update.sh",
+        ),
+        (
+            "telemetry_dhcp.sh",
+            "telemetry_clients.sh",
+            "telemetry_interfaces.sh",
+            "telemetry_topology.sh",
+            "telemetry_dns.sh",
+            "telemetry_network.sh",
+        ),
+        (
+            "transaction_spec.sh",
+            "transaction_state.sh",
+            "transaction_recovery.sh",
+            "transactions.sh",
+        ),
+        (
+            "verification_modes.sh",
+            "verification_runtime.sh",
+            "verification_client.sh",
+            "verification.sh",
+        ),
+        (
+            "command_result.sh",
+            "command_dns_runtime.sh",
+            "command_wifi_runtime.sh",
+            "command_runtime.sh",
+        ),
+        (
+            "command_network_core.sh",
+            "command_network_topology.sh",
+            "command_network_services.sh",
+            "command_network_policy.sh",
+            "command_network.sh",
+        ),
+        (
+            "command_terminal_transport.sh",
+            "command_terminal_session.sh",
+            "command_ssh.sh",
+        ),
     )
     for group in ordered_groups:
         positions = [source.index(f"load_lib {name}") for name in group]
@@ -172,11 +210,11 @@ def test_wifi_schedule_preserves_owner_state_and_reports_effective_state():
     assert "applied" in source
     assert "effective_enabled" in telemetry
     assert "active_now" in telemetry
-    assert 'wrtmonitor.$schedule_ref.base_enabled' in command
+    assert "wrtmonitor.$schedule_ref.base_enabled" in command
     verification = library_sources("verification")
-    assert 'wifi.set_schedule)' in verification
-    assert 'wrtmonitor.$schedule_ref.weekdays' in verification
-    assert 'wifi.set_radio)' in verification
+    assert "wifi.set_schedule)" in verification
+    assert "wrtmonitor.$schedule_ref.weekdays" in verification
+    assert "wifi.set_radio)" in verification
 
 
 def test_disabled_wifi_schedule_does_not_publish_stale_window():
@@ -189,7 +227,7 @@ def test_disabled_wifi_schedule_does_not_publish_stale_window():
 
 def test_existing_mesh_password_is_not_replaced_by_an_empty_value():
     command = read_text(LIB_DIR / "command_wifi.sh")
-    assert 'mesh password is required for a new secured network' in command
+    assert "mesh password is required for a new secured network" in command
     assert 'elif [ -n "$wifi_key" ]' in command
     assert 'uci -q delete "wireless.$mesh_iface.key"' in command
 
@@ -426,10 +464,14 @@ def test_token_reinstall_resolves_identity_before_touching_runtime():
     source = read_text(INSTALLER)
     assert "resolve_device_identity()" in source
     assert "post_json /api/v1/agent/register" in source
-    assert 'uci -q delete wrtmonitor.main.device_id' not in source
-    assert source.index("resolve_device_identity\n") < source.index("prepare_work_dir\n")
+    assert "uci -q delete wrtmonitor.main.device_id" not in source
+    assert source.index("resolve_device_identity\n") < source.index(
+        "prepare_work_dir\n"
+    )
     assert source.index("system_preflight\n") < source.index("ensure_dependencies\n")
-    assert source.index("installation_preflight\n") < source.index("stop_existing_agent\n")
+    assert source.index("installation_preflight\n") < source.index(
+        "stop_existing_agent\n"
+    )
 
 
 def test_update_checks_version_before_writable_filesystem_preflight():
@@ -454,8 +496,8 @@ def test_agent_update_uses_complete_generations_and_switches_entrypoint_last():
     assert 'CURRENT_RELEASE_POINTER="$RELEASES_DIR/current"' in entrypoint
     assert 'agent-version.txt")" = "$AGENT_VERSION"' in entrypoint
     status = read_text(LIB_DIR / "status.sh")
-    assert 'lib.previous/common.sh' in status
-    assert 'VERSION.previous' in status
+    assert "lib.previous/common.sh" in status
+    assert "VERSION.previous" in status
     assert "prune_release_generations" in source
 
 
@@ -505,7 +547,9 @@ def test_complete_generation_is_activated_as_one_runtime(tmp_path: Path):
     init_path = install_root / "init.d" / "wrtmonitor"
     agent_path.write_text("old-agent\n", encoding="utf-8")
     init_path.write_text("old-init\n", encoding="utf-8")
-    (payload / "wrtmonitor-agent").write_text("#!/bin/sh\necho new-agent\n", encoding="utf-8")
+    (payload / "wrtmonitor-agent").write_text(
+        "#!/bin/sh\necho new-agent\n", encoding="utf-8"
+    )
     (payload / "wrtmonitor.init").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     (payload / "lib" / "common.sh").write_text("fixture=complete\n", encoding="utf-8")
     (payload / "agent-version.txt").write_text("9.9.9\n", encoding="utf-8")
@@ -526,7 +570,9 @@ def test_complete_generation_is_activated_as_one_runtime(tmp_path: Path):
     assert "new-agent" in agent_path.read_text(encoding="utf-8")
     releases = install_root / "lib" / "releases"
     current_id = (releases / "current").read_text(encoding="utf-8").strip()
-    assert (releases / current_id / "common.sh").read_text(encoding="utf-8") == "fixture=complete\n"
+    assert (releases / current_id / "common.sh").read_text(
+        encoding="utf-8"
+    ) == "fixture=complete\n"
 
 
 def test_daemon_handoffs_after_command_driven_update():
@@ -891,15 +937,21 @@ esac
 
 def test_package_upgrade_uses_upgrade_action_and_reports_versions():
     source = read_text(LIB_DIR / "command_maintenance.sh")
-    assert '[ "$command_type" = maintenance.package.upgrade ] && package_action=upgrade' in source
-    assert 'package_version_before=' in source
-    assert 'package_target_version=' in source
-    assert 'package_version_after=' in source
+    assert (
+        '[ "$command_type" = maintenance.package.upgrade ] && package_action=upgrade'
+        in source
+    )
+    assert "package_version_before=" in source
+    assert "package_target_version=" in source
+    assert "package_version_after=" in source
 
 
 def test_package_postcondition_explains_remaining_candidate():
     source = read_text(LIB_DIR / "verification_runtime.sh")
-    assert 'POSTCONDITION_ERROR_MESSAGE="package $package remains at $installed_version; expected $remaining_candidate"' in source
+    assert (
+        'POSTCONDITION_ERROR_MESSAGE="package $package remains at $installed_version; expected $remaining_candidate"'
+        in source
+    )
 
 
 def test_package_commands_request_immediate_telemetry_refresh():
@@ -1018,9 +1070,9 @@ def test_client_policy_verifier_checks_exact_runtime_filter_and_rollback():
     transactions = transaction_sources()
     assert "client_policy_filter_matches" in policy
     assert 'grep -Fq "_mac $mac"' in policy
-    assert 'actual_kbps' in policy
-    assert 'other_pref' in policy
-    assert 'candidate=$((candidate + 1))' in policy
+    assert "actual_kbps" in policy
+    assert "other_pref" in policy
+    assert "candidate=$((candidate + 1))" in policy
     assert 'client_policy_filter_matches "$device" ingress' in verification
     assert 'client_policy_filter_matches "$device" egress' in verification
     assert '[ "$command_type" = client.set_policy ]' in transactions
@@ -1030,8 +1082,8 @@ def test_client_policy_verifier_checks_exact_runtime_filter_and_rollback():
     assert 'client_policy_set_reject_rule "$client_after_ref"' in library_sources(
         "command_network"
     )
-    assert 'firewall.$policy_after_ref.start_time' in verification
-    assert 'firewall.$policy_days_ref.weekdays' in verification
+    assert "firewall.$policy_after_ref.start_time" in verification
+    assert "firewall.$policy_days_ref.weekdays" in verification
 
 
 def test_update_manifest_signature_is_required_and_valid(tmp_path: Path):
@@ -1236,6 +1288,47 @@ def test_terminal_transport_uses_finite_chunks_and_readiness_handshake():
     assert '-O "$launch_log"' not in source
     assert 'exec >>"$launch_log" 2>&1' in source
     assert "terminal startup readiness timeout" in source
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+def test_terminal_startup_distinguishes_short_session_from_failed_start(
+    tmp_path: Path, authenticated: bool
+):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    source = read_text(LIB_DIR / "command_terminal_transport.sh")
+    readiness = (
+        "ready=0\n"
+        + source.split("    ready=0\n", 1)[1].split(
+            '    if [ "$ready" -ne 1 ]; then', 1
+        )[0]
+    )
+    if authenticated:
+        (tmp_path / "up.ready").touch()
+        (tmp_path / "down.ready").touch()
+    script = f"""set -eu
+        work_dir='{tmp_path.as_posix()}'
+        launch_file="$work_dir/launch"
+        pid_pty=999999
+        kill() {{ return 1; }}
+        {readiness}
+        printf '%s\\n' "$ready"
+        cat "$launch_file"
+    """
+    completed = subprocess.run(
+        [shell, "-c", script],
+        check=True,
+        text=True,
+        capture_output=True,
+        env=shell_env(),
+        timeout=10,
+    )
+    assert completed.stdout.splitlines() == (
+        ["1", "ready"]
+        if authenticated
+        else ["0", "failed: PTY process exited during startup"]
+    )
 
 
 def test_terminal_up_loop_delivers_router_output_as_a_finite_request(tmp_path: Path):
@@ -1596,8 +1689,12 @@ def test_wifi_access_profiles_use_real_traffic_control_and_exact_verification():
     assert "wifi_access_profile_direction_pref" in profile
     assert "tc filter add" in profile
     assert "tc filter replace" not in profile
-    assert 'wifi_access_profile_delete_filter "$ifname" ingress "$upload_pref"' in profile
-    assert 'wifi_access_profile_delete_filter "$ifname" egress "$download_pref"' in profile
+    assert (
+        'wifi_access_profile_delete_filter "$ifname" ingress "$upload_pref"' in profile
+    )
+    assert (
+        'wifi_access_profile_delete_filter "$ifname" egress "$download_pref"' in profile
+    )
     assert "wifi_access_profile_filter_matches" in profile
     assert "verify_wifi_access_profile_postcondition" in verifier
     assert "wifi_access_profile_json" in telemetry
@@ -1682,6 +1779,71 @@ def test_wifi_security_changes_validate_keys_and_runtime_state():
     assert "wireless.wrtmonitor_guest.encryption=psk2" not in command
     assert "wifi_security_key_valid()" in runtime
     assert "wifi_iface_runtime_active()" in runtime
+
+
+@pytest.mark.parametrize("exists", [True, False])
+def test_guest_disable_does_not_create_a_network_and_updates_access_profile(tmp_path, exists):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    log = tmp_path / "uci-actions"
+    script = f'''
+        set -eu
+        . "{(LIB_DIR / "wifi_access_profile.sh").as_posix()}"
+        . "{(LIB_DIR / "command_wifi_access_profile.sh").as_posix()}"
+        . "{(LIB_DIR / "command_wifi.sh").as_posix()}"
+        command_type=wifi.set_guest; command_payload='{{"enabled":false}}'; status=done
+        json_get_bool() {{ printf false; }}
+        json_get_string() {{ :; }}
+        resolve_wifi_radio() {{ printf radio0; }}
+        wifi() {{ :; }}
+        command_success_result() {{ printf '{{}}'; }}
+        command_failed_result() {{ printf '{{}}'; }}
+        uci() {{
+            [ "$1" != -q ] || shift
+            case "$1:$2" in
+                get:wireless.wrtmonitor_guest) return {0 if exists else 1} ;;
+                get:wrtmonitor.wifi_access_wrtmonitor_guest) return 0 ;;
+                get:*) return 1 ;;
+                *) printf '%s\\n' "$*" >>'{log.as_posix()}' ;;
+            esac
+        }}
+        handle_wifi_command
+        test "$status" = done
+    '''
+    subprocess.run([shell, "-c", script], check=True, env=shell_env(), timeout=10)
+    actions = log.read_text()
+    assert "network.wrtmonitor_guest" not in actions
+    assert "wireless.wrtmonitor_guest=wifi-iface" not in actions
+    if exists:
+        assert "wireless.wrtmonitor_guest.disabled=1" in actions
+        assert "wrtmonitor.wifi_access_wrtmonitor_guest.base_enabled=0" in actions
+    else:
+        assert "delete wrtmonitor.wifi_access_wrtmonitor_guest" in actions
+
+
+@pytest.mark.parametrize("base_enabled", [0, 1])
+def test_guest_verifier_rejects_profile_that_would_reenable_network(base_enabled):
+    shell = shell_path()
+    if not shell:
+        pytest.skip("sh is not available")
+    script = f'''
+        . "{(LIB_DIR / "verification.sh").as_posix()}"
+        postcondition_mode_for_command() {{ printf read_after_write_config; }}
+        json_get_bool() {{ printf false; }}
+        wifi_access_profile_section() {{ printf wifi_access_wrtmonitor_guest; }}
+        uci() {{ return 0; }}
+        verify_uci_value() {{
+            case "$1" in
+                wireless.wrtmonitor_guest.disabled) [ "$2" = 1 ] ;;
+                *.base_enabled) [ "$2" = '{base_enabled}' ] ;;
+                *) return 1 ;;
+            esac
+        }}
+        verify_command_postcondition wifi.set_guest '{{"enabled":false}}'
+    '''
+    result = subprocess.run([shell, "-c", script], env=shell_env(), timeout=10)
+    assert result.returncode == (0 if base_enabled == 0 else 1)
 
 
 def test_network_topology_telemetry_reads_live_uci_sections():

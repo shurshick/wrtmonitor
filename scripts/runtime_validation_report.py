@@ -28,7 +28,7 @@ def runtime_fingerprint(root: Path = ROOT) -> str:
     for name in sorted(name.strip() for name in names if name.strip()):
         if name in FINGERPRINT_EXCLUDED:
             continue
-        content = (agent_root / name).read_bytes()
+        content = (agent_root / name).read_bytes().replace(b"\r\n", b"\n")
         if name == "wrtmonitor-agent":
             text = content.decode("utf-8")
             text = re.sub(
@@ -46,7 +46,13 @@ def load_evidence(root: Path, reference: str) -> dict[str, Any]:
     return json.loads((root / reference / "result.json").read_text(encoding="utf-8"))
 
 
-def validate_report(path: Path, expected_version: str, root: Path = ROOT) -> list[str]:
+def validate_report(
+    path: Path,
+    expected_version: str,
+    root: Path = ROOT,
+    *,
+    require_lifecycle: bool = False,
+) -> list[str]:
     report = json.loads(path.read_text(encoding="utf-8"))
     failures: list[str] = []
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
@@ -70,6 +76,22 @@ def validate_report(path: Path, expected_version: str, root: Path = ROOT) -> lis
     for command, result in report.get("commands", {}).items():
         if result.get("status") not in {"pass", "not_applicable"}:
             failures.append(f"{command}: status={result.get('status')}")
+        if require_lifecycle and result.get("status") == "pass":
+            for field in ("idempotency", "timeout", "redelivery", "post_condition"):
+                if result.get(field) != "pass":
+                    failures.append(f"{command}: lifecycle {field} has not passed")
+            reference = result.get("evidence")
+            evidence = (
+                (root / str(reference) / "result.json").resolve() if reference else None
+            )
+            if (
+                not evidence
+                or not evidence.is_relative_to(root.resolve())
+                or not evidence.is_file()
+            ):
+                failures.append(
+                    f"{command}: lifecycle evidence is missing or outside the project"
+                )
     for command, fields in REQUIRED_RUNTIME.items():
         result = report.get("commands", {}).get(command) or {}
         reference = result.get("evidence")

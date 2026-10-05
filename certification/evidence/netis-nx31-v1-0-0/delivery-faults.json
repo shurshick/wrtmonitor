@@ -1,0 +1,23 @@
+{
+  "tested_at": "2026-10-05T11:54:19.132318+00:00",
+  "target": "netis-nx31-v1-0-0",
+  "release_version": "1.0.0",
+  "runtime_fingerprint": "86cebf25be0606a6de9208bad791fb52d5414ad3a04aa5c7404d54a3da72cc82",
+  "method": "isolated candidate DB fault injection; real router daemon delivery",
+  "redelivery": {
+    "status": "pass",
+    "same_uuid": true,
+    "api_idempotency_same_uuid": true,
+    "delivery_count": 2,
+    "executions": 1,
+    "lease_expiry_requeued": true,
+    "old_long_poll_drained": true
+  },
+  "expiry": {
+    "status": "pass",
+    "command_status": "expired",
+    "delivery_count": 0,
+    "marker_absent": true
+  },
+  "recovered": true
+}

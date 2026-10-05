@@ -16,6 +16,11 @@ def responses(monkeypatch):
         "wrtmonitor-android-v1.0.0.apk",
         "wrtmonitor-openwrt-agent-v1.0.0.tar.gz",
         "wrtmonitor-truenas-v1.0.0.yaml",
+        "RELEASE_INVENTORY.json",
+        "RELEASE_SHA256SUMS.txt",
+        "RELEASE_SHA256SUMS.sig",
+        "RELEASE_SHA256SUMS.rsa.sig",
+        "LICENSE",
     ]
     release = {
         "tag_name": "v1.0.0",
