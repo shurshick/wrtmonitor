@@ -30,7 +30,7 @@
 
 ## Secret scan
 
-Gitleaks v8.30.1, официальная сборка с проверенным SHA-256: полный git history `--all`, 361 commit до изменений этой ветки. Найден один false positive в vendored xterm: `FourKeyMap=t.TwoKeyMap=void0`. В `.gitleaksignore` исключён только точный fingerprint этого конкретного commit/file/line, не вся vendor-директория. После исключения scan прошёл. Новый CI повторяет полный scan для новых commit; ключи, тестовые credentials и dev switches не скрыты широким allowlist.
+Gitleaks v8.30.1, официальная сборка с проверенным SHA-256: полный git history `--all`, 361 commit до изменений этой ветки. Найден false positive на присваивании JavaScript FourKeyMap/TwoKeyMap в vendored xterm. Его цитата в первом commit аудита также сработала как false positive. В `.gitleaksignore` исключены только два точных fingerprint этих commit/file/line, не vendor-директория и не документация целиком. Новый CI повторяет полный scan для новых commit; ключи, тестовые credentials и dev switches не скрыты широким allowlist.
 
 Модель/firmware в публичном отчёте нужны для совместимости и не считаются секретом автоматически. Перед публикацией всё равно просмотрите файл. Backup, UCI, terminal transcript, raw telemetry и локальные credentials не являются публичным support report.
 
