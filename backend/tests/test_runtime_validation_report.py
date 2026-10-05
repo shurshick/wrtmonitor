@@ -56,6 +56,8 @@ def test_runtime_report_requires_real_post_conditions(tmp_path: Path):
     )
 
     assert validate_report(report, "0.49.0", tmp_path) == []
+    strict = validate_report(report, "0.49.0", tmp_path, require_lifecycle=True)
+    assert "router.reboot: lifecycle timeout has not passed" in strict
 
     payload = json.loads(
         (evidence / "router.reboot" / "result.json").read_text(encoding="utf-8")
@@ -145,3 +147,13 @@ def test_runtime_report_can_be_inherited_only_for_identical_runtime(tmp_path: Pa
     )
     failures = validate_report(report, "0.50.0", tmp_path)
     assert any("certified runtime fingerprint" in failure for failure in failures)
+
+
+def test_fingerprint_is_independent_of_windows_line_endings(tmp_path):
+    agent = tmp_path / "openwrt-agent"
+    agent.mkdir()
+    (agent / "openwrt-agent-files.txt").write_bytes(b"lib.sh\n")
+    (agent / "lib.sh").write_bytes(b"first\nsecond\n")
+    expected = runtime_fingerprint(tmp_path)
+    (agent / "lib.sh").write_bytes(b"first\r\nsecond\r\n")
+    assert runtime_fingerprint(tmp_path) == expected

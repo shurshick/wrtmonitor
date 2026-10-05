@@ -9,6 +9,14 @@ from sqlalchemy.orm import Session
 
 from ..models import DeviceHardwareIdentity, HardwareSensorSample
 from .hardware_profiles import CATALOG_VERSION
+from .report_privacy import (
+    CPU_FIELDS,
+    HARDWARE_FIELDS,
+    IDENTITY_FIELDS,
+    SENSOR_FIELDS,
+    THROTTLING_FIELDS,
+    public_fields,
+)
 
 
 def _temperature_status(
@@ -177,25 +185,25 @@ def hardware_report(
         "generated_at": datetime.now(UTC).isoformat(),
         "catalog_version": CATALOG_VERSION,
         "device": {
-            "id": str(device_id),
-            "name": getattr(device, "name", None),
-            "hostname": getattr(device, "hostname", None),
             "model": getattr(device, "model", None),
             "firmware": getattr(device, "firmware", None),
         },
-        "identity": summary,
+        "identity": public_fields(summary, IDENTITY_FIELDS),
         "observed": {
-            "hardware": telemetry.get("hardware") or {},
-            "cpu": telemetry.get("cpu") or {},
+            "hardware": public_fields(telemetry.get("hardware"), HARDWARE_FIELDS),
+            "cpu": public_fields(telemetry.get("cpu"), CPU_FIELDS),
             "thermal": {
                 "state": raw_thermal.get("state", "unsupported"),
                 "available": bool(raw_thermal.get("available")),
-                "sensors": sensors,
-                "throttling": raw_thermal.get("throttling")
-                or {
-                    "state": "unsupported",
-                    "active": None,
-                },
+                "sensors": public_fields(sensors, [SENSOR_FIELDS]),
+                "throttling": public_fields(
+                    raw_thermal.get("throttling")
+                    or {
+                        "state": "unsupported",
+                        "active": None,
+                    },
+                    THROTTLING_FIELDS,
+                ),
             },
         },
     }

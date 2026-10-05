@@ -48,6 +48,7 @@ handle_maintenance_command() {
             payload_file=/tmp/wrtmonitor-command-payload; printf '%s' "$command_payload" >"$payload_file"; restore_b64="$(json_get_string "$payload_file" '@.archive_base64')"; rm -f "$payload_file"; restore_path="/tmp/wrtmonitor-restore-$command_id.tar.gz"
             if ! printf '%s' "$restore_b64" | base64 -d >"$restore_path" 2>/dev/null; then status=failed; result="$(command_failed_result "backup decoding failed")"
             elif ! tar -tzf "$restore_path" 2>/dev/null | awk 'BEGIN{ok=1} /^\//{ok=0} /(^|\/)\.\.($|\/)/{ok=0} !/^etc\//{ok=0} END{exit !ok}'; then status=failed; result="$(command_failed_result "backup contains unsafe paths")"
+            elif ! tar -tvzf "$restore_path" 2>/dev/null | awk 'BEGIN{ok=1} !/^[-d]/{ok=0} END{exit !ok}'; then status=failed; result="$(command_failed_result "backup contains unsafe links or special files")"
             elif sysupgrade -r "$restore_path" >/dev/null 2>&1; then result="$(command_success_result "configuration backup restored; reboot recommended")"; else status=failed; result="$(command_failed_result "configuration restore failed")"; fi
             rm -f "$restore_path"
             ;;
@@ -107,7 +108,7 @@ handle_maintenance_command() {
             else status=failed; result="$(command_failed_result "service action failed or service does not exist")"; fi
             ;;
         maintenance.diagnostics.bundle)
-            bundle_dir="/tmp/wrtmonitor-diagnostics-$command_id"; bundle_path="$bundle_dir.tar.gz"; mkdir -p "$bundle_dir"; ubus call system board >"$bundle_dir/board.json" 2>&1 || true; ubus call system info >"$bundle_dir/system.json" 2>&1 || true; ubus call network.interface dump >"$bundle_dir/network.json" 2>&1 || true; logread 2>/dev/null | tail -n 500 >"$bundle_dir/logread.txt"; ps w >"$bundle_dir/processes.txt" 2>&1 || true; df -h >"$bundle_dir/storage.txt" 2>&1 || true; package_list_installed >"$bundle_dir/packages.txt" 2>&1 || true; capabilities_json >"$bundle_dir/capabilities.json"; if tar -czf "$bundle_path" -C "$bundle_dir" .; then bundle_b64="$(base64 <"$bundle_path" | tr -d '\n')"; result="$(command_success_result "diagnostic bundle created" "\"filename\":\"wrtmonitor-diagnostics.tar.gz\",\"bundle_base64\":\"$bundle_b64\"")"; else status=failed; result="$(command_failed_result "failed to create diagnostic bundle")"; fi; rm -rf "$bundle_dir" "$bundle_path"
+            bundle_dir="/tmp/wrtmonitor-diagnostics-$command_id"; bundle_path="$bundle_dir.tar.gz"; mkdir -p "$bundle_dir"; write_public_diagnostic_files "$bundle_dir"; if tar -czf "$bundle_path" -C "$bundle_dir" .; then bundle_b64="$(base64 <"$bundle_path" | tr -d '\n')"; result="$(command_success_result "diagnostic bundle created" "\"filename\":\"wrtmonitor-diagnostics.tar.gz\",\"bundle_base64\":\"$bundle_b64\"")"; else status=failed; result="$(command_failed_result "failed to create diagnostic bundle")"; fi; rm -rf "$bundle_dir" "$bundle_path"
             ;;
         maintenance.recovery.enable)
             recovery_path=/tmp/wrtmonitor-recovery.tar.gz; if sysupgrade -b "$recovery_path" >/dev/null 2>&1; then uci set "$CONFIG.recovery_mode=1"; uci commit wrtmonitor; result="$(command_success_result "recovery mode enabled")"; else status=failed; result="$(command_failed_result "failed to create recovery backup")"; fi

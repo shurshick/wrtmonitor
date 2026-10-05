@@ -26,13 +26,13 @@ from ..models import NetworkClient
 from .client_registry import effective_client_presence
 from .events import emit_event
 from .command_store import cleanup_device_command_history, expire_old_commands
-from .command_store import public_command_result
 from .telemetry_history import (
     cleanup_device_telemetry,
     cleanup_device_telemetry_metrics,
 )
 from .terminal_broker import cleanup_terminal_sessions
 from .realtime import broker
+from .report_privacy import fields, public_fields
 
 
 TERMINAL_COMMAND_STATES = ("done", "success", "failed", "expired", "cancelled")
@@ -226,9 +226,6 @@ def _render_device_diagnostic_report(
         "generated_at": now.isoformat(),
         "server_version": APP_VERSION,
         "device": {
-            "id": str(device.id),
-            "name": device.name,
-            "hostname": device.hostname,
             "model": device.model,
             "firmware": device.firmware,
             "status": device.status,
@@ -258,12 +255,26 @@ def _render_device_diagnostic_report(
             "completed_at": diagnostic.completed_at.isoformat()
             if diagnostic.completed_at
             else None,
-            "error": diagnostic.last_error,
-            "result": public_command_result(diagnostic.command_type, diagnostic.result),
+            "error_code": (diagnostic.result or {}).get("error_detail", {}).get("code")
+            if isinstance((diagnostic.result or {}).get("error_detail"), dict)
+            else None,
+            "result": _public_diagnostics(diagnostic.result),
         }
         if diagnostic
         else None,
     }
+
+
+def _public_diagnostics(result: dict | None) -> dict:
+    from .report_privacy import fields, public_fields
+
+    return public_fields(
+        result,
+        {
+            check: fields("status", "code", "http_status", "radio_count")
+            for check in ("server", "dns", "route", "wifi", "dependencies")
+        },
+    )
 
 
 def build_device_diagnostic_report(db: Session, device: Device) -> dict[str, Any]:
@@ -440,7 +451,6 @@ def build_server_diagnostic_archive(db: Session, config: Settings) -> bytes:
             json.dumps(
                 {
                     "version": APP_VERSION,
-                    "public_server_url": config.public_server_url,
                     "telemetry_retention_per_device": config.telemetry_retention_per_device,
                     "telemetry_metric_retention_days": config.telemetry_metric_retention_days,
                     "command_history_retention_days": config.command_history_retention_days,
@@ -452,11 +462,50 @@ def build_server_diagnostic_archive(db: Session, config: Settings) -> bytes:
         )
         archive.writestr(
             "operations.json",
-            json.dumps(operation_metrics(db), ensure_ascii=False, indent=2),
+            json.dumps(
+                public_fields(
+                    operation_metrics(db),
+                    {
+                        "generated_at": None,
+                        "command_queue": {
+                            "active": None,
+                            "oldest_queued_age_seconds": None,
+                            "by_status": fields(
+                                "queued",
+                                "delivered",
+                                "running",
+                                "done",
+                                "success",
+                                "failed",
+                                "expired",
+                                "cancelled",
+                            ),
+                        },
+                        "agents": fields("total", "fresh", "stale"),
+                        "realtime": fields(
+                            "long_poll_active",
+                            "long_poll_wakeups",
+                            "long_poll_timeouts",
+                            "events_published",
+                            "events_dropped",
+                            "sse_subscribers",
+                        ),
+                    },
+                ),
+                ensure_ascii=False,
+                indent=2,
+            ),
         )
         archive.writestr(
             "notifications.json",
-            json.dumps(operational_notifications(db), ensure_ascii=False, indent=2),
+            json.dumps(
+                public_fields(
+                    operational_notifications(db),
+                    [fields("severity", "kind", "created_at")],
+                ),
+                ensure_ascii=False,
+                indent=2,
+            ),
         )
         devices = db.scalars(
             select(Device).where(Device.archived_at.is_(None)).order_by(Device.name)

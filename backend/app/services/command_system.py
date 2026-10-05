@@ -94,6 +94,8 @@ def _maintenance_module(payload: dict[str, Any]) -> dict[str, str]:
 
 
 def _maintenance_backup_restore(payload: dict[str, Any]) -> dict[str, str]:
+    from .backup_archive import validate_router_backup
+
     archive = _require_string(payload, "archive_base64", max_length=2_000_000)
     try:
         decoded = base64.b64decode(archive, validate=True)
@@ -101,6 +103,10 @@ def _maintenance_backup_restore(payload: dict[str, Any]) -> dict[str, str]:
         raise HTTPException(status_code=400, detail="Invalid backup archive") from exc
     if not decoded.startswith(b"\x1f\x8b") or len(decoded) > 1_500_000:
         raise HTTPException(status_code=400, detail="Invalid backup archive")
+    try:
+        validate_router_backup(decoded)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"archive_base64": archive}
 
 

@@ -73,14 +73,24 @@ def create_refresh_token(
 
 
 def decode_access_token(token: str, config: Settings) -> dict[str, Any]:
-    payload = jwt.decode(token, config.jwt_secret, algorithms=["HS256"])
+    payload = jwt.decode(
+        token,
+        config.jwt_secret,
+        algorithms=["HS256"],
+        options={"require": ["sub", "type", "iat", "exp"]},
+    )
     if payload.get("type") != "access":
         raise jwt.InvalidTokenError("unexpected token type")
     return payload
 
 
 def decode_refresh_token(token: str, config: Settings) -> dict[str, Any]:
-    payload = jwt.decode(token, config.jwt_secret, algorithms=["HS256"])
+    payload = jwt.decode(
+        token,
+        config.jwt_secret,
+        algorithms=["HS256"],
+        options={"require": ["sub", "type", "iat", "exp", "jti"]},
+    )
     if payload.get("type") != "refresh":
         raise jwt.InvalidTokenError("unexpected token type")
     return payload

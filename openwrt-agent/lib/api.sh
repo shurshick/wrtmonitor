@@ -25,7 +25,7 @@ register_device() {
     firmware="$(json_escape "$(openwrt_firmware_description)")"
     name="$(json_escape "$(cfg name)")"
     body="{\"hostname\":\"$hostname\",\"model\":\"$model\",\"firmware\":\"$firmware\",\"name\":\"$name\",\"device_token\":\"$(json_escape "$(device_token)")\"}"
-    response="$(curl -fsS -X POST "$(server_url)/api/v1/agent/register" -H "Content-Type: application/json" -d "$body")"
+    response="$(curl -fsS --connect-timeout 10 --max-time 30 -X POST "$(server_url)/api/v1/agent/register" -H "Content-Type: application/json" -d "$body")" || return 1
     printf '%s' "$response" >/tmp/wrtmonitor-register-response
     id="$(json_get_string /tmp/wrtmonitor-register-response '@.device_id')"
     rm -f /tmp/wrtmonitor-register-response
@@ -161,21 +161,11 @@ debug_api() {
 }
 
 support_bundle() {
-    public_mode="${1:-}"
+    case "${1:-}" in ''|--public) ;; *) return 2 ;; esac
     bundle_dir="/tmp/wrtmonitor-agent-support-$$"
     archive="/tmp/wrtmonitor-agent-support.tar.gz"
     mkdir -p "$bundle_dir"
-    printf 'agent_version=%s\n' "$AGENT_VERSION" >"$bundle_dir/version.txt"
-    cat /etc/openwrt_release 2>/dev/null >>"$bundle_dir/version.txt" || true
-    uci show wrtmonitor 2>/dev/null | sed -E "s/(device_token=).*/\1'***'/; s/(password=).*/\1'***'/; s/(key=).*/\1'***'/" >"$bundle_dir/wrtmonitor.conf" || true
-    [ ! -r "$STATUS_FILE" ] || cp "$STATUS_FILE" "$bundle_dir/update-status.env"
-    logread 2>/dev/null | grep -i wrtmonitor | tail -100 | sed -E 's/(Authorization: Bearer )[A-Za-z0-9._-]+/\1***/g; s/(device_token=).*/\1***/g; s/(password=).*/\1***/g; s/(key=).*/\1***/g' >"$bundle_dir/wrtmonitor.log" || true
-    debug_api >"$bundle_dir/debug-api.txt" 2>&1 || true
-    debug_telemetry >"$bundle_dir/debug-telemetry.txt" 2>&1 || true
-    sed -i -E 's/(Authorization: Bearer )[A-Za-z0-9._-]+/\1***/g; s/(device_token["=: ]+)[^", ]+/\1***/g; s/(password["=: ]+)[^", ]+/\1***/g; s/(key["=: ]+)[^", ]+/\1***/g' "$bundle_dir"/debug-*.txt 2>/dev/null || true
-    if [ "$public_mode" = "--public" ]; then
-        sed -i -E 's/[0-9a-fA-F-]{16,}/***DEVICE***/g; s#https?://[^ /]+#https://***SERVER***#g' "$bundle_dir"/* 2>/dev/null || true
-    fi
+    write_public_diagnostic_files "$bundle_dir"
     tar -czf "$archive" -C "$bundle_dir" .
     rm -rf "$bundle_dir"
     printf '%s\n' "$archive"

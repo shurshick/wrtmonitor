@@ -51,7 +51,7 @@ def main():
 
     if args.ed25519_key:
         sig = sign_ed25519(args.ed25519_key, data)
-        sig_path = args.manifest.with_name("SHA256SUMS.sig")
+        sig_path = args.manifest.with_suffix(".sig")
         with open(sig_path, "wb") as f:
             f.write(sig)
             f.write(b"\n")
@@ -59,7 +59,7 @@ def main():
 
     if args.rsa_key:
         sig = sign_rsa(args.rsa_key, data)
-        sig_path = args.manifest.with_name("SHA256SUMS.rsa.sig")
+        sig_path = args.manifest.with_suffix(".rsa.sig")
         with open(sig_path, "wb") as f:
             f.write(sig)
             f.write(b"\n")

@@ -1,6 +1,24 @@
 # WrtMonitor
 
-`WrtMonitor` - self-hosted сервер, Web UI, Android-приложение и OpenWrt-агент для мониторинга и удалённого управления роутерами OpenWrt.
+WrtMonitor - self-hosted контроллер OpenWrt для дома, homelab и небольших сетей. Один Web UI и Android-приложение показывают состояние нескольких роутеров и позволяют управлять ими, включая удалённые устройства через исходящее соединение агента. Облако производителя и входящие порты на роутере не нужны.
+
+**Self-hosted · Web UI · Android · Несколько роутеров · Исходящий агент · Без vendor cloud · Docker / NAS / TrueNAS**
+
+Повседневные задачи: посмотреть клиентов и трафик, настроить Wi-Fi и гостевую сеть, проверить WAN/DNS, перезагрузить устройство, обновить пакеты, сохранить резервную копию или открыть Web SSH. Изменения конфигурации проходят проверки результата; для предусмотренных контрактом операций есть backup и rollback. Это не гарантия восстановления после любой аварии или ошибки прошивки.
+
+## Для кого WrtMonitor
+
+Один владелец и небольшая сеть, ориентировочно 1–20 OpenWrt-устройств: дом, homelab, небольшой офис, дача, роутеры родственников или несколько удалённых объектов. Это целевой сценарий, не подтверждённый нагрузочным тестом предел в 20 устройств.
+
+Модель `single-owner` выбрана сознательно. WrtMonitor не является ISP ACS, enterprise NMS или multi-tenant controller и не заменяет OpenWISP для большой организации.
+
+Вместо переключения между несколькими LuCI здесь общий список устройств, мониторинг, история операций и мобильный клиент. LuCI остаётся полезным для специфичных настроек, SSH - для ручной диагностики. [Сравнение с LuCI, SSH/Ansible и OpenWISP](docs/comparison.md).
+
+## С чего начать
+
+Нужны сервер с Docker Compose или NAS/TrueNAS с Docker, PostgreSQL 16, OpenWrt с root-доступом для установки агента и исходящим доступом к серверу. Для удалённого доступа нужен HTTPS и корректный сертификат; Android требует Android 8.0+.
+
+**[Quick Start: от установки до первой telemetry](docs/quick-start.md)** · [Проверенное оборудование](docs/hardware-compatibility.md) · [Поддерживаемые функции](docs/supported-features.md)
 
 ## Текущая версия
 
@@ -64,6 +82,8 @@
 [![Интерактивная PTY-сессия OpenWrt через Web SSH в WrtMonitor](docs/images/web-terminal.png)](docs/images/web-terminal.png)
 
 ## Быстрый старт
+
+Полная воспроизводимая инструкция: [docs/quick-start.md](docs/quick-start.md). Ниже только краткий порядок.
 
 1. Разверните сервер и PostgreSQL через Docker Compose или TrueNAS.
 2. Откройте `/setup`.
@@ -131,6 +151,17 @@ OpenWrt-агент можно установить:
 - [Router management core](docs/router-management-core.md)
 
 ## Документация
+
+- [Quick Start](docs/quick-start.md)
+- [Hardware Compatibility и безопасный отчёт](docs/hardware-compatibility.md)
+- [Supported Features](docs/supported-features.md)
+- [Security](docs/security.md)
+- [Backup / Restore](docs/server-operations.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Comparison](docs/comparison.md)
+- [Checklist перехода к 1.0](docs/release-checklist-1.0.md)
+- [Текущая готовность публичного релиза](docs/public-release-readiness.md)
+- [Решение о лицензии](docs/license-decision.md)
 
 - [OpenWrt agent](docs/openwrt-agent.md)
 - [Развёртывание сервера](docs/server-deployment.md)
